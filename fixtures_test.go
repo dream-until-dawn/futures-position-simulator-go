@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -155,5 +156,46 @@ func TestBlindSpotGuardDiscriminates(t *testing.T) {
 		if !hit {
 			t.Errorf("⚠️ 判据放过了一次真实的凭据读取 %q —— 那它什么都挡不住", real)
 		}
+	}
+}
+
+// TestNoStrayFixtureTrees 断言仓库里**只有一棵**夹具树。
+//
+// ⚠️ 起因：落盘目录配成了相对路径，从 cmd/oracle 里跑探针时，
+// 夹具落在 cmd/oracle/testdata/probes 下，而日志里只写相对路径，
+// 看不出它落在哪棵树上。那一份跟着 `git add -A` 进了仓库，
+// 内容与主树的同名文件**不同**（采样时刻不同），而没有任何东西会说一句。
+//
+// 多出来的那棵树不会报错，只会安静地成为第二份「证据」——
+// 将来有人拿它对拍，对的是一份来路不明的数。
+func TestNoStrayFixtureTrees(t *testing.T) {
+	const canonical = "testdata/probes"
+	var stray []string
+	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(p) != ".json" {
+			return nil
+		}
+		dir := filepath.ToSlash(filepath.Dir(p))
+		if dir == canonical || !strings.Contains(dir, "testdata") {
+			return nil
+		}
+		stray = append(stray, filepath.ToSlash(p))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stray) > 0 {
+		t.Errorf("⚠️ %s 之外还有 %d 份夹具：%v", canonical, len(stray), stray)
+		t.Error("   落盘目录很可能配成了相对路径，随 cwd 另开了一棵树")
 	}
 }

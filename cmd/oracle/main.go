@@ -78,7 +78,15 @@ func runProbe(args []string) error {
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	exp := fs.String("exp", "status", "实验名称")
 	symbols := fs.String("symbols", "", "实验用合约，逗号分隔，形如 SHFE.rb2601")
-	dump := fs.String("dump", "testdata/probes", "夹具落盘目录")
+	// ⚠️ 默认值必须是空串。
+	//
+	// 它原先默认 "testdata/probes"，于是 Runner 里那句
+	// 「DumpDir 为空才回落到 .env」永远不成立 —— .env 的 PROBE_DUMP_DIR
+	// 从来没被读过。我为了修「相对路径另开夹具树」把 .env 改成绝对路径，
+	// 改完毫无效果，而**唯一发现这件事的是那条机械守卫**
+	// （根包 TestNoStrayFixtureTrees）。一个什么也没改的修复，
+	// 在日志里和一个生效的修复长得一模一样。
+	dump := fs.String("dump", "", "夹具落盘目录（留空则用 .env 的 PROBE_DUMP_DIR）")
 	timeout := fs.Duration("timeout", 90*time.Second, "整体超时")
 	if args[1] == "status" {
 		_ = fs.Parse(args[2:])

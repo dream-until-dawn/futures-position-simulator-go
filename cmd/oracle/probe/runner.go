@@ -31,6 +31,14 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 	if r.DumpDir == "" {
 		r.DumpDir = r.Env.DumpDir
 	}
+	// ⚠️ 相对的落盘目录随 cwd 走。从 cmd/oracle 里跑就会在 cmd/oracle/testdata
+	// 下另开一棵夹具树，而那份夹具与主树的同名文件内容不同、无人知晓。
+	// 这里不拒绝相对路径（有人确实会从仓库根跑），但要把它解析成绝对路径**说出来**。
+	if r.DumpDir != "" && !filepath.IsAbs(r.DumpDir) {
+		abs, _ := filepath.Abs(r.DumpDir)
+		r.Logf("⚠️ 落盘目录 %q 是相对路径，随 cwd 走。本次实际落到：%s", r.DumpDir, abs)
+		r.DumpDir = abs
+	}
 
 	cli := kq.New(kq.Credentials{User: r.Env.KQUser, Password: r.Env.KQPassword, ClientSecret: r.Env.KQClientSecret}, r.Logf)
 	r.cli = cli
