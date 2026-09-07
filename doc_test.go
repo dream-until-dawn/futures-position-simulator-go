@@ -14,6 +14,7 @@ package futsim
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -431,27 +432,37 @@ func TestForbiddenTableIsNotEmpty(t *testing.T) {
 //
 // 判据只覆盖主模块的顶层包（cmd/ 是嵌套模块，另算）。
 func TestPackagesDoneMatchesReality(t *testing.T) {
-	// 磁盘上：顶层目录里含 .go 文件的
+	// 磁盘上：**递归**找含 .go 文件的目录，键是相对仓库根的路径。
+	//
+	// ⚠️ 第一版只扫顶层目录，于是 internal/decimalx 落在了它的视野之外：
+	// state.md 一登记 decimalx 就报「磁盘上没有」。抓到的又是判据 ——
+	// 「怎么算一个包」当时只想到了顶层。这是同一天第四次「守卫的第一次红
+	// 是守卫自己的判据没写全」。
 	onDisk := map[string]bool{}
-	entries, err := os.ReadDir(".")
-	if err != nil {
-		t.Fatalf("读不到仓库根目录: %v", err)
-	}
-	skip := map[string]bool{"docs": true, "testdata": true, "cmd": true, ".git": true}
-	for _, e := range entries {
-		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") || skip[e.Name()] {
-			continue
-		}
-		files, err := os.ReadDir(e.Name())
+	skip := map[string]bool{"docs": true, "testdata": true, "cmd": true}
+	err := filepath.WalkDir(".", func(path string, e fs.DirEntry, err error) error {
 		if err != nil {
-			continue
+			return err
 		}
-		for _, f := range files {
-			if strings.HasSuffix(f.Name(), ".go") {
-				onDisk[e.Name()] = true
-				break
+		if e.IsDir() {
+			base := e.Name()
+			if path != "." && (strings.HasPrefix(base, ".") || skip[base]) {
+				return filepath.SkipDir
 			}
+			return nil
 		}
+		if !strings.HasSuffix(e.Name(), ".go") {
+			return nil
+		}
+		dir := filepath.ToSlash(filepath.Dir(path))
+		if dir == "." {
+			return nil // 根包由 doc.go 代表，不算独立的包目录
+		}
+		onDisk[dir] = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("遍历仓库失败: %v", err)
 	}
 	if len(onDisk) == 0 {
 		t.Fatal("⚠️ 磁盘上一个含 .go 的顶层包都没扫到 —— 判据本身可能坏了")
@@ -500,11 +511,13 @@ func TestPackagesDoneMatchesReality(t *testing.T) {
 }
 
 // isPackageName 过滤掉值列里那些不是包名的记号。
+//
+// 包名是相对仓库根的路径，允许 `/`（如 internal/decimalx）。
 func isPackageName(tok string) bool {
 	for _, r := range tok {
-		if !(r >= 'a' && r <= 'z' || r == '_') {
+		if !(r >= 'a' && r <= 'z' || r == '_' || r == '/') {
 			return false
 		}
 	}
-	return true
+	return tok != ""
 }
