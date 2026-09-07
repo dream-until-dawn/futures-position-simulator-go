@@ -422,3 +422,89 @@ func TestForbiddenTableIsNotEmpty(t *testing.T) {
 	}
 	fmt.Fprintf(os.Stderr, "禁语表：%d 条，覆盖 %d 个状态键\n", len(forbidden), len(keys))
 }
+
+// TestPackagesDoneMatchesReality 断言 state.md 的 packages_done 与磁盘一致。
+//
+// ⚠️ 这条针对的是「文档里写着、代码里没有」这类债 —— 上游数据层把它叫做
+// 「从没被代码验证过的类型名与签名」。文档里的规划可以先于代码，
+// 但**声称已完成的那部分必须能被机械核对**，否则「已落地」会悄悄变成「打算做」。
+//
+// 判据只覆盖主模块的顶层包（cmd/ 是嵌套模块，另算）。
+func TestPackagesDoneMatchesReality(t *testing.T) {
+	// 磁盘上：顶层目录里含 .go 文件的
+	onDisk := map[string]bool{}
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("读不到仓库根目录: %v", err)
+	}
+	skip := map[string]bool{"docs": true, "testdata": true, "cmd": true, ".git": true}
+	for _, e := range entries {
+		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") || skip[e.Name()] {
+			continue
+		}
+		files, err := os.ReadDir(e.Name())
+		if err != nil {
+			continue
+		}
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), ".go") {
+				onDisk[e.Name()] = true
+				break
+			}
+		}
+	}
+	if len(onDisk) == 0 {
+		t.Fatal("⚠️ 磁盘上一个含 .go 的顶层包都没扫到 —— 判据本身可能坏了")
+	}
+
+	// state.md 里：packages_done 那一行
+	var declared map[string]bool
+	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
+		if !strings.Contains(l, "packages_done") {
+			continue
+		}
+		// ⚠️ 只取表格的**值列**（第 2 个单元格），不扫整行。
+		//
+		// 首次跑这条守卫时它报了两个假阳性：备注列里写着「（`ctperr` / `refdata`
+		// 未开始）」，而按整行扫反引号会把它们当成「已落地」。
+		// 抓到的是**解析规则没写清楚**，不是文档写错——与标记判定那次同族：
+		// 「怎么算一个值」当时没有定义。
+		cells := strings.Split(l, "|")
+		if len(cells) < 3 {
+			t.Fatalf("⚠️ packages_done 那一行不是三列表格：%q", l)
+		}
+		declared = map[string]bool{}
+		for _, tok := range strings.Split(cells[2], "`") {
+			if tok = strings.TrimSpace(tok); tok != "" && isPackageName(tok) {
+				declared[tok] = true
+			}
+		}
+		break
+	}
+	if declared == nil {
+		t.Fatal("⚠️ state.md 里找不到 packages_done —— 单一状态源缺了这一项")
+	}
+
+	for pkg := range onDisk {
+		if !declared[pkg] {
+			t.Errorf("包 %s 已在磁盘上，但 state.md 的 packages_done 没写它 —— "+
+				"单一状态源落后于代码", pkg)
+		}
+	}
+	for pkg := range declared {
+		if !onDisk[pkg] {
+			t.Errorf("⚠️ state.md 声称 %s 已落地，磁盘上却没有含 .go 的该目录 —— "+
+				"「已落地」不能是打算做", pkg)
+		}
+	}
+}
+
+// isPackageName 过滤掉值列里那些不是包名的记号。
+func isPackageName(tok string) bool {
+	for _, r := range tok {
+		if !(r >= 'a' && r <= 'z' || r == '_') {
+			return false
+		}
+	}
+	return true
+}
