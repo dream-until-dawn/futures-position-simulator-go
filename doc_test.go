@@ -17,6 +17,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -646,4 +647,52 @@ func TestRulesPendingMatchesTable(t *testing.T) {
 func TestKQFactsMatchesTable(t *testing.T) {
 	assertCountMatchesTable(t, "kq_facts",
 		filepath.Join("docs", "state.md"), "## `kq_facts`")
+}
+
+// TestMethodologyItemsAreContiguous 断言 silent-risks.md 的方法论条目编号
+// 从 1 连续到 N，无空号、无重号。
+//
+// ⚠️ **先说清它抓不到什么。** 它抓的是「条目被删掉 / 被重复编号」，
+// 抓不到「小节标题被删掉」——而后者刚刚真的发生过：
+// 我用脚本替换锚点 `--- \n ## 怎么用这份清单` 时，替换文本的结尾没把锚点带回去，
+// 于是那个小节标题连同分隔线被**静默删除**，正文项目符号照常留着，看不出异样。
+// 那次是我自己核出来的，不是守卫。**这条守卫不掩盖那个缺口。**
+//
+// 它仍然值得存在：这份文档的价值全在这串编号上——
+// 别处引用它们时写的是「见第 11 条」，编号一乱，所有引用同时失效而没有任何动静。
+func TestMethodologyItemsAreContiguous(t *testing.T) {
+	re := regexp.MustCompile(`^\*\*(\d+)\. `)
+	var got []int
+	for _, l := range readLines(t, filepath.Join("docs", "silent-risks.md")) {
+		if m := re.FindStringSubmatch(l); m != nil {
+			n, err := strconv.Atoi(m[1])
+			if err != nil {
+				t.Fatalf("条目编号 %q 不是整数", m[1])
+			}
+			got = append(got, n)
+		}
+	}
+	// ⚠️ 迭代次数下界：一条都没解析到时，下面的循环空转，本测试会「通过」。
+	if len(got) < 20 {
+		t.Fatalf("只解析到 %d 条方法论条目 —— 是真的这么少，还是编号格式变了？"+
+			"两种情形下本条都会「通过」，所以这里必须失败", len(got))
+	}
+	for i, n := range got {
+		if n != i+1 {
+			t.Errorf("⚠️ 第 %d 个条目的编号是 %d，应为 %d —— 编号断了，"+
+				"而别处「见第 N 条」的引用会同时失效且不会有任何动静", i+1, n, i+1)
+			break
+		}
+	}
+
+	// 引用完整性：正文里出现的「第 N 条」不得超出实际条数。
+	ref := regexp.MustCompile(`第 (\d+) 条`)
+	for i, l := range readLines(t, filepath.Join("docs", "silent-risks.md")) {
+		for _, m := range ref.FindAllStringSubmatch(l, -1) {
+			n, _ := strconv.Atoi(m[1])
+			if n > len(got) {
+				t.Errorf("silent-risks.md:%d 引用了「第 %d 条」，但只有 %d 条", i+1, n, len(got))
+			}
+		}
+	}
 }
