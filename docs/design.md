@@ -120,10 +120,16 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 
   internal/decimalx/    取整与舍入口径（金额、价格、手续费）
 
-  cmd/refdata-sync/     生成内置快照
-  cmd/conformance/      ← 独立嵌套模块：双口子逐字段对拍
-    diff/                 天勤快期模拟（WebSocket + JSON）
-    ctp/                  SimNow（CTP）
+  cmd/refdata-sync/     生成内置快照（只用 stdlib + 本库，留在主模块）
+
+  cmd/oracle/           ← 独立嵌套模块（自带 go.mod）：一切需要连柜台的工具
+                        oracle = test oracle，**判定真值的那一方**，不是数据库
+    go.mod
+    main.go               两个子命令：oracle probe / oracle conformance
+    probe/                六条判别实验的执行器（v0.1.0 的核心交付物）
+    conformance/          双口子逐字段对拍（v0.2.0 起）
+    kq/                   天勤 DIFF 客户端：WebSocket + RFC 7386 合并
+    ctp/                  SimNow CTP 客户端：含查询节流（goctp 缺这个，见 probes.md §6.3）
 ```
 
 ### 为什么这样切
@@ -140,19 +146,37 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 依赖是一个有向无环图，箭头一律从下往上：
 
 ```
-types ← refdata ← {fee, margin, pnl} ← {position, order, settle, risk, view}
-                                     ← account ← {settle, risk, view}
-                                       order ← match
-                                       futsim ← 以上全部
+types ─┬→ ctperr                       错误码，只依赖 types 的枚举
+       └→ refdata ─→ {fee, margin, pnl} ─┬→ {position, order, settle, risk, view}
+                                          │
+internal/decimalx ────────────────────────┘   取整与舍入口径，被 fee / margin / pnl
+                                              三个纯函数包共同依赖
+
+account ─→ {settle, risk, view}
+order   ─→ match
+futsim  ─→ 以上全部
 ```
+
+`internal/decimalx` 在图里有位置不是形式：**待实测 5（手续费的取整口径）落在它身上**，
+而 `fee` / `margin` / `pnl` 三个包都要用同一套舍入规则。三处各写各的，
+就会出现「同一笔钱在两个包里差一分」这种谁都不报错的分歧。
 
 **硬性约束：主模块的依赖树只有 `github.com/shopspring/decimal` 一个。**
 
-`refdata/live` 引入 `net/http`，故独立成子包；`cmd/conformance` 需要 WebSocket 客户端
+`refdata/live` 引入 `net/http`，故独立成子包；`cmd/oracle` 需要 WebSocket 客户端
 与 CTP 绑定（后者自带数十 MB 的二进制），故做成**嵌套模块**（自带 `go.mod`）——
 若写进主模块，即便使用者从不引用该工具，依赖仍会出现在他们的模块图里。
 
-代价是根目录的 `go build ./...` 不含 `cmd/conformance`，需单独进入执行。
+⚠️ **判别实验的执行器 `probe` 必须和 `conformance` 一起待在这个嵌套模块里。**
+它要连天勤 WebSocket 与 SimNow CTP，放进主模块会当场破掉上面那条硬约束——
+而**破掉的方式是使用者 `go get` 之后才在自己的模块图里看见一个 WebSocket 依赖，
+本仓库这边没有任何报错**。两者合成一个模块的两个子命令，还顺带共用凭据读取、
+传输层与夹具目录，这三样本来就重叠。
+
+`cmd/refdata-sync` 留在主模块：它只用 stdlib 与本库，不引入任何第三方依赖。
+
+代价是根目录的 `go build ./...` 不含 `cmd/oracle`，需单独进入执行。
+CI 要分别对两个模块跑，漏掉第二个就等于对拍工具永远没被编译过。
 
 > **包边界在 v1.0.0 之前可以调整。** 若某个边界在实现中被证明会逼出别扭的类型
 > （典型症状：为了跨包传参而定义一堆只用一次的结构体），就合并它，并在
@@ -217,7 +241,7 @@ types ← refdata ← {fee, margin, pnl} ← {position, order, settle, risk, vie
 
 | 截面 | 字段 |
 |---|---|
-| `trade/{user}/accounts/CNY` | 18 个：`pre_balance` `static_balance` `balance` `available` `margin` `frozen_margin` `frozen_commission` `commission` `close_profit` `position_profit` `float_profit` `risk_ratio` … |
+| `trade/{user}/accounts/CNY` | **23 个**（DIFF 文档只列了 18，实测多 5 个，见 [probes.md](./probes.md) §6.2）：`pre_balance` `static_balance` `balance` `available` `margin` `frozen_margin` `frozen_commission` `commission` `close_profit` `position_profit` `float_profit` `risk_ratio` … |
 | `trade/{user}/positions/{symbol}` | 28 个：`volume_long_today/his` `volume_short_today/his` 及各自的冻结、`open_price_*` `open_cost_*` `position_price_*` `position_cost_*` `float_profit_*` `position_profit_*` `margin_*` `order_volume_*` |
 | `orders` / `trades` | 报单与成交明细 |
 | `quotes/{symbol}` | `volume_multiple` `price_tick` `margin` `commission` `upper_limit` `lower_limit` `pre_settlement` `settlement` … |
@@ -253,8 +277,18 @@ CTP 是国内柜台的事实标准，SimNow 就是 CTP 本身。它比天勤更�
 
 沿用参照项目已被证明有效的一条：
 
-> **逐字段比对，每个字段要么值对得上，要么在 `policy.go` 里写明为什么不建模。
-> 两样都没有就判失败。**
+> **逐字段比对，每个字段落进三档之一：**
+>
+> 1. **值对得上，且本次样本内被触发过** —— 唯一算通过的一档
+> 2. **已声明不建模，且带到期版本**（`NotModeledUntil`）
+> 3. **值对得上，但本次样本内从未被触发** —— ⚠️ **单独计数，不算通过**
+>
+> 三档之外的，判失败。
+
+第三档是后加的，堵的是**零值假通过**：字段两边都是零、本次样本从未触发它，
+对拍照样判「一致」。本仓库第一次连上快期模拟就撞见了它的样子——空仓时
+`balance == ctp_balance == 1000000.0`，看起来两个口径完全一致，实际什么都没证明。
+展开见 [fidelity.md](./fidelity.md) §2。
 
 挑着比永远发现不了「有个字段我压根没建模」。参照项目在补上全字段对拍的当天
 就暴露出 35 处差异与 4 个从未建模的字段。
@@ -284,12 +318,19 @@ CTP 是国内柜台的事实标准，SimNow 就是 CTP 本身。它比天勤更�
 
 ---
 
-## 7. 待用户提供
+## 7. 外部依赖：已解除
 
-见 [probes.md](./probes.md) 的「待办」。当前阻塞项：
+✅ **两套凭据都已配好并端到端跑通**（2026-09-07，见 [probes.md](./probes.md) §6）：
 
-1. **快期账户**（用户已有）—— 需要账号密码写进 `.env`（已在 `.gitignore`，不入库）
-2. **SimNow 账户**（免费，待注册）—— <https://www.simnow.com.cn/>
+| | 状态 |
+|---|---|
+| 快期账户 | 已配置，DIFF 通路登录成功，`wss://otg-sim.shinnytech.com/trade` |
+| SimNow 账户 | 已配置，CTP 登录成功，`TradingDay=20260907` |
 
-在拿到之前，cn-futures-rules.md 里的 **6 条待实测**无法收敛，
-本项目关于「与真实柜台一致」的任何说法都只是**计划**，不是结论。
+凭据在 `.env`（已在 `.gitignore`，不入库），模板见 [`.env.example`](../.env.example)。
+
+⚠️ **但阻塞只解除了一半。** cn-futures-rules.md 里的 **6 条待实测仍全部未收敛**
+——不再是因为连不上，而是因为**实验还没跑**。
+
+**能连上柜台，和从柜台问出正确答案，中间隔着六个实验。**
+在它们收敛之前，本项目关于「与真实柜台一致」的任何说法都只是**计划**，不是结论。
