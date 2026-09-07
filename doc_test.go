@@ -307,25 +307,42 @@ func TestForbiddenPhraseRuleIsWellDefined(t *testing.T) {
 	}
 }
 
-// TestMarkerJudgmentIsAbsolute 是**绝对断言**，不是相对断言。
+// TestMarkerJudgmentIsAbsolute 是**绝对断言**，而且它打在扫描器的**可观测输出**上。
 //
-// ⚠️ 一致性检查有一条它永远够不到的边界：**两侧被同样地改**。
-// 实测：把两个实现的标记判定同时从「整行相等」退回「行内含有」，
-// 一致性测试**全绿**——两版一致地错，而它只看是否一致。
+// ⚠️ 第一版不是这样写的，它抄了一份判定逻辑来断言，结果守错了东西：
 //
-// 相对断言（两版是否一致）与绝对断言（这一行到底算不算标记）是两种不同的保护：
+//	gotStart1 := strings.TrimSpace(c.line) == archiveStart  // 测试自己重抄了一遍
+//	inner, ok := htmlCommentBody(c.line)                    // 调的是真函数
 //
-//	一致性  抓「一侧漂移」   —— 有人只改了其中一个实现
-//	绝对    抓「两侧同改」   —— 规则被整体改错，或被人「统一修正」
+// 前者是**副本**：改扫描器，副本不动，照样绿。
+// 后者调了真货，但只要扫描器**不再调它**，函数还在、还是对的、还被测着，
+// **只是没人用了**。
 //
-// 所以两者都要有。这条断言里的期望值是**手写死的**，不引用任何被测代码，
-// 否则它会随被测代码一起漂。
+// 于是那一版证明的是「这两份判定逻辑是对的」，
+// **不是「两个扫描器跑的是那两份判定」**——中间那根线没有任何东西在守。
+// 实测：两侧扫描器同时退回「行内含有」、断言一个字不改 → 全绿。
+//
+// 这与前几轮抓到的是同一族，只是又高了一层：
+//
+//	一开始   有东西没被检查
+//	上一轮   检查在某处悄悄降级成更弱的检查
+//	这一轮   检查还在、还是对的，只是被测的代码已经不走它了
+//
+// 共同点仍是：**降级 / 脱钩本身不产生任何信号。**
+//
+// 界线因此有两条，方向相反：
+//
+//	两个实现之间：共享数据可以，共享判定不行
+//	断言与被测代码之间：断言必须打在真实代码路径上
+//
+// **抄一份逻辑来断言，守的是副本；调一个函数来断言，守的是函数；
+// 只有喂进入口，守的才是行为。**
 func TestMarkerJudgmentIsAbsolute(t *testing.T) {
 	cases := []struct {
-		line      string
-		wantStart bool
-		wantEnd   bool
-		why       string
+		line    string
+		isStart bool
+		isEnd   bool
+		why     string
 	}{
 		{"<!-- 历史留档:start -->", true, false, "标准写法"},
 		{"  <!-- 历史留档:start -->  ", true, false, "两侧空白应被容忍"},
@@ -341,25 +358,32 @@ func TestMarkerJudgmentIsAbsolute(t *testing.T) {
 	if len(cases) != 8 {
 		t.Fatalf("用例数应为 8，实际 %d —— 增删了就同步更新下界", len(cases))
 	}
-	for _, c := range cases {
-		// 判定之一：scanDepth 侧用的「整行相等」
-		gotStart1 := strings.TrimSpace(c.line) == archiveStart
-		gotEnd1 := strings.TrimSpace(c.line) == archiveEnd
-		// 判定之二：scanFlag 侧用的「解析注释内文」
-		inner, ok := htmlCommentBody(c.line)
-		gotStart2 := ok && inner == "历史留档:start"
-		gotEnd2 := ok && inner == "历史留档:end"
 
-		for i, got := range []bool{gotStart1, gotStart2} {
-			if got != c.wantStart {
-				t.Errorf("判定之%d 对 %q 的 start 判断 = %v，期望 %v（%s）",
-					i+1, c.line, got, c.wantStart, c.why)
+	scanners := []struct {
+		name string
+		fn   func([]string) map[int]bool
+	}{{"深度计数版", scanDepth}, {"布尔开关版", scanFlag}}
+
+	for _, c := range cases {
+		// 每条样本造成两行文档：第 1 行是待判定的那一行，第 2 行是一句裸禁语。
+		// 断言第 2 行**是否被豁免**——即扫描器有没有把第 1 行认成开始标记。
+		// 期望值仍是手写死的，但走的是**真实代码路径**。
+		openDoc := []string{c.line, "六条"}
+		for _, sc := range scanners {
+			if got := sc.fn(openDoc)[2]; got != c.isStart {
+				t.Errorf("%s：把 %q 之后的一行判为豁免=%v，期望 %v（%s）",
+					sc.name, c.line, got, c.isStart, c.why)
 			}
 		}
-		for i, got := range []bool{gotEnd1, gotEnd2} {
-			if got != c.wantEnd {
-				t.Errorf("判定之%d 对 %q 的 end 判断 = %v，期望 %v（%s）",
-					i+1, c.line, got, c.wantEnd, c.why)
+
+		// 对称地测结束标记：先真开一个块，再看这一行能不能把它关上。
+		closeDoc := []string{archiveStart, c.line, "六条"}
+		for _, sc := range scanners {
+			// 第 3 行仍在块内 ⟺ 第 2 行**没有**关掉块。
+			stillInside := sc.fn(closeDoc)[3]
+			if stillInside == c.isEnd {
+				t.Errorf("%s：%q 关闭留档块的能力判为 %v，期望 %v（%s）",
+					sc.name, c.line, !stillInside, c.isEnd, c.why)
 			}
 		}
 	}
