@@ -93,7 +93,7 @@
 | `docs/design.md` | 26 |
 | `docs/cn-futures-rules.md` | 39 |
 | `docs/fidelity.md` | 21 |
-| `docs/probes.md` | 28 |
+| `docs/probes.md` | 32 |
 | `docs/roadmap.md` | 20 |
 | `docs/silent-risks.md` | 12 |
 | `docs/state.md` | 10 |

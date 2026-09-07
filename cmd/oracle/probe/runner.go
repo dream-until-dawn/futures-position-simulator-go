@@ -79,6 +79,10 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expFeeForm(ctx)
 	case "frozen":
 		return r.expFrozen(ctx)
+	case "settle-check":
+		return r.expSettleCheck(ctx)
+	case "close-profit-sign":
+		return r.expCloseProfitSign(ctx)
 	case "reject-code":
 		return r.expRejectCode(ctx)
 	case "overnight-setup":
