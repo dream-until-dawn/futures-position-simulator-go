@@ -27,20 +27,24 @@ const (
 	sourceOfTrue = "state.md"
 )
 
-// isMarker 判定一行**整行就是**某个标记。
+// ⚠️⚠️ 共享面清单 —— 双实现机制的**盲区清单**
 //
-// ⚠️ 用「整行相等」而不是「行内含有」，是被守卫的守卫当场逼出来的：
-// state.md 在**定义**标记时必然要**提到**它们，
+// 双实现的判别力**全部来自两个实现的独立性**。任何被它们共享的东西，
+// 都在一致性检查的射程之外：共享的代码一起变，两版一致地错，
+// 而一致性检查只看是否一致。
 //
-//	> ② 不在 `<!-- 历史留档:start -->` … `<!-- 历史留档:end -->` 块内；
+//	可以共享（输入）：forbidden 表、archiveStart/End 常量、readLines、docFiles
+//	                  —— 共享它们正是为了让两版跑在同一批数据上
+//	不可共享（判定）：「什么算一个标记」、「什么算围栏」、豁免的四条判据
+//	                  —— 各写各的，哪怕只有一行
 //
-// 这一行同时含有 start 与 end，按「含有」判定会被读成一个未闭合的 start，
-// 于是 state.md 结束时 depth=1。
+// 这条界线是被实测逼出来的：曾有一个共享的 isMarker(line, marker) helper，
+// 把它从「整行相等」改成「行内含有」，**两个实现一起退化、测试全绿**。
+// 而合成样本里偏偏有一条就叫「标记只是被提到、不独占整行」——
+// **名字精确对准了这个缺陷，结构上却不可能因它而失败。**
+// 一个这样的用例比没有这条用例更糟：它让人以为这块被覆盖了。
 //
-// 这与「字典必然包含它定义的每一个词」是同一个形状，只是从禁语层跑到了标记层。
-// 而它暴露的是规则的另一处未定义：**「怎么算一个标记」当时根本没写。**
-// 两个实现可以在「含有」与「整行是」上分道扬镳，而两条都读得通。
-func isMarker(line, marker string) bool { return strings.TrimSpace(line) == marker }
+// 界线：**共享数据可以，共享判定不行。**
 
 // forbidden 是 docs/state.md「派生禁语」表的机械副本。
 //
@@ -113,13 +117,13 @@ func TestArchiveMarkersBalance(t *testing.T) {
 		depth, startLines := 0, []int{}
 		for i, l := range readLines(t, path) {
 			switch {
-			case isMarker(l, archiveStart):
+			case strings.TrimSpace(l) == archiveStart:
 				depth++
 				startLines = append(startLines, i+1)
 				if depth > 1 {
 					t.Errorf("%s:%d 历史留档块嵌套（depth=%d），规则不允许嵌套", path, i+1, depth)
 				}
-			case isMarker(l, archiveEnd):
+			case strings.TrimSpace(l) == archiveEnd:
 				depth--
 				if depth < 0 {
 					t.Errorf("%s:%d 出现多余的 end（没有对应的 start）", path, i+1)
@@ -145,12 +149,12 @@ func scanDepth(lines []string) map[int]bool {
 			exempt[i+1] = true
 			continue
 		}
-		if isMarker(l, archiveStart) {
+		if trimmed == archiveStart { // 判定之一：整行相等
 			depth++
 			exempt[i+1] = true
 			continue
 		}
-		if isMarker(l, archiveEnd) {
+		if trimmed == archiveEnd {
 			if depth > 0 {
 				depth--
 			}
@@ -177,12 +181,13 @@ func scanFlag(lines []string) map[int]bool {
 			exempt[n] = true
 			continue
 		}
-		if isMarker(l, archiveStart) {
+		// 判定之二：把它当 HTML 注释解析出内文再比，与 scanDepth 的写法刻意不同。
+		if inner, ok := htmlCommentBody(l); ok && inner == "历史留档:start" {
 			inArchive = true
 			exempt[n] = true
 			continue
 		}
-		if isMarker(l, archiveEnd) {
+		if inner, ok := htmlCommentBody(l); ok && inner == "历史留档:end" {
 			inArchive = false
 			exempt[n] = true
 			continue
@@ -199,6 +204,18 @@ func scanFlag(lines []string) map[int]bool {
 		}
 	}
 	return exempt
+}
+
+// htmlCommentBody 把一整行解析成 HTML 注释的内文。
+//
+// 它是 scanFlag 侧对「什么算一个标记」的**独立判断**，与 scanDepth 的
+// 「整行等于常量」不共用任何代码——见上方共享面清单。
+func htmlCommentBody(line string) (string, bool) {
+	t := strings.TrimSpace(line)
+	if !strings.HasPrefix(t, "<!--") || !strings.HasSuffix(t, "-->") {
+		return "", false
+	}
+	return strings.TrimSpace(t[len("<!--") : len(t)-len("-->")]), true
 }
 
 type hit struct {
@@ -286,6 +303,64 @@ func TestForbiddenPhraseRuleIsWellDefined(t *testing.T) {
 	for i := range a {
 		if a[i] != b[i] {
 			t.Errorf("第 %d 处不一致：%+v vs %+v", i, a[i], b[i])
+		}
+	}
+}
+
+// TestMarkerJudgmentIsAbsolute 是**绝对断言**，不是相对断言。
+//
+// ⚠️ 一致性检查有一条它永远够不到的边界：**两侧被同样地改**。
+// 实测：把两个实现的标记判定同时从「整行相等」退回「行内含有」，
+// 一致性测试**全绿**——两版一致地错，而它只看是否一致。
+//
+// 相对断言（两版是否一致）与绝对断言（这一行到底算不算标记）是两种不同的保护：
+//
+//	一致性  抓「一侧漂移」   —— 有人只改了其中一个实现
+//	绝对    抓「两侧同改」   —— 规则被整体改错，或被人「统一修正」
+//
+// 所以两者都要有。这条断言里的期望值是**手写死的**，不引用任何被测代码，
+// 否则它会随被测代码一起漂。
+func TestMarkerJudgmentIsAbsolute(t *testing.T) {
+	cases := []struct {
+		line      string
+		wantStart bool
+		wantEnd   bool
+		why       string
+	}{
+		{"<!-- 历史留档:start -->", true, false, "标准写法"},
+		{"  <!-- 历史留档:start -->  ", true, false, "两侧空白应被容忍"},
+		{"<!-- 历史留档:end -->", false, true, "结束标记"},
+		{"讲 <!-- 历史留档:start --> 这个标记", false, false, "⚠️ 只是被提到，不独占整行"},
+		{"> ② 不在 `<!-- 历史留档:start -->` … `<!-- 历史留档:end -->` 块内；", false, false,
+			"⚠️ state.md 定义标记的那一行，同时含 start 与 end"},
+		{"<!-- 其它注释 -->", false, false, "别的 HTML 注释"},
+		{"历史留档:start", false, false, "缺注释包裹"},
+		{"", false, false, "空行"},
+	}
+	// 下界用确切条数，不是 > 0。
+	if len(cases) != 8 {
+		t.Fatalf("用例数应为 8，实际 %d —— 增删了就同步更新下界", len(cases))
+	}
+	for _, c := range cases {
+		// 判定之一：scanDepth 侧用的「整行相等」
+		gotStart1 := strings.TrimSpace(c.line) == archiveStart
+		gotEnd1 := strings.TrimSpace(c.line) == archiveEnd
+		// 判定之二：scanFlag 侧用的「解析注释内文」
+		inner, ok := htmlCommentBody(c.line)
+		gotStart2 := ok && inner == "历史留档:start"
+		gotEnd2 := ok && inner == "历史留档:end"
+
+		for i, got := range []bool{gotStart1, gotStart2} {
+			if got != c.wantStart {
+				t.Errorf("判定之%d 对 %q 的 start 判断 = %v，期望 %v（%s）",
+					i+1, c.line, got, c.wantStart, c.why)
+			}
+		}
+		for i, got := range []bool{gotEnd1, gotEnd2} {
+			if got != c.wantEnd {
+				t.Errorf("判定之%d 对 %q 的 end 判断 = %v，期望 %v（%s）",
+					i+1, c.line, got, c.wantEnd, c.why)
+			}
 		}
 	}
 }
