@@ -101,6 +101,16 @@ go env -w GOPROXY=https://goproxy.cn,direct
 ⚠️ **本机 `proxy.golang.org` 不可达**（[probes.md](docs/probes.md) §1）。
 不设 `GOPROXY` 会挂在第一个依赖上，而报错信息不会指向真正的原因。
 
+对拍与探针需要柜台凭据：
+
+```bash
+cp .env.example .env
+```
+
+[`.env.example`](.env.example) 里逐项说明了每个值从哪里取。`.env` 已在 `.gitignore`。
+**主库 `futsim` 不读任何环境变量**——它是纯计算库，不联网；凭据只被
+`cmd/probe` 与 `cmd/conformance`（独立嵌套模块）使用。
+
 分支约定见 [roadmap.md](docs/roadmap.md)：`dev` 是开发分支，`main` 只接受来自 `dev`
 的合并并在合并时打 tag。
 
