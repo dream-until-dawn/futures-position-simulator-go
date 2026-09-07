@@ -86,7 +86,7 @@
 
 | 口子 | 协议 | 角色 |
 |---|---|---|
-| 天勤快期模拟 | JSON over WebSocket（DIFF，RFC 7386 merge patch） | **主对拍**：账户 **23** 字段 + 持仓 28 字段 + 报单成交。纯 Go 可达，无需 cgo（**已实测跑通**） |
+| 天勤快期模拟 | JSON over WebSocket（DIFF，RFC 7386 merge patch） | **主对拍**：账户与持仓的**全部**字段 + 报单成交（数量见 [state.md](docs/state.md)）。纯 Go 可达，无需 cgo（**已实测跑通**） |
 | SimNow（CTP） | CTP API（Windows 走 `syscall`，Linux 走 cgo） | **权威裁决**：两套平仓盈亏口径、完整费率表、以及测量天勤与真实柜台的口径差 |
 
 再加一条中国期货特有的、也是最有力的：**结算单对拍**。

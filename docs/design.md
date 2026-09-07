@@ -126,7 +126,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
                         oracle = test oracle，**判定真值的那一方**，不是数据库
     go.mod
     main.go               两个子命令：oracle probe / oracle conformance
-    probe/                六条判别实验的执行器（v0.1.0 的核心交付物）
+    probe/                判别实验的执行器（v0.1.0 的核心交付物）
     conformance/          双口子逐字段对拍（v0.2.0 起）
     kq/                   天勤 DIFF 客户端：WebSocket + RFC 7386 合并
     ctp/                  SimNow CTP 客户端：含查询节流（goctp 缺这个，见 probes.md §6.3）
@@ -425,5 +425,5 @@ if bar.TradingDay != prev.TradingDay { sim.Settle(...) }   // 先结上一日，
 凭据在 `.env`（已在 `.gitignore`，不入库），模板见 [`.env.example`](../.env.example)。
 
 ⚠️ **「能连上柜台」与「规则已实测」是两件事**，进度上极易混为一谈。
-后者以 [cn-futures-rules.md](./cn-futures-rules.md) §13 的六条判别实验为准，
+后者以 [cn-futures-rules.md](./cn-futures-rules.md) §13 的判别实验为准（条数见 [state.md](./state.md)），
 且「实测」必须带**来源**与**性质**两个坐标，见该文件表头。
