@@ -33,14 +33,21 @@ func usage() {
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
   oracle status                    只读：登录并打印账户与持仓截面
 
-实验名称:
-  status          只读连通性自检（做到协议层登录，不是 TCP 层）
-  margin-price    实验 1：盘中保证金用哪个价
-  profit-price    实验 2：盘中持仓盈亏用哪个价
-  max-margin-side 实验 3：单向大边按品种还是按合约合并
-  close-order     实验 4：NoUseHistory 合约的平仓消耗顺序
-  fee-rounding    实验 5：手续费的取整口径
-  reject-code     实验 6：报单被拒的错误码
+实验名称（当日即可跑）:
+  status           连通性自检（做到协议层登录，不是 TCP 层）
+  reject-code      实验 6：报单被拒时柜台的原话
+  max-margin-side  实验 3：单向大边按品种还是按合约合并（需两个同品种不同月份合约）
+  margin-price     实验 1/2 今仓版：只能排除「连续重估」这一个候选
+  flatten          把账户平回空仓
+
+需要昨仓（先在前一交易日跑 overnight-setup，等一次结算）:
+  overnight-setup  建立过夜种子
+  baseline-full    实验 1b/2 完整版：margin 与 position_profit 各自的价格基线
+  close-order      实验 4：NoUseHistory 合约的平仓消耗顺序
+  yd-vs-his        实验 7：volume_long_yd 与 volume_long_his 的差别
+
+尚未实现:
+  fee-rounding     实验 5：手续费取整口径 —— 需要 CTP 的六个费率，天勤只给「每手」
 `)
 }
 

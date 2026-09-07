@@ -62,6 +62,16 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expMaxMarginSide(ctx)
 	case "reject-code":
 		return r.expRejectCode(ctx)
+	case "overnight-setup":
+		return r.expOvernightSetup(ctx)
+	case "baseline-full":
+		return r.expBaselineFull(ctx)
+	case "close-order":
+		return r.expCloseOrder(ctx)
+	case "yd-vs-his":
+		return r.expYdVsHis(ctx)
+	case "flatten":
+		return r.expFlattenAll(ctx)
 	default:
 		return fmt.Errorf("未实现的实验: %s", exp)
 	}

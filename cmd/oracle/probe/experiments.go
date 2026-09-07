@@ -269,3 +269,85 @@ func (r *Runner) flatten(sym string, dir kq.Direction) error {
 	}
 	return fmt.Errorf("⚠️ 平仓失败，**账户仍有持仓** %s %.0f 手，请手工处理", sym, volToday)
 }
+
+// expFlattenAll 把账户平回空仓，让下一条实验有一个可复现的起点。
+//
+// ⚠️ 它逐个方向、逐个开平标志地试，失败也继续试下一个，最后**如实汇报还剩什么**。
+// 平不掉时绝不静默返回成功——账上留着仓而报告说干净，是最坏的一种结果。
+func (r *Runner) expFlattenAll(ctx context.Context) error {
+	cli := r.cli
+	if err := cli.ConnectQuote(ctx); err != nil {
+		return err
+	}
+	var syms []string
+	for s := range cli.Positions() {
+		syms = append(syms, s)
+	}
+	if len(syms) == 0 {
+		r.Logf("账户无持仓记录，无需处理")
+		return nil
+	}
+	if err := cli.SubscribeQuotes(syms...); err != nil {
+		return err
+	}
+	r.Logf("")
+	r.Logf("== 平回空仓 ==")
+	r.Logf("  起始持仓 %.0f 手，涉及 %d 个合约记录", cli.OpenLots(), len(syms))
+
+	var failed []string
+	for _, sym := range syms {
+		for _, dir := range []kq.Direction{kq.Buy, kq.Sell} {
+			if err := r.flattenAny(sym, dir); err != nil {
+				failed = append(failed, fmt.Sprintf("%s/%s: %v", sym, dir, err))
+			}
+		}
+	}
+	cli.WaitTrade(5 * time.Second)
+	left := cli.OpenLots()
+	r.Logf("")
+	if left > 0 || len(failed) > 0 {
+		for _, f := range failed {
+			r.Logf("  ⚠️ %s", f)
+		}
+		return fmt.Errorf("⚠️ **账户仍有 %.0f 手持仓**，请人工处理", left)
+	}
+	r.Logf("  已平回空仓")
+	return nil
+}
+
+// flattenAny 平掉某方向的今昨仓，今仓用平今、昨仓用平昨。
+func (r *Runner) flattenAny(sym string, dir kq.Direction) error {
+	cli := r.cli
+	p := cli.PositionOf(sym)
+	closeDir, todayKey, hisKey := kq.Sell, "volume_long_today", "volume_long_his"
+	if dir == kq.Sell {
+		closeDir, todayKey, hisKey = kq.Buy, "volume_short_today", "volume_short_his"
+	}
+	today, his := kq.MustNum(p, todayKey), kq.MustNum(p, hisKey)
+	if today+his <= 0 {
+		return nil
+	}
+	q, ok := cli.WaitQuoteReady(sym, 20*time.Second)
+	if !ok {
+		return fmt.Errorf("行情未就绪（原因未确定），仍有 %.0f 手", today+his)
+	}
+	ex, inst := splitSymbol(sym)
+	for _, leg := range []struct {
+		off kq.Offset
+		vol float64
+	}{{kq.CloseToday, today}, {kq.Close, his}} {
+		for i := 0; i < int(leg.vol); i++ {
+			id, err := cli.InsertOrder(r.guard(), kq.OrderReq{
+				Exchange: ex, Instrument: inst, Direction: closeDir,
+				Offset: leg.off, Volume: 1, LimitPrice: q.AggressivePrice(closeDir)})
+			if err != nil {
+				return err
+			}
+			st, done := cli.WaitOrderFinished(id, 30*time.Second)
+			if !done || st.VolumeLeft != 0 {
+				return fmt.Errorf("%s 第 %d 手未成（status=%q msg=%q）", leg.off, i+1, st.Status, st.LastMsg)
+			}
+		}
+	}
+	return nil
+}
