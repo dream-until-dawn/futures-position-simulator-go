@@ -140,7 +140,7 @@ ls "$MOD/v6.5.1_20200908/win_x64/"    # thosttraderapi_se.dll .lib .h …
 - 模块自带 CTP v6.5.1 的头文件、win_x64 的 `.dll`/`.lib`、以及 Linux 的 `.so`
 
 ⚠️ 但它仍然是**一个带二进制的第三方模块**。按 design.md 的依赖硬约束，它只能进
-`cmd/conformance` 这个**独立嵌套模块**，绝不进主模块。
+`cmd/oracle` 这个**独立嵌套模块**，绝不进主模块。
 
 ---
 
@@ -230,7 +230,7 @@ curl -sL https://openmd.shinnytech.com/t/md/symbols/latest.json
 **200，无需认证**，约 8 MB，覆盖全市场合约与指数，每条带
 `class` `exchange_id` `instrument_id` `ins_name` `volume_multiple` `price_tick` `price_decs` 等。
 
-这解决了 §2 里「SHFE 的合约参数端点全 404」那个缺口——合约规格不必去爬六家交易所。
+这解决了 §7 表里「SHFE 的合约参数端点全 404」那个缺口——合约规格不必去爬六家交易所。
 
 ⚠️ 但**本机下载它不稳定**：`curl` 两次都在传输中途被截断（167 KB 与 8.05 MB 处
 各断在一个未闭合的字符串上），PowerShell 走得通但很慢。
@@ -359,6 +359,9 @@ v0.8.0 的双口子交叉验。这条要写进 v0.1.0 的实验清单。
 ---
 
 ## 待办（需要账号）
+
+> ✅ **两项均已完成（2026-09-07 14:2x），实测结果见 §6。** 下面保留原文，
+> 是为了让「当时缺什么、拿到后验出了什么」这条线索完整。
 
 ### 1. 快期账户（使用者已有）
 

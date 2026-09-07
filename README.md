@@ -13,9 +13,12 @@
 > [适用边界与保真度](docs/fidelity.md)；**出问题时不报错的那些**单列在
 > [静默风险清单](docs/silent-risks.md)。
 >
-> ⚠️ **尚无任何一条规则经过实测。** 规则调研里的每一条都标着证据等级，
-> 现在全部是「文档」或「待实测」。需要柜台账号才能推进，见
-> [探针报告](docs/probes.md) 的「待办」。
+> ⚠️ **通路已实测，规则尚未实测。** 两条对拍通路（天勤快期模拟 / SimNow CTP）
+> 都已在本机跑通并登录成功（[probes.md](docs/probes.md) §6）；但
+> [规则调研](docs/cn-futures-rules.md) 里的每一条仍是「文档」或「待实测」等级，
+> **6 条判别实验一条都还没跑**。
+>
+> 「通路通了」不等于「规则对了」—— 这两件事在进度上很容易被混为一谈。
 
 ---
 
@@ -80,7 +83,7 @@
 
 | 口子 | 协议 | 角色 |
 |---|---|---|
-| 天勤快期模拟 | JSON over WebSocket（DIFF，RFC 7386 merge patch） | **主对拍**：账户 18 字段 + 持仓 28 字段 + 报单成交。纯 Go 可达，无需 cgo |
+| 天勤快期模拟 | JSON over WebSocket（DIFF，RFC 7386 merge patch） | **主对拍**：账户 **23** 字段 + 持仓 28 字段 + 报单成交。纯 Go 可达，无需 cgo（**已实测跑通**） |
 | SimNow（CTP） | CTP API（Windows 走 `syscall`，Linux 走 cgo） | **权威裁决**：两套平仓盈亏口径、完整费率表、以及测量天勤与真实柜台的口径差 |
 
 再加一条中国期货特有的、也是最有力的：**结算单对拍**。
@@ -109,7 +112,7 @@ cp .env.example .env
 
 [`.env.example`](.env.example) 里逐项说明了每个值从哪里取。`.env` 已在 `.gitignore`。
 **主库 `futsim` 不读任何环境变量**——它是纯计算库，不联网；凭据只被
-`cmd/probe` 与 `cmd/conformance`（独立嵌套模块）使用。
+`cmd/oracle`（独立嵌套模块，含 `probe` 与 `conformance` 两个子命令）使用。
 
 分支约定见 [roadmap.md](docs/roadmap.md)：`dev` 是开发分支，`main` 只接受来自 `dev`
 的合并并在合并时打 tag。
