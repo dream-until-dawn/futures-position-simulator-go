@@ -56,14 +56,25 @@ type Guard struct {
 
 // Check 校验一笔委托是否被安全阀放行。
 //
-// ⚠️ MaxVolume 只管**开仓**。
+// ⚠️ MaxVolume 放过的是**已识别的平仓**，不是「非开仓」。
 //
-// 它原先对所有委托一视同仁，结果是：一次实验意外建到 2 手，
+// 上限原先对所有委托一视同仁，结果是：一次实验意外建到 2 手，
 // 收尾平仓要发 2 手的单，被 MaxVolume=1 挡下——**账上留着仓，平不掉**。
 // 一个用来防止扩大风险的守卫，反过来阻止了缩小风险。
+// 平仓只会让敞口变小或归零，所以它不该受开仓上限约束。
 //
-// 平仓单不会让敞口变大，只会变小或归零，所以不受手数上限约束。
-// 上限仍然管住真正的风险来源：开仓。
+// ⚠️ 但修那次故障时我写成了「是开仓才拦」（`r.Offset == Open`），**那是个洞**：
+// Offset 的底层类型是 string，零值是 ""，而常量只有三个——
+// 于是任何未设置或拼错的 Offset 都绕过了上限，实测 ""、"BUYOPEN"、
+// "open"、"CLOSE_TODAY" 全部放行。这是真账户上的安全阀，
+// 而它的**失败方向朝着「不拦」**。
+//
+// 更要记的是这个洞的来历：人在修「阀门太紧」的故障时，会本能地往松了调，
+// 而**松的方向恰好是危险的方向**。
+//
+// 所以判据翻过来：不是已识别的平仓，就按开仓对待、就拦。
+// 将来加 CloseYesterday 而漏改这里，后果从「安全阀失效」变成「多拦一次」——
+// 后者会立刻被看见。
 func (g Guard) Check(r OrderReq) error {
 	if !g.AllowOrder {
 		return fmt.Errorf("下单被安全阀拦下：PROBE_ALLOW_ORDER 未开启（%s）", r)
@@ -71,8 +82,10 @@ func (g Guard) Check(r OrderReq) error {
 	if r.Volume <= 0 {
 		return fmt.Errorf("手数必须为正，得到 %d", r.Volume)
 	}
-	if g.MaxVolume > 0 && r.Offset == Open && r.Volume > g.MaxVolume {
-		return fmt.Errorf("开仓手数 %d 超过上限 PROBE_MAX_VOLUME=%d（%s）", r.Volume, g.MaxVolume, r)
+	isClose := r.Offset == Close || r.Offset == CloseToday
+	if g.MaxVolume > 0 && !isClose && r.Volume > g.MaxVolume {
+		return fmt.Errorf("手数 %d 超过上限 PROBE_MAX_VOLUME=%d（开平标志 %q 不是已识别的平仓，按开仓对待）（%s）",
+			r.Volume, g.MaxVolume, r.Offset, r)
 	}
 	if r.LimitPrice <= 0 {
 		return fmt.Errorf("限价必须为正，得到 %v（%s）", r.LimitPrice, r)

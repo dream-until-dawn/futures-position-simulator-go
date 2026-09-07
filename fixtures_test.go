@@ -1,9 +1,11 @@
 package futsim
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -80,92 +82,63 @@ func TestFixturesNoFieldDrift(t *testing.T) {
 	}
 }
 
-// selfRef 标记「这一行是判据自身的一部分，扫描时跳过」。
+// ⚠️ 「怎么算一次凭据读取」——这条判据换过**四次**，前三次都错在同一件事上：
+// 我在**文本**里找模式，而判据自己就写在文本里。
 //
-// ⚠️ 自引用豁免必须**先于**判据设计好，不能等它红在自己身上再补。
-// 本文件已经为此红过两次：先是判据写成「文中出现 .env」——注释里说明
-// 「本层不读它」的那句话就把它点着了；改成「有没有真去读」之后，
-// 存放这些调用形态的字符串列表**自己**又含有那些形态。
-// 两次都不是被查对象出了问题，是判据没说清「怎么算一次读取」。
-const selfRef = "// 判据自身"
-
-// TestFixtureScanDeclaresItsBlindSpot 把这层扫描**查不了**的东西钉成一条断言。
+//	一跑  「文中出现 .env」        → 红在自己的注释上：说明「本层不读它」那句必然含它
+//	二跑  「有没有真去读」          → 红在自己的模式列表上：存放调用形态的字符串就是那些形态
+//	三跑  加行级豁免 `// 判据自身`  → 又红在讲这个标记的说明文字上
+//	四跑  再加「纯注释行跳过」      → 还是红：测试样本里的**字符串字面量**长得像调用
 //
-// ⚠️ 它查不了「夹具里有没有出现凭据文件里的密码」——CI 上没有那个文件，
-// 有也不该让测试去读。所以这一层只能查**形状**，查不了**具体值**。
+// 前三次我都在**加豁免**，而豁免只会越加越宽，且每一条都要人记住。
+// 第四次才看清：**病根不在漏了哪种豁免，在于判据的种类选错了。**
 //
-// 这条测试的作用是：谁要是哪天把凭据读进这一层，
-// 「本层不读凭据」这条约束会立刻红，而不是悄悄多出一个凭据读取点。
-func TestFixtureScanDeclaresItsBlindSpot(t *testing.T) {
-	// ⚠️ 迭代次数下界。credentialReaders() 若返回空切片，
-	// 下面那两层循环一次都不会进，测试**空转通过**——
-	// 而空转通过与「真的没有凭据读取」在结果上一模一样。
-	if n := len(credentialReaders()); n < 4 {
-		t.Fatalf("凭据读取形态只有 %d 条，太少 —— 判据可能被删空了", n)
-	}
-	src, err := os.ReadFile("fixtures_test.go")
+// 注释不调用任何东西，字符串字面量也不调用任何东西。能调用的只有**调用表达式**。
+// 所以改用 go/parser 解析语法树，只看 `*ast.CallExpr`——
+// 于是注释、字符串、说明文字、测试样本全部自动不在视野内，**一条豁免都不需要**。
+//
+// ⚠️ 一个需要不断打补丁的判据，通常不是补得不够，是问的问题不对。
+func credentialReadsIn(t *testing.T, filename string, src any) []string {
+	t.Helper()
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filename, src, parser.ParseComments)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("解析 %s 失败：%v", filename, err)
 	}
-	sc := bufio.NewScanner(bytes.NewReader(src))
-	for i := 1; sc.Scan(); i++ {
-		line := sc.Text()
-		if strings.Contains(line, selfRef) {
-			continue
+	var hits []string
+	ast.Inspect(f, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
 		}
-		for _, r := range credentialReaders() {
-			if strings.Contains(line, r) {
-				t.Errorf("fixtures_test.go:%d 出现凭据读取 %q。"+
-					"具体值的复查在 kq.Scrubbed（落盘时）做，两层用不同原理才不会一起失效；"+
-					"本层只查形状", i, r)
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		pkg, ok := sel.X.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		name := pkg.Name + "." + sel.Sel.Name
+		switch name {
+		case "os.Getenv":
+			// 读环境变量本身就是读凭据的入口，不看参数。
+			hits = append(hits, fmt.Sprintf("%s:%d %s(...)",
+				filename, fset.Position(call.Pos()).Line, name))
+		case "os.ReadFile", "os.Open", "ioutil.ReadFile", "probe.LoadEnv":
+			// ⚠️ 这几个函数本层**合法地**用着（读夹具、读自己的源码），
+			// 所以只在参数指向凭据文件时才算。
+			for _, a := range call.Args {
+				lit, ok := a.(*ast.BasicLit)
+				if ok && lit.Kind == token.STRING && strings.Contains(lit.Value, ".env") {
+					hits = append(hits, fmt.Sprintf("%s:%d %s(%s)",
+						filename, fset.Position(call.Pos()).Line, name, lit.Value))
+				}
 			}
 		}
-	}
-}
-
-// credentialReaders 列出「真的去读凭据文件」的调用形态。
-//
-// 提到文件名不算，真去读才算——第一版把两者混为一谈，结果红在自己的注释上。
-func credentialReaders() []string {
-	return []string{
-		`os.ReadFile(".env`,     // 判据自身
-		`os.Open(".env`,         // 判据自身
-		`ioutil.ReadFile(".env`, // 判据自身
-		`probe.LoadEnv(`,        // 判据自身
-		`os.Getenv(`,            // 判据自身
-	}
-}
-
-// TestBlindSpotGuardDiscriminates 双向证明上面那条判据既不误伤也不漏放。
-//
-// ⚠️ 一个只做过「正常输入下通过」的判据什么都不说明。
-// 这里两个方向各来一次：纯提及必须放过，真实读取必须逮住。
-func TestBlindSpotGuardDiscriminates(t *testing.T) {
-	if n := len(credentialReaders()); n < 4 {
-		t.Fatalf("凭据读取形态只有 %d 条，太少 —— 本条的两个方向都会空转", n)
-	}
-	mention := "本层不读凭据文件，只查形状"
-	for _, r := range credentialReaders() {
-		if strings.Contains(mention, r) {
-			t.Errorf("判据 %q 命中了一句纯提及 —— 它会红在自己的说明文字上", r)
-		}
-	}
-
-	// 一条连自己的说明都容忍不了的判据，会被人直接删掉，而不是被修对。
-	for _, real := range []string{
-		"data, _ := os.Read" + `File(".env")`,
-		"pw := os.Get" + `env("KQ_PASSWORD")`,
-	} {
-		hit := false
-		for _, r := range credentialReaders() {
-			if strings.Contains(real, r) {
-				hit = true
-			}
-		}
-		if !hit {
-			t.Errorf("⚠️ 判据放过了一次真实的凭据读取 %q —— 那它什么都挡不住", real)
-		}
-	}
+		return true
+	})
+	return hits
 }
 
 // TestNoStrayFixtureTrees 断言仓库里**只有一棵**夹具树。
@@ -217,5 +190,59 @@ func TestNoStrayFixtureTrees(t *testing.T) {
 	if len(stray) > 0 {
 		t.Errorf("⚠️ %s 之外还有 %d 份夹具：%v", canonical, len(stray), stray)
 		t.Error("   落盘目录很可能配成了相对路径，随 cwd 另开了一棵树")
+	}
+}
+
+// TestFixtureScanDeclaresItsBlindSpot 把这层扫描**查不了**的东西钉成一条断言。
+//
+// ⚠️ 它查不了「夹具里有没有出现凭据文件里的密码」——CI 上没有那个文件，
+// 有也不该让测试去读。所以这一层只能查**形状**，查不了**具体值**。
+//
+// 这条测试的作用是：谁要是哪天把凭据读进这一层，
+// 「本层不读凭据」这条约束会立刻红，而不是悄悄多出一个凭据读取点。
+func TestFixtureScanDeclaresItsBlindSpot(t *testing.T) {
+	for _, hit := range credentialReadsIn(t, "fixtures_test.go", nil) {
+		t.Errorf("⚠️ %s —— 本层出现凭据读取。具体值的复查在 kq.Scrubbed（落盘时）做，"+
+			"两层用不同原理才不会一起失效；本层只查形状", hit)
+	}
+}
+
+// TestCredentialReadDetectorDiscriminates 双向钉住上面那个探测器。
+//
+// ⚠️ 样本是**合成源码**，解析成独立的文件，所以它们既不会被当成本文件的一部分，
+// 也不需要任何豁免。这正是换成语法树之后省下的那一整套机制。
+func TestCredentialReadDetectorDiscriminates(t *testing.T) {
+	// 只是**提到**：注释、字符串字面量、变量名。一次调用都没有。
+	mentions := `package p
+
+import "os"
+
+// 本层不读 .env，也不调用 os.Getenv(...)。
+var patterns = []string{` + "`os.Getenv(`, `os.ReadFile(\".env`" + `}
+
+func f() {
+	_ = patterns
+	_, _ = os.ReadFile("fixtures_test.go") // 读自己的源码是合法的
+}
+`
+	// 真的读：环境变量、凭据文件。
+	reads := `package p
+
+import "os"
+
+func f() {
+	_ = os.Getenv("KQ_PASSWORD")
+	_, _ = os.ReadFile(".env")
+	_, _ = os.Open(".env")
+}
+`
+	if hits := credentialReadsIn(t, "mentions.go", mentions); len(hits) != 0 {
+		t.Errorf("⚠️ 探测器把 %d 处**提及**当成了读取：%v —— "+
+			"它会红在说明文字和测试样本上，然后被人删掉", len(hits), hits)
+	}
+	hits := credentialReadsIn(t, "reads.go", reads)
+	if len(hits) != 3 {
+		t.Errorf("⚠️ 三处真实的凭据读取只逮到 %d 处：%v —— 漏掉的那些它什么都挡不住",
+			len(hits), hits)
 	}
 }
