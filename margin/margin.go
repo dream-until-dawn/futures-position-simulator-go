@@ -50,6 +50,21 @@ const (
 	SettlementAll
 )
 
+// check 报告计价基准是否已指定。
+//
+// ⚠️ 它被**前置调用**（在处理任何 leg 之前）与**逐 leg 调用**两处共用，
+// 共用是为了让「什么算已指定」只有一份定义 —— 两处各写一遍会分岔，
+// 而分岔时没有任何东西会报警。
+func (b PriceBasis) check() error {
+	if b == PriceBasisUnmeasured {
+		return fmt.Errorf("保证金的计价基准未指定：判别实验 1 尚未收敛，"+
+			"本库不提供默认值。见 docs/state.md 的 rules_pending。"+
+			"（候选：%v / %v / %v / %v）",
+			OpenTodayPreSettleHistory, PreSettleAll, LastAll, SettlementAll)
+	}
+	return nil
+}
+
 func (b PriceBasis) String() string {
 	switch b {
 	case OpenTodayPreSettleHistory:
@@ -80,6 +95,16 @@ const (
 	// NoNetting 不走大边：多空各自占用。
 	NoNetting
 )
+
+// check 报告合并范围是否已指定。
+func (s SideScope) check() error {
+	if s == SideScopeUnmeasured {
+		return fmt.Errorf("单向大边的合并范围未指定：判别实验 3 尚未收敛，"+
+			"本库不提供默认值。见 docs/state.md 的 rules_pending。"+
+			"（候选：%v / %v / %v）", ByProduct, ByInstrument, NoNetting)
+	}
+	return nil
+}
 
 func (s SideScope) String() string {
 	switch s {
@@ -166,12 +191,10 @@ func (l Leg) price(b PriceBasis) (decimal.Decimal, error) {
 		}
 		return v, nil
 	}
+	if err := b.check(); err != nil {
+		return decimal.Zero, err
+	}
 	switch b {
-	case PriceBasisUnmeasured:
-		return decimal.Zero, fmt.Errorf("保证金的计价基准未指定：判别实验 1 尚未收敛，"+
-			"本库不提供默认值。见 docs/state.md 的 rules_pending。"+
-			"（候选：%v / %v / %v / %v）",
-			OpenTodayPreSettleHistory, PreSettleAll, LastAll, SettlementAll)
 	case OpenTodayPreSettleHistory:
 		if l.IsHistory {
 			return need(l.PreSettlement, l.HasPreSettlement, "昨结算价")
@@ -254,10 +277,24 @@ type Result struct {
 // Compute 计算一组持仓的保证金占用。
 func Compute(legs []Leg, basis PriceBasis, scope SideScope) (Result, error) {
 	var res Result
-	if scope == SideScopeUnmeasured {
-		return res, fmt.Errorf("单向大边的合并范围未指定：判别实验 3 尚未收敛，"+
-			"本库不提供默认值。见 docs/state.md 的 rules_pending。"+
-			"（候选：%v / %v / %v）", ByProduct, ByInstrument, NoNetting)
+
+	// ⚠️ 两个未实测参数都必须**前置**检查，在 len(legs)==0 的早返回**之前**。
+	//
+	// 这一处曾经不对称：scope 是前置的，basis 只在逐 leg 循环里才被消费，
+	// 于是 Compute(nil, PriceBasisUnmeasured, ByProduct) 静默返回零值。
+	//
+	// 零值报错的设计意图**不是算对数，是告诉调用方它没配这个参数**。
+	// 空仓时放行意味着：一个引擎在空仓状态下初始化并跑通第一步会拿到绿灯，
+	// 等它第一次开仓错误才出现——**配置错误与它的报告点被错开在不同时间、
+	// 不同位置**。而 basis 恰好是「错了 → 可用资金曲线整体错位 → 追保时点错」
+	// 的那个参数。
+	//
+	// 形状上它是「零值假通过」的同族：**守卫通过，是因为什么都没被执行。**
+	if err := basis.check(); err != nil {
+		return res, err
+	}
+	if err := scope.check(); err != nil {
+		return res, err
 	}
 	if len(legs) == 0 {
 		return res, nil
