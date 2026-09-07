@@ -31,7 +31,7 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		r.DumpDir = r.Env.DumpDir
 	}
 
-	cli := kq.New(kq.Credentials{User: r.Env.KQUser, Password: r.Env.KQPassword}, r.Logf)
+	cli := kq.New(kq.Credentials{User: r.Env.KQUser, Password: r.Env.KQPassword, ClientSecret: r.Env.KQClientSecret}, r.Logf)
 	r.cli = cli
 	defer cli.Close()
 

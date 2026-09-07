@@ -22,8 +22,9 @@ var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
 
 // Env 是 .env 里与本工具相关的配置。
 type Env struct {
-	KQUser     string
-	KQPassword string
+	KQUser         string
+	KQPassword     string
+	KQClientSecret string
 
 	CTPUserID   string
 	CTPPassword string
@@ -45,7 +46,8 @@ type Env struct {
 //
 // ⚠️ 调用方不得打印它。
 func (e Env) Secrets() []string {
-	return []string{e.KQUser, e.KQPassword, e.CTPPassword, e.CTPAuthCode, e.CTPUserID}
+	return []string{e.KQUser, e.KQPassword, e.KQClientSecret,
+		e.CTPPassword, e.CTPAuthCode, e.CTPUserID}
 }
 
 // LoadEnv 读 .env。缺文件是硬错误——探针连柜台，不该有「默认凭据」这种东西。
@@ -73,17 +75,18 @@ func LoadEnv(path string) (Env, error) {
 	}
 
 	e := Env{
-		KQUser:      raw["KQ_USER"],
-		KQPassword:  raw["KQ_PASSWORD"],
-		CTPUserID:   raw["CTP_USER_ID"],
-		CTPPassword: raw["CTP_PASSWORD"],
-		CTPBrokerID: raw["CTP_BROKER_ID"],
-		CTPTdFront:  raw["CTP_TD_FRONT"],
-		CTPMdFront:  raw["CTP_MD_FRONT"],
-		CTPAppID:    raw["CTP_APP_ID"],
-		CTPAuthCode: raw["CTP_AUTH_CODE"],
-		DumpDir:     raw["PROBE_DUMP_DIR"],
-		raw:         raw,
+		KQUser:         raw["KQ_USER"],
+		KQPassword:     raw["KQ_PASSWORD"],
+		KQClientSecret: raw["KQ_CLIENT_SECRET"],
+		CTPUserID:      raw["CTP_USER_ID"],
+		CTPPassword:    raw["CTP_PASSWORD"],
+		CTPBrokerID:    raw["CTP_BROKER_ID"],
+		CTPTdFront:     raw["CTP_TD_FRONT"],
+		CTPMdFront:     raw["CTP_MD_FRONT"],
+		CTPAppID:       raw["CTP_APP_ID"],
+		CTPAuthCode:    raw["CTP_AUTH_CODE"],
+		DumpDir:        raw["PROBE_DUMP_DIR"],
+		raw:            raw,
 	}
 	e.AllowOrder = strings.EqualFold(raw["PROBE_ALLOW_ORDER"], "true")
 	if v, err := strconv.Atoi(raw["PROBE_MAX_VOLUME"]); err == nil {

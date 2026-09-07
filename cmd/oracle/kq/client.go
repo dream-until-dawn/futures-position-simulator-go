@@ -23,11 +23,10 @@ import (
 )
 
 const (
-	authURL      = "https://auth.shinnytech.com/auth/realms/shinnytech/protocol/openid-connect/token"
-	brokerFile   = "https://files.shinnytech.com/%s.json"
-	nsURL        = "https://api.shinnytech.com/ns"
-	clientID     = "shinny_tq"
-	clientSecret = "be30b9f4-6862-488a-99ad-21bde0400081"
+	authURL    = "https://auth.shinnytech.com/auth/realms/shinnytech/protocol/openid-connect/token"
+	brokerFile = "https://files.shinnytech.com/%s.json"
+	nsURL      = "https://api.shinnytech.com/ns"
+	clientID   = "shinny_tq"
 
 	// BrokerKQ 是快期模拟的经纪商标识，登录报文的 bid 用它。
 	BrokerKQ = "快期模拟"
@@ -39,6 +38,13 @@ const (
 type Credentials struct {
 	User     string
 	Password string
+
+	// ClientSecret 是 TqSdk 这个 OAuth 客户端的身份，**不是使用者的密钥**。
+	//
+	// ⚠️ 它虽然公开在 tqsdk-python 的开源代码里，本仓库仍然不内置它：
+	// 那是**对方 SDK 的身份**，把它抄进一个公开仓库等于让本仓成为转发点。
+	// 取值位置见 .env.example。
+	ClientSecret string
 }
 
 // Client 持有一条交易连接与一条行情连接，以及各自的业务截面。
@@ -95,9 +101,16 @@ func (c *Client) AuthID() string { return c.authID }
 
 // Auth 取访问令牌并解出 authID。
 func (c *Client) Auth(ctx context.Context) error {
+	if c.cred.ClientSecret == "" {
+		return fmt.Errorf("KQ_CLIENT_SECRET 为空；" +
+			"它是 TqSdk 这个 OAuth 客户端的身份，不是你的密钥，本仓库不内置它。" +
+			"取值：tqsdk-python 的 tqsdk/auth.py，_request_token 里的 client_secret" +
+			"（https://raw.githubusercontent.com/shinnytech/tqsdk-python/master/tqsdk/auth.py），" +
+			"填进 .env 的 KQ_CLIENT_SECRET=")
+	}
 	form := url.Values{
 		"client_id":     {clientID},
-		"client_secret": {clientSecret},
+		"client_secret": {c.cred.ClientSecret},
 		"grant_type":    {"password"},
 		"username":      {c.cred.User},
 		"password":      {c.cred.Password},
