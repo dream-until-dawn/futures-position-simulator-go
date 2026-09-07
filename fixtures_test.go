@@ -97,6 +97,12 @@ const selfRef = "// 判据自身"
 // 这条测试的作用是：谁要是哪天把凭据读进这一层，
 // 「本层不读凭据」这条约束会立刻红，而不是悄悄多出一个凭据读取点。
 func TestFixtureScanDeclaresItsBlindSpot(t *testing.T) {
+	// ⚠️ 迭代次数下界。credentialReaders() 若返回空切片，
+	// 下面那两层循环一次都不会进，测试**空转通过**——
+	// 而空转通过与「真的没有凭据读取」在结果上一模一样。
+	if n := len(credentialReaders()); n < 4 {
+		t.Fatalf("凭据读取形态只有 %d 条，太少 —— 判据可能被删空了", n)
+	}
 	src, err := os.ReadFile("fixtures_test.go")
 	if err != nil {
 		t.Fatal(err)
@@ -135,6 +141,9 @@ func credentialReaders() []string {
 // ⚠️ 一个只做过「正常输入下通过」的判据什么都不说明。
 // 这里两个方向各来一次：纯提及必须放过，真实读取必须逮住。
 func TestBlindSpotGuardDiscriminates(t *testing.T) {
+	if n := len(credentialReaders()); n < 4 {
+		t.Fatalf("凭据读取形态只有 %d 条，太少 —— 本条的两个方向都会空转", n)
+	}
 	mention := "本层不读凭据文件，只查形状"
 	for _, r := range credentialReaders() {
 		if strings.Contains(mention, r) {
@@ -171,6 +180,7 @@ func TestBlindSpotGuardDiscriminates(t *testing.T) {
 func TestNoStrayFixtureTrees(t *testing.T) {
 	const canonical = "testdata/probes"
 	var stray []string
+	seenCanonical := 0
 	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -185,7 +195,11 @@ func TestNoStrayFixtureTrees(t *testing.T) {
 			return nil
 		}
 		dir := filepath.ToSlash(filepath.Dir(p))
-		if dir == canonical || !strings.Contains(dir, "testdata") {
+		if dir == canonical {
+			seenCanonical++
+			return nil
+		}
+		if !strings.Contains(dir, "testdata") {
 			return nil
 		}
 		stray = append(stray, filepath.ToSlash(p))
@@ -193,6 +207,12 @@ func TestNoStrayFixtureTrees(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// ⚠️ 「没找到杂散文件」与「根本没在找」在结果上同形。
+	// 所以要求这次遍历**确实走到过**规范目录：走到了才说明 walk 是活的。
+	if seenCanonical == 0 {
+		t.Fatalf("遍历没在 %s 下看到任何夹具 —— 是真的空了，还是 walk 的起点不对？"+
+			"两种情形下本条都会「通过」，所以这里必须失败", canonical)
 	}
 	if len(stray) > 0 {
 		t.Errorf("⚠️ %s 之外还有 %d 份夹具：%v", canonical, len(stray), stray)
