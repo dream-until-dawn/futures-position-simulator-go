@@ -266,22 +266,18 @@ func (r *Runner) flatten(sym string, dir kq.Direction) error {
 	// **被解释为平昨**。账上同时有昨仓（过夜种子）与今仓（实验腿）时，
 	// 一次超时回退会去平掉种子——而种子是六条实验共用、当晚不可再生的资源。
 	// 日志却只会说「换一种开平标志再试」：**它不是没平掉，它是平了别的。**
-	yesterdayKey := "volume_long_his"
-	if dir == kq.Sell {
-		yesterdayKey = "volume_short_his"
-	}
-	volHis := kq.MustNum(p, yesterdayKey)
-
-	for _, off := range []kq.Offset{kq.CloseToday, kq.Close} {
-		// ⚠️ 守卫三（最省的一条）：账上有昨仓时，一律禁止 CLOSE 回退。
-		//
-		// 在 `UseHistory` 交易所上，`CLOSE` 必然打在昨仓上。这条不需要判断拒因，
-		// 只看账上有没有昨仓——**一个不需要解析对方措辞的守卫，比一个需要的可靠**。
-		if off == kq.Close && volHis > 0 {
-			return fmt.Errorf("⚠️ %s 上有 %.0f 手**昨仓**，禁止回退到 CLOSE —— "+
-				"实测 CLOSE 在此类交易所上被解释为平昨，回退会平掉昨仓。"+
-				"今仓 %.0f 手**仍未平掉**，请手工处理", sym, volHis, volToday)
-		}
+	// ⚠️ 判定走 decideFallback，**不在这里内联条件**。
+	//
+	// 上一版把判定抽成了纯函数并给它写了 7 条用例、2 条穷举不变式、3 次破坏验证——
+	// 然后**忘了接线**。守卫仍然内联在这里，而 `decideFallback` 全仓没有一个非测试调用者。
+	// 评审做了决定性的那次破坏：把内联的昨仓守卫换成 `if false`，**全库仍然全绿**。
+	//
+	// ⚠️ 这比「守着一个没人用的副本」更进一步：那是副本，这是**平行函数**。
+	// 而它之所以容易发生，恰恰因为抽纯函数**看起来就是正确的动作**——
+	// **接线那一步在被省略时是不可见的**：不报错、不告警，`unused` 也不会报，
+	// 因为测试用了它。
+	offsets := []kq.Offset{kq.CloseToday, kq.Close}
+	for i, off := range offsets {
 		req := kq.OrderReq{Exchange: ex, Instrument: inst, Direction: closeDir,
 			Offset: off, Volume: int(volToday), LimitPrice: q.AggressivePrice(closeDir)}
 		id, err := cli.InsertOrder(r.guard(), req)
@@ -289,13 +285,14 @@ func (r *Runner) flatten(sym string, dir kq.Direction) error {
 			return err
 		}
 		st, done := cli.WaitOrderFinished(id, 30*time.Second)
-		if done && st.VolumeLeft == 0 {
+
+		switch decideFallback(p, dir, done, st.VolumeLeft) {
+		case fallbackDone:
 			r.Logf("  已平仓 %s %.0f 手（%s）", sym, volToday, off)
 			return nil
-		}
-		if !done {
-			// ⚠️ 守卫二：超时**不是**被拒，委托很可能还活着。
-			// 不撤就换标志再发，两笔可能**都成交**——今仓昨仓各被平掉一手。
+
+		case fallbackStopTimeout:
+			// 超时**不是**被拒，委托很可能还活着。不撤就换标志再发，两笔可能都成交。
 			r.Logf("  ⚠️ %s 委托 30 秒未到终态，**撤单**并停止（超时不等于被拒，不回退）", off)
 			if err := cli.CancelOrder(id); err != nil {
 				r.Logf("  ⚠️ 撤单也失败：%v", err)
@@ -303,9 +300,19 @@ func (r *Runner) flatten(sym string, dir kq.Direction) error {
 			return fmt.Errorf("⚠️ %s 平仓委托超时未成交（status=%q msg=%q），已发撤单。"+
 				"**这不说明它被拒**，所以不换开平标志重试；持仓仍在，请人工确认",
 				off, st.Status, st.LastMsg)
+
+		case fallbackForbiddenYesterday:
+			return fmt.Errorf("⚠️ %s 上有**昨仓**，禁止回退到 CLOSE —— "+
+				"实测 CLOSE 在此类交易所上被解释为平昨，回退会平掉昨仓。"+
+				"今仓 %.0f 手**仍未平掉**（%s 被拒：%q），请手工处理",
+				sym, volToday, off, st.LastMsg)
+
+		case fallbackAllowed:
+			if i == len(offsets)-1 {
+				break
+			}
+			r.Logf("  用 %s 平仓被拒（status=%q msg=%q），换一种开平标志再试", off, st.Status, st.LastMsg)
 		}
-		// 到这里是「终态但没全成」= 被拒 / 被撤，这才是可以回退的情形。
-		r.Logf("  用 %s 平仓被拒（status=%q msg=%q），换一种开平标志再试", off, st.Status, st.LastMsg)
 	}
 	return fmt.Errorf("⚠️ 平仓失败，**账户仍有持仓** %s %.0f 手，请手工处理", sym, volToday)
 }

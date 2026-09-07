@@ -95,7 +95,7 @@
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 32 |
 | `docs/roadmap.md` | 20 |
-| `docs/silent-risks.md` | 12 |
+| `docs/silent-risks.md` | 13 |
 | `docs/state.md` | 10 |
 
 ⚠️ **增删小节时要同步改这里**，这是刻意的摩擦：一次有意的增删是一行改动，
