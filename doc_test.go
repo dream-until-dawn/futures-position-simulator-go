@@ -523,28 +523,28 @@ func isPackageName(tok string) bool {
 	return tok != ""
 }
 
-// ⚠️ 「怎么算一个待实测项」——判据先写死在这里，再写检查逻辑。
+// ⚠️ 「怎么算一张计数表里的一行」——判据先写死在这里，再写检查逻辑。
 //
 // 这一步是被方法论第 7 条逼出来的：守卫的第一次红有很大概率是判据自己没写全，
 // 而共同病因永远是「怎么算一个 X」当时根本没写。所以先写定义：
 //
-// §13 表格里的一行是**一条在册的待实测项**，当且仅当：
+// 一行是**一条在册项**，当且仅当：
 //
-//	① 它在 cn-futures-rules.md 的 "## 13." 与下一个 "## " 之间；
+//	① 它在 sectionPrefix 开头的那个二级标题与下一个 "## " 之间；
 //	② 它以 "|" 开头（是表格行）；
 //	③ 第 2 个单元格去空白后是一个**正整数**（表头行、分隔行、说明行都不是）；
 //	④ 第 3 个单元格**不以 "~~" 开头**——删除线表示这条已经收敛、不再在册。
 //
 // 第 ④ 条是关键：收敛的条目**留在表里**（历史可查），但不计数。
 // 若把它们直接删掉，「这条曾经是问题」这件事就没了。
-func pendingRuleRows(t *testing.T) []string {
+func numberedTableRows(t *testing.T, path, sectionPrefix string) []string {
 	t.Helper()
 	var rows []string
 	in := false
-	for _, l := range readLines(t, filepath.Join("docs", "cn-futures-rules.md")) {
+	for _, l := range readLines(t, path) {
 		trimmed := strings.TrimSpace(l)
 		if strings.HasPrefix(trimmed, "## ") {
-			in = strings.HasPrefix(trimmed, "## 13.")
+			in = strings.HasPrefix(trimmed, sectionPrefix)
 			continue
 		}
 		if !in || !strings.HasPrefix(trimmed, "|") {
@@ -565,32 +565,29 @@ func pendingRuleRows(t *testing.T) []string {
 	return rows
 }
 
-// TestRulesPendingMatchesTable 断言 state.md 的 rules_pending 与 §13 表实际在册的条数一致。
+// declaredCount 取 state.md 计数表里某个键的**加粗值**。
 //
-// ⚠️ 这条守卫针对的正是 state.md 存在的理由。计数类复述栽过两次，
-// 而两次都躲过了禁语扫描——**计数不是状态词，人眼扫过去根本不会停**。
-// 现在这个数有了一个会在提交前红的机械核对。
-func TestRulesPendingMatchesTable(t *testing.T) {
-	rows := pendingRuleRows(t)
-	if len(rows) == 0 {
-		// ⚠️ 一个「找不到就通过」的检查，在章节改名或表格重排时也会通过——
-		// 而那正是它最该报警的时候。
-		t.Fatal("⚠️ §13 里一条在册的待实测项都没解析到 —— 是真的清空了，还是解析规则失效了？" +
-			"两种情形下这条检查都会「通过」，所以这里必须失败")
-	}
-
-	var declared int = -1
+// ⚠️ 两条定义都是踩出来的，缺一条就取错数：
+//
+//	怎么算「声明该键的那一行」 → 键出现在**键列**，不是行里含有
+//	怎么算「该键的值」        → 值列里 **N** 包着的那个，不是行里第一个数字
+//
+// 前一条是本函数第一次跑就红的原因：查 kq_facts 时它取到了 1。
+// 因为 rules_measured 那一行的**备注列**里写着「理由见下方 `kq_facts`」，
+// 而那行排在前面——按「行里含有」判定，先命中的是它，取回的是它的值。
+// ⚠️ 这已经是同一形状的第七次：**「怎么算一个 X」当时根本没写。**
+//
+// 后一条防的是备注列里的历史数字（「从 7 涨到 10」）。
+func declaredCount(t *testing.T, key string) int {
+	t.Helper()
 	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
-		if !strings.Contains(l, "`rules_pending`") {
-			continue
-		}
 		cells := strings.Split(l, "|")
 		if len(cells) < 3 {
 			continue
 		}
-		// ⚠️ 只从**值列**取数，且只取 **N** 里的那个。
-		// 备注列里写着「从 7 涨到 10」这样的历史，按整行抓数字会抓到它们。
-		// 「怎么算一个值」——同 packages_done 那次。
+		if strings.TrimSpace(cells[1]) != "`"+key+"`" {
+			continue
+		}
 		v := cells[2]
 		i := strings.Index(v, "**")
 		if i < 0 {
@@ -602,20 +599,51 @@ func TestRulesPendingMatchesTable(t *testing.T) {
 		}
 		n, err := strconv.Atoi(strings.TrimSpace(v[i+2 : i+2+j]))
 		if err != nil {
-			t.Fatalf("⚠️ rules_pending 的值列不是加粗的整数：%q", v)
+			t.Fatalf("⚠️ %s 的值列不是加粗的整数：%q", key, v)
 		}
-		declared = n
-		break
+		return n
 	}
-	if declared < 0 {
-		t.Fatal("⚠️ state.md 里找不到 `rules_pending` 的加粗值 —— 单一状态源缺了这一项")
-	}
+	t.Fatalf("⚠️ state.md 里找不到 `%s` 的加粗值 —— 单一状态源缺了这一项", key)
+	return -1
+}
 
-	if declared != len(rows) {
-		t.Errorf("⚠️ state.md 的 rules_pending = %d，但 §13 表里在册 %d 条", declared, len(rows))
+// assertCountMatchesTable 是两条计数守卫共用的骨架。
+func assertCountMatchesTable(t *testing.T, key, path, sectionPrefix string) {
+	t.Helper()
+	rows := numberedTableRows(t, path, sectionPrefix)
+	if len(rows) == 0 {
+		// ⚠️ 一个「找不到就通过」的检查，在章节改名或表格重排时也会通过——
+		// 而那正是它最该报警的时候。
+		t.Fatalf("⚠️ %s 的 %s 里一条在册项都没解析到 —— 是真的清空了，还是解析规则失效了？"+
+			"两种情形下这条检查都会「通过」，所以这里必须失败", path, sectionPrefix)
+	}
+	if declared := declaredCount(t, key); declared != len(rows) {
+		t.Errorf("⚠️ state.md 的 %s = %d，但 %s 的 %s 里在册 %d 条",
+			key, declared, path, sectionPrefix, len(rows))
 		for _, r := range rows {
 			cells := strings.Split(r, "|")
 			t.Logf("    在册：#%s %s", strings.TrimSpace(cells[1]), strings.TrimSpace(cells[2]))
 		}
 	}
+}
+
+// TestRulesPendingMatchesTable 断言 state.md 的 rules_pending 与 §13 表实际在册的条数一致。
+//
+// ⚠️ 这条守卫针对的正是 state.md 存在的理由。计数类复述栽过两次，
+// 而两次都躲过了禁语扫描——**计数不是状态词，人眼扫过去根本不会停**。
+// 现在这个数有了一个会在提交前红的机械核对。
+func TestRulesPendingMatchesTable(t *testing.T) {
+	assertCountMatchesTable(t, "rules_pending",
+		filepath.Join("docs", "cn-futures-rules.md"), "## 13.")
+}
+
+// TestKQFactsMatchesTable 断言 state.md 的 kq_facts 与它自己那张表的条数一致。
+//
+// ⚠️ 这条是**在 state.md 自己身上**栽了一次之后补的：
+// 表已经长到 9 条，而同一页上方的散文还写着「夜盘量到六条」。
+// 唯一状态源自己也会过期，而它过期时同样不会有任何动静——
+// **「唯一来源」保证的是不该有第二处，不保证那一处是对的。**
+func TestKQFactsMatchesTable(t *testing.T) {
+	assertCountMatchesTable(t, "kq_facts",
+		filepath.Join("docs", "state.md"), "## `kq_facts`")
 }
