@@ -63,7 +63,7 @@ func (r *Runner) expFeeBase(ctx context.Context) error {
 	px1 := kq.MustNum(p, "open_price_long")
 	cost1 := kq.MustNum(p, "open_cost_long")
 	fee1 := c1 - c0
-	r.Logf("  第一手：成交价=%.2f  手续费=%.4f", px1, fee1)
+	r.Logf("  第一手：成交价=%.2f  手续费=%.6f", px1, fee1)
 
 	// 第二手：反方向开仓。买单吃卖一、卖单吃买一，有价差就必然是两个成交价。
 	q, _ := cli.QuoteOf(sym)
@@ -88,7 +88,7 @@ func (r *Runner) expFeeBase(ctx context.Context) error {
 	if px1 > 0 {
 		mult = cost1 / px1
 	}
-	r.Logf("  第二手：成交价=%.2f（空头开仓均价）  手续费=%.4f", px2, fee2)
+	r.Logf("  第二手：成交价=%.2f（空头开仓均价）  手续费=%.6f", px2, fee2)
 
 	if err := r.dump("exp-fee-base", "手续费基准价：同合约两个不同成交价"); err != nil {
 		return err
@@ -109,7 +109,7 @@ func (r *Runner) expFeeBase(ctx context.Context) error {
 			"「费额相同」在此样本上什么都不说明。**判据不成立**", px1)
 	}
 	r.Logf("  两手成交价 %.2f vs %.2f，差 %.2f", px1, px2, px2-px1)
-	r.Logf("  两手手续费 %.4f vs %.4f，差 %.4f", fee1, fee2, fee2-fee1)
+	r.Logf("  两手手续费 %.6f vs %.6f，差 %.6f", fee1, fee2, fee2-fee1)
 	r.Logf("")
 
 	q0, _ := cli.QuoteOf(sym)

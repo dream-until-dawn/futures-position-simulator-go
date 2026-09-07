@@ -80,7 +80,7 @@ func (r *Runner) expFeeForm(ctx context.Context) error {
 
 		q, _ := cli.QuoteOf(sym)
 		rows = append(rows, feeRow{sym, openPx, q.PreSettlement, mult, openPx * mult, c1 - c0, c2 - c1, marginOfLot})
-		r.Logf("  %-14s 昨结=%9.2f 乘数=%4.0f  开仓费=%9.4f 平今费=%9.4f 保证金=%10.2f",
+		r.Logf("  %-14s 昨结=%9.2f 乘数=%4.0f  开仓费=%11.6f 平今费=%11.6f 保证金=%10.2f",
 			sym, q.PreSettlement, mult, c1-c0, c2-c1, marginOfLot)
 	}
 
@@ -102,7 +102,7 @@ func (r *Runner) expFeeForm(ctx context.Context) error {
 
 func (r *Runner) reportFeeForm(tier string, a, b feeRow, fa, fb float64) {
 	r.Logf("")
-	r.Logf("  【%s】%s=%.4f  %s=%.4f", tier, a.Sym, fa, b.Sym, fb)
+	r.Logf("  【%s】%s=%.6f  %s=%.6f", tier, a.Sym, fa, b.Sym, fb)
 	if fa == 0 || fb == 0 {
 		r.Logf("     ⚠️ 有一边为 0 —— 该档不收费或没实现，两个候选在此恒等，**判据不成立**")
 		return

@@ -20,6 +20,13 @@ type feeRow struct {
 	Margin    float64 // 该手持仓保证金
 }
 
+// ⚠️ 打印精度刻意给到小数点后 6 位。
+//
+// 手续费的取整口径本身就是一条待实测项（规则文档 §7）。用 %.4f 打印，
+// **显示取整会正好盖住柜台取整**——柜台若报 12.07125，我看到的是 12.0712，
+// 于是「柜台取到 4 位」与「柜台不取整、是我打印时截了」长得一模一样。
+// 一个观测工具的精度低于被观测量的精度时，它测的是自己。
+//
 // expFeeRates 问的是：**快期模拟的手续费是全局一个口径，还是分品种的真实费率。**
 //
 // ⚠️ 这个问题的提法是被保证金那条实测逼出来的：rb2701 / rb2610 / m2701
@@ -101,7 +108,7 @@ func (r *Runner) expFeeRates(ctx context.Context) error {
 		}
 		rows = append(rows, row)
 		r.Logf("  %-14s 成交=%10.2f 昨结=%10.2f 乘数=%5.0f 名义额=%12.2f", sym, row.OpenPx, row.PreSettle, row.Mult, row.Notional)
-		r.Logf("  %-14s   开仓费=%9.4f 平今费=%9.4f 保证金=%11.2f", "", row.OpenFee, row.CloseFee, row.Margin)
+		r.Logf("  %-14s   开仓费=%11.6f 平今费=%11.6f 保证金=%11.2f", "", row.OpenFee, row.CloseFee, row.Margin)
 	}
 
 	if err := r.dump("exp-fee-rates", "手续费：全局统一口径 vs 分品种费率"); err != nil {
@@ -239,7 +246,7 @@ func (r *Runner) reportFeeTier(tier string, rows []feeRow, pick func(feeRow) flo
 		if !nearlyEqual(pick(x)/x.Notional, r0) {
 			sameRate = false
 		}
-		r.Logf("     %-14s 费=%9.4f  费/名义额=%.10f", x.Sym, pick(x), pick(x)/x.Notional)
+		r.Logf("     %-14s 费=%11.6f  费/名义额=%.10f", x.Sym, pick(x), pick(x)/x.Notional)
 	}
 
 	switch {

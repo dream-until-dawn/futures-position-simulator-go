@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -520,4 +521,101 @@ func isPackageName(tok string) bool {
 		}
 	}
 	return tok != ""
+}
+
+// ⚠️ 「怎么算一个待实测项」——判据先写死在这里，再写检查逻辑。
+//
+// 这一步是被方法论第 7 条逼出来的：守卫的第一次红有很大概率是判据自己没写全，
+// 而共同病因永远是「怎么算一个 X」当时根本没写。所以先写定义：
+//
+// §13 表格里的一行是**一条在册的待实测项**，当且仅当：
+//
+//	① 它在 cn-futures-rules.md 的 "## 13." 与下一个 "## " 之间；
+//	② 它以 "|" 开头（是表格行）；
+//	③ 第 2 个单元格去空白后是一个**正整数**（表头行、分隔行、说明行都不是）；
+//	④ 第 3 个单元格**不以 "~~" 开头**——删除线表示这条已经收敛、不再在册。
+//
+// 第 ④ 条是关键：收敛的条目**留在表里**（历史可查），但不计数。
+// 若把它们直接删掉，「这条曾经是问题」这件事就没了。
+func pendingRuleRows(t *testing.T) []string {
+	t.Helper()
+	var rows []string
+	in := false
+	for _, l := range readLines(t, filepath.Join("docs", "cn-futures-rules.md")) {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.HasPrefix(trimmed, "## 13.")
+			continue
+		}
+		if !in || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := strings.Split(trimmed, "|")
+		if len(cells) < 4 {
+			continue
+		}
+		if _, err := strconv.Atoi(strings.TrimSpace(cells[1])); err != nil {
+			continue // 表头 / 分隔行 / 别的表
+		}
+		if strings.HasPrefix(strings.TrimSpace(cells[2]), "~~") {
+			continue // 已收敛，留档但不在册
+		}
+		rows = append(rows, trimmed)
+	}
+	return rows
+}
+
+// TestRulesPendingMatchesTable 断言 state.md 的 rules_pending 与 §13 表实际在册的条数一致。
+//
+// ⚠️ 这条守卫针对的正是 state.md 存在的理由。计数类复述栽过两次，
+// 而两次都躲过了禁语扫描——**计数不是状态词，人眼扫过去根本不会停**。
+// 现在这个数有了一个会在提交前红的机械核对。
+func TestRulesPendingMatchesTable(t *testing.T) {
+	rows := pendingRuleRows(t)
+	if len(rows) == 0 {
+		// ⚠️ 一个「找不到就通过」的检查，在章节改名或表格重排时也会通过——
+		// 而那正是它最该报警的时候。
+		t.Fatal("⚠️ §13 里一条在册的待实测项都没解析到 —— 是真的清空了，还是解析规则失效了？" +
+			"两种情形下这条检查都会「通过」，所以这里必须失败")
+	}
+
+	var declared int = -1
+	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
+		if !strings.Contains(l, "`rules_pending`") {
+			continue
+		}
+		cells := strings.Split(l, "|")
+		if len(cells) < 3 {
+			continue
+		}
+		// ⚠️ 只从**值列**取数，且只取 **N** 里的那个。
+		// 备注列里写着「从 7 涨到 10」这样的历史，按整行抓数字会抓到它们。
+		// 「怎么算一个值」——同 packages_done 那次。
+		v := cells[2]
+		i := strings.Index(v, "**")
+		if i < 0 {
+			continue
+		}
+		j := strings.Index(v[i+2:], "**")
+		if j < 0 {
+			continue
+		}
+		n, err := strconv.Atoi(strings.TrimSpace(v[i+2 : i+2+j]))
+		if err != nil {
+			t.Fatalf("⚠️ rules_pending 的值列不是加粗的整数：%q", v)
+		}
+		declared = n
+		break
+	}
+	if declared < 0 {
+		t.Fatal("⚠️ state.md 里找不到 `rules_pending` 的加粗值 —— 单一状态源缺了这一项")
+	}
+
+	if declared != len(rows) {
+		t.Errorf("⚠️ state.md 的 rules_pending = %d，但 §13 表里在册 %d 条", declared, len(rows))
+		for _, r := range rows {
+			cells := strings.Split(r, "|")
+			t.Logf("    在册：#%s %s", strings.TrimSpace(cells[1]), strings.TrimSpace(cells[2]))
+		}
+	}
 }

@@ -77,6 +77,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expFeeBase(ctx)
 	case "fee-form":
 		return r.expFeeForm(ctx)
+	case "frozen":
+		return r.expFrozen(ctx)
 	case "reject-code":
 		return r.expRejectCode(ctx)
 	case "overnight-setup":
