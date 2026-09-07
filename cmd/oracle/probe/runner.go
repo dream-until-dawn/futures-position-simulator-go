@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -66,6 +67,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expFeeRates(ctx)
 	case "fee-base":
 		return r.expFeeBase(ctx)
+	case "fee-form":
+		return r.expFeeForm(ctx)
 	case "reject-code":
 		return r.expRejectCode(ctx)
 	case "overnight-setup":
@@ -197,8 +200,11 @@ func (r *Runner) dump(name, note string) error {
 	if err := os.MkdirAll(r.DumpDir, 0o755); err != nil {
 		return err
 	}
-	path := filepath.Join(r.DumpDir, fmt.Sprintf("%s-%s.json", name, cli.TradingDay()))
 	b, err := json.MarshalIndent(f, "", "  ")
+	if err != nil {
+		return err
+	}
+	path, err := freeFixturePath(r.DumpDir, name, cli.TradingDay(), b, r.Logf)
 	if err != nil {
 		return err
 	}
@@ -224,4 +230,41 @@ func sortedKeys(m map[string]any) []string {
 	}
 	sort.Strings(ks)
 	return ks
+}
+
+// freeFixturePath 挑一个不会**静默覆盖**已有证据的落盘路径。
+//
+// ⚠️ 起因是一次真实的静默数据丢失：同一天里 fee-form 跑了两趟，
+// 一趟豆粕一趟螺纹——两个**不同的样本**，得出的还是两个**不同的结论**。
+// 文件名只带「实验名 + 交易日」，第二趟把第一趟整份盖掉了，没有任何提示。
+//
+// 覆盖本身不总是错的：同一条实验重跑一遍、想要最新那份，是常见需求。
+// 错的是**分不出这两种情形还一律覆盖**。所以这里按内容判断：
+//
+//	文件不存在        → 就用这个名字
+//	存在且内容一致    → 就用这个名字（重跑得到同样的数，覆盖它没有损失）
+//	存在且内容不同    → 换一个带序号的名字，并**吼出来**
+func freeFixturePath(dir, name, tradingDay string, content []byte, logf func(string, ...any)) (string, error) {
+	base := filepath.Join(dir, fmt.Sprintf("%s-%s", name, tradingDay))
+	for i := 1; i <= 99; i++ {
+		p := base + ".json"
+		if i > 1 {
+			p = fmt.Sprintf("%s-%d.json", base, i)
+		}
+		old, err := os.ReadFile(p)
+		if os.IsNotExist(err) {
+			if i > 1 {
+				logf("⚠️ 同名夹具已存在且**内容不同**，本份另存为 %s", filepath.Base(p))
+				logf("   （同一天同一实验跑了不同的样本？两份都是证据，不该互相覆盖）")
+			}
+			return p, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		if bytes.Equal(old, content) {
+			return p, nil // 内容一致，覆盖它没有损失
+		}
+	}
+	return "", fmt.Errorf("%s 已有 99 份同名夹具，先清理再跑", base)
 }
