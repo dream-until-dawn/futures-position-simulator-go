@@ -133,6 +133,18 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
     ctp/                  SimNow CTP 客户端：含查询节流（goctp 缺这个，见 probes.md §6.3）
 ```
 
+⚠️ **上面这棵树是计划，不是进度。** 哪些包已落地以
+[state.md](./state.md) 的 `packages_done` 为唯一来源——本文不复述状态，
+理由见 §7 与 state.md 的自指豁免那一节。
+
+### 费率类型住在 refdata，不住在 fee / margin
+
+`CommissionRates` 与 `MarginRates` 是**规则数据**，不是计算逻辑。
+把它们定义在 `fee` / `margin` 里，`refdata` 返回费率时就得反过来 import 那两个包
+——而依赖图是 `refdata ← {fee, margin, pnl}`，那样**就成环了**。
+
+`fee.Rates` / `margin.Rates` 保留为**类型别名**，调用方两种写法都通。
+
 ### 为什么这样切
 
 **纯函数层与状态层的分界是这套结构的主轴。** `fee` / `margin` / `pnl` 只做计算：

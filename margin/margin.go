@@ -24,6 +24,7 @@ package margin
 import (
 	"fmt"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -118,25 +119,11 @@ func (s SideScope) String() string {
 	return "未实测"
 }
 
-// Rates 是一个合约的保证金率。
-//
-// ⚠️ 多空**可以不等**，两种形态（按金额 / 按手数）**都要算并相加**——
-// 理由与手续费相同：一个恒为 0 的加项不会暴露自己被漏掉了。
-type Rates struct {
-	LongByMoney   decimal.Decimal
-	LongByVolume  decimal.Decimal
-	ShortByMoney  decimal.Decimal
-	ShortByVolume decimal.Decimal
+// Rates 是保证金率，**类型住在 refdata**（理由同 fee.Rates）。
+type Rates = refdata.MarginRates
 
-	// CompanyAddOn 是期货公司在交易所率之上的加收（绝对比例，非倍数）。
-	//
-	// ⚠️ 默认 0 意味着公司口径 = 交易所口径，这会**低估**保证金占用。
-	// 回测里通常拿不到真实加收，所以默认如此；但低估的方向必须被知道。
-	CompanyAddOn decimal.Decimal
-}
-
-// Validate 检查费率形态。
-func (r Rates) Validate() error {
+// validateRates 检查费率形态。
+func validateRates(r Rates) error {
 	for _, f := range []struct {
 		name string
 		v    decimal.Decimal
@@ -215,7 +202,7 @@ func (l Leg) price(b PriceBasis) (decimal.Decimal, error) {
 
 // one 计算单段的交易所口径与公司口径保证金。
 func (l Leg) one(b PriceBasis) (exchange, company decimal.Decimal, err error) {
-	if err := l.Rates.Validate(); err != nil {
+	if err := validateRates(l.Rates); err != nil {
 		return decimal.Zero, decimal.Zero, err
 	}
 	if l.Volume <= 0 {

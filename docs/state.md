@@ -24,7 +24,7 @@
 | 键 | 值 | 出处 |
 |---|---|---|
 | `rules_pending` | **7** | [cn-futures-rules.md](./cn-futures-rules.md) §13 |
-| `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` / `refdata` 未开始） |
+| `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` / `refdata` 未开始） |
 | `rules_measured` | **0** | 同上。⚠️ 实验 6 只收敛了**快期模拟**那一半，CTP 数值错误码未测 |
 | `account_fields` | **23** | [probes.md](./probes.md) §6.2（DIFF 文档只列 18） |
 | `position_fields` | **54** | probes.md §6（DIFF 文档只列 28） |
@@ -44,11 +44,10 @@
 ## `doc_debt`：文档里写着、代码里还没有的标识符
 
 ⚠️ **规划可以先于代码，但那笔债必须是机械可见的**，而不是靠谁在消息里说一句
-「这是我欠的」。当前 5 项，每项写明预定版本：
+「这是我欠的」。当前 4 项，每项写明预定版本（`Version` 已随 `refdata` 落地，2026-09-07 移除）：
 
 | 标识符 | 是什么 | 预定版本 |
 |---|---|---|
-| `Version` | 规则数据的版本戳 | v0.1.0 |
 | `Bar` | `Advance` 的入参 | v0.2.0 |
 | `Advance` | 盘中推进 | v0.2.0 |
 | `NotModeledUntil` | 对拍「不建模」声明的到期版本 | v0.2.0 |

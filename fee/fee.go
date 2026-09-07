@@ -26,31 +26,23 @@ import (
 	"fmt"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
 
-// Rates 是一个合约的六个费率。
+// Rates 是手续费率，**类型住在 refdata**。
 //
-// 取值来自柜台（CTP 的 CThostFtdcInstrumentCommissionRateField）。
-//
-// ⚠️ 天勤的 `quotes.{symbol}.commission` 是「**每手手续费**」的单一数值，
-// 不是这六个率。用它填这里会**丢掉平今这个维度**——见 docs/design.md §5。
-type Rates struct {
-	OpenByMoney        decimal.Decimal // 开仓，按成交金额
-	OpenByVolume       decimal.Decimal // 开仓，按手数
-	CloseByMoney       decimal.Decimal // 平昨，按成交金额
-	CloseByVolume      decimal.Decimal // 平昨，按手数
-	CloseTodayByMoney  decimal.Decimal // 平今，按成交金额
-	CloseTodayByVolume decimal.Decimal // 平今，按手数
-}
+// ⚠️ 它是规则数据，不是计算逻辑。放在本包会让 refdata 反过来 import fee，
+// 而 docs/design.md 的依赖图是 `refdata ← {fee, margin, pnl}` —— 那样就成环。
+type Rates = refdata.CommissionRates
 
 // Validate 检查费率的形态。
 //
 // ⚠️ 费率允许为零（免平今是真实存在的），但**不允许为负**：
 // 返佣不在本库范围内，而一个负费率会让手续费变成收入，
 // 且它会一直看起来像是策略在赚钱。
-func (r Rates) Validate() error {
+func validateRates(r Rates) error {
 	for _, f := range []struct {
 		name string
 		v    decimal.Decimal
@@ -68,7 +60,7 @@ func (r Rates) Validate() error {
 }
 
 // pick 按开平标志选出该用哪一档费率。
-func (r Rates) pick(offset types.Offset) (byMoney, byVolume decimal.Decimal, err error) {
+func pick(r Rates, offset types.Offset) (byMoney, byVolume decimal.Decimal, err error) {
 	switch offset {
 	case types.Open:
 		return r.OpenByMoney, r.OpenByVolume, nil
@@ -105,10 +97,10 @@ func Compute(
 	price, multiplier decimal.Decimal, volume int,
 	rounding decimalx.Rounding,
 ) (decimal.Decimal, error) {
-	if err := rates.Validate(); err != nil {
+	if err := validateRates(rates); err != nil {
 		return decimal.Zero, err
 	}
-	byMoney, byVolume, err := rates.pick(offset)
+	byMoney, byVolume, err := pick(rates, offset)
 	if err != nil {
 		return decimal.Zero, err
 	}
@@ -149,7 +141,7 @@ func ComputeRaw(
 //
 // ⚠️ 它存在的理由是让「平今费率远高于平昨」这件事**可被量化地看见**。
 // 把平今当平昨算的错误，其危害正比于这个比值，而危害本身不会报警。
-func (r Rates) CloseTodayPremium(price, multiplier decimal.Decimal) (decimal.Decimal, bool) {
+func CloseTodayPremium(r Rates, price, multiplier decimal.Decimal) (decimal.Decimal, bool) {
 	if !price.IsPositive() || !multiplier.IsPositive() {
 		return decimal.Zero, false
 	}

@@ -197,7 +197,7 @@ func TestComputeRawIsUnrounded(t *testing.T) {
 
 // TestCloseTodayPremium 覆盖平今溢价的量化。
 func TestCloseTodayPremium(t *testing.T) {
-	r, ok := rbLike.CloseTodayPremium(d(px), d(mult))
+	r, ok := CloseTodayPremium(rbLike, d(px), d(mult))
 	if !ok {
 		t.Fatal("平昨费率非零时应能作比")
 	}
@@ -206,7 +206,7 @@ func TestCloseTodayPremium(t *testing.T) {
 	}
 	// 平昨免费时无法作比 —— 必须报「没有」而不是返回 0 或无穷。
 	free := Rates{CloseTodayByMoney: d("0.0006")}
-	if _, ok := free.CloseTodayPremium(d(px), d(mult)); ok {
+	if _, ok := CloseTodayPremium(free, d(px), d(mult)); ok {
 		t.Error("⚠️ 平昨费率为零时本该报「无法作比」，而不是给一个数")
 	}
 }
