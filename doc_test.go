@@ -696,3 +696,67 @@ func TestMethodologyItemsAreContiguous(t *testing.T) {
 		}
 	}
 }
+
+// TestDocSectionCountsMatch 断言各文档的小节数与 state.md 登记的一致。
+//
+// ⚠️ 它针对的是一次**真实发生过的静默丢失**：脚本替换锚点时，替换文本的结尾
+// 没把锚点带回来，`silent-risks.md` 的一个小节标题连同分隔线被删掉。
+// 正文照常留着，渲染没有异样，全库测试全绿——是人核编号时撞见的。
+//
+// ⚠️ 为什么不扫「历史里出现过、现在没有的标题」：评审试过，13 个候选**全是改名**
+// （多为证据等级变了导致标题跟着变）。一个今天就 100% 误报的检查会被关掉，
+// 与 `restatement-count.sh` 注释里那种死法同族。
+//
+// **小节数则是干净的判据：改名不动它，删除会动它。**
+// 代价是增删小节要同步改 state.md 一行——这是刻意的摩擦。
+//
+// ⚠️ 这条**不覆盖**「小节被改成了错的内容」，只覆盖「小节整个没了」。
+func TestDocSectionCountsMatch(t *testing.T) {
+	// state.md 里那张表。按 "|" 切列、去掉反引号 —— 不用正则：
+	// 这个表达式要匹配 markdown 的反引号，写成 Go 字符串字面量既难读又容易错转义。
+	want := map[string]int{}
+	in := false
+	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.HasPrefix(trimmed, "## `doc_sections`")
+			continue
+		}
+		if !in || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := strings.Split(trimmed, "|")
+		if len(cells) < 3 {
+			continue
+		}
+		name := strings.Trim(strings.TrimSpace(cells[1]), "`")
+		if !strings.HasSuffix(name, ".md") {
+			continue // 表头、分隔行
+		}
+		n, err := strconv.Atoi(strings.TrimSpace(cells[2]))
+		if err != nil {
+			t.Fatalf("%s 那一行的小节数 %q 不是整数", name, strings.TrimSpace(cells[2]))
+		}
+		want[filepath.ToSlash(name)] = n
+	}
+	// ⚠️ 迭代次数下界：表没解析到时下面的循环空转，本条会「通过」。
+	if len(want) < 8 {
+		t.Fatalf("只从 state.md 解析到 %d 个文档的小节数 —— 是真的这么少，还是表格格式变了？"+
+			"两种情形下本条都会「通过」，所以这里必须失败", len(want))
+	}
+
+	head := regexp.MustCompile(`^###? `)
+	for path, n := range want {
+		got := 0
+		for _, l := range readLines(t, filepath.FromSlash(path)) {
+			if head.MatchString(l) {
+				got++
+			}
+		}
+		if got != n {
+			t.Errorf("⚠️ %s 有 %d 个小节，state.md 登记 %d 个 —— "+
+				"若是有意增删，同步改 state.md 那一行；否则很可能是一次**静默删除**",
+				path, got, n)
+		}
+	}
+}
