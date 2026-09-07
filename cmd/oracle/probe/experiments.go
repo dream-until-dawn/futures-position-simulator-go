@@ -253,8 +253,35 @@ func (r *Runner) flatten(sym string, dir kq.Direction) error {
 	ex, inst := splitSymbol(sym)
 
 	// ⚠️ 平今与平昨不是可选风格：SHFE / INE / CFFEX 必须显式声明平今，
-	// DCE / CZCE 只接受普通平仓。这里按今仓平，用 CLOSETODAY；被拒则回退 CLOSE。
+	// DCE / CZCE 只接受普通平仓。这里按今仓平，用 CLOSETODAY；**被拒**才回退 CLOSE。
+	//
+	// ⚠️ 「被拒」和「没成交」必须分开，这里曾经把两者混为一谈：
+	// 原判据是「30 秒内没有全成就回退」，而注释写的是「被拒则回退」——
+	// **注释描述的是一个代码里并不存在的条件**。两者的差别在有昨仓时是致命的：
+	//
+	//	CLOSETODAY 被拒（DCE/CZCE 不认这个标志）    → 回退 CLOSE 是对的
+	//	CLOSETODAY 只是没成交（限价没被打到 / 行情快）→ 回退 CLOSE 是另一回事
+	//
+	// 因为实测（快期模拟·语义，§9）：`CLOSE` 在 `UseHistory` 交易所上
+	// **被解释为平昨**。账上同时有昨仓（过夜种子）与今仓（实验腿）时，
+	// 一次超时回退会去平掉种子——而种子是六条实验共用、当晚不可再生的资源。
+	// 日志却只会说「换一种开平标志再试」：**它不是没平掉，它是平了别的。**
+	yesterdayKey := "volume_long_his"
+	if dir == kq.Sell {
+		yesterdayKey = "volume_short_his"
+	}
+	volHis := kq.MustNum(p, yesterdayKey)
+
 	for _, off := range []kq.Offset{kq.CloseToday, kq.Close} {
+		// ⚠️ 守卫三（最省的一条）：账上有昨仓时，一律禁止 CLOSE 回退。
+		//
+		// 在 `UseHistory` 交易所上，`CLOSE` 必然打在昨仓上。这条不需要判断拒因，
+		// 只看账上有没有昨仓——**一个不需要解析对方措辞的守卫，比一个需要的可靠**。
+		if off == kq.Close && volHis > 0 {
+			return fmt.Errorf("⚠️ %s 上有 %.0f 手**昨仓**，禁止回退到 CLOSE —— "+
+				"实测 CLOSE 在此类交易所上被解释为平昨，回退会平掉昨仓。"+
+				"今仓 %.0f 手**仍未平掉**，请手工处理", sym, volHis, volToday)
+		}
 		req := kq.OrderReq{Exchange: ex, Instrument: inst, Direction: closeDir,
 			Offset: off, Volume: int(volToday), LimitPrice: q.AggressivePrice(closeDir)}
 		id, err := cli.InsertOrder(r.guard(), req)
@@ -266,7 +293,19 @@ func (r *Runner) flatten(sym string, dir kq.Direction) error {
 			r.Logf("  已平仓 %s %.0f 手（%s）", sym, volToday, off)
 			return nil
 		}
-		r.Logf("  用 %s 平仓未成（status=%q msg=%q），换一种开平标志再试", off, st.Status, st.LastMsg)
+		if !done {
+			// ⚠️ 守卫二：超时**不是**被拒，委托很可能还活着。
+			// 不撤就换标志再发，两笔可能**都成交**——今仓昨仓各被平掉一手。
+			r.Logf("  ⚠️ %s 委托 30 秒未到终态，**撤单**并停止（超时不等于被拒，不回退）", off)
+			if err := cli.CancelOrder(id); err != nil {
+				r.Logf("  ⚠️ 撤单也失败：%v", err)
+			}
+			return fmt.Errorf("⚠️ %s 平仓委托超时未成交（status=%q msg=%q），已发撤单。"+
+				"**这不说明它被拒**，所以不换开平标志重试；持仓仍在，请人工确认",
+				off, st.Status, st.LastMsg)
+		}
+		// 到这里是「终态但没全成」= 被拒 / 被撤，这才是可以回退的情形。
+		r.Logf("  用 %s 平仓被拒（status=%q msg=%q），换一种开平标志再试", off, st.Status, st.LastMsg)
 	}
 	return fmt.Errorf("⚠️ 平仓失败，**账户仍有持仓** %s %.0f 手，请手工处理", sym, volToday)
 }
@@ -391,8 +430,16 @@ func (r *Runner) flattenAny(sym string, dir kq.Direction) error {
 				return err
 			}
 			st, done := cli.WaitOrderFinished(id, 30*time.Second)
-			if !done || st.VolumeLeft != 0 {
-				return fmt.Errorf("%s 第 %d 手未成（status=%q msg=%q）", leg.off, i+1, st.Status, st.LastMsg)
+			if !done {
+				// ⚠️ 超时的委托可能还活着；不撤就走，它会在无人看管时成交。
+				if err := cli.CancelOrder(id); err != nil {
+					r.Logf("  ⚠️ 撤单失败：%v", err)
+				}
+				return fmt.Errorf("%s 第 %d 手 30 秒未到终态（status=%q msg=%q），已发撤单",
+					leg.off, i+1, st.Status, st.LastMsg)
+			}
+			if st.VolumeLeft != 0 {
+				return fmt.Errorf("%s 第 %d 手终态未全成（status=%q msg=%q）", leg.off, i+1, st.Status, st.LastMsg)
 			}
 		}
 	}
