@@ -28,16 +28,65 @@ import (
 // 那是在小数点后 4 位的打印精度下看到的。全精度下夹具里存着
 // `commission: 126.95459999999999` 这种 float64 往返噪声，
 // 恒等式成立于**表示误差之内**，不是字面精确。后者是更弱、也更准确的陈述。
-// moneyEps 是恒等式的判定容差。
+// 三个常量把「容差为什么是这个数」写死，并由 TestToleranceOrderingIsAsserted 守住。
 //
-// ⚠️ 它**不是**「差不多就行」。定这个数要同时满足两头：
+// ⚠️ 定容差不是「差不多就行」，它要同时卡两头：
 //
 //	下界：夹具里的数来自 float64 往返，1e6 量级上的表示误差约 1e-10，容差必须盖住它
-//	上界：一笔真实的记账偏差最小是 0.0001（一分钱的百分之一），容差必须远小于它
+//	上界：一笔真实的记账偏差最小是 minMeaningfulMoney，容差必须远小于它
 //
-// 1e-9 与 1e-4 相隔五个数量级，所以这个容差**不可能同时放过噪声和真实偏差**。
-// ⚠️ 若哪天残差顶到容差上，正确的反应是查账，不是把容差往上调。
-var moneyEps = decimal.RequireFromString("0.000000001")
+// 全部以 minMeaningfulMoney 为基准表述，**不要再用「差几个数量级」的散文**：
+// 此处曾同时写着「相隔五个数量级」（对 1e-4 说的）与「差七个数量级」（对 0.01 说的），
+// 两句各自都对，并排读却像自相矛盾——而这段是整个容差论证的承重墙。
+var (
+	// minMeaningfulMoney 是一笔真实记账偏差的下限：一分钱的百分之一。
+	minMeaningfulMoney = decimal.RequireFromString("0.0001")
+
+	// moneyEps 是恒等式的判定容差。
+	moneyEps = decimal.RequireFromString("0.000000001")
+
+	// residualBackstop 是**第二道**闸：即便有人把 moneyEps 调松，
+	// 落进容差内的残差仍会在这里被拦下。它不随 moneyEps 移动。
+	residualBackstop = decimal.RequireFromString("0.000001")
+)
+
+// TestToleranceOrderingIsAsserted 把「不要把容差往上调」从**忠告**变成**断言**。
+//
+// ⚠️ 这条是评审提的，而它补上的正是我一次陈述失误暴露出来的空当：
+// 我报告过「把容差调松一千万倍，残差守卫仍然会红」。评审照做，**全绿**。
+// 差别在于我当时跑的夹具里**还留着上一次破坏注入的 0.001 偏差**而我没复位——
+// 那句话在「存在真实偏差」的前提下为真，我却没把前提写出来。
+//
+// 更要紧的是那句话依赖**夹具状态**才成立，于是它不可复现。
+// 现在这条断言不依赖任何夹具：谁把 moneyEps 调到接近真实金额，
+// 干净仓库下就会红。**一个不依赖状态的断言，胜过一句需要前提的描述。**
+func TestToleranceOrderingIsAsserted(t *testing.T) {
+	// 容差与兜底阈值都必须比「最小有意义金额」小两个数量级以上。
+	limit := minMeaningfulMoney.Div(decimal.NewFromInt(100))
+	for _, c := range []struct {
+		name string
+		v    decimal.Decimal
+	}{
+		{"moneyEps", moneyEps},
+		{"residualBackstop", residualBackstop},
+	} {
+		if c.v.GreaterThan(limit) {
+			t.Errorf("⚠️ %s = %s，已经不比最小有意义金额 %s 小两个数量级（上限 %s）——"+
+				"这个容差会开始吞掉真实的记账偏差。**该查账，不该调容差**",
+				c.name, c.v, minMeaningfulMoney, limit)
+		}
+		if !c.v.IsPositive() {
+			t.Errorf("⚠️ %s = %s 非正 —— 恒等式会变成字面相等，浮点噪声会让它永远红", c.name, c.v)
+		}
+	}
+
+	// ⚠️ 两道闸必须来自不同的数：若 residualBackstop 跟着 moneyEps 走，
+	// 调松容差就会同时调松兜底，第二道闸形同虚设。
+	if residualBackstop.Equal(moneyEps) {
+		t.Error("⚠️ 兜底阈值与判定容差同值 —— 那就只有一道闸了，" +
+			"「两套不同原理的机制不会一起失效」这条在这里不成立")
+	}
+}
 
 type acctSnap struct {
 	Account map[string]any `json:"account"`
@@ -175,11 +224,10 @@ func TestAccountIdentitiesHoldOnEveryFixture(t *testing.T) {
 
 	// ——— ② 判别力报告：这批证据**分不开**哪些柜台参数 ———
 	// ⚠️ 把最大残差打出来，别让容差把真实漂移藏起来。
-	// 容差 1e-9 与「一分钱」差七个数量级：一笔真的记账偏差至少是 1e-4，
-	// 落在容差里绝无可能；而 float64 在 1e6 量级上的表示误差约 1e-10，
-	// 正好被容差覆盖。**两者相隔足够远，所以这个容差不会同时放过两类东西。**
-	t.Logf("恒等式最大残差 %s（容差 %s，最小有意义金额 0.0001）", maxResidual, moneyEps)
-	if maxResidual.GreaterThan(decimal.RequireFromString("0.000001")) {
+	// 三者的关系由 TestToleranceOrderingIsAsserted 守住，这里只报数。
+	t.Logf("恒等式最大残差 %s（容差 %s，兜底阈值 %s，最小有意义金额 %s）",
+		maxResidual, moneyEps, residualBackstop, minMeaningfulMoney)
+	if maxResidual.GreaterThan(residualBackstop) {
 		t.Errorf("⚠️ 最大残差 %s 已经比 float64 表示误差大得多 —— "+
 			"这不像噪声，像真的对不上。别再往上调容差，去查账", maxResidual)
 	}
