@@ -1,0 +1,30 @@
+{
+  "trading_day": "20260907",
+  "captured_at": "2026-09-07T15:04:11+08:00",
+  "note": "只读连通性自检",
+  "account": {
+    "available": 1000000,
+    "balance": 1000000,
+    "close_profit": 0,
+    "commission": 0,
+    "ctp_available": 1000000,
+    "ctp_balance": 1000000,
+    "currency": "CNY",
+    "deposit": 1000000,
+    "float_profit": 0,
+    "frozen_commission": 0,
+    "frozen_margin": 0,
+    "frozen_premium": 0,
+    "margin": 0,
+    "market_value": 0,
+    "position_profit": 0,
+    "pre_balance": 0,
+    "pre_option_market_value": 0,
+    "premium": 0,
+    "risk_ratio": 0,
+    "static_balance": 1000000,
+    "withdraw": 0
+  },
+  "positions": {},
+  "unclassified": null
+}
