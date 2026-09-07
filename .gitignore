@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# 探针/对拍产生的本地凭据缓存，绝不入库
+.tokcache
+.tdurl
+*.token
