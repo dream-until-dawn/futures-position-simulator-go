@@ -3,6 +3,7 @@ package probe
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
@@ -279,20 +280,50 @@ func (r *Runner) expFlattenAll(ctx context.Context) error {
 	if err := cli.ConnectQuote(ctx); err != nil {
 		return err
 	}
+
+	// ⚠️ -symbols 在这里是**限定**，不是可选装饰。
+	//
+	// 起因是一次真实的操作失误：一条实验意外留下 2 手散仓，我用本命令去清，
+	// 它把账上**所有**持仓一起平了——包括刻意留着过夜、准备第二天做昨仓实验的种子。
+	// 一个「收拾干净」的命令顺手毁掉了刻意建立的状态。
+	// 现在给了合约就只动那些合约；不给才是全平，而全平会先把要动的仓列出来。
+	want := map[string]bool{}
+	for _, s := range r.Symbols {
+		want[s] = true
+	}
 	var syms []string
 	for s := range cli.Positions() {
+		if len(want) > 0 && !want[s] {
+			continue
+		}
 		syms = append(syms, s)
 	}
+	sort.Strings(syms)
 	if len(syms) == 0 {
-		r.Logf("账户无持仓记录，无需处理")
+		if len(want) > 0 {
+			r.Logf("指定的 %d 个合约上没有持仓记录，无需处理", len(want))
+		} else {
+			r.Logf("账户无持仓记录，无需处理")
+		}
 		return nil
 	}
 	if err := cli.SubscribeQuotes(syms...); err != nil {
 		return err
 	}
 	r.Logf("")
-	r.Logf("== 平回空仓 ==")
-	r.Logf("  起始持仓 %.0f 手，涉及 %d 个合约记录", cli.OpenLots(), len(syms))
+	if len(want) > 0 {
+		r.Logf("== 平仓（限定 %d 个合约）==", len(want))
+	} else {
+		r.Logf("== 平回空仓（**全账户**，不限合约）==")
+	}
+	r.Logf("  账户共 %.0f 手，本次将处理以下合约：", cli.OpenLots())
+	for _, sym := range syms {
+		p := cli.PositionOf(sym)
+		n := kq.MustNum(p, "volume_long") + kq.MustNum(p, "volume_short")
+		if n > 0 {
+			r.Logf("    %-14s %.0f 手", sym, n)
+		}
+	}
 
 	var failed []string
 	for _, sym := range syms {
@@ -305,6 +336,22 @@ func (r *Runner) expFlattenAll(ctx context.Context) error {
 	cli.WaitTrade(5 * time.Second)
 	left := cli.OpenLots()
 	r.Logf("")
+	if len(want) > 0 {
+		// 限定模式下账上本来就该剩别的仓，OpenLots 不是判据；只看指定合约。
+		var rest float64
+		for _, sym := range syms {
+			p := cli.PositionOf(sym)
+			rest += kq.MustNum(p, "volume_long") + kq.MustNum(p, "volume_short")
+		}
+		if rest > 0 || len(failed) > 0 {
+			for _, f := range failed {
+				r.Logf("  ⚠️ %s", f)
+			}
+			return fmt.Errorf("⚠️ **指定合约上仍有 %.0f 手持仓**，请人工处理", rest)
+		}
+		r.Logf("  指定合约已平净；账户其余持仓 %.0f 手**未动**", left)
+		return nil
+	}
 	if left > 0 || len(failed) > 0 {
 		for _, f := range failed {
 			r.Logf("  ⚠️ %s", f)

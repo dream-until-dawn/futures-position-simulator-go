@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
 	"strings"
 )
 
@@ -45,9 +47,15 @@ type Env struct {
 // Secrets 返回所有不得出现在夹具里的值，交给独立复查用。
 //
 // ⚠️ 调用方不得打印它。
-func (e Env) Secrets() []string {
-	return []string{e.KQUser, e.KQPassword, e.KQClientSecret,
-		e.CTPPassword, e.CTPAuthCode, e.CTPUserID}
+func (e Env) Secrets() []kq.Secret {
+	return []kq.Secret{
+		{Name: "KQ_USER", Value: e.KQUser},
+		{Name: "KQ_PASSWORD", Value: e.KQPassword},
+		{Name: "KQ_CLIENT_SECRET", Value: e.KQClientSecret},
+		{Name: "CTP_PASSWORD", Value: e.CTPPassword},
+		{Name: "CTP_AUTH_CODE", Value: e.CTPAuthCode},
+		{Name: "CTP_USER_ID", Value: e.CTPUserID},
+	}
 }
 
 // LoadEnv 读 .env。缺文件是硬错误——探针连柜台，不该有「默认凭据」这种东西。

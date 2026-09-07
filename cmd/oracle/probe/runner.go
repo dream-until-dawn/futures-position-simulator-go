@@ -60,6 +60,12 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expMarginPrice(ctx) // 与实验 1 同一次观测，见该函数说明
 	case "max-margin-side":
 		return r.expMaxMarginSide(ctx)
+	case "max-margin-lock":
+		return r.expMaxMarginLock(ctx)
+	case "fee-rates":
+		return r.expFeeRates(ctx)
+	case "fee-base":
+		return r.expFeeBase(ctx)
 	case "reject-code":
 		return r.expRejectCode(ctx)
 	case "overnight-setup":
@@ -85,6 +91,15 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 // 一个总是返回「成功」的检查，和一个正确的检查，在成功样本上长得一模一样。
 func (r *Runner) expStatus(ctx context.Context) error {
 	cli := r.cli
+
+	// ⚠️ 先等截面**静默**再读。
+	//
+	// DIFF 是增量 merge patch：登录后字段是一批批到的，
+	// 早读一拍就会读到半截截面。实测踩过一次——持仓 4 手而 margin 打印成 0.0000。
+	// 0 看起来像个合法数值，不像「还没到」，所以这种错不会自己暴露。
+	cli.WaitTrade(1500 * time.Millisecond)
+	for i := 0; i < 6 && cli.WaitTrade(700*time.Millisecond); i++ {
+	}
 	acc := cli.Account()
 	pos := cli.Positions()
 
@@ -93,6 +108,16 @@ func (r *Runner) expStatus(ctx context.Context) error {
 	for _, k := range sortedKeys(acc) {
 		if f, ok := kq.Num(acc, k); ok {
 			r.Logf("    %-26s %.4f", k, f)
+		}
+	}
+
+	// ⚠️ 有持仓却 margin=0，是**自相矛盾的截面**，不是一个观测值。
+	// 单独看它长得像「这些仓不占保证金」，那是个会被当真的读数。
+	if lots := cli.OpenLots(); lots > 0 {
+		if m, ok := kq.Num(acc, "margin"); ok && m == 0 {
+			r.Logf("")
+			r.Logf("⚠️ **截面自相矛盾**：持仓 %.0f 手而 margin=0。", lots)
+			r.Logf("   这几乎肯定是读到了尚未收齐的增量截面，**不要拿这一份做任何判定**。")
 		}
 	}
 
@@ -156,7 +181,13 @@ func (r *Runner) dump(name, note string) error {
 		time.Now().Format(time.RFC3339), note)
 
 	// 独立复查：与白名单是两套不同原理的机制，因此不会一起失效。
-	if err := kq.Scrubbed(f, append(r.Env.Secrets(), cli.AuthID())); err != nil {
+	secrets := append(r.Env.Secrets(), kq.Secret{Name: "authID", Value: cli.AuthID()})
+	if bs := kq.BlindSpots(secrets); len(bs) > 0 {
+		// ⚠️ 明说查不了什么，免得「没报错」被读成「都查过了」。
+		r.Logf("  ⓘ 独立复查的盲区：%v —— 这几个值太短，在夹具里搜它们只会撞上价格数字，", bs)
+		r.Logf("    没有判别力。它们靠白名单挡，不靠这一层。")
+	}
+	if err := kq.Scrubbed(f, secrets); err != nil {
 		return fmt.Errorf("脱敏自检失败，**不落盘**：%w", err)
 	}
 	if r.DumpDir == "" {
@@ -175,7 +206,14 @@ func (r *Runner) dump(name, note string) error {
 		return err
 	}
 	r.Logf("")
-	r.Logf("夹具落盘 %s（%d 字节，未分类字段 %d 个）", path, len(b), len(f.Unclassified))
+	// ⚠️ 打**绝对**路径。相对路径的落盘目录随 cwd 走，从 cmd/oracle 里跑
+	// 会在 cmd/oracle/testdata 下另开一份，日志里只写 "testdata\probes\..."
+	// 看不出它落在哪棵树上——踩过一次，多出一份没人知道的重复夹具。
+	shown := path
+	if abs, err := filepath.Abs(path); err == nil {
+		shown = abs
+	}
+	r.Logf("夹具落盘 %s（%d 字节，未分类字段 %d 个）", shown, len(b), len(f.Unclassified))
 	return nil
 }
 

@@ -186,7 +186,38 @@ var (
 // ⚠️ 它与白名单是两套不同原理的机制，所以不会一起失效。
 // 一个 bug 同时骗过两种不同机制，要比骗过同一种机制的两处难得多。
 // secrets 传 .env 里那几个值（账号、密码、authID），本函数不回显它们。
-func Scrubbed(f *Fixture, secrets []string) error {
+// Secret 是一个待复查的凭据值，带上它在 .env 里的键名。
+//
+// ⚠️ 带键名不是为了好看：命中时报「KQ_PASSWORD 出现在夹具里」，
+// 比报「某个长度 12 的值出现在夹具里」可操作得多，而键名本身不是秘密。
+type Secret struct {
+	Name  string
+	Value string
+}
+
+// minCheckable 是独立复查能真正判别的最短值长度。
+//
+// ⚠️ 比它短的值查不了，原因是**假阳性**而不是假阴性：
+// 四位数的 "9999" 会命中 "999989.3742" 这种价格里的子串，
+// 于是每份夹具都报警——而一个永远报警的检查，和没有检查是一回事，
+// 甚至更糟，因为它会训练人忽略告警。
+const minCheckable = 8
+
+// BlindSpots 报告独立复查**查不了**哪些凭据。
+//
+// ⚠️ 它的存在本身就是要点：一个不声明自己盲区的检查器，
+// 会让人以为「没报错 = 都查过了」。这里把查不了的那部分明说出来。
+func BlindSpots(secrets []Secret) []string {
+	var out []string
+	for _, s := range secrets {
+		if s.Value != "" && len(s.Value) < minCheckable {
+			out = append(out, s.Name)
+		}
+	}
+	return out
+}
+
+func Scrubbed(f *Fixture, secrets []Secret) error {
 	b, err := json.Marshal(f)
 	if err != nil {
 		return err
@@ -200,11 +231,12 @@ func Scrubbed(f *Fixture, secrets []string) error {
 		return fmt.Errorf("夹具里出现 JWT 形状的串，脱敏漏了")
 	}
 	for _, sec := range secrets {
-		if sec == "" || len(sec) < 4 {
-			continue
+		if sec.Value == "" || len(sec.Value) < minCheckable {
+			continue // 查不了的在 BlindSpots 里单独报，不在这里静默吞掉
 		}
-		if strings.Contains(s, sec) {
-			return fmt.Errorf("夹具里出现了 .env 中的一个值（长度 %d），脱敏漏了", len(sec))
+		if strings.Contains(s, sec.Value) {
+			return fmt.Errorf("夹具里出现了 .env 中 %s 的值（长度 %d），脱敏漏了",
+				sec.Name, len(sec.Value))
 		}
 	}
 	if len(f.Unclassified) > 0 {

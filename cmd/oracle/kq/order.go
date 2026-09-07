@@ -55,6 +55,15 @@ type Guard struct {
 }
 
 // Check 校验一笔委托是否被安全阀放行。
+//
+// ⚠️ MaxVolume 只管**开仓**。
+//
+// 它原先对所有委托一视同仁，结果是：一次实验意外建到 2 手，
+// 收尾平仓要发 2 手的单，被 MaxVolume=1 挡下——**账上留着仓，平不掉**。
+// 一个用来防止扩大风险的守卫，反过来阻止了缩小风险。
+//
+// 平仓单不会让敞口变大，只会变小或归零，所以不受手数上限约束。
+// 上限仍然管住真正的风险来源：开仓。
 func (g Guard) Check(r OrderReq) error {
 	if !g.AllowOrder {
 		return fmt.Errorf("下单被安全阀拦下：PROBE_ALLOW_ORDER 未开启（%s）", r)
@@ -62,8 +71,8 @@ func (g Guard) Check(r OrderReq) error {
 	if r.Volume <= 0 {
 		return fmt.Errorf("手数必须为正，得到 %d", r.Volume)
 	}
-	if g.MaxVolume > 0 && r.Volume > g.MaxVolume {
-		return fmt.Errorf("手数 %d 超过上限 PROBE_MAX_VOLUME=%d（%s）", r.Volume, g.MaxVolume, r)
+	if g.MaxVolume > 0 && r.Offset == Open && r.Volume > g.MaxVolume {
+		return fmt.Errorf("开仓手数 %d 超过上限 PROBE_MAX_VOLUME=%d（%s）", r.Volume, g.MaxVolume, r)
 	}
 	if r.LimitPrice <= 0 {
 		return fmt.Errorf("限价必须为正，得到 %v（%s）", r.LimitPrice, r)
