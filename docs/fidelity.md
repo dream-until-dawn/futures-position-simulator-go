@@ -244,8 +244,9 @@ go test ./...                       # 单元测试与守卫
 cd cmd/oracle && go run . -h        # 嵌套模块：probe / conformance 两个子命令
 ```
 
-对拍需要账号，配置写在 `.env`（已在 `.gitignore`，不入库）。
-账号申请见 [probes.md](./probes.md) 的「待办」。
+对拍需要**你自己的**柜台账号（本仓库的凭据不入库）。配置写在 `.env`，
+模板与各项取值来源见 [`.env.example`](../.env.example)，申请入口见
+[probes.md](./probes.md) 的「待办」一节。
 
 ⚠️ **在 `cmd/oracle conformance` 能跑出「有差异 0、未分类 0」之前，
 本文第 2 节的一切都是计划，不是结论。**
