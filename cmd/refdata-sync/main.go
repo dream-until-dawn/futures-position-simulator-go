@@ -155,10 +155,13 @@ func run(url, products, out, specOut, raw, from string, timeout time.Duration) e
 	// 「这个数是按品种还是按合约」在读的时候消失，
 	// 而那正是本项目栽过的那类问题（PositionDateType 逐合约、不是逐交易所）。
 	if specOut != "" {
-		if err := dumpSpecs(specOut, url, listed); err != nil {
+		// ⚠️ 报**落进文件的**期货数，不是 len(listed)：后者含期权与组合，
+		// 打出来会让人以为文件里有那么多合约。
+		n, err := dumpSpecs(specOut, url, listed)
+		if err != nil {
 			return err
 		}
-		fmt.Printf("合约规格已写入 %s（%d 个在市合约）", specOut, len(listed))
+		fmt.Printf("合约规格已写入 %s（%d 个在市**期货**合约）", specOut, n)
 		fmt.Println()
 	}
 
@@ -255,7 +258,7 @@ func matcher(want []string) func(string) bool {
 // ⚠️ 只落**字典真的给了**的那几项：乘数、最小变动价位、报价小数位、到期。
 // 六个费率、四个保证金率、PositionDateType、MaxMarginSideAlgorithm
 // 字典里没有 —— 不在这里填零值凑数，那样的文件会让人以为规格齐了。
-func dumpSpecs(path, source string, syms map[string]live.Symbol) error {
+func dumpSpecs(path, source string, syms map[string]live.Symbol) (int, error) {
 	type wire struct {
 		Instrument     string  `json:"instrument"`
 		Exchange       string  `json:"exchange"`
@@ -266,10 +269,23 @@ func dumpSpecs(path, source string, syms map[string]live.Symbol) error {
 		MaxLimitVolume int     `json:"max_limit_order_volume,omitempty"`
 		MinLimitVolume int     `json:"min_limit_order_volume,omitempty"`
 	}
+	// ⚠️ 只留 FUTURE，并**计数**跳过了多少。
+	//
+	// 代码前缀这个筛法很粗：`SHFE.rb` 会匹配上 `rb2701C3000` 这类期权，
+	// 实测五个品种筛出**一万九千多**个条目，而期货只有几十个。
+	// 跳过的数本身是个信号 —— 它说明筛法有多粗，而那个数不打出来就没人知道。
+	//
+	// ⚠️ 不 Validate 期权就报错：期权的字段集与期货不同，
+	// 拿期货的必需字段去查它，报的是一个**不相干**的错。
+	skipped := map[string]int{}
 	rows := make([]wire, 0, len(syms))
 	for id, sm := range syms {
+		if sm.Class != "FUTURE" {
+			skipped[sm.Class]++
+			continue
+		}
 		if err := sm.Validate(); err != nil {
-			return fmt.Errorf("合约 %s 规格不全，**不落盘**：%w", id, err)
+			return 0, fmt.Errorf("合约 %s 规格不全，**不落盘**：%w", id, err)
 		}
 		rows = append(rows, wire{
 			Instrument: id, Exchange: sm.ExchangeID, Product: sm.ProductID,
@@ -279,14 +295,30 @@ func dumpSpecs(path, source string, syms map[string]live.Symbol) error {
 		})
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Instrument < rows[j].Instrument })
+	if len(skipped) > 0 {
+		classes := make([]string, 0, len(skipped))
+		for c := range skipped {
+			classes = append(classes, c)
+		}
+		sort.Strings(classes)
+		fmt.Printf("  ⓘ 规格里跳过非期货 ")
+		for _, c := range classes {
+			fmt.Printf("%s×%d ", c, skipped[c])
+		}
+		fmt.Println("—— 代码前缀这个筛法会带进期权与组合")
+	}
+	if len(rows) == 0 {
+		return 0, fmt.Errorf("⚠️ 一个期货合约都没有（跳过非期货 %v）—— "+
+			"品种写法可能不对，或者筛出来的全是期权", skipped)
+	}
 	f, err := os.Create(path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer f.Close()
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", " ")
-	return enc.Encode(struct {
+	return len(rows), enc.Encode(struct {
 		Source      string `json:"source"`
 		GeneratedAt string `json:"generated_at"`
 		Note        string `json:"note"`
