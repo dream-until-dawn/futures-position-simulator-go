@@ -103,13 +103,15 @@ func TestParseSHFEDropsAreItemised(t *testing.T) {
 		t.Errorf("结果里 %d 个合约，报告说留下 %d 个", len(got), rep.Kept)
 	}
 	// ⚠️ 下界：一条都没丢时，上面那条恒等式恒真而丢弃分类从未被走到。
-	// 实测这份文件里有 27 行小计 + 5 行 TAS。
+	// 实测这份文件里有 31 行被丢弃：26 行小计 + 5 行 TAS。
+	// ⚠️ 不是「27 + 5」——有一行**既是小计又是 TAS**，
+	// PRODUCTCLASS 先判，于是它记在「非期货」那一类里。「+」暗示互斥，那里不互斥。
 	if dropped < 20 {
-		t.Errorf("⚠️ 只丢了 %d 行 —— 实测这份文件有 27 行小计与 5 行 TAS，"+
+		t.Errorf("⚠️ 只丢了 %d 行 —— 实测这份文件有 26 行小计与 5 行 TAS（另有一行两者皆是，记在非期货类），"+
 			"丢得太少说明它们被当成合约放进去了：%s", dropped, rep)
 	}
 	// 汇总行与 TAS 必须各自被认出来，而不是混进一个笼统的「解析失败」。
-	for _, want := range []string{"汇总行（月份非数字）", "非期货（PRODUCTCLASS≠1）"} {
+	for _, want := range []string{dropSummary, dropNonFuture} {
 		if rep.Dropped[want] == 0 {
 			t.Errorf("⚠️ 丢弃分类里没有 %q —— 分类笼统等于没分类：%s", want, rep)
 		}
@@ -251,4 +253,56 @@ func TestFixtureIsRealExchangeData(t *testing.T) {
 			"没有它的夹具证不了那段代码是对的")
 	}
 	t.Logf("夹具：%d 个 PRODUCTID，%d 个空字符串价格", len(products), emptyPrices)
+}
+
+// TestParseSHFEDistinguishesNotYetSettled 断言「结算尚未发生」不被读成「解析失败」。
+//
+// ⚠️ 实测（自然日 2026-09-08 14:4x，日盘尚未收盘）：
+// kx20260908.dat **已经存在且返回 200**，332 行俱全，
+// 而全部 SETTLEMENTPRICE 是空字符串 —— 交易所盘中就发布这个文件，
+// 结算之后才填价。
+//
+// **「文件在」不等于「结算发生了」。**
+// 把这种情形与解析失败合并，会让人去查解析器，而真正的原因是「时候未到」。
+//
+// 它同时是一条**独立的结算判据**，与柜台那两条（quotes.settlement 由 "-" 变成数、
+// pre_balance 推进）互不依赖。
+func TestParseSHFEDistinguishesNotYetSettled(t *testing.T) {
+	body := `{"report_date":"20260907","o_curinstrument":[
+		{"PRODUCTID":"rb_f","PRODUCTCLASS":"1","DELIVERYMONTH":"2701",
+		 "SETTLEMENTPRICE":"","PRESETTLEMENTPRICE":3160},
+		{"PRODUCTID":"rb_f","PRODUCTCLASS":"1","DELIVERYMONTH":"2705",
+		 "SETTLEMENTPRICE":"","PRESETTLEMENTPRICE":3187},
+		{"PRODUCTID":"cu_f","PRODUCTCLASS":"1","DELIVERYMONTH":"小计",
+		 "SETTLEMENTPRICE":"","PRESETTLEMENTPRICE":""},
+		{"PRODUCTID":"sc_tas","PRODUCTCLASS":"6","DELIVERYMONTH":"2610",
+		 "SETTLEMENTPRICE":"","PRESETTLEMENTPRICE":""}]}`
+	_, rep, err := ParseSHFE(strings.NewReader(body), day20260907())
+	if err == nil {
+		t.Fatal("⚠️ 结算价全为空时应当报错")
+	}
+	if !strings.Contains(err.Error(), "结算尚未发生") {
+		t.Errorf("⚠️ 报错了但没说「结算尚未发生」，而是：%v —— "+
+			"合并成「解析失败」会让人去查解析器，而真正的原因是时候未到", err)
+	}
+	// ⚠️ 汇总行与 TAS 不该被算进「结算价为空」那一类，
+	// 否则一份**只有汇总行**的文件也会被判成「尚未结算」。
+	if rep.Dropped[dropEmptyPrice] != 2 {
+		t.Errorf("「结算价为空」应为 2 条（两个 rb），得到 %d：%s",
+			rep.Dropped[dropEmptyPrice], rep)
+	}
+
+	// 对照：同样全为空但**一条期货都没有**（只有汇总与 TAS）——
+	// 那不是「尚未结算」，那是这份文件里根本没有期货行。
+	only := `{"report_date":"20260907","o_curinstrument":[
+		{"PRODUCTID":"cu_f","PRODUCTCLASS":"1","DELIVERYMONTH":"小计",
+		 "SETTLEMENTPRICE":"","PRESETTLEMENTPRICE":""}]}`
+	_, _, err = ParseSHFE(strings.NewReader(only), day20260907())
+	if err == nil {
+		t.Fatal("应当报错")
+	}
+	if strings.Contains(err.Error(), "结算尚未发生") {
+		t.Errorf("⚠️ 一条期货都没有却被判成「结算尚未发生」—— "+
+			"那会让人白等一个永远不会填上的价：%v", err)
+	}
 }

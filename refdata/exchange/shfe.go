@@ -102,6 +102,18 @@ type shfeRow struct {
 	PreSettlement json.RawMessage `json:"PRESETTLEMENTPRICE"`
 }
 
+// 丢弃原因。⚠️ 用常量而不是字面量：判据里要按原因取数，
+// 而两处各写一遍字符串时，改一处就会静默地永远取到 0。
+const (
+	dropNonFuture   = "非期货（PRODUCTCLASS≠1）"
+	dropSummary     = "汇总行（月份非数字）"
+	dropNoSuffix    = "PRODUCTID 没有 _f 后缀"
+	dropBadID       = "合约代码解析失败"
+	dropEmptyPrice  = "结算价为空"
+	dropNotNumber   = "结算价不是数"
+	dropNotPositive = "结算价非正"
+)
+
 // shfeFutures 是 PRODUCTCLASS 里表示「期货」的取值。
 //
 // ⚠️ 实测（kx20260907.dat，332 行）：只有 "1" 与 "6" 两种，
@@ -153,38 +165,38 @@ func ParseSHFE(r io.Reader, day types.TradingDay) (map[string]Daily, Report, err
 		month := strings.TrimSpace(row.DeliveryMonth)
 		label := pid + "/" + month
 		if row.ProductClass != shfeFutures {
-			rep.drop("非期货（PRODUCTCLASS≠1）", label)
+			rep.drop(dropNonFuture, label)
 			continue
 		}
 		if !allDigits(month) {
 			// 小计行：DELIVERYMONTH 是「小计」，价格字段为空。
-			rep.drop("汇总行（月份非数字）", label)
+			rep.drop(dropSummary, label)
 			continue
 		}
 		product, ok := strings.CutSuffix(pid, "_f")
 		if !ok {
 			// ⚠️ 报出来而不是硬切：后缀规则变了要有人知道。
-			rep.drop("PRODUCTID 没有 _f 后缀", label)
+			rep.drop(dropNoSuffix, label)
 			continue
 		}
 		inst, err := types.ParseNative(types.SHFE, product+month, day)
 		if err != nil {
-			rep.drop("合约代码解析失败", label+"："+err.Error())
+			rep.drop(dropBadID, label+"："+err.Error())
 			continue
 		}
 		settle, ok := numText(row.Settlement)
 		if !ok {
-			rep.drop("结算价为空", label)
+			rep.drop(dropEmptyPrice, label)
 			continue
 		}
 		d, err := decimal.NewFromString(settle)
 		if err != nil {
-			rep.drop("结算价不是数", label+"："+settle)
+			rep.drop(dropNotNumber, label+"："+settle)
 			continue
 		}
 		if !d.IsPositive() {
 			// ⚠️ 结算价为零不是「便宜」，是缺数据。放进去会让逐日盯市把整个持仓算成归零。
-			rep.drop("结算价非正", label+"："+settle)
+			rep.drop(dropNotPositive, label+"："+settle)
 			continue
 		}
 		rec := Daily{Instrument: inst, Settlement: d}
@@ -202,6 +214,24 @@ func ParseSHFE(r io.Reader, day types.TradingDay) (map[string]Daily, Report, err
 		rep.Kept++
 	}
 	if rep.Kept == 0 {
+		// ⚠️ 「文件在」不等于「结算发生了」。
+		//
+		// 实测（自然日 2026-09-08 14:4x，日盘尚未收盘）：
+		// kx20260908.dat **已经存在且返回 200**，332 行俱全，
+		// 而 301 行的 SETTLEMENTPRICE 全是空字符串 —— 交易所盘中就发布这个文件，
+		// 结算之后才把价填进去。
+		//
+		// 把这种情形与「解析失败」合并成一条错误，会让人去查解析器，
+		// 而真正的原因是「时候未到」。所以单独判、单独说。
+		if rep.Dropped[dropEmptyPrice] == rep.Rows-rep.Dropped[dropSummary]-rep.Dropped[dropNonFuture] &&
+			rep.Dropped[dropEmptyPrice] > 0 {
+			return nil, rep, fmt.Errorf("⚠️ 交易日 %s 的日行情**已发布但结算价全为空**（%d 行）—— "+
+				"交易所盘中就发布这个文件，结算之后才填价。"+
+				"这不是解析失败，是**结算尚未发生**；"+
+				"它同时是一条独立的结算判据（另两条：柜台的 quotes.settlement 由 \"-\" 变成数、"+
+				"以及 pre_balance 推进）",
+				day, rep.Dropped[dropEmptyPrice])
+		}
 		return nil, rep, fmt.Errorf("一个合约都没解析出来 —— %s", rep)
 	}
 	return out, rep, nil
