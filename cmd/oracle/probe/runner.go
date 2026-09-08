@@ -201,7 +201,7 @@ func (r *Runner) expStatus(ctx context.Context) error {
 // 可能已经进过 git index —— 一次 git add -A 就够了。
 func (r *Runner) dump(name, note string) error {
 	cli := r.cli
-	f := kq.Sanitize(cli.Account(), cli.Positions(), cli.TradingDay(),
+	f := kq.Sanitize(cli.Account(), cli.Positions(), cli.Trades(), cli.TradingDay(),
 		time.Now().Format(time.RFC3339), note)
 
 	// 独立复查：与白名单是两套不同原理的机制，因此不会一起失效。

@@ -112,6 +112,43 @@ var positionDrop = map[string]string{
 	"account_id":  "丢弃：账号标识",
 }
 
+// tradeKeep 是成交截面的白名单。
+//
+// ⚠️ 成交此前**根本没进夹具**，而这正好是本项目核心那条设计的死角：
+//
+//	本库存逐笔明细，理由是「均价是有损压缩」——
+//	(2 手 @100, 1 手 @130) 与 (3 手 @110) 均价相同，
+//	平掉 1 手 @120 时逐笔对冲 +20、按均价 +10，两个结果都不会报错。
+//
+// 而夹具只存了持仓截面，也就是**只存了均价**。
+// 于是从存档证据里重建不出本库的输入，逐笔对冲口径在夹具上**永远不可对拍** ——
+// 一个为了不丢明细而做的设计，它的证据层把明细丢了。
+//
+// 落在实测上：现有 20 份 2 手样本里，两笔全是同一个价
+// （open_cost = open_price × 2 × 乘数，见 probes.md §9），
+// 也就是加权平均这条**从未被考验过**，而单看持仓截面**看不出这一点**。
+var tradeKeep = map[string]string{
+	"trade_id":          "保留：成交编号，同一笔的幂等键",
+	"order_id":          "保留：对应委托，用于把成交归到某次下单",
+	"exchange_id":       "保留：交易所",
+	"instrument_id":     "保留：合约",
+	"exchange_trade_id": "保留：交易所成交号",
+	"direction":         "保留：买卖方向",
+	"offset":            "保留：开平标志 —— ⚠️ 平今平昨的判定全靠它",
+	"price":             "保留：**成交价** —— 逐笔对冲口径的基线，本库的 Lot.OpenPrice",
+	"volume":            "保留：成交手数",
+	"trade_date_time":   "保留：成交时刻（纳秒）",
+	"commission":        "保留：这一笔的手续费",
+	"seqno":             "保留：序号",
+}
+
+var tradeDrop = map[string]string{
+	"user_id":     "丢弃：账户 UUID",
+	"investor_id": "丢弃：投资者代码",
+	"account_id":  "丢弃：账号标识",
+	"broker_id":   "丢弃：经纪商标识",
+}
+
 // Fixture 是脱敏后的夹具，可以入库。
 type Fixture struct {
 	TradingDay string                    `json:"trading_day"`
@@ -119,6 +156,13 @@ type Fixture struct {
 	Note       string                    `json:"note,omitempty"`
 	Account    map[string]any            `json:"account"`
 	Positions  map[string]map[string]any `json:"positions"`
+
+	// Trades 是本交易日的逐笔成交。
+	//
+	// ⚠️ 它不是「顺手多存一点」：没有它，夹具里只有均价，
+	// 而均价是有损压缩 —— 逐笔对冲口径在存档证据上就**永远不可对拍**。
+	// 见 tradeKeep 的注释。
+	Trades map[string]map[string]any `json:"trades"`
 
 	// Unclassified 记录白名单与丢弃表都没见过的键。
 	//
@@ -129,13 +173,14 @@ type Fixture struct {
 }
 
 // Sanitize 把交易截面按白名单过成夹具。
-func Sanitize(account map[string]any, positions map[string]any, tradingDay, capturedAt, note string) *Fixture {
+func Sanitize(account, positions, trades map[string]any, tradingDay, capturedAt, note string) *Fixture {
 	f := &Fixture{
 		TradingDay: tradingDay,
 		CapturedAt: capturedAt,
 		Note:       note,
 		Account:    map[string]any{},
 		Positions:  map[string]map[string]any{},
+		Trades:     map[string]map[string]any{},
 	}
 	unknown := map[string]struct{}{}
 
@@ -167,6 +212,25 @@ func Sanitize(account map[string]any, positions map[string]any, tradingDay, capt
 			unknown["positions/"+k] = struct{}{}
 		}
 		f.Positions[sym] = out
+	}
+
+	for id, raw := range trades {
+		t, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		out := map[string]any{}
+		for k, v := range t {
+			if _, ok := tradeKeep[k]; ok {
+				out[k] = v
+				continue
+			}
+			if _, ok := tradeDrop[k]; ok {
+				continue
+			}
+			unknown["trades/"+k] = struct{}{}
+		}
+		f.Trades[id] = out
 	}
 
 	for k := range unknown {
