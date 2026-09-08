@@ -57,6 +57,13 @@ const (
 	// CheckTradable 合约是否可交易。
 	CheckTradable
 	// CheckSession 是否在交易时段内。⚠️ 本库目前查不了，见 Result.Unchecked。
+	//
+	// ⚠️ 还有第二层，与「查不了」不是一回事：**快期模拟自己也不查**。
+	// 20260909 从已有语料横着读：313 笔从未被拒过的委托里有 217 笔
+	// 落在该品种的任何时段之外，`DCE.i2701` 甚至在夜盘收盘后近四小时被收下
+	// （kq_facts 48，守卫 TestOrdersAcceptedOutsideSession）。
+	// 于是在这个口子上，**一个查时段的实现与一个不查的实现对拍结果相同** ——
+	// 那是一条盲区，不是一处待办。
 	CheckSession
 	// CheckPriceTick 价格是否为最小变动价位的整数倍。
 	//

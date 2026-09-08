@@ -1741,5 +1741,16 @@
   "test": "TestNotifyCodesAreKnown",
   "want": "没有登记",
   "expect": "red"
+ },
+ {
+  "name": "157 时段判定恒真（「非交易时段照收」这条实测会失去语料）",
+  "dir": "",
+  "file": "conformance/fixture/session_accept_test.go",
+  "old": "\t\t\tin := false",
+  "new": "\t\t\tin := true",
+  "pkg": "./conformance/fixture/",
+  "test": "TestOrdersAcceptedOutsideSession",
+  "want": "全都落在交易时段内",
+  "expect": "red"
  }
 ]
