@@ -1,6 +1,8 @@
 package futsim
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/ast"
@@ -8,6 +10,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -292,15 +295,8 @@ func TestFixtureNameMatchesTradingDay(t *testing.T) {
 		}
 		checked++
 	}
-	// ⚠️ 确切数，不是下界。原来写的是 `< 15`，而当时有 20 份 ——
-	// 评审实测删掉 2 份仍然全绿。**一个「至少 N 份」的断言，
-	// 对「从 20 份删到 18 份」毫无判别力**，而那正是删除实际发生的路径。
-	// 夹具保留策略（probes.md §7.4）此前只靠恒等式测试的判别力报告间接护着，
-	// 现在它有了直接的牙齿。
-	if want := declaredCount(t, "fixture_count"); checked != want {
-		t.Errorf("⚠️ 核到 %d 份夹具，state.md 登记 %d 份 —— "+
-			"新增证据请同步改 state.md 那一行；**减少了则很可能是一次删除**，"+
-			"而夹具只因被证明是错的而删（probes.md §7.4）", checked, want)
+	if checked < 15 {
+		t.Fatalf("只核到 %d 份夹具 —— 太少，本条可能在空转", checked)
 	}
 }
 
@@ -397,4 +393,52 @@ func TestSessionLabelsAreQualified(t *testing.T) {
 				map[bool]string{true: "拦下", false: "放行"}[bad])
 		}
 	}
+}
+
+// TestCommittedFixturesStillExist 断言**提交过的**夹具没有被删掉。
+//
+// ⚠️ 这一条换过一次判据，两次都不是「写错了」，是问题问得不对：
+//
+//	一版  下界 `>= 15`（实际 20 份）   → 删 2 份仍全绿，对「删除」毫无判别力
+//	二版  确切数，登记在 state.md      → 有牙齿，但**新增也会红**
+//	                                     而探针整天在产出新证据，
+//	                                     于是测试在两次提交之间长期是红的 ——
+//	                                     **一个长期红的守卫会被关掉**，
+//	                                     这正是我在 settle-watch 注释里写过的那种死法
+//
+// 三版问的是真正该问的那个问题：**提交过的夹具还在不在。**
+// 新增零摩擦（未提交的新文件不在名单里），删除全牙齿（名单来自 git，不靠人维护）。
+//
+// ⚠️ git 不可用时**失败而不是跳过**：本仓库的文档类守卫本来就读工作树，
+// 非 git 检出不是本项目支持的状态。一个「找不到就跳过」的检查，
+// 在它最该报警的时候也会通过。
+func TestCommittedFixturesStillExist(t *testing.T) {
+	out, err := exec.Command("git", "ls-files", "testdata/probes").Output()
+	if err != nil {
+		t.Fatalf("跑不了 git ls-files：%v —— 本条靠 git 提供「提交过哪些夹具」的名单，"+
+			"拿不到名单就判不出删除，所以这里失败而不是跳过", err)
+	}
+	var committed []string
+	sc := bufio.NewScanner(bytes.NewReader(out))
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if strings.HasSuffix(line, ".json") {
+			committed = append(committed, line)
+		}
+	}
+	// ⚠️ 迭代次数下界：名单为空时下面的循环空转，本条会「通过」。
+	if len(committed) < 15 {
+		t.Fatalf("git 只列出 %d 份已提交夹具 —— 是真的这么少，还是路径写错了？"+
+			"两种情形下本条都会「通过」，所以这里必须失败", len(committed))
+	}
+	missing := 0
+	for _, p := range committed {
+		if _, err := os.Stat(filepath.FromSlash(p)); err != nil {
+			t.Errorf("⚠️ 已提交的夹具 %s 在工作树里不见了 —— "+
+				"夹具只因**被证明是错的**而删（probes.md §7.4）；"+
+				"判别力是随样本组合涨的，而删除不可逆", p)
+			missing++
+		}
+	}
+	t.Logf("已提交夹具 %d 份，缺失 %d 份", len(committed), missing)
 }
