@@ -33,15 +33,22 @@ func main() {
 	products := flag.String("products", "", "要的品种，形如 SHFE.rb,DCE.m；留空报错")
 	out := flag.String("out", "", "时段表输出文件；留空只打印不落盘")
 	timeout := flag.Duration("timeout", 20*time.Minute, "整体超时（那份文件 334 MiB）")
+	// ⚠️ raw / from 让「拉取」与「转换」分开。
+	//
+	// 一次拉取实测 25 分钟（238978 条、334 MiB），
+	// 而转换侧的每一处改动都不该再付那 25 分钟 ——
+	// 那样的代价会让人倾向于「少改一点」，而少改的那一点通常正是该改的。
+	raw := flag.String("raw", "", "把筛出来的原始条目落盘到这里，供离线重跑转换")
+	from := flag.String("from", "", "从 -raw 落下的文件读，不联网")
 	flag.Parse()
 
-	if err := run(*url, *products, *out, *timeout); err != nil {
+	if err := run(*url, *products, *out, *raw, *from, *timeout); err != nil {
 		fmt.Fprintf(os.Stderr, "失败：%v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(url, products, out string, timeout time.Duration) error {
+func run(url, products, out, raw, from string, timeout time.Duration) error {
 	// ⚠️ 必须显式给品种。字典约三万条，"全都要" 不是一个合理的默认值，
 	// 而一个默认全要的工具会在第一次被跑起来时把内存吃光。
 	var want []string
@@ -55,23 +62,48 @@ func run(url, products, out string, timeout time.Duration) error {
 			"字典约三万条，「全都要」不是一个合理的默认值")
 	}
 	fmt.Printf("要的品种 %d 个：%s\n", len(want), strings.Join(want, " "))
-	fmt.Printf("拉取 %s\n", url)
-	fmt.Println("⚠️ 那份文件约 334 MiB，流式解析、单次请求、**不续传**")
+	var syms map[string]live.Symbol
+	if from != "" {
+		// ⚠️ 离线路径**只跳过网络**，不跳过任何校验：
+		// 转换与汇总走的仍是同一套函数。一条绕过校验的「快路径」，
+		// 会成为唯一没被检查过的入口 —— 而它恰好是被用得最多的那条。
+		b, err := os.ReadFile(from)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(b, &syms); err != nil {
+			return fmt.Errorf("读 %s 失败：%w", from, err)
+		}
+		fmt.Printf("从 %s 离线读入 %d 条（未联网）", from, len(syms))
+		fmt.Println()
+	} else {
+		fmt.Printf("拉取 %s", url)
+		fmt.Println()
+		fmt.Println("⚠️ 那份文件约 334 MiB，流式解析、单次请求、**不续传**")
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
-	match := matcher(want)
-	start := time.Now()
-	syms, err := live.FetchSymbols(ctx, url, match, func(scanned, kept int, bytes int64) {
-		fmt.Printf("\r  扫过 %d 条，留下 %d 条，已读 %.1f MiB（%.0fs）",
-			scanned, kept, float64(bytes)/1024/1024, time.Since(start).Seconds())
-	})
-	fmt.Println()
-	if err != nil {
-		return err
+		start := time.Now()
+		var err error
+		syms, err = live.FetchSymbols(ctx, url, matcher(want), func(scanned, kept int, bytes int64) {
+			fmt.Printf("\r  扫过 %d 条，留下 %d 条，已读 %.1f MiB（%.0fs）",
+				scanned, kept, float64(bytes)/1024/1024, time.Since(start).Seconds())
+		})
+		fmt.Println()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("拉完：%d 条命中，耗时 %.0fs", len(syms), time.Since(start).Seconds())
+		fmt.Println()
+		if raw != "" {
+			if err := dumpRaw(raw, syms); err != nil {
+				return err
+			}
+			fmt.Printf("原始条目已落盘 %s —— 之后用 -from 离线重跑转换", raw)
+			fmt.Println()
+		}
 	}
-	fmt.Printf("拉完：%d 条命中，耗时 %.0fs\n", len(syms), time.Since(start).Seconds())
 	if len(syms) == 0 {
 		return fmt.Errorf("一条都没命中 —— 品种写法可能不对（要交易所前缀，如 SHFE.rb）")
 	}
@@ -148,6 +180,18 @@ func run(url, products, out string, timeout time.Duration) error {
 	}
 	fmt.Printf("\n时段表已写入 %s\n", out)
 	return nil
+}
+
+// dumpRaw 把筛出来的原始条目落盘，供 -from 离线重跑。
+func dumpRaw(path string, syms map[string]live.Symbol) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", " ")
+	return enc.Encode(syms)
 }
 
 func fmtSessions(ss []refdata.Session) string {

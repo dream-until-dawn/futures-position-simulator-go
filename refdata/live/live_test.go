@@ -355,3 +355,84 @@ func TestSessionTablesRefuseAllNonFuture(t *testing.T) {
 			"空列表与「这些品种没有时段表」长得一样，而实际是筛选写错了", len(tabs))
 	}
 }
+
+// TestParseClockHandlesHoursBeyond24 断言上游「小时数 ≥ 24 表示次日」的约定。
+//
+// ⚠️ 这个约定是实测撞出来的，不是文档里读到的：
+// 字典里 SHFE.ag1601 的夜盘终点写作 **26:30:00** —— 即次日 02:30。
+// 它是被 refdata.NewClockTime 的越界守卫拦住才暴露的。
+//
+// ⚠️ 值得单记：**这里取模会碰巧算对** —— 26:30 取模正是 02:30。
+// 取模不会在这个约定上出错，只会在 36:00 这类笔误上静默出错，
+// 而那时错的值看起来完全合法。「碰巧对」和「对」在这一处长得一模一样。
+func TestParseClockHandlesHoursBeyond24(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+		ok   bool
+	}{
+		{"21:00:00", "21:00:00", true},
+		{"26:30:00", "02:30:00", true}, // ⚠️ 实测：SHFE.ag1601 的夜盘终点
+		{"25:00:00", "01:00:00", true},
+		{"24:00:00", "00:00:00", true},
+		{"47:59:59", "23:59:59", true},
+		{"48:00:00", "", false}, // ⚠️ 跨过第二个零点的盘不存在
+		{"36:00:00", "12:00:00", true},
+		{"09:60:00", "", false},
+		{"不是时刻", "", false},
+	}
+	if len(cases) != 9 {
+		t.Fatalf("用例 %d 条，应为 9 —— 增删了就同步改这个数", len(cases))
+	}
+	for _, c := range cases {
+		got, err := parseClock(c.in)
+		if c.ok != (err == nil) {
+			t.Errorf("⚠️ %q：err=%v，期望 ok=%v", c.in, err, c.ok)
+			continue
+		}
+		if c.ok && got.String() != c.want {
+			t.Errorf("%q 解成 %s，应为 %s", c.in, got, c.want)
+		}
+	}
+}
+
+// TestAgNightSessionCrossesMidnight 用**实测的**白银夜盘验证跨零点表示。
+//
+// 白银夜盘 21:00 → 次日 02:30，字典写作 "21:00:00" → "26:30:00"。
+// 转换后 End < Start，正是 refdata.Session 表示跨零点的形态。
+func TestAgNightSessionCrossesMidnight(t *testing.T) {
+	s := Symbol{Class: "FUTURE", InstrumentID: "SHFE.ag2702", ExchangeID: "SHFE",
+		ProductID: "ag", VolumeMultiple: 15, PriceTick: 1,
+		TradingTime: TradingTime{
+			Day:   [][]string{{"09:00:00", "15:00:00"}},
+			Night: [][]string{{"21:00:00", "26:30:00"}},
+		}}
+	tab, err := ToSessionTable(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tab.Night) != 1 {
+		t.Fatalf("夜盘应有 1 段，实得 %d 段", len(tab.Night))
+	}
+	n := tab.Night[0]
+	if !n.CrossesMidnight() {
+		t.Errorf("⚠️ 21:00→26:30 没被识别为跨零点：%s→%s", n.Start, n.End)
+	}
+	if n.End.String() != "02:30:00" {
+		t.Errorf("终点应为 02:30:00，实为 %s", n.End)
+	}
+	// ⚠️ 判别力：凌晨 01:00 必须落在这一段内，23:00 也必须。
+	for _, c := range []struct {
+		clock string
+		want  bool
+	}{{"22:00:00", true}, {"01:00:00", true}, {"02:29:59", true},
+		{"02:30:00", false}, {"20:59:59", false}, {"12:00:00", false}} {
+		ct, err := parseClock(c.clock)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := n.Contains(ct); got != c.want {
+			t.Errorf("%s 落在 21:00→02:30 内？得到 %v，应为 %v", c.clock, got, c.want)
+		}
+	}
+}

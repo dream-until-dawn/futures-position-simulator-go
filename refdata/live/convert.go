@@ -132,11 +132,33 @@ func ToSessionTable(s Symbol) (refdata.SessionTable, error) {
 	return t, nil
 }
 
+// parseClock 读上游的时刻，**并处理「小时数 ≥ 24」这个约定**。
+//
+// ⚠️ 这个约定是实测撞出来的，不是文档里读到的：
+// 字典里 `SHFE.ag1601` 的夜盘终点写作 **26:30:00** —— 即次日 02:30。
+// 跨零点的夜盘，上游用「继续往上加小时」来表示。
+//
+// ⚠️ 而它是被 refdata.NewClockTime 的越界守卫拦住才暴露的，
+// 那条守卫当初写的理由是「取模会把 25:00 悄悄变成 01:00」。
+// 值得记一笔的是：**这里取模会碰巧算对** —— 26:30 取模正是 02:30。
+// 取模不会在这个约定上出错，只会在 `36:00` 这类笔误上静默出错，
+// 而那时错的值看起来完全合法。**「碰巧对」和「对」在这一处长得一模一样。**
+//
+// 所以这里显式减 24，并把上界卡在 48：
+// 一场盘跨过第二个零点是不存在的形态，出现即数据错。
 func parseClock(s string) (refdata.ClockTime, error) {
 	var h, m, sec int
 	n, err := fmt.Sscanf(s, "%d:%d:%d", &h, &m, &sec)
 	if err != nil || n != 3 {
 		return 0, fmt.Errorf("时刻 %q 不是 hh:mm:ss", s)
+	}
+	if h >= 24 {
+		if h >= 48 {
+			return 0, fmt.Errorf("时刻 %q 的小时数 ≥ 48 —— "+
+				"上游用「小时数 ≥ 24」表示次日（26:30 即次日 02:30），"+
+				"但跨过第二个零点的盘不存在，这是数据错", s)
+		}
+		h -= 24
 	}
 	return refdata.NewClockTime(h, m, sec)
 }
