@@ -49,8 +49,13 @@ var wipRe = regexp.MustCompile(`(?i)^(wip\b|wip\d*$)`)
 // git 状态变了而本包文件没变时，它会把上一次的 PASS 直接端出来。
 // 20260909 当场撞到：新增一个 wip 提交后它报 `ok (cached)`，
 // `go clean -testcache` 之后才红 —— 那一刻我差点据此认为守卫没生效。
-// 单独跑时加 `-count=1`。见 silent-risks 方法论 46。
+// ⚠️ 缓解**不能**只写成「单独跑时加 -count=1」——那句方向是反的：
+// 单独跑这条测试时人正盯着它，本来就最不容易被骗；
+// **真正会骗到人的是 `go test ./...`**，那是被当成「全绿了」来引用的
+// 那条命令，而它恰恰是会命中缓存的。所以缓解打在 touchGitState 上，
+// 让缓存自己看得见 git 的状态。见 silent-risks 方法论 46。
 func TestNoNewWipCommits(t *testing.T) {
+	touchGitState(t) // ⚠️ 见它的注释：不读一遍 git 状态，这条测试会被缓存端出旧判决
 	out, err := exec.Command("git", "log", "--format=%h %s", "main..HEAD").Output()
 	if err != nil {
 		t.Skipf("⚠️ 数不出 main..HEAD，这条守卫**没有查任何东西**：%v", err)

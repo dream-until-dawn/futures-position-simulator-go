@@ -439,6 +439,7 @@ func TestSessionLabelsAreQualified(t *testing.T) {
 // 非 git 检出不是本项目支持的状态。一个「找不到就跳过」的检查，
 // 在它最该报警的时候也会通过。
 func TestCommittedFixturesStillExist(t *testing.T) {
+	touchGitState(t) // ⚠️ 见它的注释：不读一遍 git 状态，这条测试会被缓存端出旧判决
 	out, err := exec.Command("git", "ls-files", "testdata/probes").Output()
 	if err != nil {
 		t.Fatalf("跑不了 git ls-files：%v —— 本条靠 git 提供「提交过哪些夹具」的名单，"+

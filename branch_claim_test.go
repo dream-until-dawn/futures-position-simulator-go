@@ -41,6 +41,7 @@ const devOnlyMarker = "**只在 `dev` 上**"
 // ⚠️ 还有一处真盲区：本地没有 `main` 分支时（浅克隆、只拉了 dev），
 // 这条守卫**跳过**。跳过是绿的，而绿在这里意味着「没查」。
 func TestDevOnlyClaimIsAccurate(t *testing.T) {
+	touchGitState(t) // ⚠️ 见它的注释：不读一遍 git 状态，这条测试会被缓存端出旧判决
 	if _, err := exec.Command("git", "rev-parse", "--verify", "main").Output(); err != nil {
 		t.Skipf("⚠️ 本地没有 main 分支，这条守卫**没有查任何东西**：%v", err)
 	}

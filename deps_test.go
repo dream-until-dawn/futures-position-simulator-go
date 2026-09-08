@@ -49,6 +49,10 @@ import (
 // 第一版报错只有一句「exit status 1」，而真正的原因全在 stderr 里 ——
 // 一条只说「失败了」的错误信息，会让人去查错的地方。
 func TestMainModuleHasOneDependency(t *testing.T) {
+	// ⚠️ 依赖列表来自子进程；而**新依赖不改目录条目、只改某个 .go 的内容**，
+	// 所以走目录不够，要真读一遍源码。⚠️ 评审方 20260909 实测：只改 go.mod
+	// **不会**让根包的测试缓存失效 —— go.mod 压根不在缓存键里。见 touchSourceBytes。
+	touchSourceBytes(t)
 	cmd := exec.Command("go", "list", "-deps", "./...")
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
