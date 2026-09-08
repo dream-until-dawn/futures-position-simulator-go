@@ -1,0 +1,1512 @@
+{
+ "source": "https://www.shfe.com.cn/data/tradedata/future/dailydata/kx20260908.dat",
+ "trading_day": "20260908",
+ "note": "上期所日行情。⚠️ 这是**交易所**的结算结果，独立于柜台 —— 拿柜台自己的结算价去验柜台自己的逐日盯市是同义反复。⚠️ 只含上期所；其余五家未实现，大商所 412 未打通。",
+ "settlements": [
+  {
+   "instrument": "SHFE.ad2609",
+   "settlement": "23575",
+   "pre_settlement": "23545"
+  },
+  {
+   "instrument": "SHFE.ad2610",
+   "settlement": "23575",
+   "pre_settlement": "23575"
+  },
+  {
+   "instrument": "SHFE.ad2611",
+   "settlement": "23630",
+   "pre_settlement": "23640"
+  },
+  {
+   "instrument": "SHFE.ad2612",
+   "settlement": "23650",
+   "pre_settlement": "23695"
+  },
+  {
+   "instrument": "SHFE.ad2701",
+   "settlement": "23650",
+   "pre_settlement": "23660"
+  },
+  {
+   "instrument": "SHFE.ad2702",
+   "settlement": "23640",
+   "pre_settlement": "23640"
+  },
+  {
+   "instrument": "SHFE.ad2703",
+   "settlement": "23505",
+   "pre_settlement": "23505"
+  },
+  {
+   "instrument": "SHFE.ad2704",
+   "settlement": "23500",
+   "pre_settlement": "23500"
+  },
+  {
+   "instrument": "SHFE.ad2705",
+   "settlement": "23480",
+   "pre_settlement": "23480"
+  },
+  {
+   "instrument": "SHFE.ad2706",
+   "settlement": "23435",
+   "pre_settlement": "23435"
+  },
+  {
+   "instrument": "SHFE.ad2707",
+   "settlement": "23500",
+   "pre_settlement": "23500"
+  },
+  {
+   "instrument": "SHFE.ad2708",
+   "settlement": "23410",
+   "pre_settlement": "23410"
+  },
+  {
+   "instrument": "SHFE.ag2609",
+   "settlement": "16174",
+   "pre_settlement": "16001"
+  },
+  {
+   "instrument": "SHFE.ag2610",
+   "settlement": "16198",
+   "pre_settlement": "16025"
+  },
+  {
+   "instrument": "SHFE.ag2611",
+   "settlement": "16217",
+   "pre_settlement": "16039"
+  },
+  {
+   "instrument": "SHFE.ag2612",
+   "settlement": "16240",
+   "pre_settlement": "16049"
+  },
+  {
+   "instrument": "SHFE.ag2701",
+   "settlement": "16257",
+   "pre_settlement": "16069"
+  },
+  {
+   "instrument": "SHFE.ag2702",
+   "settlement": "16262",
+   "pre_settlement": "16095"
+  },
+  {
+   "instrument": "SHFE.ag2703",
+   "settlement": "16293",
+   "pre_settlement": "16088"
+  },
+  {
+   "instrument": "SHFE.ag2704",
+   "settlement": "16324",
+   "pre_settlement": "16100"
+  },
+  {
+   "instrument": "SHFE.ag2705",
+   "settlement": "16311",
+   "pre_settlement": "16116"
+  },
+  {
+   "instrument": "SHFE.ag2706",
+   "settlement": "16349",
+   "pre_settlement": "16108"
+  },
+  {
+   "instrument": "SHFE.ag2707",
+   "settlement": "16342",
+   "pre_settlement": "16133"
+  },
+  {
+   "instrument": "SHFE.ag2708",
+   "settlement": "16364",
+   "pre_settlement": "16142"
+  },
+  {
+   "instrument": "SHFE.al2609",
+   "settlement": "24460",
+   "pre_settlement": "24365"
+  },
+  {
+   "instrument": "SHFE.al2610",
+   "settlement": "24450",
+   "pre_settlement": "24345"
+  },
+  {
+   "instrument": "SHFE.al2611",
+   "settlement": "24445",
+   "pre_settlement": "24345"
+  },
+  {
+   "instrument": "SHFE.al2612",
+   "settlement": "24405",
+   "pre_settlement": "24295"
+  },
+  {
+   "instrument": "SHFE.al2701",
+   "settlement": "24340",
+   "pre_settlement": "24240"
+  },
+  {
+   "instrument": "SHFE.al2702",
+   "settlement": "24320",
+   "pre_settlement": "24220"
+  },
+  {
+   "instrument": "SHFE.al2703",
+   "settlement": "24340",
+   "pre_settlement": "24260"
+  },
+  {
+   "instrument": "SHFE.al2704",
+   "settlement": "24340",
+   "pre_settlement": "24220"
+  },
+  {
+   "instrument": "SHFE.al2705",
+   "settlement": "24330",
+   "pre_settlement": "24245"
+  },
+  {
+   "instrument": "SHFE.al2706",
+   "settlement": "24330",
+   "pre_settlement": "24205"
+  },
+  {
+   "instrument": "SHFE.al2707",
+   "settlement": "24315",
+   "pre_settlement": "24200"
+  },
+  {
+   "instrument": "SHFE.al2708",
+   "settlement": "24275",
+   "pre_settlement": "24185"
+  },
+  {
+   "instrument": "SHFE.ao2609",
+   "settlement": "2683",
+   "pre_settlement": "2712"
+  },
+  {
+   "instrument": "SHFE.ao2610",
+   "settlement": "2722",
+   "pre_settlement": "2746"
+  },
+  {
+   "instrument": "SHFE.ao2611",
+   "settlement": "2734",
+   "pre_settlement": "2753"
+  },
+  {
+   "instrument": "SHFE.ao2612",
+   "settlement": "2746",
+   "pre_settlement": "2766"
+  },
+  {
+   "instrument": "SHFE.ao2701",
+   "settlement": "2759",
+   "pre_settlement": "2780"
+  },
+  {
+   "instrument": "SHFE.ao2702",
+   "settlement": "2773",
+   "pre_settlement": "2792"
+  },
+  {
+   "instrument": "SHFE.ao2703",
+   "settlement": "2799",
+   "pre_settlement": "2812"
+  },
+  {
+   "instrument": "SHFE.ao2704",
+   "settlement": "2804",
+   "pre_settlement": "2828"
+  },
+  {
+   "instrument": "SHFE.ao2705",
+   "settlement": "2827",
+   "pre_settlement": "2848"
+  },
+  {
+   "instrument": "SHFE.ao2706",
+   "settlement": "2824",
+   "pre_settlement": "2865"
+  },
+  {
+   "instrument": "SHFE.ao2707",
+   "settlement": "2846",
+   "pre_settlement": "2874"
+  },
+  {
+   "instrument": "SHFE.ao2708",
+   "settlement": "2867",
+   "pre_settlement": "2873"
+  },
+  {
+   "instrument": "SHFE.au2609",
+   "settlement": "950.88",
+   "pre_settlement": "950.22"
+  },
+  {
+   "instrument": "SHFE.au2610",
+   "settlement": "955.9",
+   "pre_settlement": "954.52"
+  },
+  {
+   "instrument": "SHFE.au2611",
+   "settlement": "956.74",
+   "pre_settlement": "954.64"
+  },
+  {
+   "instrument": "SHFE.au2612",
+   "settlement": "958.48",
+   "pre_settlement": "956.46"
+  },
+  {
+   "instrument": "SHFE.au2702",
+   "settlement": "961.04",
+   "pre_settlement": "958.94"
+  },
+  {
+   "instrument": "SHFE.au2704",
+   "settlement": "963.22",
+   "pre_settlement": "960.92"
+  },
+  {
+   "instrument": "SHFE.au2706",
+   "settlement": "965.74",
+   "pre_settlement": "961.8"
+  },
+  {
+   "instrument": "SHFE.au2708",
+   "settlement": "968.22",
+   "pre_settlement": "965.12"
+  },
+  {
+   "instrument": "SHFE.bc2609",
+   "settlement": "97540",
+   "pre_settlement": "97250"
+  },
+  {
+   "instrument": "SHFE.bc2610",
+   "settlement": "98550",
+   "pre_settlement": "97430"
+  },
+  {
+   "instrument": "SHFE.bc2611",
+   "settlement": "98220",
+   "pre_settlement": "97100"
+  },
+  {
+   "instrument": "SHFE.bc2612",
+   "settlement": "97630",
+   "pre_settlement": "96740"
+  },
+  {
+   "instrument": "SHFE.bc2701",
+   "settlement": "97530",
+   "pre_settlement": "96650"
+  },
+  {
+   "instrument": "SHFE.bc2702",
+   "settlement": "96780",
+   "pre_settlement": "96610"
+  },
+  {
+   "instrument": "SHFE.bc2703",
+   "settlement": "97070",
+   "pre_settlement": "95920"
+  },
+  {
+   "instrument": "SHFE.bc2704",
+   "settlement": "96740",
+   "pre_settlement": "96690"
+  },
+  {
+   "instrument": "SHFE.bc2705",
+   "settlement": "96950",
+   "pre_settlement": "96000"
+  },
+  {
+   "instrument": "SHFE.bc2706",
+   "settlement": "97230",
+   "pre_settlement": "96120"
+  },
+  {
+   "instrument": "SHFE.bc2707",
+   "settlement": "96960",
+   "pre_settlement": "95960"
+  },
+  {
+   "instrument": "SHFE.bc2708",
+   "settlement": "97230",
+   "pre_settlement": "96100"
+  },
+  {
+   "instrument": "SHFE.br2609",
+   "settlement": "15820",
+   "pre_settlement": "15825"
+  },
+  {
+   "instrument": "SHFE.br2610",
+   "settlement": "15640",
+   "pre_settlement": "15585"
+  },
+  {
+   "instrument": "SHFE.br2611",
+   "settlement": "15495",
+   "pre_settlement": "15425"
+  },
+  {
+   "instrument": "SHFE.br2612",
+   "settlement": "15325",
+   "pre_settlement": "15305"
+  },
+  {
+   "instrument": "SHFE.br2701",
+   "settlement": "15205",
+   "pre_settlement": "15150"
+  },
+  {
+   "instrument": "SHFE.br2702",
+   "settlement": "15080",
+   "pre_settlement": "15030"
+  },
+  {
+   "instrument": "SHFE.br2703",
+   "settlement": "14965",
+   "pre_settlement": "14790"
+  },
+  {
+   "instrument": "SHFE.br2704",
+   "settlement": "14920",
+   "pre_settlement": "14715"
+  },
+  {
+   "instrument": "SHFE.br2705",
+   "settlement": "14975",
+   "pre_settlement": "14800"
+  },
+  {
+   "instrument": "SHFE.br2706",
+   "settlement": "14930",
+   "pre_settlement": "14770"
+  },
+  {
+   "instrument": "SHFE.br2707",
+   "settlement": "14910",
+   "pre_settlement": "14740"
+  },
+  {
+   "instrument": "SHFE.br2708",
+   "settlement": "14780",
+   "pre_settlement": "14740"
+  },
+  {
+   "instrument": "SHFE.bu2609",
+   "settlement": "5354",
+   "pre_settlement": "5193"
+  },
+  {
+   "instrument": "SHFE.bu2610",
+   "settlement": "5138",
+   "pre_settlement": "5006"
+  },
+  {
+   "instrument": "SHFE.bu2611",
+   "settlement": "4933",
+   "pre_settlement": "4792"
+  },
+  {
+   "instrument": "SHFE.bu2612",
+   "settlement": "4602",
+   "pre_settlement": "4461"
+  },
+  {
+   "instrument": "SHFE.bu2701",
+   "settlement": "4371",
+   "pre_settlement": "4242"
+  },
+  {
+   "instrument": "SHFE.bu2702",
+   "settlement": "4280",
+   "pre_settlement": "4159"
+  },
+  {
+   "instrument": "SHFE.bu2703",
+   "settlement": "4231",
+   "pre_settlement": "4118"
+  },
+  {
+   "instrument": "SHFE.bu2704",
+   "settlement": "4145",
+   "pre_settlement": "4044"
+  },
+  {
+   "instrument": "SHFE.bu2705",
+   "settlement": "4082",
+   "pre_settlement": "4001"
+  },
+  {
+   "instrument": "SHFE.bu2706",
+   "settlement": "4035",
+   "pre_settlement": "3944"
+  },
+  {
+   "instrument": "SHFE.bu2707",
+   "settlement": "3968",
+   "pre_settlement": "3878"
+  },
+  {
+   "instrument": "SHFE.bu2708",
+   "settlement": "3885",
+   "pre_settlement": "3813"
+  },
+  {
+   "instrument": "SHFE.bu2709",
+   "settlement": "3832",
+   "pre_settlement": "3765"
+  },
+  {
+   "instrument": "SHFE.bu2712",
+   "settlement": "3660",
+   "pre_settlement": "3631"
+  },
+  {
+   "instrument": "SHFE.bu2803",
+   "settlement": "3626",
+   "pre_settlement": "3579"
+  },
+  {
+   "instrument": "SHFE.bu2806",
+   "settlement": "3627",
+   "pre_settlement": "3584"
+  },
+  {
+   "instrument": "SHFE.cu2609",
+   "settlement": "110910",
+   "pre_settlement": "109680"
+  },
+  {
+   "instrument": "SHFE.cu2610",
+   "settlement": "110260",
+   "pre_settlement": "109210"
+  },
+  {
+   "instrument": "SHFE.cu2611",
+   "settlement": "109970",
+   "pre_settlement": "108910"
+  },
+  {
+   "instrument": "SHFE.cu2612",
+   "settlement": "109650",
+   "pre_settlement": "108620"
+  },
+  {
+   "instrument": "SHFE.cu2701",
+   "settlement": "109360",
+   "pre_settlement": "108330"
+  },
+  {
+   "instrument": "SHFE.cu2702",
+   "settlement": "109150",
+   "pre_settlement": "108170"
+  },
+  {
+   "instrument": "SHFE.cu2703",
+   "settlement": "109210",
+   "pre_settlement": "108030"
+  },
+  {
+   "instrument": "SHFE.cu2704",
+   "settlement": "108990",
+   "pre_settlement": "107980"
+  },
+  {
+   "instrument": "SHFE.cu2705",
+   "settlement": "108980",
+   "pre_settlement": "108070"
+  },
+  {
+   "instrument": "SHFE.cu2706",
+   "settlement": "109170",
+   "pre_settlement": "108030"
+  },
+  {
+   "instrument": "SHFE.cu2707",
+   "settlement": "109140",
+   "pre_settlement": "108110"
+  },
+  {
+   "instrument": "SHFE.cu2708",
+   "settlement": "108840",
+   "pre_settlement": "108140"
+  },
+  {
+   "instrument": "SHFE.ec2609",
+   "settlement": "2478",
+   "pre_settlement": "2475"
+  },
+  {
+   "instrument": "SHFE.ec2610",
+   "settlement": "1909",
+   "pre_settlement": "1902"
+  },
+  {
+   "instrument": "SHFE.ec2611",
+   "settlement": "2159",
+   "pre_settlement": "2108.5"
+  },
+  {
+   "instrument": "SHFE.ec2612",
+   "settlement": "2387.5",
+   "pre_settlement": "2324.5"
+  },
+  {
+   "instrument": "SHFE.ec2701",
+   "settlement": "2468",
+   "pre_settlement": "2411"
+  },
+  {
+   "instrument": "SHFE.ec2703",
+   "settlement": "1577",
+   "pre_settlement": "1573.5"
+  },
+  {
+   "instrument": "SHFE.ec2706",
+   "settlement": "1832",
+   "pre_settlement": "1826.5"
+  },
+  {
+   "instrument": "SHFE.fu2610",
+   "settlement": "4063",
+   "pre_settlement": "3973"
+  },
+  {
+   "instrument": "SHFE.fu2611",
+   "settlement": "3893",
+   "pre_settlement": "3799"
+  },
+  {
+   "instrument": "SHFE.fu2612",
+   "settlement": "3792",
+   "pre_settlement": "3700"
+  },
+  {
+   "instrument": "SHFE.fu2701",
+   "settlement": "3726",
+   "pre_settlement": "3620"
+  },
+  {
+   "instrument": "SHFE.fu2702",
+   "settlement": "3654",
+   "pre_settlement": "3561"
+  },
+  {
+   "instrument": "SHFE.fu2703",
+   "settlement": "3610",
+   "pre_settlement": "3506"
+  },
+  {
+   "instrument": "SHFE.fu2704",
+   "settlement": "3561",
+   "pre_settlement": "3458"
+  },
+  {
+   "instrument": "SHFE.fu2705",
+   "settlement": "3522",
+   "pre_settlement": "3418"
+  },
+  {
+   "instrument": "SHFE.fu2706",
+   "settlement": "3477",
+   "pre_settlement": "3360"
+  },
+  {
+   "instrument": "SHFE.fu2707",
+   "settlement": "3437",
+   "pre_settlement": "3323"
+  },
+  {
+   "instrument": "SHFE.fu2708",
+   "settlement": "3397",
+   "pre_settlement": "3292"
+  },
+  {
+   "instrument": "SHFE.fu2709",
+   "settlement": "3369",
+   "pre_settlement": "3264"
+  },
+  {
+   "instrument": "SHFE.hc2609",
+   "settlement": "3315",
+   "pre_settlement": "3308"
+  },
+  {
+   "instrument": "SHFE.hc2610",
+   "settlement": "3374",
+   "pre_settlement": "3367"
+  },
+  {
+   "instrument": "SHFE.hc2611",
+   "settlement": "3380",
+   "pre_settlement": "3369"
+  },
+  {
+   "instrument": "SHFE.hc2612",
+   "settlement": "3374",
+   "pre_settlement": "3371"
+  },
+  {
+   "instrument": "SHFE.hc2701",
+   "settlement": "3380",
+   "pre_settlement": "3374"
+  },
+  {
+   "instrument": "SHFE.hc2702",
+   "settlement": "3389",
+   "pre_settlement": "3385"
+  },
+  {
+   "instrument": "SHFE.hc2703",
+   "settlement": "3392",
+   "pre_settlement": "3386"
+  },
+  {
+   "instrument": "SHFE.hc2704",
+   "settlement": "3407",
+   "pre_settlement": "3408"
+  },
+  {
+   "instrument": "SHFE.hc2705",
+   "settlement": "3391",
+   "pre_settlement": "3386"
+  },
+  {
+   "instrument": "SHFE.hc2706",
+   "settlement": "3391",
+   "pre_settlement": "3386"
+  },
+  {
+   "instrument": "SHFE.hc2707",
+   "settlement": "3407",
+   "pre_settlement": "3407"
+  },
+  {
+   "instrument": "SHFE.hc2708",
+   "settlement": "3400",
+   "pre_settlement": "3387"
+  },
+  {
+   "instrument": "SHFE.lu2610",
+   "settlement": "5190",
+   "pre_settlement": "5064"
+  },
+  {
+   "instrument": "SHFE.lu2611",
+   "settlement": "5118",
+   "pre_settlement": "4968"
+  },
+  {
+   "instrument": "SHFE.lu2612",
+   "settlement": "4965",
+   "pre_settlement": "4811"
+  },
+  {
+   "instrument": "SHFE.lu2701",
+   "settlement": "4779",
+   "pre_settlement": "4633"
+  },
+  {
+   "instrument": "SHFE.lu2702",
+   "settlement": "4591",
+   "pre_settlement": "4468"
+  },
+  {
+   "instrument": "SHFE.lu2703",
+   "settlement": "4461",
+   "pre_settlement": "4372"
+  },
+  {
+   "instrument": "SHFE.lu2704",
+   "settlement": "4340",
+   "pre_settlement": "4278"
+  },
+  {
+   "instrument": "SHFE.lu2705",
+   "settlement": "4343",
+   "pre_settlement": "4328"
+  },
+  {
+   "instrument": "SHFE.lu2706",
+   "settlement": "4320",
+   "pre_settlement": "4136"
+  },
+  {
+   "instrument": "SHFE.lu2707",
+   "settlement": "4161",
+   "pre_settlement": "4064"
+  },
+  {
+   "instrument": "SHFE.lu2708",
+   "settlement": "4128",
+   "pre_settlement": "3997"
+  },
+  {
+   "instrument": "SHFE.lu2709",
+   "settlement": "4097",
+   "pre_settlement": "3989"
+  },
+  {
+   "instrument": "SHFE.ni2609",
+   "settlement": "126690",
+   "pre_settlement": "127550"
+  },
+  {
+   "instrument": "SHFE.ni2610",
+   "settlement": "126940",
+   "pre_settlement": "127880"
+  },
+  {
+   "instrument": "SHFE.ni2611",
+   "settlement": "127200",
+   "pre_settlement": "128120"
+  },
+  {
+   "instrument": "SHFE.ni2612",
+   "settlement": "127440",
+   "pre_settlement": "128410"
+  },
+  {
+   "instrument": "SHFE.ni2701",
+   "settlement": "127760",
+   "pre_settlement": "128650"
+  },
+  {
+   "instrument": "SHFE.ni2702",
+   "settlement": "127990",
+   "pre_settlement": "128870"
+  },
+  {
+   "instrument": "SHFE.ni2703",
+   "settlement": "128460",
+   "pre_settlement": "129090"
+  },
+  {
+   "instrument": "SHFE.ni2704",
+   "settlement": "128510",
+   "pre_settlement": "129310"
+  },
+  {
+   "instrument": "SHFE.ni2705",
+   "settlement": "128710",
+   "pre_settlement": "129700"
+  },
+  {
+   "instrument": "SHFE.ni2706",
+   "settlement": "129090",
+   "pre_settlement": "130010"
+  },
+  {
+   "instrument": "SHFE.ni2707",
+   "settlement": "129340",
+   "pre_settlement": "130340"
+  },
+  {
+   "instrument": "SHFE.ni2708",
+   "settlement": "129740",
+   "pre_settlement": "130790"
+  },
+  {
+   "instrument": "SHFE.nr2609",
+   "settlement": "16300",
+   "pre_settlement": "16020"
+  },
+  {
+   "instrument": "SHFE.nr2610",
+   "settlement": "16420",
+   "pre_settlement": "16050"
+  },
+  {
+   "instrument": "SHFE.nr2611",
+   "settlement": "16620",
+   "pre_settlement": "16260"
+  },
+  {
+   "instrument": "SHFE.nr2612",
+   "settlement": "16550",
+   "pre_settlement": "16200"
+  },
+  {
+   "instrument": "SHFE.nr2701",
+   "settlement": "16500",
+   "pre_settlement": "16160"
+  },
+  {
+   "instrument": "SHFE.nr2702",
+   "settlement": "16500",
+   "pre_settlement": "16150"
+  },
+  {
+   "instrument": "SHFE.nr2703",
+   "settlement": "16485",
+   "pre_settlement": "16170"
+  },
+  {
+   "instrument": "SHFE.nr2704",
+   "settlement": "16485",
+   "pre_settlement": "16200"
+  },
+  {
+   "instrument": "SHFE.nr2705",
+   "settlement": "16465",
+   "pre_settlement": "16265"
+  },
+  {
+   "instrument": "SHFE.nr2706",
+   "settlement": "16585",
+   "pre_settlement": "16280"
+  },
+  {
+   "instrument": "SHFE.nr2707",
+   "settlement": "16485",
+   "pre_settlement": "16285"
+  },
+  {
+   "instrument": "SHFE.nr2708",
+   "settlement": "16455",
+   "pre_settlement": "16155"
+  },
+  {
+   "instrument": "SHFE.op2609",
+   "settlement": "3840",
+   "pre_settlement": "3844"
+  },
+  {
+   "instrument": "SHFE.op2610",
+   "settlement": "3878",
+   "pre_settlement": "3868"
+  },
+  {
+   "instrument": "SHFE.op2611",
+   "settlement": "3866",
+   "pre_settlement": "3854"
+  },
+  {
+   "instrument": "SHFE.op2612",
+   "settlement": "3884",
+   "pre_settlement": "3872"
+  },
+  {
+   "instrument": "SHFE.op2701",
+   "settlement": "3920",
+   "pre_settlement": "3910"
+  },
+  {
+   "instrument": "SHFE.op2702",
+   "settlement": "3934",
+   "pre_settlement": "3934"
+  },
+  {
+   "instrument": "SHFE.op2703",
+   "settlement": "3944",
+   "pre_settlement": "3944"
+  },
+  {
+   "instrument": "SHFE.op2704",
+   "settlement": "3954",
+   "pre_settlement": "3954"
+  },
+  {
+   "instrument": "SHFE.op2705",
+   "settlement": "3928",
+   "pre_settlement": "3928"
+  },
+  {
+   "instrument": "SHFE.op2706",
+   "settlement": "3976",
+   "pre_settlement": "3976"
+  },
+  {
+   "instrument": "SHFE.op2707",
+   "settlement": "4050",
+   "pre_settlement": "4050"
+  },
+  {
+   "instrument": "SHFE.op2708",
+   "settlement": "3986",
+   "pre_settlement": "3986"
+  },
+  {
+   "instrument": "SHFE.pb2609",
+   "settlement": "16050",
+   "pre_settlement": "16170"
+  },
+  {
+   "instrument": "SHFE.pb2610",
+   "settlement": "16070",
+   "pre_settlement": "16175"
+  },
+  {
+   "instrument": "SHFE.pb2611",
+   "settlement": "16085",
+   "pre_settlement": "16185"
+  },
+  {
+   "instrument": "SHFE.pb2612",
+   "settlement": "16110",
+   "pre_settlement": "16205"
+  },
+  {
+   "instrument": "SHFE.pb2701",
+   "settlement": "16130",
+   "pre_settlement": "16235"
+  },
+  {
+   "instrument": "SHFE.pb2702",
+   "settlement": "16105",
+   "pre_settlement": "16235"
+  },
+  {
+   "instrument": "SHFE.pb2703",
+   "settlement": "16110",
+   "pre_settlement": "16220"
+  },
+  {
+   "instrument": "SHFE.pb2704",
+   "settlement": "16175",
+   "pre_settlement": "16175"
+  },
+  {
+   "instrument": "SHFE.pb2705",
+   "settlement": "16135",
+   "pre_settlement": "16230"
+  },
+  {
+   "instrument": "SHFE.pb2706",
+   "settlement": "16225",
+   "pre_settlement": "16225"
+  },
+  {
+   "instrument": "SHFE.pb2707",
+   "settlement": "16140",
+   "pre_settlement": "16200"
+  },
+  {
+   "instrument": "SHFE.pb2708",
+   "settlement": "16160",
+   "pre_settlement": "16200"
+  },
+  {
+   "instrument": "SHFE.rb2609",
+   "settlement": "3046",
+   "pre_settlement": "3060"
+  },
+  {
+   "instrument": "SHFE.rb2610",
+   "settlement": "3101",
+   "pre_settlement": "3100"
+  },
+  {
+   "instrument": "SHFE.rb2611",
+   "settlement": "3122",
+   "pre_settlement": "3110"
+  },
+  {
+   "instrument": "SHFE.rb2612",
+   "settlement": "3156",
+   "pre_settlement": "3139"
+  },
+  {
+   "instrument": "SHFE.rb2701",
+   "settlement": "3163",
+   "pre_settlement": "3158"
+  },
+  {
+   "instrument": "SHFE.rb2702",
+   "settlement": "3174",
+   "pre_settlement": "3168"
+  },
+  {
+   "instrument": "SHFE.rb2703",
+   "settlement": "3181",
+   "pre_settlement": "3179"
+  },
+  {
+   "instrument": "SHFE.rb2704",
+   "settlement": "3189",
+   "pre_settlement": "3182"
+  },
+  {
+   "instrument": "SHFE.rb2705",
+   "settlement": "3192",
+   "pre_settlement": "3189"
+  },
+  {
+   "instrument": "SHFE.rb2706",
+   "settlement": "3209",
+   "pre_settlement": "3197"
+  },
+  {
+   "instrument": "SHFE.rb2707",
+   "settlement": "3206",
+   "pre_settlement": "3214"
+  },
+  {
+   "instrument": "SHFE.rb2708",
+   "settlement": "3212",
+   "pre_settlement": "3205"
+  },
+  {
+   "instrument": "SHFE.ru2609",
+   "settlement": "18700",
+   "pre_settlement": "18350"
+  },
+  {
+   "instrument": "SHFE.ru2610",
+   "settlement": "18690",
+   "pre_settlement": "18540"
+  },
+  {
+   "instrument": "SHFE.ru2611",
+   "settlement": "18630",
+   "pre_settlement": "18330"
+  },
+  {
+   "instrument": "SHFE.ru2701",
+   "settlement": "19465",
+   "pre_settlement": "19110"
+  },
+  {
+   "instrument": "SHFE.ru2703",
+   "settlement": "19455",
+   "pre_settlement": "19150"
+  },
+  {
+   "instrument": "SHFE.ru2704",
+   "settlement": "19470",
+   "pre_settlement": "19170"
+  },
+  {
+   "instrument": "SHFE.ru2705",
+   "settlement": "19505",
+   "pre_settlement": "19130"
+  },
+  {
+   "instrument": "SHFE.ru2706",
+   "settlement": "19480",
+   "pre_settlement": "19135"
+  },
+  {
+   "instrument": "SHFE.ru2707",
+   "settlement": "19475",
+   "pre_settlement": "19125"
+  },
+  {
+   "instrument": "SHFE.ru2708",
+   "settlement": "19435",
+   "pre_settlement": "19125"
+  },
+  {
+   "instrument": "SHFE.sc2610",
+   "settlement": "703.3",
+   "pre_settlement": "688.5"
+  },
+  {
+   "instrument": "SHFE.sc2611",
+   "settlement": "665",
+   "pre_settlement": "648.5"
+  },
+  {
+   "instrument": "SHFE.sc2612",
+   "settlement": "635.5",
+   "pre_settlement": "621.3"
+  },
+  {
+   "instrument": "SHFE.sc2701",
+   "settlement": "614.3",
+   "pre_settlement": "600.6"
+  },
+  {
+   "instrument": "SHFE.sc2702",
+   "settlement": "598.6",
+   "pre_settlement": "584.4"
+  },
+  {
+   "instrument": "SHFE.sc2703",
+   "settlement": "585.1",
+   "pre_settlement": "572.4"
+  },
+  {
+   "instrument": "SHFE.sc2704",
+   "settlement": "575.8",
+   "pre_settlement": "561.3"
+  },
+  {
+   "instrument": "SHFE.sc2705",
+   "settlement": "559.4",
+   "pre_settlement": "551.4"
+  },
+  {
+   "instrument": "SHFE.sc2706",
+   "settlement": "551",
+   "pre_settlement": "543"
+  },
+  {
+   "instrument": "SHFE.sc2707",
+   "settlement": "536",
+   "pre_settlement": "537.6"
+  },
+  {
+   "instrument": "SHFE.sc2708",
+   "settlement": "540",
+   "pre_settlement": "532.4"
+  },
+  {
+   "instrument": "SHFE.sc2709",
+   "settlement": "532.9",
+   "pre_settlement": "529.3"
+  },
+  {
+   "instrument": "SHFE.sc2712",
+   "settlement": "521.8",
+   "pre_settlement": "518.6"
+  },
+  {
+   "instrument": "SHFE.sc2803",
+   "settlement": "512.9",
+   "pre_settlement": "512.9"
+  },
+  {
+   "instrument": "SHFE.sc2806",
+   "settlement": "511",
+   "pre_settlement": "511"
+  },
+  {
+   "instrument": "SHFE.sc2809",
+   "settlement": "508.8",
+   "pre_settlement": "511"
+  },
+  {
+   "instrument": "SHFE.sc2812",
+   "settlement": "501.1",
+   "pre_settlement": "500.9"
+  },
+  {
+   "instrument": "SHFE.sc2903",
+   "settlement": "501.8",
+   "pre_settlement": "501"
+  },
+  {
+   "instrument": "SHFE.sc2906",
+   "settlement": "499.4",
+   "pre_settlement": "499.8"
+  },
+  {
+   "instrument": "SHFE.sc2909",
+   "settlement": "491.3",
+   "pre_settlement": "489.2"
+  },
+  {
+   "instrument": "SHFE.sn2609",
+   "settlement": "418270",
+   "pre_settlement": "416740"
+  },
+  {
+   "instrument": "SHFE.sn2610",
+   "settlement": "418850",
+   "pre_settlement": "416940"
+  },
+  {
+   "instrument": "SHFE.sn2611",
+   "settlement": "419250",
+   "pre_settlement": "417380"
+  },
+  {
+   "instrument": "SHFE.sn2612",
+   "settlement": "419420",
+   "pre_settlement": "417670"
+  },
+  {
+   "instrument": "SHFE.sn2701",
+   "settlement": "419310",
+   "pre_settlement": "417450"
+  },
+  {
+   "instrument": "SHFE.sn2702",
+   "settlement": "419190",
+   "pre_settlement": "417580"
+  },
+  {
+   "instrument": "SHFE.sn2703",
+   "settlement": "419430",
+   "pre_settlement": "417720"
+  },
+  {
+   "instrument": "SHFE.sn2704",
+   "settlement": "420370",
+   "pre_settlement": "418720"
+  },
+  {
+   "instrument": "SHFE.sn2705",
+   "settlement": "420100",
+   "pre_settlement": "418430"
+  },
+  {
+   "instrument": "SHFE.sn2706",
+   "settlement": "420250",
+   "pre_settlement": "417210"
+  },
+  {
+   "instrument": "SHFE.sn2707",
+   "settlement": "420620",
+   "pre_settlement": "418560"
+  },
+  {
+   "instrument": "SHFE.sn2708",
+   "settlement": "420720",
+   "pre_settlement": "418800"
+  },
+  {
+   "instrument": "SHFE.sp2609",
+   "settlement": "4798",
+   "pre_settlement": "4794"
+  },
+  {
+   "instrument": "SHFE.sp2610",
+   "settlement": "4834",
+   "pre_settlement": "4816"
+  },
+  {
+   "instrument": "SHFE.sp2611",
+   "settlement": "4850",
+   "pre_settlement": "4848"
+  },
+  {
+   "instrument": "SHFE.sp2612",
+   "settlement": "4866",
+   "pre_settlement": "4864"
+  },
+  {
+   "instrument": "SHFE.sp2701",
+   "settlement": "5024",
+   "pre_settlement": "5024"
+  },
+  {
+   "instrument": "SHFE.sp2702",
+   "settlement": "5032",
+   "pre_settlement": "5038"
+  },
+  {
+   "instrument": "SHFE.sp2703",
+   "settlement": "5050",
+   "pre_settlement": "5046"
+  },
+  {
+   "instrument": "SHFE.sp2704",
+   "settlement": "5064",
+   "pre_settlement": "5072"
+  },
+  {
+   "instrument": "SHFE.sp2705",
+   "settlement": "5070",
+   "pre_settlement": "5066"
+  },
+  {
+   "instrument": "SHFE.sp2706",
+   "settlement": "5098",
+   "pre_settlement": "5086"
+  },
+  {
+   "instrument": "SHFE.sp2707",
+   "settlement": "5090",
+   "pre_settlement": "5088"
+  },
+  {
+   "instrument": "SHFE.sp2708",
+   "settlement": "5102",
+   "pre_settlement": "5102"
+  },
+  {
+   "instrument": "SHFE.ss2609",
+   "settlement": "13805",
+   "pre_settlement": "13845"
+  },
+  {
+   "instrument": "SHFE.ss2610",
+   "settlement": "13820",
+   "pre_settlement": "13880"
+  },
+  {
+   "instrument": "SHFE.ss2611",
+   "settlement": "13835",
+   "pre_settlement": "13895"
+  },
+  {
+   "instrument": "SHFE.ss2612",
+   "settlement": "13855",
+   "pre_settlement": "13920"
+  },
+  {
+   "instrument": "SHFE.ss2701",
+   "settlement": "13895",
+   "pre_settlement": "13945"
+  },
+  {
+   "instrument": "SHFE.ss2702",
+   "settlement": "13955",
+   "pre_settlement": "14010"
+  },
+  {
+   "instrument": "SHFE.ss2703",
+   "settlement": "13965",
+   "pre_settlement": "14050"
+  },
+  {
+   "instrument": "SHFE.ss2704",
+   "settlement": "14005",
+   "pre_settlement": "14060"
+  },
+  {
+   "instrument": "SHFE.ss2705",
+   "settlement": "14075",
+   "pre_settlement": "14105"
+  },
+  {
+   "instrument": "SHFE.ss2706",
+   "settlement": "14140",
+   "pre_settlement": "14175"
+  },
+  {
+   "instrument": "SHFE.ss2707",
+   "settlement": "14165",
+   "pre_settlement": "14215"
+  },
+  {
+   "instrument": "SHFE.ss2708",
+   "settlement": "14210",
+   "pre_settlement": "14210"
+  },
+  {
+   "instrument": "SHFE.wr2609",
+   "settlement": "3316",
+   "pre_settlement": "3316"
+  },
+  {
+   "instrument": "SHFE.wr2610",
+   "settlement": "3330",
+   "pre_settlement": "3330"
+  },
+  {
+   "instrument": "SHFE.wr2611",
+   "settlement": "3402",
+   "pre_settlement": "3402"
+  },
+  {
+   "instrument": "SHFE.wr2612",
+   "settlement": "3415",
+   "pre_settlement": "3415"
+  },
+  {
+   "instrument": "SHFE.wr2701",
+   "settlement": "3414",
+   "pre_settlement": "3408"
+  },
+  {
+   "instrument": "SHFE.wr2702",
+   "settlement": "3395",
+   "pre_settlement": "3395"
+  },
+  {
+   "instrument": "SHFE.wr2703",
+   "settlement": "3388",
+   "pre_settlement": "3385"
+  },
+  {
+   "instrument": "SHFE.wr2704",
+   "settlement": "3431",
+   "pre_settlement": "3431"
+  },
+  {
+   "instrument": "SHFE.wr2705",
+   "settlement": "3416",
+   "pre_settlement": "3413"
+  },
+  {
+   "instrument": "SHFE.wr2706",
+   "settlement": "3420",
+   "pre_settlement": "3420"
+  },
+  {
+   "instrument": "SHFE.wr2707",
+   "settlement": "3388",
+   "pre_settlement": "3388"
+  },
+  {
+   "instrument": "SHFE.wr2708",
+   "settlement": "3434",
+   "pre_settlement": "3434"
+  },
+  {
+   "instrument": "SHFE.zn2609",
+   "settlement": "27490",
+   "pre_settlement": "27015"
+  },
+  {
+   "instrument": "SHFE.zn2610",
+   "settlement": "27430",
+   "pre_settlement": "26995"
+  },
+  {
+   "instrument": "SHFE.zn2611",
+   "settlement": "27470",
+   "pre_settlement": "27040"
+  },
+  {
+   "instrument": "SHFE.zn2612",
+   "settlement": "27440",
+   "pre_settlement": "27040"
+  },
+  {
+   "instrument": "SHFE.zn2701",
+   "settlement": "27420",
+   "pre_settlement": "27025"
+  },
+  {
+   "instrument": "SHFE.zn2702",
+   "settlement": "27490",
+   "pre_settlement": "27020"
+  },
+  {
+   "instrument": "SHFE.zn2703",
+   "settlement": "27380",
+   "pre_settlement": "26925"
+  },
+  {
+   "instrument": "SHFE.zn2704",
+   "settlement": "27310",
+   "pre_settlement": "26950"
+  },
+  {
+   "instrument": "SHFE.zn2705",
+   "settlement": "27345",
+   "pre_settlement": "26965"
+  },
+  {
+   "instrument": "SHFE.zn2706",
+   "settlement": "27300",
+   "pre_settlement": "26990"
+  },
+  {
+   "instrument": "SHFE.zn2707",
+   "settlement": "27240",
+   "pre_settlement": "26925"
+  },
+  {
+   "instrument": "SHFE.zn2708",
+   "settlement": "27305",
+   "pre_settlement": "26990"
+  }
+ ]
+}
