@@ -20,6 +20,9 @@ type Runner struct {
 	DumpDir string
 	Logf    func(string, ...any)
 
+	// Every 是 settle-watch 的采样间隔。其余实验不用它。
+	Every time.Duration
+
 	cli *kq.Client
 }
 
@@ -83,6 +86,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expSettleCheck(ctx)
 	case "session-check":
 		return r.expSessionCheck(ctx)
+	case "settle-watch":
+		return r.expSettleWatch(ctx)
 	case "close-profit-sign":
 		return r.expCloseProfitSign(ctx)
 	case "reject-code":

@@ -87,7 +87,8 @@ func runProbe(args []string) error {
 	// （根包 TestNoStrayFixtureTrees）。一个什么也没改的修复，
 	// 在日志里和一个生效的修复长得一模一样。
 	dump := fs.String("dump", "", "夹具落盘目录（留空则用 .env 的 PROBE_DUMP_DIR）")
-	timeout := fs.Duration("timeout", 90*time.Second, "整体超时")
+	timeout := fs.Duration("timeout", 90*time.Second, "整体超时（settle-watch 用它当观察时长）")
+	every := fs.Duration("every", 5*time.Second, "settle-watch 的采样间隔")
 	if args[1] == "status" {
 		_ = fs.Parse(args[2:])
 		*exp = "status"
@@ -113,6 +114,7 @@ func runProbe(args []string) error {
 		Env:     env,
 		Symbols: syms,
 		DumpDir: *dump,
+		Every:   *every,
 		Logf:    func(f string, a ...any) { fmt.Printf(f+"\n", a...) },
 	}
 	return r.Run(ctx, *exp)
