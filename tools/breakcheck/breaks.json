@@ -1363,5 +1363,71 @@
   "test": "TestValidateDoesNotShortCircuit",
   "want": "那说明 Validate 短路了",
   "expect": "red"
+ },
+ {
+  "name": "123 开仓的零冻结保证金放行（可用资金凭空多一截）",
+  "dir": "",
+  "file": "order/freeze.go",
+  "old": "\t\tif in.Margin.IsZero() {",
+  "new": "\t\tif false {",
+  "pkg": "./order/",
+  "test": "TestFreezeRefusesSuspiciousZero",
+  "want": "竟然通过了",
+  "expect": "red"
+ },
+ {
+  "name": "124 平仓单带着非零保证金时**忽略**而不是报错",
+  "dir": "",
+  "file": "order/freeze.go",
+  "old": "\t\tif !in.Margin.IsZero() {\n\t\t\treturn Frozen{}, fmt.Errorf(\"平仓单带着 %s 的冻结保证金 —— \"+",
+  "new": "\t\tif false {\n\t\t\treturn Frozen{}, fmt.Errorf(\"平仓单带着 %s 的冻结保证金 —— \"+",
+  "pkg": "./order/",
+  "test": "TestCloseWithMarginIsCallerError",
+  "want": "带着非零保证金却通过了",
+  "expect": "red"
+ },
+ {
+  "name": "125 平今冻到昨仓上（今昨搞反）",
+  "dir": "",
+  "file": "order/freeze.go",
+  "old": "\t\tif req.Offset == types.CloseToday {\n\t\t\tf.VolumeToday = req.Volume\n\t\t} else {\n\t\t\tf.VolumeHistory = req.Volume\n\t\t}",
+  "new": "\t\tif req.Offset == types.CloseToday {\n\t\t\tf.VolumeHistory = req.Volume\n\t\t} else {\n\t\t\tf.VolumeToday = req.Volume\n\t\t}",
+  "pkg": "./order/",
+  "test": "TestFreezeOfSeparatesTwoSides",
+  "want": "冻结手数 今0/昨2，应为 今2/昨0",
+  "expect": "red"
+ },
+ {
+  "name": "126 委托簿的逐方向分组按下单方向（不是被平持仓方向）",
+  "dir": "",
+  "file": "order/freeze.go",
+  "old": "\t\tif e.req.Offset.IsClose() && closingSide(e.req.Direction) != dir {",
+  "new": "\t\tif e.req.Offset.IsClose() && e.req.Direction != dir {",
+  "pkg": "./order/",
+  "test": "TestBookAggregates",
+  "want": "SELL/CLOSETODAY 平的是多头",
+  "expect": "red"
+ },
+ {
+  "name": "127 释放不在簿上的委托时静默当成零",
+  "dir": "",
+  "file": "order/freeze.go",
+  "old": "\t\treturn Frozen{}, fmt.Errorf(\"委托 %s 不在簿上 —— \"+",
+  "new": "\t\treturn Frozen{}, nil\n\t\t//nolint\n\t\treturn Frozen{}, fmt.Errorf(\"委托 %s 不在簿上 —— \"+",
+  "pkg": "./order/",
+  "test": "TestBookAggregates",
+  "want": "释放了两次却没报错",
+  "expect": "red"
+ },
+ {
+  "name": "128 冻结累加漏掉昨仓手数",
+  "dir": "",
+  "file": "order/freeze.go",
+  "old": "\t\tVolumeHistory: f.VolumeHistory + o.VolumeHistory,",
+  "new": "\t\tVolumeHistory: f.VolumeHistory,",
+  "pkg": "./order/",
+  "test": "TestFrozenAddIsAdditive",
+  "want": "累加漏了字段",
+  "expect": "red"
  }
 ]
