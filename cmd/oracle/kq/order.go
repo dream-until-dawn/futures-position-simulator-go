@@ -18,7 +18,17 @@ const (
 //
 // ⚠️ CloseToday 与 Close 的区别不是可选风格：
 // PositionDateType = UseHistory 的合约（SHFE / INE / CFFEX）**必须**显式声明平今或平昨；
-// NoUseHistory 的合约（DCE / CZCE）只接受 Close。用错会被柜台拒单。
+// NoUseHistory 的合约（DCE / CZCE）只接受 Close。
+//
+// ⚠️ 上一句的最后半句原来写着「用错会被柜台拒单」，**已被实测推翻**：
+// 20260909 的 position-frozen 实验在 DCE.m2701（今仓 3 手）上发 CLOSETODAY，
+// 快期模拟**接受了**，且冻结结果与 CLOSE 逐字段相同
+// （volume_long_frozen=1、volume_long_frozen_today=1）。
+//
+// 规则本身不改 —— 它是 CTP 的约定，本库照它建模；
+// 改的是「柜台一定会拒」这个**关于口子的**断言：这个口子不拒。
+// 两者混在一句里，会让人拿一次「没被拒」去否定整条规则，
+// 或反过来拿规则去解释一次实测。见 state.md 的 kq_facts。
 type Offset string
 
 const (

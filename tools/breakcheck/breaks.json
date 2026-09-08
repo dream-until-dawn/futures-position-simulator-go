@@ -823,8 +823,8 @@
   "name": "75 零观测表列满六个字段（排序退化成恒等）",
   "dir": "cmd/oracle",
   "file": "cmd/oracle/probe/exp_position_frozen.go",
-  "old": "var zeroObserved = map[string]bool{\n\t\"volume_long_frozen_today\":  true,",
-  "new": "var zeroObserved = map[string]bool{\n\t\"volume_long_frozen\":        true,\n\t\"volume_long_frozen_his\":    true,\n\t\"volume_long_frozen_today\":  true,",
+  "old": "\t\"volume_short_frozen\":       true,",
+  "new": "\t\"volume_long_frozen\":        true,\n\t\"volume_long_frozen_today\":  true,\n\t\"volume_long_frozen_his\":    true,\n\t\"volume_short_frozen\":       true,",
   "pkg": "./probe/",
   "test": "TestZeroObservedIsNotEverything",
   "want": "全列进去会让排序退化成恒等",
@@ -834,22 +834,22 @@
   "name": "76 证据棘轮的钉子调高一格",
   "dir": "",
   "file": "conformance/fixture/coverage_test.go",
-  "old": "\tconst pinnedOnlyZero = 17",
-  "new": "\tconst pinnedOnlyZero = 18",
+  "old": "\tconst pinnedOnlyZero = 16",
+  "new": "\tconst pinnedOnlyZero = 17",
   "pkg": "./conformance/fixture/",
   "test": "TestPositionFieldEvidence",
-  "want": "从 18 降到 17",
+  "want": "从 17 降到 16",
   "expect": "red"
  },
  {
   "name": "77 证据棘轮的钉子调低一格",
   "dir": "",
   "file": "conformance/fixture/coverage_test.go",
-  "old": "\tconst pinnedOnlyZero = 17",
-  "new": "\tconst pinnedOnlyZero = 16",
+  "old": "\tconst pinnedOnlyZero = 16",
+  "new": "\tconst pinnedOnlyZero = 15",
   "pkg": "./conformance/fixture/",
   "test": "TestPositionFieldEvidence",
-  "want": "从 16 涨到 17",
+  "want": "从 15 涨到 16",
   "expect": "red"
  },
  {
@@ -860,7 +860,7 @@
   "new": "\t\t\t\t\tobs[k] = o\n\t\t\t\t}\n\t\t\t\tswitch {\n\t\t\t\tcase v.Absent:\n\t\t\t\t\to.zero++",
   "pkg": "./conformance/fixture/",
   "test": "TestPositionFieldEvidence",
-  "want": "涨到 20",
+  "want": "涨到 19",
   "expect": "red"
  },
  {

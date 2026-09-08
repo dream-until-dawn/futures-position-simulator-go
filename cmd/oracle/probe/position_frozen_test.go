@@ -240,6 +240,35 @@ func TestPositionFrozenUsesTheGuards(t *testing.T) {
 	}
 }
 
+// TestPositionFrozenDumpsWhileHeld 断言**趁冻结还在**就落一份夹具。
+//
+// ⚠️ 第一版只在实验末尾落盘，于是夹具记的是**撤单之后**的状态 ——
+// 六个字段全为零。冻结确实发生过、日志里也写着，
+// 而留在仓库里的那份证据一个非零值都没有：证据扫描照样报「零观测」，
+// 对拍照样两边都是 0。**证据只活在会话里等于没有证据。**
+//
+// 判据落在**顺序**上：dump 必须在 CancelOrder 之前。
+func TestPositionFrozenDumpsWhileHeld(t *testing.T) {
+	body := funcBody(t, "exp_position_frozen.go", "expPositionFrozen")
+	i := strings.Index(body, "case frozenChanged:")
+	if i < 0 {
+		t.Fatal("⚠️ 找不到 frozenChanged 分支 —— 本条守卫落空了")
+	}
+	arm := body[i:]
+	dump := strings.Index(arm, `r.dump("position-frozen-held"`)
+	cancel := strings.Index(arm, "CancelOrder")
+	switch {
+	case dump < 0:
+		t.Error("⚠️ 冻结发生时没有落盘 —— " +
+			"撤单之后再落，夹具里六个字段全为零，这次观测等于没发生")
+	case cancel < 0:
+		t.Error("⚠️ 冻结分支里没有撤单 —— 委托会留在盘上")
+	case dump > cancel:
+		t.Error("⚠️ 落盘排在撤单**之后** —— 拍到的是释放后的稳态，" +
+			"六个字段全为零，这次观测等于没发生")
+	}
+}
+
 // TestPositionFrozenStopsOnFill 断言**成交了就停**，不接着发下一笔。
 //
 // ⚠️ 挂不上的价却成交了，说明前提已经不成立；此时接着按候选表往下发单，

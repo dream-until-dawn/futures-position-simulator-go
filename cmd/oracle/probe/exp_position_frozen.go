@@ -16,9 +16,13 @@ import (
 //	frozen           账户侧 —— FrozenMargin / FrozenCommission 怎么进 Available
 //	position-frozen  持仓侧 —— volume_*_frozen_today / _his 冻的是哪一边
 //
-// 前者早已实测；后者至今**几乎零观测**：54 个持仓字段里
+// 前者早已实测；后者此前**几乎零观测**：54 个持仓字段里
 // `volume_long_frozen_today` 与三个 `volume_short_frozen_*` 一次都没取到过非零值。
 // 而一个从未非零过的字段，对拍时两边都是 0，判「一致」什么都不说明。
+//
+// ⚠️ 20260909 本实验补掉了 `volume_long_frozen_today`（DCE.m2701 挂平今 1 手）。
+// 剩下三个全在空头 —— 种子是纯多头，要开一手空仓才够得着。
+// 当前的清单以 zeroObserved 为准，**别照这段注释的字面读**。
 //
 // # 判据
 //
@@ -125,10 +129,26 @@ func (r *Runner) expPositionFrozen(ctx context.Context) error {
 
 		case frozenChanged:
 			measured = true
+			var moved []string
 			for _, k := range frozenFields {
 				if before[k] != during[k] {
 					r.Logf("    ✓ %s：%s → %s", k, before[k], during[k])
+					moved = append(moved, k)
 				}
+			}
+			// ⚠️ **趁冻结还在的时候落一份夹具**，撤单之前。
+			//
+			// 第一版把落盘放在实验末尾，于是夹具里记的是**撤单之后**的状态 ——
+			// 六个字段全为零。冻结确实发生过、日志里也写着，
+			// 而留在仓库里的那份证据一个非零值都没有：
+			// TestPositionFieldEvidence 照样报「零观测」，对拍照样两边都是 0。
+			// **证据只活在会话里等于没有证据**，这是同一个教训的第二次。
+			if err := r.dump("position-frozen-held", fmt.Sprintf(
+				"⚠️ 这份夹具是**挂单冻结生效期间**拍的，不是稳态：%s 的 %s 方向"+
+					"挂着一笔 %s 1 手（挂不上的限价），冻结字段 %v 非零。"+
+					"随后即撤单释放 —— 稳态那份见 position-frozen-*",
+				sym, pick.side, pick.offset, moved)); err != nil {
+				r.Logf("    ⚠️ 冻结期夹具落盘失败：%v —— **本次观测没能留下证据**", err)
 			}
 			if err := cli.CancelOrder(id); err != nil {
 				r.Logf("    ⚠️ 撤单失败：%v —— **去看一眼那笔委托**，它可能还挂着", err)
@@ -203,7 +223,9 @@ func (c closable) target() string {
 // ⚠️ 这张表是排序的依据，不是断言。它会过期 —— 一旦某个字段被观测到，
 // 它就该从这里挪走，否则实验会一直去补一份已经有了的样本。
 var zeroObserved = map[string]bool{
-	"volume_long_frozen_today":  true,
+	// ⚠️ volume_long_frozen_today 已于 20260909 观测到（DCE.m2701 挂平今 1 手），
+	// 按本表自己的规矩挪走了 —— 留着的话实验会一直去补一份已经有的样本。
+	// 剩下三个全在空头：种子是纯多头，开一手空仓才够得着。
 	"volume_short_frozen":       true,
 	"volume_short_frozen_today": true,
 	"volume_short_frozen_his":   true,
