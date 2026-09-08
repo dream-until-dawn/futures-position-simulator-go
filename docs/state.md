@@ -26,8 +26,8 @@
 | `rules_pending` | **11** | [cn-futures-rules.md](./cn-futures-rules.md) §13。⚠️ 交易日 20260908 的夜盘先从 7 涨到 10（新增三条全部由实测本身暴露），当晚补测掉一条；送审后核实评审的重新框定时又撞出两条，净 +4 |
 | `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` 未开始） |
 | `rules_measured` | **1** | 同上。⚠️ **夜盘量了一整晚，这个数只从 0 走到 1**，理由见下方 `kq_facts` |
-| `fixture_count` | **20** | `testdata/probes/*.json`。⚠️ **确切数，不是下界**：夹具保留策略（[probes.md](./probes.md) §7.4）要求只因「被证明是错的」而删；一个「至少 N 份」的断言对「删掉两份」毫无判别力 |
-| `kq_facts` | **11** | 关于**快期模拟这个口子**的已实测事实，见下节 |
+| `fixture_count` | **24** | `testdata/probes/*.json`。⚠️ **确切数，不是下界**：夹具保留策略（[probes.md](./probes.md) §7.4）要求只因「被证明是错的」而删；一个「至少 N 份」的断言对「删掉两份」毫无判别力 |
+| `kq_facts` | **12** | 关于**快期模拟这个口子**的已实测事实，见下节 |
 | `account_fields` | **23** | [probes.md](./probes.md) §6.2（DIFF 文档只列 18） |
 | `position_fields` | **54** | probes.md §6（DIFF 文档只列 28） |
 
@@ -60,6 +60,7 @@
 | 9 | 手续费**不按分取整**（`ag2702` 每手 `12.07125`，五位原样保留） | ⚠️ 只排除「到分」；更细的位数没被考验过 |
 | 10 | `static_balance = pre_balance + deposit − withdraw` | ⚠️ 只有 2026-09-07 那两份**旧夹具**入金非零，这条靠它们才测得出；`− withdraw` 项仍未参与过运算 |
 | 11 | CTP 的 `Algorithm`（盈亏算法）在此口子上是 `'1'` 浮盈浮亏都计算 | 浮盈 6 份 + 浮亏 6 份，结存恒等式两边都成立，排除其余三个取值 |
+| 12 | **时段边界本身不动任何非行情字段**：今昨仓不滚、逐日盯市基线不重置、保证金不重算 | 跨 23:00–09:00 停盘、期间无成交；⚠️ 它的用处是**归因**——今晚结算后的变化因此可以归给结算 |
 
 ⚠️ 第 4 条是本批唯一一条**已知与真实柜台不同**的，而它的偏差在同一天内是常数，
 因此对拍时最容易被读成「对上了」。它必须进对拍的**已知差异表**，不能当成通过。
@@ -94,7 +95,7 @@
 | `docs/design.md` | 26 |
 | `docs/cn-futures-rules.md` | 39 |
 | `docs/fidelity.md` | 21 |
-| `docs/probes.md` | 33 |
+| `docs/probes.md` | 35 |
 | `docs/roadmap.md` | 20 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 10 |

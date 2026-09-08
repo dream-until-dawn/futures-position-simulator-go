@@ -81,6 +81,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expFrozen(ctx)
 	case "settle-check":
 		return r.expSettleCheck(ctx)
+	case "session-check":
+		return r.expSessionCheck(ctx)
 	case "close-profit-sign":
 		return r.expCloseProfitSign(ctx)
 	case "reject-code":
