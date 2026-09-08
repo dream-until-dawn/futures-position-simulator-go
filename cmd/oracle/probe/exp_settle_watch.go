@@ -6,8 +6,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
 )
 
 // watched 是 settle-watch 盯着的账户字段。
@@ -36,7 +34,7 @@ var watchedQuote = []string{"pre_settlement", "settlement", "upper_limit", "lowe
 // 它一次回答三个欠着的问题：
 //
 //	结算发生在哪个时刻          —— pre_balance / close_profit 何时跳
-//	今结算价何时出现            —— quote.settlement 何时由 0 变成有值
+//	今结算价何时出现            —— quote.settlement 何时由 "-" 变成有值
 //	交易日跳变的秒级时刻        —— trading_day 何时改变（欠数据层会话的采样点）
 //
 // ⚠️ 此前这三件事记的都是**区间**而不是**点**：
@@ -73,18 +71,17 @@ func (r *Runner) expSettleWatch(ctx context.Context) error {
 		m["trading_day"] = cli.TradingDay()
 		acc := cli.Account()
 		for _, k := range watchedAccount {
-			m["account."+k] = fmt.Sprintf("%.4f", kq.MustNum(acc, k))
+			m["account."+k] = numOrDash(acc, k)
 		}
 		for _, sym := range r.Symbols {
 			p := cli.PositionOf(sym)
 			for _, k := range watchedPosition {
-				m["pos."+sym+"."+k] = fmt.Sprintf("%.4f", kq.MustNum(p, k))
+				m["pos."+sym+"."+k] = numOrDash(p, k)
 			}
 			if q, ok := cli.QuoteOf(sym); ok {
-				m["quote."+sym+".pre_settlement"] = fmt.Sprintf("%.4f", q.PreSettlement)
-				m["quote."+sym+".settlement"] = fmt.Sprintf("%.4f", q.Settlement)
-				m["quote."+sym+".upper_limit"] = fmt.Sprintf("%.4f", q.UpperLimit)
-				m["quote."+sym+".lower_limit"] = fmt.Sprintf("%.4f", q.LowerLimit)
+				for _, k := range watchedQuote {
+					m["quote."+sym+"."+k] = numOrDash(q.Raw, k)
+				}
 			}
 		}
 		return m
@@ -163,4 +160,38 @@ func (r *Runner) expSettleWatch(ctx context.Context) error {
 		}
 		prev = cur
 	}
+}
+
+// numOrDash 把一个字段渲染成可比较的文本：**有值给数，无值给 "-"**。
+//
+// ⚠️ 这不是显示上的讲究，它决定了今晚这批证据说的是不是实话。
+//
+// 上一版用的是 kq.MustNum，缺失与 "-" 都会变成 0.0000。结算发生时
+// 「settlement 由 0 变成 3160」照样会触发记录，所以**探测本身是好的** ——
+// 坏的是留在夹具里的那句话：柜台说的是「无值 → 3160」，而夹具写的是「0 → 3160」。
+// 事后读这份证据的人分不出柜台当时报的是 0 还是没有。
+//
+// ⚠️ 实测（本交易日 14:2x 的 status 夹具）：结算之前 quotes.settlement
+// 给的是字符串 "-"，不是 0；空仓方向的 margin_long 也是 "-"。
+// 而「"-" 与 0 是两回事」正是 probes.md §9 那一批的结论 ——
+// 那个结论此前只落进了库这一侧，采集器这一侧还留着旧写法。
+func numOrDash(m map[string]any, key string) string {
+	if m == nil {
+		return "(无截面)"
+	}
+	v, ok := m[key]
+	if !ok {
+		// ⚠️ 「键不在」与「键在但柜台说无值」也要分开：
+		// 前者可能是订阅没到齐，后者是柜台的一个答复。
+		return "(缺字段)"
+	}
+	switch x := v.(type) {
+	case float64:
+		return fmt.Sprintf("%.4f", x)
+	case string:
+		return x
+	case nil:
+		return "(null)"
+	}
+	return fmt.Sprintf("(%T)", v)
 }

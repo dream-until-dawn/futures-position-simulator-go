@@ -150,6 +150,45 @@ var tradeDrop = map[string]string{
 	"broker_id":   "丢弃：经纪商标识",
 }
 
+// quoteKeep 是行情截面的白名单。
+//
+// ⚠️ 行情进夹具的理由与成交同一条：**让夹具自足**。
+//
+//	昨结算价是按额手续费的基准（kq_facts 4）、也是持仓保证金的基准（kq_facts 1）、
+//	还是逐日盯市重置基线的那个数 —— 而它此前**不在夹具里的任何地方**。
+//
+// 于是拿夹具重算手续费或保证金，都要先去别处找一个数补进来，
+// 而「别处」意味着那个数不属于这份证据，它可以被换掉而没人发现。
+//
+// ⚠️ 只留**本库用得上**的字段，不整份行情照搬：
+// 五档盘口与成交量每一拍都在动，存进夹具只会让同名夹具永远「内容不同」，
+// 而那条冲突守卫会因此天天报警 —— 一个天天报警的守卫等于没有守卫。
+var quoteKeep = map[string]string{
+	"instrument_id":     "保留：合约",
+	"exchange_id":       "保留：交易所",
+	"volume_multiple":   "保留：合约乘数 —— ⚠️ 漏乘会得到量级正确到肉眼看不出的错值",
+	"price_tick":        "保留：最小变动价位",
+	"price_decs":        "保留：报价小数位",
+	"pre_settlement":    "保留：**昨结算价** —— 手续费基准、保证金基准、逐日盯市基线，三处都用它",
+	"settlement":        "保留：今结算价 —— ⚠️ 结算之前它是无值",
+	"pre_close":         "保留：昨收盘价（与昨结算价不是一回事，留着是为了能证明用的不是它）",
+	"last_price":        "保留：最新价",
+	"upper_limit":       "保留：涨停价",
+	"lower_limit":       "保留：跌停价",
+	"open_interest":     "保留：持仓量",
+	"pre_open_interest": "保留：昨持仓量",
+	"expired":           "保留：是否已到期",
+	"datetime":          "保留：行情时刻 —— 判断这份行情是不是停在某个时刻的依据",
+	"margin":            "保留：柜台给的每手保证金 —— ⚠️ 单一数值，不是四个保证金率",
+	"commission":        "保留：柜台给的每手手续费 —— ⚠️ 单一数值，丢掉了平今这个维度",
+	"trading_day":       "保留：交易日",
+}
+
+var quoteDrop = map[string]string{
+	"user_id":    "丢弃：账户 UUID",
+	"account_id": "丢弃：账号标识",
+}
+
 // Fixture 是脱敏后的夹具，可以入库。
 type Fixture struct {
 	TradingDay string                    `json:"trading_day"`
@@ -157,6 +196,12 @@ type Fixture struct {
 	Note       string                    `json:"note,omitempty"`
 	Account    map[string]any            `json:"account"`
 	Positions  map[string]map[string]any `json:"positions"`
+
+	// Quotes 是被观察合约的行情快照，**只含本库用得上的字段**。
+	//
+	// ⚠️ 它让夹具自足：昨结算价此前不在夹具里的任何地方，
+	// 而它同时是手续费基准、保证金基准与逐日盯市基线。
+	Quotes map[string]map[string]any `json:"quotes"`
 
 	// Trades 是本交易日的逐笔成交。
 	//
@@ -173,8 +218,12 @@ type Fixture struct {
 	Unclassified []string `json:"unclassified"`
 }
 
-// Sanitize 把交易截面按白名单过成夹具。
-func Sanitize(account, positions, trades map[string]any, tradingDay, capturedAt, note string) *Fixture {
+// Sanitize 把交易与行情截面按白名单过成夹具。
+//
+// ⚠️ quotes 应当**只含被观察的合约**，由调用方筛好再传进来。
+// 整份行情有几万个合约，而夹具是证据不是数据库。
+func Sanitize(account, positions, trades, quotes map[string]any,
+	tradingDay, capturedAt, note string) *Fixture {
 	f := &Fixture{
 		TradingDay: tradingDay,
 		CapturedAt: capturedAt,
@@ -182,6 +231,7 @@ func Sanitize(account, positions, trades map[string]any, tradingDay, capturedAt,
 		Account:    map[string]any{},
 		Positions:  map[string]map[string]any{},
 		Trades:     map[string]map[string]any{},
+		Quotes:     map[string]map[string]any{},
 	}
 	unknown := map[string]struct{}{}
 
@@ -232,6 +282,32 @@ func Sanitize(account, positions, trades map[string]any, tradingDay, capturedAt,
 			unknown["trades/"+k] = struct{}{}
 		}
 		f.Trades[id] = out
+	}
+
+	for sym, raw := range quotes {
+		q, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		out := map[string]any{}
+		for k, v := range q {
+			if _, ok := quoteKeep[k]; ok {
+				out[k] = v
+				continue
+			}
+			if _, ok := quoteDrop[k]; ok {
+				continue
+			}
+			// ⚠️ 行情的键集比业务截面大得多（五档盘口、成交量、涨跌幅…），
+			// 而本库只用其中十几个。这里**不报漂移**，只是不留 ——
+			// 与账户/持仓/成交相反，理由是那三个是「柜台对账户说的话」，
+			// 多一个键意味着有个概念本库不知道；而行情是公共数据，
+			// 多一个键通常只是行情商多给了一个指标。
+			// ⚠️ 代价写在这里：行情侧**没有漂移探测**，
+			// 上游把 pre_settlement 改名的话，本库会安静地少一个字段。
+			// 挡它的是 fixture.Load 那边的「必需字段缺失即报错」。
+		}
+		f.Quotes[sym] = out
 	}
 
 	for k := range unknown {

@@ -30,6 +30,12 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 			"investor_id": "abc", // 丢弃表
 			"mystery":     "x",   // 两张表都没有
 		}},
+		map[string]any{"SHFE.rb2701": map[string]any{
+			"pre_settlement": 3158.0,
+			"last_price":     3151.0,
+			"account_id":     "12345678", // 丢弃表
+			"bid_price1":     3150.0,     // 行情侧的「不留但也不报漂移」
+		}},
 		"20260908", "2026-09-08T13:00:00+08:00", "单测")
 
 	// ① 白名单里的键原样保留。
@@ -41,6 +47,10 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 	}
 	if f.Trades["t1"]["price"] != 3151.0 {
 		t.Errorf("白名单字段 price 没保留 —— ⚠️ 它是逐笔对冲口径的基线")
+	}
+	if f.Quotes["SHFE.rb2701"]["pre_settlement"] != 3158.0 {
+		t.Errorf("⚠️ 白名单字段 pre_settlement 没保留 —— " +
+			"它同时是手续费基准、保证金基准与逐日盯市基线")
 	}
 
 	// ② 丢弃表里的键**不出现**，且**不算漂移**。
@@ -61,7 +71,25 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 		}
 	}
 
-	// ③ ⚠️ 两张表都没有的键必须进 Unclassified —— 这是漂移探测器本身。
+	// ③ ⚠️ 行情侧的规则与其余三处**相反**，这一条把差别钉住。
+	//
+	// 账户/持仓/成交是「柜台对账户说的话」，多一个键意味着有个概念本库不知道
+	// —— 那要报漂移。而行情是公共数据，多一个键通常只是多了一个指标，
+	// 报漂移会让守卫天天响。代价是**行情侧没有漂移探测**，写在 Sanitize 的注释里。
+	if _, ok := f.Quotes["SHFE.rb2701"]["bid_price1"]; ok {
+		t.Error("⚠️ 行情侧未登记的键被保留了 —— 白名单是白名单，不是黑名单")
+	}
+	if _, ok := f.Quotes["SHFE.rb2701"]["account_id"]; ok {
+		t.Error("⚠️ 行情侧的丢弃字段 account_id 出现在夹具里")
+	}
+	for _, u := range f.Unclassified {
+		if strings.HasPrefix(u, "quotes/") {
+			t.Errorf("⚠️ 行情侧不该报漂移，却报了 %s —— "+
+				"报漂移会让这个守卫天天响，而天天响的守卫等于没有", u)
+		}
+	}
+
+	// ④ ⚠️ 两张表都没有的键必须进 Unclassified —— 这是漂移探测器本身。
 	//
 	// 静默丢弃与静默保留是两种不同的坏：前者丢证据，后者可能泄漏。
 	// 白名单选的是「漏一个 → 夹具缺字段 → 报错」这一侧，
@@ -87,7 +115,7 @@ func TestSanitizeCarriesTrades(t *testing.T) {
 	f := Sanitize(nil, nil, map[string]any{
 		"t1": map[string]any{"price": 3150.0, "volume": 1.0, "offset": "OPEN"},
 		"t2": map[string]any{"price": 3152.0, "volume": 1.0, "offset": "OPEN"},
-	}, "20260908", "2026-09-08T13:00:00+08:00", "")
+	}, nil, "20260908", "2026-09-08T13:00:00+08:00", "")
 	if len(f.Trades) != 2 {
 		t.Fatalf("⚠️ 成交没进夹具：%v", f.Trades)
 	}

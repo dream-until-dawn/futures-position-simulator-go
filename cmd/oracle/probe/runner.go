@@ -131,6 +131,37 @@ func (r *Runner) expStatus(ctx context.Context) error {
 	acc := cli.Account()
 	pos := cli.Positions()
 
+	// ⚠️ 订阅**被观察合约**的行情，让夹具自足。
+	//
+	// 昨结算价同时是手续费基准、保证金基准与逐日盯市基线，而它不在业务截面里 ——
+	// 不订阅的话，这份夹具存下来之后重算这三样都要去别处找一个数补进来，
+	// 而「别处」意味着那个数不属于这份证据，可以被换掉而没人发现。
+	if syms := observedSymbols(cli); len(syms) > 0 {
+		if err := cli.ConnectQuote(ctx); err != nil {
+			// ⚠️ 行情连不上不该让只读自检整个失败，但**必须说出来**：
+			// 少了行情的夹具是一份不自足的夹具，而它长得和自足的一样。
+			r.Logf("")
+			r.Logf("⚠️ 行情网关连不上（%v）—— 本份夹具将**不含行情**，", err)
+			r.Logf("   也就是昨结算价缺席，拿它重算手续费/保证金/盯市基线都补不上。")
+		} else if err := cli.SubscribeQuotes(syms...); err != nil {
+			r.Logf("⚠️ 订阅行情失败：%v —— 本份夹具将不含行情", err)
+		} else {
+			ready := 0
+			for _, sym := range syms {
+				if _, ok := cli.WaitQuoteReady(sym, 15*time.Second); ok {
+					ready++
+				}
+			}
+			r.Logf("")
+			r.Logf("行情已订阅 %d 个合约，就绪 %d 个", len(syms), ready)
+			if ready < len(syms) {
+				// ⚠️ 缺席本身就是记录，不去补一个空壳。
+				r.Logf("⚠️ 有 %d 个合约的行情没就绪 —— 它们在夹具里会**缺席**，"+
+					"而缺席比一份填了默认值的行情诚实", len(syms)-ready)
+			}
+		}
+	}
+
 	r.Logf("")
 	r.Logf("账户截面 %d 字段", len(acc))
 	for _, k := range sortedKeys(acc) {
@@ -205,7 +236,10 @@ func (r *Runner) expStatus(ctx context.Context) error {
 // 可能已经进过 git index —— 一次 git add -A 就够了。
 func (r *Runner) dump(name, note string) error {
 	cli := r.cli
-	f := kq.Sanitize(cli.Account(), cli.Positions(), cli.Trades(), cli.TradingDay(),
+	// ⚠️ 行情只留**被观察到的合约**：持仓里出现过的、或成交里出现过的。
+	// 整份行情有几万个合约，而夹具是证据不是数据库。
+	f := kq.Sanitize(cli.Account(), cli.Positions(), cli.Trades(),
+		observedQuotes(cli), cli.TradingDay(),
 		time.Now().Format(time.RFC3339), note)
 
 	// 独立复查：与白名单是两套不同原理的机制，因此不会一起失效。
@@ -292,4 +326,46 @@ func freeFixturePath(dir, name, tradingDay string, content []byte, logf func(str
 		}
 	}
 	return "", fmt.Errorf("%s 已有 99 份同名夹具，先清理再跑", base)
+}
+
+// observedQuotes 挑出「本次截面里出现过的合约」的行情。
+//
+// ⚠️ 判据是**持仓或成交里出现过**，不是「订阅过」：
+// 订阅过而没持仓也没成交的合约，它的行情对这份证据没有用；
+// 而持仓里有、却因为没订阅所以没行情的合约，会在这里**缺席** ——
+// 那是一个真实的缺口，缺席本身就是它的记录，不去补一个空壳。
+func observedQuotes(cli *kq.Client) map[string]any {
+	all, _ := kq.Dig(cli.QuoteSnapshot(), "quotes").(map[string]any)
+	out := map[string]any{}
+	for _, sym := range observedSymbols(cli) {
+		if q, ok := all[sym]; ok {
+			out[sym] = q
+		}
+	}
+	return out
+}
+
+// observedSymbols 列出本次截面里出现过的合约，升序。
+func observedSymbols(cli *kq.Client) []string {
+	want := map[string]bool{}
+	for sym := range cli.Positions() {
+		want[sym] = true
+	}
+	for _, raw := range cli.Trades() {
+		t, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		ex, _ := t["exchange_id"].(string)
+		inst, _ := t["instrument_id"].(string)
+		if ex != "" && inst != "" {
+			want[ex+"."+inst] = true
+		}
+	}
+	out := make([]string, 0, len(want))
+	for sym := range want {
+		out = append(out, sym)
+	}
+	sort.Strings(out)
+	return out
 }

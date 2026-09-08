@@ -63,6 +63,13 @@ type Fixture struct {
 	Account    map[string]Value
 	Positions  map[string]map[string]Value
 	Trades     []Trade
+
+	// Quotes 是被观察合约的行情快照。
+	//
+	// ⚠️ 它让夹具自足：昨结算价同时是手续费基准、保证金基准与逐日盯市基线，
+	// 而它此前不在夹具里的任何地方 —— 拿夹具重算这三样，都要先去别处找一个数补进来，
+	// 而「别处」意味着那个数不属于这份证据，它可以被换掉而没人发现。
+	Quotes map[string]map[string]Value
 	// SkippedTrades 记录解析不了的成交，带原因。
 	//
 	// ⚠️ 它不是警告而是**证据缺口**：少一笔成交，重放出来的持仓就是错的，
@@ -79,6 +86,7 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 		Account    map[string]any            `json:"account"`
 		Positions  map[string]map[string]any `json:"positions"`
 		Trades     map[string]map[string]any `json:"trades"`
+		Quotes     map[string]map[string]any `json:"quotes"`
 		// Unclassified 是落盘时白名单与丢弃表都没见过的键。
 		//
 		// ⚠️ 它非空意味着**这份夹具丢过字段**：那些键被记了名字，值没有留下。
@@ -107,6 +115,7 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 		Path: path, TradingDay: day, CapturedAt: raw.CapturedAt, Note: raw.Note,
 		Account:   map[string]Value{},
 		Positions: map[string]map[string]Value{},
+		Quotes:    map[string]map[string]Value{},
 	}
 	for k, v := range raw.Account {
 		val, err := toValue(v)
@@ -125,6 +134,17 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 			out[k] = val
 		}
 		f.Positions[sym] = out
+	}
+	for sym, q := range raw.Quotes {
+		out := map[string]Value{}
+		for k, v := range q {
+			val, err := toValue(v)
+			if err != nil {
+				return nil, fmt.Errorf("%s 的 quotes[%s].%s：%w", path, sym, k, err)
+			}
+			out[k] = val
+		}
+		f.Quotes[sym] = out
 	}
 	for id, t := range raw.Trades {
 		tr, err := toTrade(id, t, day)
@@ -243,4 +263,37 @@ func (f *Fixture) TradesOf(symbol string) []Trade {
 		}
 	}
 	return out
+}
+
+// PreSettlement 取某个合约的昨结算价。
+//
+// ⚠️ 第二个返回值不是可有可无的：昨结算价缺失时，
+// 手续费、保证金、逐日盯市基线三处都算不出来，
+// 而回落到 0 会让保证金变成 0、让手续费变成 0 —— 两个都看起来「便宜」，
+// 而「便宜」在数上完全合理。
+func (f *Fixture) PreSettlement(symbol string) (decimal.Decimal, bool) {
+	q, ok := f.Quotes[symbol]
+	if !ok {
+		return decimal.Zero, false
+	}
+	v, ok := q["pre_settlement"]
+	if !ok || v.Absent || v.IsText || !v.Number.IsPositive() {
+		return decimal.Zero, false
+	}
+	return v.Number, true
+}
+
+// Multiplier 取某个合约的乘数。
+//
+// ⚠️ 同样带 ok：乘数为零会让所有金额变成 0，而 0 看起来完全合理。
+func (f *Fixture) Multiplier(symbol string) (decimal.Decimal, bool) {
+	q, ok := f.Quotes[symbol]
+	if !ok {
+		return decimal.Zero, false
+	}
+	v, ok := q["volume_multiple"]
+	if !ok || v.Absent || v.IsText || !v.Number.IsPositive() {
+		return decimal.Zero, false
+	}
+	return v.Number, true
 }
