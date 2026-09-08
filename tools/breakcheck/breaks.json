@@ -2118,5 +2118,38 @@
 		"test": "TestStrayCRIsActuallyCaught",
 		"want": "期望**只有** bad.md",
 		"expect": "red"
+	},
+	{
+		"name": "191 把空档下界调到 0.2：1/3 那个盘中点落进空档",
+		"dir": "",
+		"file": "conformance/fixture/tick_session_test.go",
+		"old": "\thalfTickGapLo = 0.34",
+		"new": "\thalfTickGapLo = 0.2",
+		"pkg": "./conformance/fixture/",
+		"test": "TestTickScanInSessionCoverage",
+		"want": "现在有盘中样本了",
+		"expect": "red"
+	},
+	{
+		"name": "192 时段过滤失效：盘后那批零头也算成盘中",
+		"dir": "",
+		"file": "conformance/fixture/tick_session_test.go",
+		"old": "\t\t\tif !live {\n\t\t\t\tcontinue\n\t\t\t}",
+		"new": "\t\t\tif !live {\n\t\t\t\t_ = live\n\t\t\t}",
+		"pkg": "./conformance/fixture/",
+		"test": "TestTickScanInSessionCoverage",
+		"want": "现在有盘中样本了",
+		"expect": "red"
+	},
+	{
+		"name": "193 零头全被当成整数倍滤掉：盘中样本数归零",
+		"dir": "",
+		"file": "conformance/fixture/tick_session_test.go",
+		"old": "\t\t\tif frac == 0 {",
+		"new": "\t\t\tif frac >= 0 {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestTickScanInSessionCoverage",
+		"want": "一个**盘中的、带零头的**样本都没有",
+		"expect": "red"
 	}
 ]
