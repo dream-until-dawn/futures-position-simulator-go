@@ -26,6 +26,27 @@ type PositionInput struct {
 	// MarginLong / MarginShort 是该方向的持仓保证金合计，来自 margin 包。
 	MarginLong, MarginShort decimal.Decimal
 	HasMargin               bool
+
+	// FrozenLong / FrozenShort 是该方向被挂单冻结的手数，来自 order 包
+	// （`order.Book.TotalOf(合约, 方向)`）。
+	//
+	// ⚠️ `HasFrozen` 为假时这三个字段渲染成 **NotImplemented**，
+	// 不是零。调用方没接 order 包时，「没有挂单」与「没告诉我有没有挂单」
+	// 在数上都是 0 —— 而前者可以拿去对拍，后者不能。
+	//
+	// ⚠️ 今昨必须**分开**给：实测柜台按今昨拆（kq_facts 31/32），
+	// 合起来给一个数，那两个字段就永远填不对。
+	FrozenLongToday, FrozenLongHistory   int
+	FrozenShortToday, FrozenShortHistory int
+	HasFrozen                            bool
+}
+
+// frozenOf 取某个方向的冻结手数。
+func (in PositionInput) frozenOf(side string) (today, his int) {
+	if side == "long" {
+		return in.FrozenLongToday, in.FrozenLongHistory
+	}
+	return in.FrozenShortToday, in.FrozenShortHistory
 }
 
 // sideStats 是一个方向上从逐笔明细算出来的量。
@@ -268,10 +289,32 @@ func PositionOf(p *position.Position, in PositionInput) (Position, error) {
 			"但「对方也没填」不能把本库的欠债抵消掉")
 		v["margin_"+n+"_his"] = Todo("同 margin_*_today")
 
-		// —— 报单冻结：v0.4.0 ——
-		v["volume_"+n+"_frozen"] = Todo("报单冻结在 v0.4.0（order 包），本库尚无")
-		v["volume_"+n+"_frozen_today"] = Todo("同上")
-		v["volume_"+n+"_frozen_his"] = Todo("同上")
+		// —— 报单冻结（v0.4.0 起由 order 包提供）——
+		//
+		// ⚠️ 调用方没给的时候渲染成 NotImplemented，**不是零**：
+		// 「没有挂单」与「没告诉我有没有挂单」在数上都是 0，
+		// 而前者可以拿去对拍，后者不能 —— 判成一致什么都不说明。
+		if !in.HasFrozen {
+			v["volume_"+n+"_frozen"] = Todo("调用方没有提供挂单冻结 —— " +
+				"接上 order.Book.TotalOf(合约, 方向) 之后本字段就有值。" +
+				"⚠️ 这里不填 0：没有挂单与不知道有没有挂单，在数上都是 0")
+			v["volume_"+n+"_frozen_today"] = Todo("同上")
+			v["volume_"+n+"_frozen_his"] = Todo("同上")
+		} else {
+			ft, fh := in.frozenOf(n)
+			// ⚠️ 冻结量超过持有量是**自相矛盾**，不是一个观测值。
+			// 让它过去，对拍时会得到一个看起来正常的数，
+			// 而它意味着有一批手数被冻了两次。
+			if ft > st.volToday || fh > st.volHis {
+				return nil, fmt.Errorf(
+					"⚠️ %s 方向冻结 今%d/昨%d **超过**持有 今%d/昨%d —— "+
+						"那意味着有手数被冻了两次；委托簿与持仓对不上，先查那边",
+					n, ft, fh, st.volToday, st.volHis)
+			}
+			v["volume_"+n+"_frozen"] = Num(decimal.NewFromInt(int64(ft + fh)))
+			v["volume_"+n+"_frozen_today"] = Num(decimal.NewFromInt(int64(ft)))
+			v["volume_"+n+"_frozen_his"] = Num(decimal.NewFromInt(int64(fh)))
+		}
 
 		// —— volume_*_yd：与 _his 的差别**已经实测出来了** ——
 		//

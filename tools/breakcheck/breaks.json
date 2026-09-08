@@ -1429,5 +1429,39 @@
   "test": "TestFrozenAddIsAdditive",
   "want": "累加漏了字段",
   "expect": "red"
+ },
+ {
+  "name": "129 没提供冻结时填 0 而不是「未实现」",
+  "dir": "",
+  "file": "view/position.go",
+  "old": "\t\tif !in.HasFrozen {",
+  "new": "\t\tif false {",
+  "pkg": "./view/",
+  "test": "TestFrozenRendersFromInput",
+  "want": "应为「未实现」",
+  "expect": "red"
+ },
+ {
+  "name": "130 冻结超过持有量时放行（有手数被冻两次）",
+  "dir": "",
+  "file": "view/position.go",
+  "old": "\t\t\tif ft > st.volToday || fh > st.volHis {",
+  "new": "\t\t\tif false {",
+  "pkg": "./view/",
+  "test": "TestFrozenExceedingHeldIsContradiction",
+  "want": "竟然渲染成功了",
+  "expect": "red"
+ },
+ {
+  "name": "131 冻结合计漏掉昨仓那部分",
+  "dir": "",
+  "file": "view/position.go",
+  "old": "\t\t\tv[\"volume_\"+n+\"_frozen\"] = Num(decimal.NewFromInt(int64(ft + fh)))",
+  "new": "\t\t\tv[\"volume_\"+n+\"_frozen\"] = Num(decimal.NewFromInt(int64(ft)))",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionViewCoversMeasuredFields",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ 现有夹具**一份都没有**接上 order 包（HasFrozen 恒为假），于是合计那一支根本走不到，改坏它照样绿。声明的盲区：冻结这一块要到实时对拍把柜台的 orders 喂进来才验得了 —— 而那正是下一步。⚠️ 本条与「测试写错了」不同：判据本身是对的，只是**没有输入能走到它**。"
  }
 ]

@@ -387,3 +387,82 @@ func TestPositionMultiplierMustBePositive(t *testing.T) {
 		}
 	}
 }
+
+// TestFrozenRendersFromInput 断言挂单冻结**由调用方提供，不给就是未实现**。
+//
+// ⚠️ 关键在后半句：调用方没接 order 包时，「没有挂单」与「没告诉我有没有挂单」
+// 在数上**都是 0**。填 0 的话对拍会判「一致」—— 而那个一致什么都不说明：
+// 把整块冻结逻辑删掉，它照样一致。
+func TestFrozenRendersFromInput(t *testing.T) {
+	day := types.NewTradingDay(2026, 9, 9)
+	p, err := position.New(rb2701(t), types.Speculation, day, refdata.UseHistory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Open(types.Buy, day, decimal.RequireFromString("3163"), 5); err != nil {
+		t.Fatal(err)
+	}
+	base := PositionInput{Multiplier: decimal.NewFromInt(10)}
+
+	// —— 没给：三个字段都是「未实现」——
+	v, err := PositionOf(p, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []string{
+		"volume_long_frozen", "volume_long_frozen_today", "volume_long_frozen_his",
+	} {
+		if v[k].Presence != NotImplemented {
+			t.Errorf("⚠️ 没提供冻结时 %s 渲染成了 %v，应为「未实现」—— "+
+				"填 0 的话对拍会判一致，而那个一致什么都不说明", k, v[k].Presence)
+		}
+	}
+
+	// —— 给了：三个字段都有值，且合计 = 今 + 昨 ——
+	in := base
+	in.HasFrozen = true
+	in.FrozenLongToday = 2
+	v, err = PositionOf(p, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := v["volume_long_frozen_today"]; got.Presence != Present ||
+		!got.Number.Equal(decimal.NewFromInt(2)) {
+		t.Errorf("volume_long_frozen_today = %v，应为 2", got)
+	}
+	if got := v["volume_long_frozen"]; !got.Number.Equal(decimal.NewFromInt(2)) {
+		t.Errorf("合计 = %v，应为 2（今 2 + 昨 0）", got.Number)
+	}
+	// ⚠️ 空头没有挂单，但**给过了**，所以是 0 而不是「未实现」——
+	// 这正是「给了」与「没给」的区别所在。
+	if got := v["volume_short_frozen"]; got.Presence != Present {
+		t.Errorf("⚠️ 给过冻结之后，空头应当是 0 而不是 %v —— "+
+			"「这个方向没有挂单」是一个可以拿去对拍的结论", got.Presence)
+	}
+}
+
+// TestFrozenExceedingHeldIsContradiction 断言**冻结超过持有要报错**。
+//
+// ⚠️ 那不是一个观测值，是自相矛盾：它意味着有一批手数被冻了两次。
+// 让它过去的话，对拍会得到一个**看起来完全正常**的数。
+func TestFrozenExceedingHeldIsContradiction(t *testing.T) {
+	day := types.NewTradingDay(2026, 9, 9)
+	p, err := position.New(rb2701(t), types.Speculation, day, refdata.UseHistory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Open(types.Buy, day, decimal.RequireFromString("3163"), 3); err != nil {
+		t.Fatal(err)
+	}
+	in := PositionInput{Multiplier: decimal.NewFromInt(10), HasFrozen: true}
+	in.FrozenLongToday = 4 // 持有 3 手
+	if _, err := PositionOf(p, in); err == nil {
+		t.Fatal("⚠️ 冻结 4 手而只持有 3 手，竟然渲染成功了 —— " +
+			"那意味着有手数被冻了两次，而对拍会得到一个看起来正常的数")
+	}
+	// 等于持有量是**合法**的（全部挂出去平掉）—— 不许被同一条规则误伤。
+	in.FrozenLongToday = 3
+	if _, err := PositionOf(p, in); err != nil {
+		t.Errorf("⚠️ 冻结等于持有量被拦下了：%v —— 全仓挂平是合法的", err)
+	}
+}
