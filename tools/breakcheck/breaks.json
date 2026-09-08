@@ -1951,5 +1951,27 @@
   "want": "",
   "expect": "green",
   "why": "⚠️ **豁免区的内侧**。与它成对的那条钉外侧必红；只做外面那一半，说不出豁免是不是过宽；只做里面那一半，说不出守卫还在不在。破坏本身就是一个样本，而豁免区正是这个样本的盲区 —— 破坏落进豁免区，量的是**豁免规则**，不是被守的那条规则，**而两者都返回绿**。（本条与配对做法由评审方 20260909 提出，此前双方各演示了一半。）"
+ },
+ {
+  "name": "176 走目录时把根目录写歪（touch 到的东西盖不住每个包）",
+  "dir": "",
+  "file": "gitcache_test.go",
+  "old": "\terr := filepath.WalkDir(\".\", func(p string, d fs.DirEntry, err error) error {\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t\tif d.IsDir() {\n\t\t\tif n := d.Name(); n == \".git\" || n == \"testdata\" {\n\t\t\t\treturn filepath.SkipDir\n\t\t\t}\n\t\t\tif abs, aerr := filepath.Abs(p); aerr == nil {",
+  "new": "\terr := filepath.WalkDir(\"order\", func(p string, d fs.DirEntry, err error) error {\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t\tif d.IsDir() {\n\t\t\tif n := d.Name(); n == \".git\" || n == \"testdata\" {\n\t\t\t\treturn filepath.SkipDir\n\t\t\t}\n\t\t\tif abs, aerr := filepath.Abs(p); aerr == nil {",
+  "pkg": "./",
+  "test": "TestPackageTreeMatchesReality",
+  "want": "没覆盖到包目录",
+  "expect": "red"
+ },
+ {
+  "name": "177 git 状态指到不存在的目录（该 Fatal 而不是静默通过）",
+  "dir": "",
+  "file": "gitcache_test.go",
+  "old": "\tgit := \".git\"",
+  "new": "\tgit := \".git-does-not-exist\"",
+  "pkg": "./",
+  "test": "TestNoNewWipCommits",
+  "want": "个 git 状态文件",
+  "expect": "red"
  }
 ]

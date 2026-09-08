@@ -3,6 +3,7 @@ package futsim
 import (
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -34,7 +35,7 @@ import (
 // .go 文件里多一行 import，目录条目没变。那一条要 touchSourceBytes。
 func touchSourceTree(t *testing.T) {
 	t.Helper()
-	dirs := 0
+	seen := map[string]bool{}
 	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -43,17 +44,58 @@ func touchSourceTree(t *testing.T) {
 			if n := d.Name(); n == ".git" || n == "testdata" {
 				return filepath.SkipDir
 			}
-			dirs++
+			if abs, aerr := filepath.Abs(p); aerr == nil {
+				seen[filepath.Clean(abs)] = true
+			}
 		}
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("⚠️ 走目录失败：%v —— 这条测试会退回「可缓存」", err)
 	}
-	if dirs < 10 {
-		t.Fatalf("⚠️ 只走到 %d 个目录 —— 走目录很可能坏了，"+
-			"而坏掉之后缓存看不见新包，守卫会在「刚好发生了它要抓的那件事」之后返回 ok", dirs)
+	assertCoversEveryPackage(t, "走目录", seen)
+}
+
+// assertCoversEveryPackage 断言 touch 到的东西**覆盖了每一个包**。
+//
+// ⚠️ 下界不用一个手写的数字（那又撞回方法论 40：需要有人维护的参数会停住）。
+// 判据是两个**互相独立**的来源之间的覆盖关系：
+//
+//	走文件系统的那一份    filepath.WalkDir 的结果
+//	走构建系统的那一份    go list -f {{.Dir}} ./...
+//
+// 走歪了根目录、过滤器写窄了、布局不是预期的那种 —— 交集当场缺包，
+// 而这个断言**不需要任何人去同步数字**（本条由评审方 20260909 提出）。
+//
+// ⚠️ 它堵的是这套 touch 机制自己的静默失效模式：**失败的方式是「什么也没读到」，
+// 而那正好把测试还原成可缓存** —— 缓存键里什么也没多，测试照样「通过」。
+func assertCoversEveryPackage(t *testing.T, what string, seen map[string]bool) {
+	t.Helper()
+	out, err := exec.Command("go", "list", "-f", "{{.Dir}}", "./...").Output()
+	if err != nil {
+		t.Fatalf("⚠️ go list 失败：%v —— 覆盖判据没法算，而算不出时"+
+			"这套机制的失效是**静默**的", err)
 	}
+	var pkgs []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			pkgs = append(pkgs, filepath.Clean(line))
+		}
+	}
+	// ⚠️ 一个包都没报出来时，下面的循环是空真 —— 那正是最该报警的时候。
+	if len(pkgs) == 0 {
+		t.Fatal("⚠️ go list 一个包都没报出来 —— 覆盖判据会空真通过")
+	}
+	missing := 0
+	for _, d := range pkgs {
+		if !seen[d] {
+			missing++
+			t.Errorf("⚠️ 「%s」没覆盖到包目录 %s —— "+
+				"这套机制失败的方式是「什么也没读到」，而那会把测试**静默还原成可缓存**："+
+				"缓存键里什么也没多，测试照样通过", what, d)
+		}
+	}
+	t.Logf("「%s」覆盖 %d 个包目录，缺 %d 个", what, len(pkgs), missing)
 }
 
 // touchSourceBytes 让缓存**看得见某个 .go 文件多了一行 import** 这件事。
@@ -71,6 +113,7 @@ func touchSourceTree(t *testing.T) {
 // 把偶然变成写下来的，而不是因为它现在多做了什么。
 func touchSourceBytes(t *testing.T) {
 	t.Helper()
+	seen := map[string]bool{}
 	files, total := 0, 0
 	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -91,14 +134,19 @@ func touchSourceBytes(t *testing.T) {
 		}
 		files++
 		total += len(b)
+		if abs, aerr := filepath.Abs(filepath.Dir(p)); aerr == nil {
+			seen[filepath.Clean(abs)] = true
+		}
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("⚠️ 读源码失败：%v —— 这条测试会退回「可缓存」", err)
 	}
-	if files < 50 || total == 0 {
-		t.Fatalf("⚠️ 只读到 %d 个 .go / 共 %d 字节 —— 读源码那一步很可能坏了", files, total)
+	if total == 0 {
+		t.Fatal("⚠️ 一个字节都没读到 —— 读源码那一步坏了，而坏掉之后测试会静默还原成可缓存")
 	}
+	assertCoversEveryPackage(t, "读源码", seen)
+	t.Logf("读了 %d 个 .go、共 %d 字节", files, total)
 }
 
 // touchGitState 让 `go test` 的缓存**看得见 git 的状态**。
