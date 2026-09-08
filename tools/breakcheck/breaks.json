@@ -1861,5 +1861,27 @@
   "test": "TestNotModeledDeclarationsHaveNotExpired",
   "want": "声明不建模到 v0.8.0，而当前版本已是 v0.8.0",
   "expect": "red"
+ },
+ {
+  "name": "168 拒因原话的取值白名单少一条（没登记过的原话要红）",
+  "dir": "",
+  "file": "conformance/fixture/last_msg_test.go",
+  "old": "\t\"平昨手数超过昨仓持仓量\": \"昨仓不足。",
+  "new": "\t\"平昨手数超过昨仓持仓量XX\": \"昨仓不足。",
+  "pkg": "./conformance/fixture/",
+  "test": "TestLastMsgValuesAreKnown",
+  "want": "没登记过的拒因原话",
+  "expect": "red"
+ },
+ {
+  "name": "169 收尾诊断把清单外的并发改动也报成「有破坏没还原」",
+  "dir": "",
+  "file": "tools/breakcheck/breakcheck.go",
+  "old": "\t\tif set[path] {\n\t\t\tm = append(m, line)\n\t\t} else {\n\t\t\tf = append(f, line)\n\t\t}",
+  "new": "\t\t_ = set\n\t\tm = append(m, line)",
+  "pkg": "./tools/breakcheck/",
+  "test": "TestSplitByBreakFiles",
+  "want": "清单外",
+  "expect": "red"
  }
 ]

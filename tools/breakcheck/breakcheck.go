@@ -172,12 +172,36 @@ func main() {
 	// 而这个守卫报的恰恰是最不能忽略的那件事。
 	//
 	// 逐文件的还原比对在 run() 的 defer 里做，那才是直接判据；
-	// 这里只兜「改了一个不在清单里的已跟踪文件」这种意外。
+	// 这里只兜「清单里的文件跑完还脏着」这种意外。
+	//
+	// ⚠️ 20260909 评审方撞到一处**说错了原因的诊断**：并发编辑
+	// docs/roadmap.md 时，这里确信地报「说明有破坏没还原」——
+	// 而清单里打在那个文件上的破坏**有 0 条**，那个改动不可能来自任何一条破坏。
+	//
+	// ⚠️ 更该记的是：**上面那段注释早就写着**「只兜改了一个不在清单里的
+	// 已跟踪文件这种意外」，而代码从头到尾没有区分过清单内外 ——
+	// 上一次加并发豁免时，**注释跟着改了，代码没跟着改**。
+	// 注释说对了规则，代码做的是另一件事，而两者在文件里挨着。
+	//
+	// ⚠️ 它建议的 `git checkout -- <文件>` 在并发场景下会**直接删掉
+	// 别人正在写的东西**。现在只对清单内的文件这么建议。
 	if after, err := gitDirty(); err == nil && hasTrackedChanges(after) {
-		fmt.Fprintf(os.Stderr,
-			"\n⚠️⚠️ 跑完之后有**已跟踪文件**被改动，说明有破坏没还原：\n%s\n"+
-				"   立刻 git checkout -- <那些文件>\n", after)
-		bad++
+		mine, foreign := splitByBreakFiles(after, breakFileSet(breaks))
+		if mine != "" {
+			fmt.Fprintf(os.Stderr,
+				"\n⚠️⚠️ 跑完之后**清单里的文件**仍有改动，说明有破坏没还原：\n%s\n"+
+					"   立刻 git checkout -- <那些文件>\n", mine)
+			bad++
+		}
+		if foreign != "" {
+			// ⚠️ 集外的一律**不**报成「有破坏没还原」，也**不**建议 checkout。
+			// 破坏改不到清单外的文件，所以那种改动只可能来自别的进程 ——
+			// 而对一份来源不明的改动建议 `git checkout --`，
+			// 是在建议**删掉别人正在写的东西**。
+			fmt.Fprintf(os.Stderr,
+				"\nⓘ 跑完之后有**清单之外**的已跟踪文件被改动"+
+					"（运行期间别的进程写的，与破坏无关；⚠️ 不要 checkout）：\n%s\n", foreign)
+		}
 	} else if err == nil && after != before {
 		fmt.Fprintf(os.Stderr,
 			"\nⓘ 工作树多了未跟踪文件（运行期间别的进程写的，与破坏无关）：\n"+
@@ -387,4 +411,46 @@ func adaptEOL(content, anchor string) string {
 		return anchor // 全 LF，或换行是混的
 	}
 	return strings.ReplaceAll(anchor, "\n", "\r\n")
+}
+
+// breakFileSet 是破坏清单**可能改到**的全部文件。
+//
+// ⚠️ 收尾诊断靠它区分「清单内没还原」与「清单外的并发改动」——
+// 破坏改不到清单外的文件，所以集外的改动只可能来自别的进程。
+func breakFileSet(bs []Break) map[string]bool {
+	out := map[string]bool{}
+	for _, b := range bs {
+		// ⚠️ File 一律相对**仓库根**（见 run 的注释），与 porcelain 同基准，不拼 Dir。
+		if b.File != "" {
+			out[b.File] = true
+		}
+		for _, a := range b.Also {
+			if a.File != "" {
+				out[a.File] = true
+			}
+		}
+	}
+	return out
+}
+
+// splitByBreakFiles 把 porcelain 的已跟踪改动按「在不在清单里」分开。
+func splitByBreakFiles(porcelain string, set map[string]bool) (mine, foreign string) {
+	var m, f []string
+	for _, line := range strings.Split(porcelain, "\n") {
+		if strings.TrimSpace(line) == "" || strings.HasPrefix(strings.TrimSpace(line), "??") {
+			continue
+		}
+		// porcelain 是 `XY path`，路径从第 4 个字符起。
+		path := strings.TrimSpace(line)
+		if len(line) > 3 {
+			path = strings.TrimSpace(line[3:])
+		}
+		path = strings.ReplaceAll(strings.Trim(path, "\""), "\\", "/")
+		if set[path] {
+			m = append(m, line)
+		} else {
+			f = append(f, line)
+		}
+	}
+	return strings.Join(m, "\n"), strings.Join(f, "\n")
 }
