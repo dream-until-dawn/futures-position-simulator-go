@@ -299,11 +299,6 @@ func TestOracleTodayHisSplit(t *testing.T) {
 					continue
 				}
 				withVolume++
-				// 有量的那一侧：today 有量看 today，his 有量看 his。
-				which := "today"
-				if his > 0 {
-					which = "his"
-				}
 				for _, pat := range neverFilled {
 					name := fmtSide(pat, side)
 					checked++
@@ -315,18 +310,34 @@ func TestOracleTodayHisSplit(t *testing.T) {
 							filepath.Base(p), inst, name, pos[name])
 					}
 				}
-				// position_cost 的那一侧：0（未经结算）或真实数字（已结算）。
-				name := "position_cost_" + side + "_" + which
-				v, ok := pos[name].(float64)
-				if !ok {
-					t.Errorf("⚠️ %s 的 %s.%s 不是数字（%v）—— "+
-						"有量的那一侧不该是 \"-\"", filepath.Base(p), inst, name, pos[name])
-					continue
-				}
-				if v == 0 {
-					costZero++
-				} else {
-					costFilled++
+				// position_cost 的拆分：**结算时写的哪一侧**才有值。
+				//
+				// ⚠️ 上一版按「有量的那一侧」找，20260909 夜盘当场红了 7 处：
+				// 那晚在 rb2701 上开了一手今仓（空头也开了一手），
+				// 而 `position_cost_short_today` 给的是 `"-"` —— 有量却没值。
+				//
+				// 一致的解释：拆分是**日终结算时**算出来的，盘中不更新。
+				// 于是它写的是哪一侧由 PositionDateType 定，与现在的手数无关：
+				//
+				//	UseHistory（SHFE）    结算时全变昨仓 → 写 _his，_today 恒 "-"
+				//	NoUseHistory（DCE）   结算时仍是今仓 → 写 _today，_his 恒 "-"
+				//	结算之后新开的仓        两侧都不写 —— 在拆分里**完全看不见**
+				//
+				// ⚠️ 后果：有盘中成交时，`_today + _his ≠ position_cost`。
+				// 实测 rb2701：合计 126970 = 95310（昨 3 手 × 3177）
+				// + 31660（今 1 手 × 开仓价 3166），而拆分只给得出前一项。
+				// 拿拆分去凑合计的人会差一整块，且不报错。
+				for _, w := range []string{"today", "his"} {
+					name := "position_cost_" + side + "_" + w
+					v, ok := pos[name].(float64)
+					if !ok {
+						continue // "-"：这一侧结算没写，合法
+					}
+					if v == 0 {
+						costZero++
+					} else {
+						costFilled++
+					}
 				}
 			}
 		}

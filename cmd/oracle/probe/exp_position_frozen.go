@@ -202,8 +202,15 @@ func (c closable) orderDir() kq.Direction {
 
 // target 是这个组合**想打中**的字段，用来给候选排序、也用来在日志里说明意图。
 //
-// ⚠️ CLOSE 打中哪个是**未知**的 —— 今昨都有时由柜台决定消耗顺序
-// （那正是 close-order 实验的问题）。这里照实说「未知」，不猜。
+// ⚠️ 今昨都有时 CLOSE 打中哪个，**在这个结构上仍然是未知**——
+// 但那不再是因为「柜台自己决定」，20260909 已经量出来了：
+//
+//	UseHistory（SHFE）     CLOSE 就是**平昨**，冻 _his；没有昨仓时直接拒单
+//	NoUseHistory（DCE）    持仓全记在今仓，CLOSE 与 CLOSETODAY 都冻 _today
+//
+// 也就是说答案由 `PositionDateType` 定，而 `closable` **不知道合约属于哪一种**——
+// 它只有手数。所以这里仍写「未定」，理由从「柜台自己决定」换成「本结构不知道」。
+// ⚠️ 两者差别很大：前者是柜台的性质，后者是我们的信息缺口。
 func (c closable) target() string {
 	base := "volume_" + c.side + "_frozen"
 	switch {
@@ -223,12 +230,14 @@ func (c closable) target() string {
 // ⚠️ 这张表是排序的依据，不是断言。它会过期 —— 一旦某个字段被观测到，
 // 它就该从这里挪走，否则实验会一直去补一份已经有了的样本。
 var zeroObserved = map[string]bool{
-	// ⚠️ volume_long_frozen_today 已于 20260909 观测到（DCE.m2701 挂平今 1 手），
-	// 按本表自己的规矩挪走了 —— 留着的话实验会一直去补一份已经有的样本。
-	// 剩下三个全在空头：种子是纯多头，开一手空仓才够得着。
-	"volume_short_frozen":       true,
-	"volume_short_frozen_today": true,
-	"volume_short_frozen_his":   true,
+	// 20260909 一晚补掉三个，按本表自己的规矩挪走了：
+	//	volume_long_frozen_today   DCE.m2701 挂平今 1 手
+	//	volume_short_frozen        rb2701 开一手空今仓后挂平今
+	//	volume_short_frozen_today  同上
+	//
+	// ⚠️ 只剩这一个，而它**今晚够不着**：要一手**过夜的空仓**，
+	// 昨仓只能等结算。留着它是对的 —— 明天结算后就够得着了。
+	"volume_short_frozen_his": true,
 }
 
 // closableCandidates 列出全部「方向×开平」组合，**按判别力排序**。

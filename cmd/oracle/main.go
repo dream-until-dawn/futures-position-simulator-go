@@ -47,6 +47,7 @@ func usage() {
   fee-form         分开两种收法：每手固定额 与 按昨结算价比例
   fee-base         按额那档的基准价是成交价还是昨结算价
   fee-predict      把「昨结算价 × 乘数 × 品种费率」变成一次可证伪的预测
+  fee-close-history  平昨那一档（⚠️ 真平仓，吃掉一手昨仓；需要昨仓≥2 手）
 
 挂单与冻结:
   frozen           账户侧：一笔挂得住的委托冻结了什么，怎么进 Available
@@ -64,6 +65,8 @@ func usage() {
   close-order      实验 4：NoUseHistory 合约的平仓消耗顺序
   yd-vs-his        实验 7：volume_long_yd 与 volume_long_his 的差别
   position-date-type  这个合约区不区分今昨仓（只能靠柜台行为测，字典里没有）
+  shape-both-sides  把一个有昨仓的合约摆成「多头今昨并存 + 空头今仓」——
+                   ⚠️ 真建仓（对手价成交），它造的是别的实验缺的前提
   avg-price        让加权均价第一次被真正考验（需多笔不同价的开仓）
   close-profit-sign  构造一笔为正的平仓盈亏，分开 CTP 的两种符号约定
 

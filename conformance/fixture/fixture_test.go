@@ -163,6 +163,7 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 	all := loadAll(t)
 	var fields []conformance.Field
 	checked, withPosition, multiPrice := 0, 0, 0
+	skippedHistory := 0
 	for _, f := range all {
 		for _, sym := range f.Symbols() {
 			trades := f.TradesOf(sym)
@@ -178,6 +179,23 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 				name string
 				dir  types.Direction
 			}{{"long", types.Buy}, {"short", types.Sell}} {
+				// ⚠️ 这一侧有昨仓就跳过，**并且记数**。
+				//
+				// 重放只回放**当日**成交，而昨仓那几手的开仓单在前一交易日的
+				// 夹具里 —— 这一侧的手数与均价重放本来就凑不出来，
+				// 那是夹具的边界，不是本库算错。要重建它得走 Carry。
+				//
+				// ⚠️ 20260909 夜盘第一次出现「同一合约既有昨仓、又有当日成交」
+				// 的截面，这条测试当场红了 14 个字段 —— 在那之前样本里
+				// 要么全是今仓、要么昨仓那天没有成交，所以这个洞一直没露头。
+				//
+				// ⚠️ 按**方向**跳而不是按合约跳：rb2701 空头只有今仓，
+				// 那一侧是能验的，整个合约跳掉会白丢一批判别力。
+				if h := oracle["volume_"+side.name+"_his"]; !h.Absent && !h.IsText &&
+					h.Number.IsPositive() {
+					skippedHistory++
+					continue
+				}
 				s, err := p.Side(side.dir)
 				if err != nil {
 					t.Fatal(err)
@@ -232,6 +250,19 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 			"单笔样本上均价恒等于那一笔的价，加权平均这条逻辑一次都没走到")
 	}
 	t.Logf("有持仓的方向 %d 个，其中多笔不同价的 %d 个", withPosition, multiPrice)
+	// ⚠️ 跳掉的那些要**报出来**：一个悄悄增长的跳过数，
+	// 会让这条测试在覆盖越来越小的同时一直保持绿色。
+	t.Logf("ⓘ 因该侧有昨仓而跳过 %d 个方向 —— 重放只回放当日成交，"+
+		"昨仓那几手的开仓单在前一交易日的夹具里，要重建得走 Carry", skippedHistory)
+	// ⚠️ 棘轮不卡绝对值：明天结算之后昨仓会**合法地**变多，
+	// 一个卡死的数字只会天天要人去调，调着调着就没人看了。
+	// 卡的是不变式：**跳过的不许多过真比过的**。
+	// 越过这条线时，这条测试已经主要在跳过而不是在比对了。
+	if skippedHistory > checked {
+		t.Errorf("⚠️ 跳过 %d 个方向，而真正比过的只有 %d 个 —— "+
+			"这条测试已经主要在跳过而不是在对拍。"+
+			"该给带昨仓的方向接上 Carry 了", skippedHistory, checked)
+	}
 	r := conformance.Classify("全部带成交的夹具", fields, decimal.RequireFromString("0.0000001"))
 	t.Logf("比对 %d 个方向、%d 个字段", checked, len(fields))
 	for _, v := range []conformance.Verdict{

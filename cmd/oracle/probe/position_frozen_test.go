@@ -62,15 +62,19 @@ func TestClosableCandidates(t *testing.T) {
 			want: []string{"long/CLOSETODAY/SELL", "long/CLOSE/SELL"},
 		},
 		{
-			// ⚠️ 空头三个字段全是零观测，所以空头的候选必须排在多头昨仓前面。
-			name: "多头只有昨仓、空头有今仓 → 空头（零观测）排前面",
+			// ⚠️ 20260909 之后空头的**今仓**那两个字段已经有观测了
+			// （volume_short_frozen 与 _today），所以这一组**没有**零观测可打 ——
+			// 顺序退回自然序。这条用例在那晚之前期望的是空头排前面，
+			// 证据一变，期望就该跟着变。
+			name: "多头只有昨仓、空头有今仓 → 没有零观测可打，自然序",
 			p:    pos("volume_long_today", 0.0, "volume_long_his", 5.0, "volume_short_today", 1.0, "volume_short_his", 0.0),
-			want: []string{"short/CLOSETODAY/BUY", "short/CLOSE/BUY", "long/CLOSE/SELL"},
+			want: []string{"long/CLOSE/SELL", "short/CLOSETODAY/BUY", "short/CLOSE/BUY"},
 		},
 		{
-			// 多头昨仓已有样本（volume_long_frozen_his 观测到过一次），
-			// 空头昨仓没有 —— 所以空头在前。
-			name: "两边都只有昨仓 → 空头（零观测）在前",
+			// ⚠️ 这一条现在是**唯一**还能考验排序的用例：
+			// volume_short_frozen_his 是仅剩的零观测字段，而它只有
+			// 「空头有昨仓」时才够得着。空头昨仓要过夜，今晚造不出来。
+			name: "两边都只有昨仓 → 空头（仅剩的零观测）在前",
 			p:    pos("volume_long_today", 0.0, "volume_long_his", 2.0, "volume_short_today", 0.0, "volume_short_his", 2.0),
 			want: []string{"short/CLOSE/BUY", "long/CLOSE/SELL"},
 		},

@@ -823,8 +823,8 @@
   "name": "75 零观测表列满六个字段（排序退化成恒等）",
   "dir": "cmd/oracle",
   "file": "cmd/oracle/probe/exp_position_frozen.go",
-  "old": "\t\"volume_short_frozen\":       true,",
-  "new": "\t\"volume_long_frozen\":        true,\n\t\"volume_long_frozen_today\":  true,\n\t\"volume_long_frozen_his\":    true,\n\t\"volume_short_frozen\":       true,",
+  "old": "\t\"volume_short_frozen_his\": true,",
+  "new": "\t\"volume_long_frozen\":        true,\n\t\"volume_long_frozen_today\":  true,\n\t\"volume_long_frozen_his\":    true,\n\t\"volume_short_frozen\":       true,\n\t\"volume_short_frozen_today\": true,\n\t\"volume_short_frozen_his\":   true,",
   "pkg": "./probe/",
   "test": "TestZeroObservedIsNotEverything",
   "want": "全列进去会让排序退化成恒等",
@@ -834,22 +834,22 @@
   "name": "76 证据棘轮的钉子调高一格",
   "dir": "",
   "file": "conformance/fixture/coverage_test.go",
-  "old": "\tconst pinnedOnlyZero = 16",
-  "new": "\tconst pinnedOnlyZero = 17",
+  "old": "\tconst pinnedOnlyZero = 14",
+  "new": "\tconst pinnedOnlyZero = 15",
   "pkg": "./conformance/fixture/",
   "test": "TestPositionFieldEvidence",
-  "want": "从 17 降到 16",
+  "want": "从 15 降到 14",
   "expect": "red"
  },
  {
   "name": "77 证据棘轮的钉子调低一格",
   "dir": "",
   "file": "conformance/fixture/coverage_test.go",
-  "old": "\tconst pinnedOnlyZero = 16",
-  "new": "\tconst pinnedOnlyZero = 15",
+  "old": "\tconst pinnedOnlyZero = 14",
+  "new": "\tconst pinnedOnlyZero = 13",
   "pkg": "./conformance/fixture/",
   "test": "TestPositionFieldEvidence",
-  "want": "从 15 涨到 16",
+  "want": "从 13 涨到 14",
   "expect": "red"
  },
  {
@@ -860,7 +860,7 @@
   "new": "\t\t\t\t\tobs[k] = o\n\t\t\t\t}\n\t\t\t\tswitch {\n\t\t\t\tcase v.Absent:\n\t\t\t\t\to.zero++",
   "pkg": "./conformance/fixture/",
   "test": "TestPositionFieldEvidence",
-  "want": "涨到 19",
+  "want": "涨到 17",
   "expect": "red"
  },
  {
@@ -872,6 +872,61 @@
   "pkg": "./conformance/fixture/",
   "test": "TestFrozenFieldsAreTheThinnestEvidence",
   "want": "六个冻结字段都拿到非零观测了",
+  "expect": "red"
+ },
+ {
+  "name": "80 重放对拍不跳过带昨仓的方向",
+  "dir": "",
+  "file": "conformance/fixture/fixture_test.go",
+  "old": "\t\t\t\tif h := oracle[\"volume_\"+side.name+\"_his\"]; !h.Absent && !h.IsText &&\n\t\t\t\t\th.Number.IsPositive() {\n\t\t\t\t\tskippedHistory++\n\t\t\t\t\tcontinue\n\t\t\t\t}",
+  "new": "",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReplayMatchesOracleVolumeAndPrice",
+  "want": "重放出来的持仓与柜台不符",
+  "expect": "red"
+ },
+ {
+  "name": "81 保证金对拍不跳过带昨仓的方向",
+  "dir": "",
+  "file": "conformance/fixture/margin_test.go",
+  "old": "\t\t\t\tif h := f.Positions[sym][\"volume_\"+side.name+\"_his\"]; !h.Absent &&\n\t\t\t\t\t!h.IsText && h.Number.IsPositive() {\n\t\t\t\t\tskippedHistory++\n\t\t\t\t\tcontinue\n\t\t\t\t}",
+  "new": "",
+  "pkg": "./conformance/fixture/",
+  "test": "TestMarginAgainstFixturePositions",
+  "want": "保证金对不上",
+  "expect": "red"
+ },
+ {
+  "name": "82 拆分守卫去掉「手数变过」的判别力要求",
+  "dir": "",
+  "file": "view/split_settlement_test.go",
+  "old": "\t\tvolChanged := len(vols[k]) > 1",
+  "new": "\t\tvolChanged := false",
+  "pkg": "./view/",
+  "test": "TestPositionCostSplitIsFrozenWithinATradingDay",
+  "want": "此时是平凡成立的",
+  "expect": "red"
+ },
+ {
+  "name": "83 拆分守卫把「同一交易日」这个分组去掉",
+  "dir": "",
+  "file": "view/split_settlement_test.go",
+  "old": "\t\t\t\t\tk := key{f.TradingDay, sym, side, w}",
+  "new": "\t\t\t\t\tk := key{\"\", sym, side, w}",
+  "pkg": "./view/",
+  "test": "TestPositionCostSplitIsFrozenWithinATradingDay",
+  "want": "拆分在交易日内变了",
+  "expect": "red"
+ },
+ {
+  "name": "84 把一行 LF 插进 CRLF 文件（文件内部换行混掉）",
+  "dir": "",
+  "file": "cmd/oracle/probe/runner.go",
+  "old": "\tcase \"position-frozen\":\r\n",
+  "new": "\tcase \"position-frozen\":\r\n\t\t// 一行 LF 注释\n",
+  "pkg": "./",
+  "test": "TestNoFileMixesLineEndings",
+  "want": "**内部**混着 CRLF 与 LF",
   "expect": "red"
  }
 ]
