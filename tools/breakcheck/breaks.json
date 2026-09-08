@@ -1752,5 +1752,27 @@
   "test": "TestOrdersAcceptedOutsideSession",
   "want": "全都落在交易时段内",
   "expect": "red"
+ },
+ {
+  "name": "158 把「被拒的开仓单」也当成进了簿",
+  "dir": "",
+  "file": "conformance/fixture/order_frozen_test.go",
+  "old": "\t\t\t\tcase rejected:\n\t\t\t\t\tb = &openRejected",
+  "new": "\t\t\t\tcase rejected && false:\n\t\t\t\t\tb = &openRejected",
+  "pkg": "./conformance/fixture/",
+  "test": "TestOrderFrozenMarginShape",
+  "want": "没有** frozen_margin",
+  "expect": "red"
+ },
+ {
+  "name": "159 白名单丢掉委托上的 frozen_margin",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/kq/sanitize.go",
+  "old": "\t\"frozen_margin\":       \"保留：这一笔冻结的保证金。",
+  "new": "\t\"zz_frozen_margin\":       \"保留：这一笔冻结的保证金。",
+  "pkg": "./kq/",
+  "test": "TestSanitizeKeepsOnlyWhitelisted",
+  "want": "frozen_margin 没保留",
+  "expect": "red"
  }
 ]

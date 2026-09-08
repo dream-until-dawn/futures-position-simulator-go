@@ -41,6 +41,13 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 			"order_id":    "o1",
 			"offset":      "CLOSETODAY",
 			"volume_left": 2.0,
+			// ⚠️ 这个字段 20260909 才第一次在真实截面里出现（只在进了簿
+			// 且尚未成交的开仓委托上）。补进用例是因为破坏验证当场演示过：
+			// 把它从白名单里拿掉，本文件**照样绿** —— 白名单的单测里没有
+			// 带这个字段的样本，而主模块那条守卫读的是已经落好盘的夹具，
+			// 改白名单影响不到它。一个只在**下次采集**时才生效的改动，
+			// 在现有语料上没有任何守卫看得见。
+			"frozen_margin": 2214.1,
 			"user_id":     "e3b0c442-98fc-1c14-9afb-4c8996fb9242", // 丢弃表
 			"odd_key":     "x",                                    // 两张表都没有
 		}},
@@ -63,6 +70,13 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 		t.Fatal(err)
 	} else if strings.Contains(string(b), "整倍数") {
 		t.Errorf("⚠️ 通知的 content 进了夹具 —— 自由文本不在白名单能保护的范围内")
+	}
+
+	// ⓪′ 委托上的 frozen_margin 要留住。见上面那段注释。
+	if got := f.Orders["o1"]["frozen_margin"]; got != 2214.1 {
+		t.Errorf("⚠️ 委托的 frozen_margin 没保留：%v —— "+
+			"它只在「进了簿且尚未成交的开仓委托」上出现（kq_facts 49），"+
+			"丢了就再也补不回来：那是采集时刻的东西", got)
 	}
 
 	// ① 白名单里的键原样保留。
