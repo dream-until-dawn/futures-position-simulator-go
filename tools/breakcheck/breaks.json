@@ -1807,5 +1807,16 @@
   "test": "TestVersionMatchesDocComment",
   "want": "找不到当前版本",
   "expect": "red"
+ },
+ {
+  "name": "163 造假合约时不认品种码（纯数字也照造）",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_reject_tradable.go",
+  "old": "\t\t\tif i == 0 {\n\t\t\t\treturn \"\"\n\t\t\t}",
+  "new": "\t\t\tif i == 0 && false {\n\t\t\t\treturn \"\"\n\t\t\t}",
+  "pkg": "./probe/",
+  "test": "TestFakeMonthOf",
+  "want": "fakeMonthOf(",
+  "expect": "red"
  }
 ]
