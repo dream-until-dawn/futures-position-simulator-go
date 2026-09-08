@@ -1528,9 +1528,8 @@
   "new": "\t\t} else if has && false {\n\t\t\tfrozenSamples++",
   "pkg": "./conformance/fixture/",
   "test": "TestReconstructCoversCarriedSides",
-  "want": "",
-  "expect": "green",
-  "why": "⚠️ 去掉之后测试仍绿 —— 因为不比就没有失败。这正是本条要说的事：**冻结那三个字段的实现，在接上证据之前写成什么样都不会红**。声明的盲区：一条「少比几个字段」的破坏，天然不会让对拍变红；能抓住它的只有『接上冻结的截面数』那个计数与它的下界。⚠️ 而那个下界现在是 `frozenSamples > 0 && frozenNonZero == 0`，管的是「接了但全零」，不管「压根没接」——那一半靠这条 why 记着。"
+  "want": "一个都没接上冻结",
+  "expect": "red"
  },
  {
   "name": "138 冻结接进来了但今昨搞反",

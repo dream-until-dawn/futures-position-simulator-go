@@ -260,6 +260,25 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		t.Error("⚠️ 接上了冻结，但本库一处非零都没算出来 —— " +
 			"全零的一致什么都不说明。要一份**挂着单**时拍的夹具")
 	}
+	// ⚠️ 「压根没接」也要拦，而这一条是破坏验证逼出来的：
+	// 第 137 条把接冻结那段整个关掉，测试**仍然绿** —— 不比就没有失败。
+	// 上面那条只管「接了但全零」，管不到「一个都没接」。
+	//
+	// 判据：只要**语料里有记了委托的夹具**，就必须至少接上一个。
+	// 一个都接不上，要么是接线断了，要么是那些夹具全被前面的条件筛掉了 ——
+	// 两种都要人去看，而不是让这条测试继续绿着。
+	withOrders := 0
+	for _, ff := range all {
+		if ff.HasOrders {
+			withOrders++
+		}
+	}
+	if withOrders > 0 && frozenSamples == 0 {
+		t.Errorf("⚠️ 语料里有 %d 份夹具记了委托，而本条**一个都没接上冻结** —— "+
+			"要么接线断了，要么那些夹具全被前面的条件筛掉了。"+
+			"⚠️ 不接就没有失败，于是 volume_*_frozen_* 的实现"+
+			"写成什么样都不会红", withOrders)
+	}
 	r := conformance.Classify("结转+重放·带昨仓的方向", fields,
 		decimal.RequireFromString("0.0000001"))
 	t.Logf("重建 %d 个截面（其中今昨并存 %d 个），比了 %d 个字段",
