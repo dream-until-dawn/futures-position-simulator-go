@@ -376,3 +376,169 @@ func TestTradesAreSortedDeterministically(t *testing.T) {
 		}
 	}
 }
+
+// multipliers 是合约乘数。
+//
+// ⚠️ 出处：probes.md §7.2 的实测（从每手保证金反解并跨合约互验）。
+// 写死在这里是因为本仓库还没有一份入库的 refdata 快照 ——
+// 而 refdata.Builder 的零值报错明确不许拿默认值凑一份。
+// 哪天有了快照，这张表要删掉换成读快照；在那之前它是**一处已知的手抄**。
+var multipliers = map[string]string{
+	"SHFE.rb2610": "10", "SHFE.rb2701": "10", "SHFE.rb2705": "10",
+	"DCE.m2701": "10", "DCE.m2703": "10", "DCE.m2705": "10",
+	"DCE.i2701": "100", "SHFE.cu2701": "5", "SHFE.ag2702": "15",
+}
+
+// TestPositionViewAcrossAllFixtures 把全量对拍推广到**每一份带成交的夹具**。
+//
+// ⚠️ 单份样本上的「32 对上」可能是那一份的巧合。
+// 跨夹具、跨合约、跨交易所跑同一套映射，才谈得上「字段级同构」。
+//
+// 它同样**不要求通过**（本库有未实现字段），要求的是：
+//
+//	失败数不许超过钉住的那个   ——  退化会红
+//	每一份样本的字段数一致     ——  柜台改字段集会红
+//	至少覆盖两个交易所         ——  判别力
+func TestPositionViewAcrossAllFixtures(t *testing.T) {
+	all := loadAll(t)
+	type key struct{ fixture, sym string }
+	totals := map[conformance.Verdict]int{}
+	failedFields := map[string]int{}
+	samples, exchanges := 0, map[types.Exchange]bool{}
+	fieldCounts := map[int][]key{}
+
+	for _, f := range all {
+		for _, sym := range f.Symbols() {
+			trades := f.TradesOf(sym)
+			if len(trades) == 0 {
+				continue
+			}
+			multStr, ok := multipliers[sym]
+			if !ok {
+				t.Errorf("⚠️ %s 没有登记乘数 —— 漏乘会得到一个量级正确到肉眼看不出的错值", sym)
+				continue
+			}
+			p, err := Replay(trades[0].Instrument, types.Speculation, f.TradingDay, trades)
+			if err != nil {
+				continue
+			}
+			oracle := f.Positions[sym]
+			last := oracle["last_price"]
+			lib, err := view.PositionOf(p, view.PositionInput{
+				Multiplier: decimal.RequireFromString(multStr),
+				LastPrice:  last.Number, HasLast: !last.Absent,
+			})
+			if err != nil {
+				t.Errorf("%s %s 渲染失败：%v", f.Path, sym, err)
+				continue
+			}
+			fields, errs := ComparePosition(lib, oracle, TriggeredByVolume(oracle))
+			for _, e := range errs {
+				t.Errorf("⚠️ %s %s：%v", f.Path, sym, e)
+			}
+			r := conformance.Classify(f.Path+" "+sym, fields,
+				decimal.RequireFromString("0.0000001"))
+			for v, n := range r.Counts {
+				totals[v] += n
+			}
+			for name, v := range r.Verdicts {
+				if v == conformance.Failed {
+					failedFields[name]++
+				}
+			}
+			for _, e := range r.Errs {
+				t.Errorf("⚠️ %s %s 判定出错：%v", f.Path, sym, e)
+			}
+			samples++
+			exchanges[trades[0].Instrument.Exchange] = true
+			fieldCounts[len(fields)] = append(fieldCounts[len(fields)], key{f.Path, sym})
+		}
+	}
+
+	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家", samples, len(exchanges))
+	for _, v := range []conformance.Verdict{
+		conformance.Matched, conformance.NotModeled, conformance.NotImplemented,
+		conformance.Untriggered, conformance.KnownDeviation, conformance.Failed,
+	} {
+		t.Logf("  %-16s %d", v.String(), totals[v])
+	}
+	names := make([]string, 0, len(failedFields))
+	for n := range failedFields {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		t.Logf("  ❌ %s：%d 个样本上失败", n, failedFields[n])
+	}
+
+	// ⚠️ 判别力：样本要够多、要跨交易所。
+	// 全在一个交易所上跑，「跨合约一致」证明的是同一套规则的同一条路径。
+	if samples < 20 {
+		t.Fatalf("只有 %d 个样本 —— 太少，跨夹具这句话没意义", samples)
+	}
+	if len(exchanges) < 2 {
+		t.Fatalf("⚠️ 只覆盖 %d 家交易所 —— 「字段级同构」这句话判别力不足", len(exchanges))
+	}
+
+	// ⚠️ 每个样本的字段数必须一致：不一致说明柜台在不同截面上给了不同的字段集，
+	// 而那会让「本库多出/缺少字段」的判断随样本而变。
+	if len(fieldCounts) != 1 {
+		for n, ks := range fieldCounts {
+			t.Errorf("⚠️ 有样本的字段数是 %d（如 %v）—— 各样本字段集不一致", n, ks[0])
+		}
+	}
+
+	// 棘轮：每一个失败字段都必须归进一个**已记录的类**，不许有第三类。
+	//
+	// ⚠️ 两类都是「本库复现不了柜台的某个行为」，而不是「本库算错了」；
+	// 两类也都**还没有裁决者**，所以按 design.md §5 走不了「已知口子差异」那一档
+	// （那一档要出处、裁决者、选边理由三样齐全，现在只有出处）。
+	// 于是它们留在失败里 —— 红是正确的结果。
+	failClass := map[string]string{
+		// 类 A：今昨拆分，柜台恒填 0 而本库算真值（kq_facts 14，188/188）。
+		"open_cost_long_today": "A", "position_cost_long_today": "A",
+		"open_cost_short_today": "A", "position_cost_short_today": "A",
+		"open_cost_long_his": "A", "position_cost_long_his": "A",
+		"open_cost_short_his": "A", "position_cost_short_his": "A",
+		// 类 B：空仓边的 "-" 与 0 是**路径依赖**的（kq_facts 15）。
+		//
+		// ⚠️ 本库判「无值」（不存在的持仓没有成本/盈亏），柜台给什么取决于
+		// 这个字段当天被设过没有 —— 本库没有那个状态，复现不了也不假装能。
+		// 实测的多数方向还不一致：open_cost_long 空仓时 139/144 给 "-"，
+		// 而 open_cost_short 空仓时 117/185 给 0。
+		// **那个不对称只反映这个账户历史上做多更多**，不是一条规则 ——
+		// 幸好当初选边是按「不存在的持仓没有成本」这句话本身，不是按哪边输得少。
+		"open_cost_long": "B", "open_cost_short": "B",
+		"position_cost_long": "B", "position_cost_short": "B",
+		"float_profit_long": "B", "float_profit_short": "B",
+		"position_profit_long": "B", "position_profit_short": "B",
+		"float_profit": "B", "position_profit": "B",
+	}
+	seenClass := map[string]int{}
+	for _, n := range names {
+		c, ok := failClass[n]
+		if !ok {
+			t.Errorf("⚠️ 多出一个**第三类**失败字段 %s（%d 个样本）—— "+
+				"已记录的只有两类：今昨拆分柜台恒填 0（kq_facts 14）与"+
+				"空仓边 \"-\"/0 路径依赖（kq_facts 15）。"+
+				"新出现的失败要先查清楚是哪一类，不许直接加进这张表",
+				n, failedFields[n])
+			continue
+		}
+		seenClass[c] += failedFields[n]
+	}
+	// ⚠️ 两类都必须**真的出现过**：一类没出现时，上面的分类判断只走了一半。
+	for _, c := range []string{"A", "B"} {
+		if seenClass[c] == 0 {
+			t.Errorf("⚠️ 失败类 %s 一次都没出现 —— "+
+				"要么它被修好了（那就把它从表里删掉并把这条一起改），"+
+				"要么分类判断在空转", c)
+		}
+	}
+	t.Logf("失败归类：类 A（今昨拆分）%d 处，类 B（空仓路径依赖）%d 处",
+		seenClass["A"], seenClass["B"])
+	if totals[conformance.Matched] < 300 {
+		t.Errorf("⚠️ 全批只有 %d 个「对得上且被触发过」—— 太少，疑似大面积退化",
+			totals[conformance.Matched])
+	}
+}
