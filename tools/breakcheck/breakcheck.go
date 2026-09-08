@@ -1,0 +1,301 @@
+// Command breakcheck 是**破坏验证**的可复现跑法。
+//
+// 规则三说「永远绿的测试等于没有测试」。破坏验证是检查这件事的手段：
+// 把生产代码改坏一处，看对应的测试红不红、红得对不对。
+//
+// ⚠️ 但此前它只活在会话里：脚本在临时目录，结论在提交信息。
+// 也就是**「这些测试有牙」这句话本身不可复现** —— 而那正是规则三要防的形状，
+// 只是换到了元层面。本命令把它落进仓库。
+//
+//	go run ./tools/breakcheck            # 全跑
+//	go run ./tools/breakcheck -only 无值  # 只跑名字含「无值」的
+//	go run ./tools/breakcheck -list      # 只列，不跑
+//
+// # 四层，本命令覆盖前三层
+//
+//	零层  先确认**破坏本身发生了** —— 锚点必须恰好出现一次，否则报「零层未成立」
+//	一层  要红
+//	二层  要红在**断言**上，不是编译失败
+//	三层  要红在**被测的那个性质**上 —— 靠 want 片段核对
+//
+// ⚠️ 第四层（红的理由与破坏的因果）机器判不了，靠 want 逼近，靠人看。
+//
+// # ⚠️ 期望「仍然绿」的破坏
+//
+// 有一类破坏**期望它不红**：它演示的是一处**盲区**——
+// 这个错在当前的口子/样本上查不出来。
+// 一条声称的盲区，只有被这样演示过一次，才算真的确认它存在。
+//
+// 所以 Expect 为 green 时 Why **必填**：不写清楚它在演示哪条盲区，
+// 一条「期望绿」的破坏与一条坏掉的检查完全一样。
+//
+// ⚠️ 而这类条目哪天**红了**是个好消息（盲区消失了），
+// 好消息同样需要有人被通知到 —— 所以它照样判为「未按预期」。
+package main
+
+import (
+	_ "embed"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+)
+
+//go:embed breaks.json
+var registryJSON []byte
+
+// Break 是一次破坏。
+type Break struct {
+	Name string `json:"name"`
+	// Dir 是跑 go test 的工作目录，相对仓库根；空表示根。
+	//
+	// ⚠️ 它不是可选的方便字段：cmd/oracle 是**嵌套模块**，
+	// 在根目录跑 `go test ./cmd/oracle/probe/` 根本找不到那个包。
+	// 少了它，那 13 条破坏会以「包不存在」的形式失败，
+	// 而那个失败与「测试没红」长得不一样，却同样不说明任何事。
+	Dir  string `json:"dir"`
+	File string `json:"file"`
+	// Old 是锚点。⚠️ 必须在文件里**恰好出现一次**：
+	// 零次说明代码变了而这条没跟着改，多次说明改了不止一处 ——
+	// 两种情形下「破坏本身」都没按预期发生，那是零层。
+	Old  string `json:"old"`
+	New  string `json:"new"`
+	Pkg  string `json:"pkg"`
+	Test string `json:"test"`
+	// Want 是期望在测试输出里出现的片段 —— 第三层：红在被测的那个性质上。
+	Want string `json:"want"`
+	// Expect 是 "red" 或 "green"。
+	Expect string `json:"expect"`
+	// Why 在 Expect 为 green 时**必填**：它在演示哪条盲区。
+	Why string `json:"why,omitempty"`
+}
+
+func main() {
+	only := flag.String("only", "", "只跑名字含这个子串的")
+	list := flag.Bool("list", false, "只列出，不跑")
+	flag.Parse()
+
+	var breaks []Break
+	if err := json.Unmarshal(registryJSON, &breaks); err != nil {
+		fmt.Fprintf(os.Stderr, "读破坏清单失败：%v\n", err)
+		os.Exit(2)
+	}
+	if err := validate(breaks); err != nil {
+		fmt.Fprintf(os.Stderr, "破坏清单本身不合法：%v\n", err)
+		os.Exit(2)
+	}
+	if *list {
+		for _, b := range breaks {
+			mark := " "
+			if b.Expect == "green" {
+				mark = "◦"
+			}
+			fmt.Printf("%s %-46s %s :: %s\n", mark, b.Name, b.Pkg, b.Test)
+		}
+		fmt.Printf("\n共 %d 条（◦ 表示**期望仍然绿**，那是盲区演示）\n", len(breaks))
+		return
+	}
+
+	// ⚠️ 工作树必须干净。
+	//
+	// 本命令会**改生产代码再改回来**。若中途被杀，改坏的那份会留在盘上，
+	// 而干净的工作树让 `git checkout` 一句话就能收拾。
+	// 工作树本来就脏的话，收拾时分不清哪些改动是自己的。
+	var before string
+	if dirty, err := gitDirty(); err != nil {
+		fmt.Fprintf(os.Stderr, "查工作树状态失败：%v\n", err)
+		os.Exit(2)
+	} else if hasTrackedChanges(dirty) {
+		fmt.Fprintf(os.Stderr,
+			"⚠️ 工作树里有**已跟踪文件**的改动，拒绝运行 ——\n"+
+				"   本命令会改生产代码再改回来，中途被杀时干净的工作树\n"+
+				"   让 git checkout 一句话就能收拾：\n%s\n", dirty)
+		os.Exit(2)
+	} else {
+		// ⚠️ 未跟踪的新文件**不拦**：夹具与落盘产物随时会冒出来，
+		// 拦它等于要求跑破坏验证之前先清空 testdata ——
+		// 那是个跟本命令无关的要求，而无关的要求会让人绕过整个工具。
+		before = dirty
+	}
+
+	bad := 0
+	ran := 0
+	for _, b := range breaks {
+		if *only != "" && !strings.Contains(b.Name, *only) {
+			continue
+		}
+		ran++
+		verdict, detail := run(b)
+		fmt.Printf("%-46s %s\n", b.Name, verdict)
+		if detail != "" {
+			fmt.Printf("    %s\n", strings.ReplaceAll(detail, "\n", "\n    "))
+		}
+		if verdict != "红对了" && verdict != "如预期仍然绿" {
+			bad++
+		}
+	}
+	// ⚠️ 跑完再查一次工作树，但与**运行前的基线**比，不是要求绝对干净。
+	//
+	// 首版要求绝对干净，结果一次后台拉取在运行期间写出了一个新文件，
+	// 于是它报「有破坏没还原」—— 而真相是没有。
+	// **一个会因为无关原因报警的守卫，会训练人忽略它**，
+	// 而这个守卫报的恰恰是最不能忽略的那件事。
+	//
+	// 逐文件的还原比对在 run() 的 defer 里做，那才是直接判据；
+	// 这里只兜「改了一个不在清单里的已跟踪文件」这种意外。
+	if after, err := gitDirty(); err == nil && hasTrackedChanges(after) {
+		fmt.Fprintf(os.Stderr,
+			"\n⚠️⚠️ 跑完之后有**已跟踪文件**被改动，说明有破坏没还原：\n%s\n"+
+				"   立刻 git checkout -- <那些文件>\n", after)
+		bad++
+	} else if err == nil && after != before {
+		fmt.Fprintf(os.Stderr,
+			"\nⓘ 工作树多了未跟踪文件（运行期间别的进程写的，与破坏无关）：\n"+
+				"  运行前 %q\n  运行后 %q\n", before, after)
+	}
+	fmt.Printf("\n跑了 %d 条，未按预期 %d 条\n", ran, bad)
+	if bad > 0 {
+		os.Exit(1)
+	}
+}
+
+func validate(bs []Break) error {
+	if len(bs) == 0 {
+		return fmt.Errorf("清单是空的")
+	}
+	seen := map[string]bool{}
+	greens := 0
+	for i, b := range bs {
+		if b.Name == "" || b.File == "" || b.Old == "" || b.Pkg == "" || b.Test == "" {
+			return fmt.Errorf("第 %d 条缺必填字段", i+1)
+		}
+		if seen[b.Name] {
+			return fmt.Errorf("破坏名 %q 重复 —— 报告里会分不清哪条是哪条", b.Name)
+		}
+		seen[b.Name] = true
+		switch b.Expect {
+		case "red":
+			if b.Want == "" {
+				return fmt.Errorf("%q 期望红，却没写 want —— "+
+					"那样只能验到「红了」，验不到「红在被测的那个性质上」", b.Name)
+			}
+		case "green":
+			// ⚠️ 期望绿而不说明演示的是哪条盲区，
+			// 与一条坏掉的检查完全一样。
+			if b.Why == "" {
+				return fmt.Errorf("%q 期望**仍然绿**，却没写 why —— "+
+					"一条不说明自己在演示哪条盲区的「期望绿」，"+
+					"与一条坏掉的检查完全一样", b.Name)
+			}
+			greens++
+		default:
+			return fmt.Errorf("%q 的 expect 是 %q，只能是 red 或 green", b.Name, b.Expect)
+		}
+	}
+	// ⚠️ 至少要有一条期望绿的：那一类是盲区的证据，
+	// 而一份只有「期望红」的清单，说明没人去演示过盲区。
+	if greens == 0 {
+		return fmt.Errorf("清单里一条「期望仍然绿」都没有 —— " +
+			"那一类是盲区的证据；没有它，所有关于盲区的说法都只是一句话")
+	}
+	return nil
+}
+
+func run(b Break) (verdict, detail string) {
+	// ⚠️ File 一律相对**仓库根**，而 go test 在 Dir 里跑。
+	// 两者的基准不同是刻意的：破坏改的是源码（按仓库定位），
+	// 测试跑的是模块（按模块定位）。混成一个会在嵌套模块上错。
+	orig, err := os.ReadFile(b.File)
+	if err != nil {
+		return "零层未成立", fmt.Sprintf("读不到 %s：%v", b.File, err)
+	}
+	if n := strings.Count(string(orig), b.Old); n != 1 {
+		return "零层未成立", fmt.Sprintf(
+			"锚点在 %s 里出现 %d 次（要恰好 1 次）—— **破坏本身没发生**，"+
+				"下面无论红绿都不说明任何事", b.File, n)
+	}
+	if err := os.WriteFile(b.File, []byte(strings.Replace(string(orig), b.Old, b.New, 1)), 0o644); err != nil {
+		return "零层未成立", err.Error()
+	}
+	defer func() {
+		if err := os.WriteFile(b.File, orig, 0o644); err != nil {
+			verdict = "⚠️ 还原失败"
+			detail = fmt.Sprintf("%s 没还原回去：%v —— 立刻 git checkout", b.File, err)
+			return
+		}
+		// ⚠️ 写回去了不等于还原了 —— 读回来逐字节比一次。
+		//
+		// 这一条比看起来重要：还原失败会让**后面每一条破坏**都跑在
+		// 一份被改坏的代码上，而它们的红绿从此不说明任何事。
+		back, rerr := os.ReadFile(b.File)
+		if rerr != nil || string(back) != string(orig) {
+			verdict = "⚠️ 还原失败"
+			detail = fmt.Sprintf("%s 写回去了但内容对不上（%v）—— "+
+				"⚠️ 后面每一条破坏都会跑在被改坏的代码上，立刻 git checkout", b.File, rerr)
+		}
+	}()
+
+	cmd := exec.Command("go", "test", b.Pkg, "-run", "^"+b.Test+"$", "-v")
+	cmd.Dir = b.Dir // 空串表示当前目录
+	out, runErr := cmd.CombinedOutput()
+	text := string(out)
+	green := runErr == nil
+
+	if b.Expect == "green" {
+		if green {
+			return "如预期仍然绿", "盲区：" + b.Why
+		}
+		return "⚠️ 竟然红了", "盲区消失了？那是好消息，但清单要跟着改。\n" +
+			"原以为的盲区：" + b.Why + "\n" + tail(text, 500)
+	}
+	if green {
+		return "仍然绿", "破坏后照样通过 —— 这条测试没在测它声称测的东西"
+	}
+	if strings.Contains(text, "build failed") {
+		return "红错了理由", "编译失败，不是断言失败（第二层不成立）：\n" + tail(text, 500)
+	}
+	if !strings.Contains(text, b.Want) {
+		return "红错了理由", fmt.Sprintf(
+			"断言失败了，但输出里没有 %q（第三层不成立）：\n%s", b.Want, tail(text, 600))
+	}
+	for _, line := range strings.Split(text, "\n") {
+		if strings.Contains(line, b.Want) {
+			return "红对了", strings.TrimSpace(line)
+		}
+	}
+	return "红对了", ""
+}
+
+func gitDirty() (string, error) {
+	out, err := exec.Command("git", "status", "--porcelain").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func tail(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[len(s)-n:]
+}
+
+// hasTrackedChanges 报告 porcelain 输出里有没有**已跟踪文件**的改动。
+//
+// ⚠️ 只有它们才需要拦：未跟踪的新文件（夹具、落盘产物）与本命令无关，
+// 拦它等于要求跑破坏验证之前先清空 testdata，
+// 而一个提出无关要求的工具，会被人整个绕过去。
+func hasTrackedChanges(porcelain string) bool {
+	for _, line := range strings.Split(porcelain, "\n") {
+		if line = strings.TrimSpace(line); line == "" {
+			continue
+		}
+		if !strings.HasPrefix(line, "??") {
+			return true
+		}
+	}
+	return false
+}

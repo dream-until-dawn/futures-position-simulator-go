@@ -1,0 +1,567 @@
+{
+ "source": "https://openmd.shinnytech.com/t/md/symbols/latest.json",
+ "generated_at": "2026-09-08T15:30:41+08:00",
+ "note": "只含字典真的给了的规格项。⚠️ 六个费率、四个保证金率、PositionDateType、MaxMarginSideAlgorithm 均**不在**本文件内 —— 字典给不出，且**不在这里填零值凑数**：那样的文件会让人以为规格齐了。",
+ "specs": [
+  {
+   "instrument": "DCE.i2609",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2610",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2611",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2612",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2701",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2702",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2703",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2704",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2705",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2706",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2707",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.i2708",
+   "exchange": "DCE",
+   "product": "i",
+   "volume_multiple": 100,
+   "price_tick": 0.5,
+   "price_decs": 1,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2609",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2611",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2612",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2701",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2703",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2705",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2707",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "DCE.m2708",
+   "exchange": "DCE",
+   "product": "m",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 1000,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2609",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2610",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2611",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2612",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2701",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2702",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2703",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2704",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2705",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2706",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2707",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.ag2708",
+   "exchange": "SHFE",
+   "product": "ag",
+   "volume_multiple": 15,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2609",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2610",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2611",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2612",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2701",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2702",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2703",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2704",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2705",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2706",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2707",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.cu2708",
+   "exchange": "SHFE",
+   "product": "cu",
+   "volume_multiple": 5,
+   "price_tick": 10,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2609",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2610",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2611",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2612",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2701",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2702",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2703",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2704",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2705",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2706",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2707",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  },
+  {
+   "instrument": "SHFE.rb2708",
+   "exchange": "SHFE",
+   "product": "rb",
+   "volume_multiple": 10,
+   "price_tick": 1,
+   "price_decs": 0,
+   "max_limit_order_volume": 500,
+   "min_limit_order_volume": 1
+  }
+ ]
+}

@@ -83,9 +83,19 @@ func TestWatcherUsesNumOrDash(t *testing.T) {
 		}
 		return true
 	})
-	if calls == 0 {
-		t.Error("⚠️ numOrDash 在采集器里一次都没被调用 —— " +
-			"渲染抽出来了却没接回去，穷举测试测的是一段死代码")
+	// ⚠️ 「调用次数 > 0」不够：采集器有**三处**要渲染（账户 / 持仓 / 行情），
+	// 只查大于零的话，三处里退回去一处是查不出来的 ——
+	// 而**混着两种写法的证据比全错的更难发现**：大部分字段是对的，个别不是。
+	//
+	// 这一条是破坏验证逼出来的：原来那个破坏之所以能红，
+	// 靠的是它同时引入了 kq.MustNum（被下面那条抓到），
+	// 而不是靠这条计数。把 kq.MustNum 换成一个不需要 import 的写法之后，
+	// 计数从 3 掉到 2，**这条照样绿**。
+	const wantCalls = 3
+	if calls < wantCalls {
+		t.Errorf("⚠️ numOrDash 在采集器里只被调用了 %d 次，应当至少 %d 次"+
+			"（账户 / 持仓 / 行情各一处）—— "+
+			"少一处就是那一类字段还在用旧写法，而混着的证据最难发现", calls, wantCalls)
 	}
 	if mustNum != 0 {
 		t.Errorf("⚠️ 采集器里还有 %d 处 MustNum —— "+

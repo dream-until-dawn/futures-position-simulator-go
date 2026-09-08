@@ -685,3 +685,48 @@ func TestHasHistoryPositionDiscriminates(t *testing.T) {
 			"去把它们接进 Carry + ReplayFrom，别让它们停在「跳过」上", withHistory)
 	}
 }
+
+// TestHardcodedMultipliersMatchTheDictionary 用**上游字典**核对那张手抄的乘数表。
+//
+// ⚠️ `multipliers` 是一处已知的手抄，它的注释写着「哪天有了快照就删掉换成读快照」——
+// 而没有任何机制逼它被删掉。这条测试是那个机制的第一步：
+// 手抄的可以留（读快照要多一层 IO，测试里未必划算），但它**必须与字典一致**。
+//
+// 两个来源是真的独立：手抄那张是从**每手保证金反解**出来的
+// （保证金 = 昨结算价 × 乘数 × 费率，probes.md §7.2），
+// 字典那份来自天勤的合约规格。两条路算出同一个乘数，才谈得上「确认」。
+func TestHardcodedMultipliersMatchTheDictionary(t *testing.T) {
+	f, err := os.Open(filepath.Join("..", "..", "testdata", "refdata", "specs-20260908.json"))
+	if err != nil {
+		t.Skipf("没有规格文件，跳过：%v", err)
+	}
+	defer f.Close()
+	specs, err := LoadSpecs(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ⚠️ 下界：规格文件里合约太少时，下面的核对可能一条都没跑。
+	if len(specs) < 20 {
+		t.Fatalf("规格文件里只有 %d 个合约 —— 太少，核对可能空转", len(specs))
+	}
+	checked, missing := 0, 0
+	for sym, want := range multipliers {
+		s, ok := specs[sym]
+		if !ok {
+			// ⚠️ 缺席要计数：到期合约不在「在市」列表里，那是正常的，
+			// 但**全部缺席**说明核对整个没发生。
+			missing++
+			continue
+		}
+		checked++
+		if !s.VolumeMultiple.Equal(decimal.RequireFromString(want)) {
+			t.Errorf("⚠️ %s 的乘数：手抄 %s，上游字典 %s —— "+
+				"两条独立通路对不上（手抄那张是从每手保证金反解的）",
+				sym, want, s.VolumeMultiple)
+		}
+	}
+	t.Logf("核对 %d 个合约的乘数，%d 个不在在市列表里（到期合约属正常）", checked, missing)
+	if checked < 5 {
+		t.Errorf("⚠️ 只核对了 %d 个 —— 太少，这条基本没起作用", checked)
+	}
+}
