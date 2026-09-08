@@ -1697,5 +1697,49 @@
   "want": "",
   "expect": "green",
   "why": "快期模拟上四档保证金率同值（今仓/昨仓 × 多/空），probes.md §7.2 实测。于是「挂单按今仓档还是昨仓档算」在这个口子上**分不开** —— 选错了也不会红。⚠️ 换一个两档不同的口子，这条会立刻变成实错。"
+ },
+ {
+  "name": "153 通知不再进夹具",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/kq/sanitize.go",
+  "old": "\tfor _, n := range notifies {\n\t\tf.Notifies = append(f.Notifies, NotifyRecord{\n\t\t\tType: n.Type, Level: n.Level, Code: n.Code})\n\t}",
+  "new": "\t_ = notifies",
+  "pkg": "./kq/",
+  "test": "TestSanitizeKeepsOnlyWhitelisted",
+  "want": "通知没进夹具",
+  "expect": "red"
+ },
+ {
+  "name": "154 通知的自由文本混进了某个结构化字段",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/kq/sanitize.go",
+  "old": "\t\t\tType: n.Type, Level: n.Level, Code: n.Code})",
+  "new": "\t\t\tType: n.Content, Level: n.Level, Code: n.Code})",
+  "pkg": "./kq/",
+  "test": "TestSanitizeKeepsOnlyWhitelisted",
+  "want": "content 进了夹具",
+  "expect": "red"
+ },
+ {
+  "name": "155 加载时把通知整段丢掉",
+  "dir": "",
+  "file": "conformance/fixture/fixture.go",
+  "old": "\tf.HasNotifies = raw.Notifies != nil",
+  "new": "\tf.HasNotifies = false\n\t_ = raw.Notifies",
+  "pkg": "./conformance/fixture/",
+  "test": "TestNotifyCodesAreKnown",
+  "want": "一份记了通知的夹具都没有",
+  "expect": "red"
+ },
+ {
+  "name": "156 通知码登记表少一条（没人看过的码要红）",
+  "dir": "",
+  "file": "conformance/fixture/notify_test.go",
+  "old": "\t311: \"报单的合约不存在。",
+  "new": "\t3110: \"报单的合约不存在。",
+  "pkg": "./conformance/fixture/",
+  "test": "TestNotifyCodesAreKnown",
+  "want": "没有登记",
+  "expect": "red"
  }
 ]

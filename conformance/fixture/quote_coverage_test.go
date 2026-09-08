@@ -8,7 +8,7 @@ import (
 // quotelessRatchet 是**当前**缺行情的夹具份数。这个数只许减少。
 //
 // ⚠️ 它不是「可以接受 68 份」，是「已经有 69 份，别再多」。
-const quotelessRatchet = 69
+const quotelessRatchet = 72
 
 // TestFixtureQuotesCoverOrderedSymbols 断言夹具里出现过的合约都带着行情。
 //

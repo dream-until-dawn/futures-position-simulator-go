@@ -83,6 +83,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expSettleWatch(ctx)
 	case "close-profit-sign":
 		return r.expCloseProfitSign(ctx)
+	case "reject-tradable":
+		return r.expRejectTradable(ctx)
 	case "reject-tick-vs-limit":
 		return r.expRejectTickVsLimit(ctx)
 	case "reject-priority":
@@ -241,10 +243,17 @@ func (r *Runner) expStatus(ctx context.Context) error {
 // 可能已经进过 git index —— 一次 git add -A 就够了。
 func (r *Runner) dump(name, note string) error {
 	cli := r.cli
+	// ⚠️ 落盘前把**出现过的合约**全订上，等行情到齐。
+	//
+	// 不这么做的话，夹具里会出现「委托/持仓提到了某合约，而它的行情不在」——
+	// 后果不是报错，是下游对拍**静默跳过**那一份，
+	// 而「跳过了一份」与「比过了一份且一致」在汇总行里长得一模一样。
+	// 守卫见根包的 TestFixtureQuotesCoverOrderedSymbols。
+	r.fillQuotes()
 	// ⚠️ 行情只留**被观察到的合约**：持仓里出现过的、或成交里出现过的。
 	// 整份行情有几万个合约，而夹具是证据不是数据库。
 	f := kq.Sanitize(cli.Account(), cli.Positions(), cli.Trades(),
-		observedQuotes(cli), cli.Orders(), cli.TradingDay(),
+		observedQuotes(cli), cli.Orders(), cli.Notifies(), cli.TradingDay(),
 		time.Now().Format(time.RFC3339), note)
 
 	// 独立复查：与白名单是两套不同原理的机制，因此不会一起失效。
@@ -428,7 +437,7 @@ func (r *Runner) LiveFixtureJSON(ctx context.Context, symbols []string) ([]byte,
 	r.cli.WaitTrade(1500 * time.Millisecond)
 
 	f := kq.Sanitize(r.cli.Account(), r.cli.Positions(), r.cli.Trades(),
-		observedQuotes(r.cli), r.cli.Orders(), r.cli.TradingDay(),
+		observedQuotes(r.cli), r.cli.Orders(), r.cli.Notifies(), r.cli.TradingDay(),
 		time.Now().Format(time.RFC3339),
 		"实时对拍取的截面（oracle conformance），**未落盘**")
 
@@ -472,4 +481,33 @@ func (r *Runner) connect(ctx context.Context) error {
 	}
 	r.Logf("[td] 登录成功  trading_day=%s", cli.TradingDay())
 	return nil
+}
+
+// fillQuotes 订阅本次截面里出现过的全部合约，并等行情到齐。
+//
+// ⚠️ 等不到的**说出来**而不是默默落盘：一份缺行情的夹具在下游只会被跳过。
+func (r *Runner) fillQuotes() {
+	cli := r.cli
+	syms := observedSymbols(cli)
+	if len(syms) == 0 {
+		return
+	}
+	if err := cli.SubscribeQuotes(syms...); err != nil {
+		r.Logf("  ⚠️ 补订行情失败：%v —— 夹具可能缺行情", err)
+		return
+	}
+	missing := func() []string {
+		var out []string
+		for _, s := range syms {
+			if _, ok := cli.QuoteOf(s); !ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	cli.WaitUntil(10*time.Second, func() bool { return len(missing()) == 0 })
+	if m := missing(); len(m) > 0 {
+		// ⚠️ 不存在的合约永远等不到 —— 那不是故障，但也要说出来。
+		r.Logf("  ⚠️ 这些合约 10 秒内没等到行情，夹具里会缺它们：%v", m)
+	}
 }

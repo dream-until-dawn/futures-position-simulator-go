@@ -1,6 +1,7 @@
 package kq
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -43,7 +44,26 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 			"user_id":     "e3b0c442-98fc-1c14-9afb-4c8996fb9242", // 丢弃表
 			"odd_key":     "x",                                    // 两张表都没有
 		}},
+		[]Notify{{Type: "TEXT", Level: "WARNING", Code: 412,
+			Content: "下单,已被服务器拒绝, 原因:下单价格不是价格单位的整倍数"}},
 		"20260908", "2026-09-08T13:00:00+08:00", "单测")
+
+	// ⓪ 通知只留结构化的三项，**content 一个字都不留**。
+	//
+	// ⚠️ 这条断言是本文件里唯一一条「某个东西**必须不在**」的断言。
+	// 理由见 Fixture.Notifies 的注释：白名单靠逐个字段点名来保护，
+	// 而自由文本从原理上不在它的保护范围内。仓库是公开的，泄漏不可逆。
+	if len(f.Notifies) != 1 {
+		t.Fatalf("⚠️ 通知没进夹具：%v", f.Notifies)
+	}
+	if f.Notifies[0].Code != 412 || f.Notifies[0].Level != "WARNING" {
+		t.Errorf("⚠️ 通知的结构化部分没留住：%+v", f.Notifies[0])
+	}
+	if b, err := json.Marshal(f); err != nil {
+		t.Fatal(err)
+	} else if strings.Contains(string(b), "整倍数") {
+		t.Errorf("⚠️ 通知的 content 进了夹具 —— 自由文本不在白名单能保护的范围内")
+	}
 
 	// ① 白名单里的键原样保留。
 	if f.Account["balance"] != 1000.5 {
@@ -139,7 +159,7 @@ func TestSanitizeCarriesTrades(t *testing.T) {
 	f := Sanitize(nil, nil, map[string]any{
 		"t1": map[string]any{"price": 3150.0, "volume": 1.0, "offset": "OPEN"},
 		"t2": map[string]any{"price": 3152.0, "volume": 1.0, "offset": "OPEN"},
-	}, nil, nil, "20260908", "2026-09-08T13:00:00+08:00", "")
+	}, nil, nil, nil, "20260908", "2026-09-08T13:00:00+08:00", "")
 	if len(f.Trades) != 2 {
 		t.Fatalf("⚠️ 成交没进夹具：%v", f.Trades)
 	}

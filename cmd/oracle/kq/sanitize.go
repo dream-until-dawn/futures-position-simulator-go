@@ -268,6 +268,24 @@ type Fixture struct {
 	// 而它们**仍然是有效的证据**，不该因为格式加了一项就作废。
 	Orders map[string]map[string]any `json:"orders,omitempty"`
 
+	// Notifies 是柜台推来的通知的**结构化部分**。
+	//
+	// ⚠️ 它此前不进夹具，而那让一整类拒绝**在存档证据上不存在**：
+	// 20260909 实测，报单到一个**不存在的合约**上时，柜台
+	// 一个字都不写进委托记录（status 与 last_msg 全空），
+	// 只从 notify 通道回一条 code=311。
+	// 只读委托记录的实验会把这种拒绝读成「柜台没反应」——
+	// 而那与「单子还挂着」长得一模一样。
+	//
+	// ⚠️⚠️ **刻意不存 content。** 白名单的保护方式是「逐个字段点名」，
+	// 而 content 是服务器写的**自由文本** —— 一个自由文本字段
+	// 从原理上就不在白名单能保护的范围内：谁也不能担保下一条通知里
+	// 不会出现账号、姓名或别的东西。仓库是公开的，而泄漏不可逆。
+	// 数值码足够做拒因对拍；文案由人工看过之后写进
+	// docs/cn-futures-rules.md §9 的表里。
+	// ⚠️ 要不要收 content 是**给使用者/评审的一个决定**，不是我该顺手改掉的。
+	Notifies []NotifyRecord `json:"notifies,omitempty"`
+
 	// Unclassified 记录白名单与丢弃表都没见过的键。
 	//
 	// ⚠️ 它非空即判失败，不是警告。字段集漂移必须自己报出来，
@@ -280,8 +298,15 @@ type Fixture struct {
 //
 // ⚠️ quotes 应当**只含被观察的合约**，由调用方筛好再传进来。
 // 整份行情有几万个合约，而夹具是证据不是数据库。
+// NotifyRecord 是一条通知里**结构化的那几项**。见 Fixture.Notifies 的注释。
+type NotifyRecord struct {
+	Type  string `json:"type"`
+	Level string `json:"level"`
+	Code  int    `json:"code"`
+}
+
 func Sanitize(account, positions, trades, quotes, orders map[string]any,
-	tradingDay, capturedAt, note string) *Fixture {
+	notifies []Notify, tradingDay, capturedAt, note string) *Fixture {
 	f := &Fixture{
 		TradingDay: tradingDay,
 		CapturedAt: capturedAt,
@@ -293,6 +318,11 @@ func Sanitize(account, positions, trades, quotes, orders map[string]any,
 		Quotes:     map[string]map[string]any{},
 	}
 	unknown := map[string]struct{}{}
+
+	for _, n := range notifies {
+		f.Notifies = append(f.Notifies, NotifyRecord{
+			Type: n.Type, Level: n.Level, Code: n.Code})
+	}
 
 	for k, v := range account {
 		if _, ok := accountKeep[k]; ok {

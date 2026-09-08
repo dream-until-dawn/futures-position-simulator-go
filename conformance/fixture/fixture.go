@@ -54,6 +54,13 @@ type Trade struct {
 	Commission decimal.Decimal
 }
 
+// Notify 是柜台一条通知的结构化部分。见 Fixture.Notifies。
+type Notify struct {
+	Type  string
+	Level string
+	Code  int
+}
+
 // Fixture 是一份读进来的夹具。
 type Fixture struct {
 	Path       string
@@ -79,6 +86,17 @@ type Fixture struct {
 	// 判成一致什么都不说明。20260909 之前的全部夹具都是后者。
 	Orders    map[string]map[string]Value
 	HasOrders bool
+
+	// Notifies 是柜台推来的通知的**结构化部分**（20260909 起）。
+	//
+	// ⚠️ 它存在的理由是一整类拒绝**不写进委托记录**：
+	// 报单到一个不存在的合约上时，柜台一个字都不写进 orders，
+	// 只从这条通道回一个码。只读委托记录会把它读成「柜台没反应」。
+	//
+	// ⚠️ 没有文案 —— 落盘时刻意不收自由文本。HasNotifies 区分
+	// 「这份夹具没记通知」与「没有通知」。
+	Notifies    []Notify
+	HasNotifies bool
 	// SkippedTrades 记录解析不了的成交，带原因。
 	//
 	// ⚠️ 它不是警告而是**证据缺口**：少一笔成交，重放出来的持仓就是错的，
@@ -101,6 +119,17 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 		// ⚠️ 老夹具没有这个键，而它们**仍然是有效的证据** ——
 		// 缺席解析成空 map，调用方靠 HasOrders 区分「没有委托」与「这份夹具没记委托」。
 		Orders map[string]map[string]any `json:"orders"`
+		// Notifies 是柜台通知的结构化部分（20260909 起）。
+		//
+		// ⚠️ 没有 content：那是服务器写的自由文本，落盘时刻意不收，
+		// 理由见 cmd/oracle/kq 的 Fixture.Notifies 注释。
+		// 于是这里能拿到的只有**码**，而拒因的文案在
+		// docs/cn-futures-rules.md §9 的表里，由人工看过之后写下。
+		Notifies []struct {
+			Type  string `json:"type"`
+			Level string `json:"level"`
+			Code  int    `json:"code"`
+		} `json:"notifies"`
 		// Unclassified 是落盘时白名单与丢弃表都没见过的键。
 		//
 		// ⚠️ 它非空意味着**这份夹具丢过字段**：那些键被记了名字，值没有留下。
@@ -166,6 +195,11 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 	// 在长度上都是 0 —— 而前者可以拿去对拍冻结（结论是「都是 0」），
 	// 后者不能。这正是本字段存在的全部理由。
 	f.HasOrders = raw.Orders != nil
+	// ⚠️ 与 HasOrders 同理：nil 判「这份夹具没记通知」，不是「没有通知」。
+	f.HasNotifies = raw.Notifies != nil
+	for _, n := range raw.Notifies {
+		f.Notifies = append(f.Notifies, Notify{Type: n.Type, Level: n.Level, Code: n.Code})
+	}
 	for id, o := range raw.Orders {
 		out := map[string]Value{}
 		for k, v := range o {
