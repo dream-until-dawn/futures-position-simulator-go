@@ -156,12 +156,15 @@ func TestFallbackSwitchHandlesEveryDecision(t *testing.T) {
 					"那会把将来新增的判定取值悄悄吞掉，本条也就查不出漏处理")
 			}
 			for _, e := range cc.List {
-				if ident, ok := e.(*ast.Ident); ok {
-					if _, known := want[ident.Name]; !known {
-						t.Errorf("switch 处理了未知取值 %q", ident.Name)
-					}
-					want[ident.Name] = true
+				ident, ok := e.(*ast.Ident)
+				if !ok {
+					continue
 				}
+				if _, known := want[ident.Name]; !known {
+					t.Errorf("switch 处理了未知取值 %q", ident.Name)
+				}
+				want[ident.Name] = true
+				checkCaseTerminates(t, fset, ident.Name, cc)
 			}
 		}
 		return true
@@ -179,5 +182,70 @@ func TestFallbackSwitchHandlesEveryDecision(t *testing.T) {
 				"漏处理的分支会静默走到 switch 之后，而那里是「平仓失败」的兜底返回；"+
 				"若漏的是 fallbackForbiddenYesterday，昨仓保护就没了", name)
 		}
+	}
+}
+
+// mustReturn 列出**必须以 return 中止**的判定分支，以及它们的返回是不是错误。
+//
+// ⚠️ 这张表是「分支的动作」这一层唯一被机械守住的部分，其余仍然靠人。
+// 评审实测过：分支保留、把 `return` 抽掉，全库**全绿** ——
+// 那不是注释写得谨慎，是那一层真的没有覆盖。本表补的就是这一小块。
+var mustReturn = map[string]bool{
+	"fallbackDone":               false, // 平成了，return nil
+	"fallbackStopTimeout":        true,  // 超时：撤单后必须报错中止
+	"fallbackForbiddenYesterday": true,  // 有昨仓：必须报错中止，绝不可继续循环
+	// fallbackAllowed 刻意不在表里：它就是要继续循环去试下一个开平标志。
+}
+
+// checkCaseTerminates 断言一个 case 分支确实以 return 中止，且错误分支不是 return nil。
+//
+// ⚠️ **它是部分修法，抓不到的比抓得到的多**：
+//
+//	抓得到   分支里没有 return（保护还在名单上，但不再中止流程）
+//	抓得到   错误分支写成 return nil（静默报告「平成了」——最坏的一种）
+//	⚠️ 抓不到 先发一笔单再 return
+//	⚠️ 抓不到 return 了一个语义不对的错误
+//
+// 真正闭环要给下单面抽接口、用假客户端跑 flatten 的行为。**刻意不做**：
+// 今晚就是窗口，而 flatten 未必活过 v0.1.0 ——
+// 为一个可能被丢掉的形状引一层接口，是把成本花在错的地方。
+// **如实记着 + 一条部分守卫**，是这里正确的停手位置（见 silent-risks.md 第 26 条的处理法）。
+func checkCaseTerminates(t *testing.T, fset *token.FileSet, name string, cc *ast.CaseClause) {
+	t.Helper()
+	wantErr, listed := mustReturn[name]
+	if !listed {
+		// 不在表里的分支（fallbackAllowed）不得 return —— 它必须继续循环。
+		for _, st := range cc.Body {
+			if _, ok := st.(*ast.ReturnStmt); ok {
+				t.Errorf("⚠️ %s 分支里出现了 return —— 它应当继续循环去试下一个开平标志，"+
+					"return 会让回退机制整个失效", name)
+			}
+		}
+		return
+	}
+
+	var ret *ast.ReturnStmt
+	for _, st := range cc.Body {
+		if r, ok := st.(*ast.ReturnStmt); ok {
+			ret = r
+		}
+	}
+	if ret == nil {
+		t.Errorf("⚠️ %s 分支**没有 return** —— 它会静默走到 switch 之后继续循环。"+
+			"若这是昨仓保护，保护就等于没有", name)
+		return
+	}
+	if !wantErr {
+		return
+	}
+	// 错误分支：return 必须带值，且不能是裸 nil。
+	if len(ret.Results) == 0 {
+		t.Errorf("⚠️ %s 分支的 return 没有返回值", name)
+		return
+	}
+	if id, ok := ret.Results[0].(*ast.Ident); ok && id.Name == "nil" {
+		t.Errorf("⚠️ %s:%d 分支 return nil —— 那是**静默报告平仓成功**，"+
+			"而持仓仍在。这比不 return 更坏：调用方不会重试，也不会告警",
+			"flatten", fset.Position(ret.Pos()).Line)
 	}
 }
