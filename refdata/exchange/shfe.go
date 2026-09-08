@@ -291,3 +291,50 @@ func FetchSHFE(ctx context.Context, day types.TradingDay) (map[string]Daily, Rep
 	}
 	return ParseSHFE(resp.Body, day)
 }
+
+// DayStatus 是探一个自然日的结果。
+type DayStatus uint8
+
+const (
+	// DayUnknown 是零值：没探。使用即出错。
+	DayUnknown DayStatus = iota
+	// DayTrading 那天是交易日：日行情有，且结算价填好了。
+	DayTrading
+	// DayNotPublished 日行情取不到（404）。
+	//
+	// ⚠️ 它对**过去的**日期意味着「非交易日」，对**当天或将来**什么都不意味着。
+	// 把两者合并成「非交易日」，会在每次「今天的还没发」时多删掉一个交易日 ——
+	// 而少一个交易日会让此后每一次今昨仓滚动错位，且不报错。
+	DayNotPublished
+	// DaySettling 日行情已发布但结算价全为空 —— 那天是交易日，只是还没结算。
+	DaySettling
+)
+
+func (d DayStatus) String() string {
+	switch d {
+	case DayTrading:
+		return "交易日（已结算）"
+	case DayNotPublished:
+		return "日行情取不到"
+	case DaySettling:
+		return "交易日（未结算）"
+	}
+	return "未探"
+}
+
+// ProbeDay 探一个自然日在上期所是不是交易日。
+//
+// ⚠️ 三态而不是两态。「取不到」与「非交易日」是两件事：
+// 前者对过去的日期才等价于后者，对今天或将来什么都不说明。
+func ProbeDay(ctx context.Context, day types.TradingDay) (DayStatus, error) {
+	_, _, err := FetchSHFE(ctx, day)
+	switch {
+	case err == nil:
+		return DayTrading, nil
+	case strings.Contains(err.Error(), "结算尚未发生"):
+		return DaySettling, nil
+	case strings.Contains(err.Error(), "状态码 404"):
+		return DayNotPublished, nil
+	}
+	return DayUnknown, err
+}

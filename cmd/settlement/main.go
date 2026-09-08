@@ -27,16 +27,17 @@ func main() {
 	day := flag.String("day", "", "交易日，八位，如 20260908")
 	symbols := flag.String("symbols", "", "只打这几个合约，逗号分隔；留空则只打汇总")
 	out := flag.String("out", "", "把结果写成 JSON 落盘到这里")
+	back := flag.Int("calendar-back", 0, "从 -day 往前探这么多个自然日，报出哪些是交易日")
 	timeout := flag.Duration("timeout", 60*time.Second, "整体超时")
 	flag.Parse()
 
-	if err := run(*day, *symbols, *out, *timeout); err != nil {
+	if err := run(*day, *symbols, *out, *back, *timeout); err != nil {
 		fmt.Fprintf(os.Stderr, "失败：%v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(dayStr, symbols, out string, timeout time.Duration) error {
+func run(dayStr, symbols, out string, back int, timeout time.Duration) error {
 	if dayStr == "" {
 		// ⚠️ 不默认「今天」：交易日不是自然日，而本库任何地方都不自行推算交易日。
 		return fmt.Errorf("必须用 -day 指定交易日（八位）—— " +
@@ -49,6 +50,9 @@ func run(dayStr, symbols, out string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	if back > 0 {
+		return probeCalendar(ctx, day, back, out)
+	}
 	fmt.Printf("取上期所交易日 %s 的日行情\n", day)
 	got, rep, err := exchange.FetchSHFE(ctx, day)
 	if err != nil {
@@ -128,5 +132,81 @@ func run(dayStr, symbols, out string, timeout time.Duration) error {
 		return err
 	}
 	fmt.Printf("\n已写入 %s（%d 个合约）\n", out, len(rows))
+	return nil
+}
+
+// probeCalendar 从 day 往前探 back 个自然日，报出哪些是交易日。
+//
+// ⚠️ 交易日列表是 refdata 快照缺的四块之一，而它**只能由交易所回答**：
+// 「哪天开市」不是行情，是安排。本函数把它落成可复现的枚举。
+//
+// ⚠️ 三态照实记，不合并：
+//
+//	交易日（已结算）  日行情有且结算价填好了
+//	交易日（未结算）  日行情已发布但结算价全空 —— 当天盘中就是这样
+//	日行情取不到      对**过去的**日期等价于非交易日；对今天什么都不说明
+//
+// 把最后一类直接当成「非交易日」，会在每次「今天的还没发」时少算一个交易日，
+// 而少一个交易日会让此后每一次今昨仓滚动错位，且不报错。
+func probeCalendar(ctx context.Context, from types.TradingDay, back int, out string) error {
+	fmt.Printf("从 %s 往前探 %d 个自然日\n", from, back)
+	fmt.Println("⚠️ 每天一次请求，慢；结果照实记三态，不把「取不到」当成「非交易日」")
+
+	type row struct {
+		Day    string `json:"day"`
+		Status string `json:"status"`
+	}
+	var rows []row
+	counts := map[exchange.DayStatus]int{}
+	d := from.CalendarDate()
+	for i := 0; i < back; i++ {
+		day := types.NewTradingDay(d.Year(), int(d.Month()), d.Day())
+		st, err := exchange.ProbeDay(ctx, day)
+		if err != nil {
+			// ⚠️ 探不动就停，不跳过：跳过会在列表里留一个**看不出来的洞**，
+			// 而一个缺了几天的交易日历比没有日历更危险。
+			return fmt.Errorf("探 %s 失败：%w —— **就此停下**，"+
+				"跳过会在日历里留一个看不出来的洞", day, err)
+		}
+		counts[st]++
+		rows = append(rows, row{day.String(), st.String()})
+		fmt.Printf("  %s  %s\n", day, st)
+		d = d.AddDate(0, 0, -1)
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Day < rows[j].Day })
+
+	fmt.Println()
+	fmt.Printf("交易日（已结算）%d  交易日（未结算）%d  取不到 %d\n",
+		counts[exchange.DayTrading], counts[exchange.DaySettling],
+		counts[exchange.DayNotPublished])
+	// ⚠️ 判别力：一天交易日都没探到，说明端点或判据坏了 ——
+	// 而那时输出的「全都不是交易日」看起来完全像一段长假。
+	if counts[exchange.DayTrading]+counts[exchange.DaySettling] == 0 {
+		return fmt.Errorf("⚠️ %d 天里一个交易日都没有 —— "+
+			"那看起来像一段长假，也可能是端点或判据坏了。**先查清楚再用这份日历**", back)
+	}
+	if out == "" {
+		return nil
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", " ")
+	if err := enc.Encode(struct {
+		Source string `json:"source"`
+		Note   string `json:"note"`
+		Days   []row  `json:"days"`
+	}{
+		Source: "上期所日行情逐日探测",
+		Note: "⚠️ 只覆盖上期所。三态照实记：「取不到」对过去的日期等价于非交易日，" +
+			"对今天什么都不说明。⚠️ 交易日历是交易所的安排，不是行情。",
+		Days: rows,
+	}); err != nil {
+		return err
+	}
+	fmt.Printf("\n已写入 %s（%d 天）\n", out, len(rows))
 	return nil
 }
