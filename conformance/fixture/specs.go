@@ -28,6 +28,12 @@ type ContractSpec struct {
 	PriceDecs   int             `json:"price_decs"`
 	MaxLimit    int             `json:"max_limit_order_volume"`
 	MinLimit    int             `json:"min_limit_order_volume"`
+	// ExpireDate 是最后交易日，八位。
+	//
+	// ⚠️ 它由 refdata-sync 从字典的 expire_datetime 换算，
+	// 而换算的依据是一条**有守卫的**实测约定：那个时刻恒为 15:00:00 +08:00。
+	// 时刻一旦不是 15:00，落盘那一步就报错 —— 不会悄悄偏一天。
+	ExpireDate string `json:"expire_date"`
 }
 
 // LoadSpecs 读 refdata-sync -specs 产出的规格文件。

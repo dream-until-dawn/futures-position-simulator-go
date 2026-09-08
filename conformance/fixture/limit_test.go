@@ -7,25 +7,32 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/shopspring/decimal"
 )
 
-// rounding 是把理论价对齐到最小变动价位的方式。
-type rounding struct {
-	name string
-	fn   func(x, tick decimal.Decimal) decimal.Decimal
+// candidates 是待试的取整方式。
+//
+// ⚠️ 它们**不是**本文件自己实现的 —— 用的是 refdata.Instrument.PriceLimits，
+// 也就是生产代码那一条路径。
+//
+// 第一版在这里自己写了一套 floor/ceil/round，于是本测试验的是
+// 「我在测试里写的取整能命中柜台」，而**生产代码对不对，它一个字都没说**。
+// 两个实现同一件事，一起退化时测试全绿 —— 那正是本项目反复警告的形状。
+var candidates = []refdata.TickRounding{
+	refdata.TickFloor, refdata.TickCeil, refdata.TickHalfUp,
 }
 
-var roundings = []rounding{
-	{"向下取整", func(x, tick decimal.Decimal) decimal.Decimal {
-		return x.Div(tick).Floor().Mul(tick)
-	}},
-	{"向上取整", func(x, tick decimal.Decimal) decimal.Decimal {
-		return x.Div(tick).Ceil().Mul(tick)
-	}},
-	{"四舍五入", func(x, tick decimal.Decimal) decimal.Decimal {
-		return x.Div(tick).Round(0).Mul(tick)
-	}},
+// limitsFor 用**生产代码**推一个合约在给定比例与取整下的涨跌停。
+func limitsFor(tick, ratio decimal.Decimal, r refdata.TickRounding,
+	pre decimal.Decimal) (up, lo decimal.Decimal, ok bool) {
+
+	inst := refdata.Instrument{
+		PriceTick:          tick,
+		PriceLimitRatio:    ratio,
+		HasPriceLimitRatio: true,
+	}
+	return inst.PriceLimits(pre, true, r)
 }
 
 // TestLimitRatioFromQuotes 从**已经在手的行情**反解涨跌幅比例与取整方向。
@@ -99,10 +106,10 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 		var hits []string
 		var ratios []string
 		for r := decimal.RequireFromString("0.005"); r.LessThanOrEqual(decimal.RequireFromString("0.30")); r = r.Add(decimal.RequireFromString("0.005")) {
-			for _, rd := range roundings {
-				if rd.fn(o.pre.Mul(decimal.NewFromInt(1).Add(r)), o.tick).Equal(o.up) &&
-					rd.fn(o.pre.Mul(decimal.NewFromInt(1).Sub(r)), o.tick).Equal(o.lo) {
-					hits = append(hits, r.String()+"@"+rd.name)
+			for _, rd := range candidates {
+				up, lo, ok := limitsFor(o.tick, r, rd, o.pre)
+				if ok && up.Equal(o.up) && lo.Equal(o.lo) {
+					hits = append(hits, r.String()+"@"+rd.String())
 					ratios = append(ratios, r.String())
 				}
 			}

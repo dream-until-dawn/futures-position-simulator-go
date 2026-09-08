@@ -64,11 +64,19 @@ func TestBuildFromMeasuredDataStopsAtWhatIsMissing(t *testing.T) {
 		}
 		mult := decimal.RequireFromString(m.multiplier)
 		tick := decimal.RequireFromString(m.tick)
+		// ⚠️ 到期日**从规格文件取**，不再硬填。
+		// 上一版写死 20270115，而那是照 rb2701 抄的 —— 用在 m2701 上就错了
+		// （大商所是 14 号）。一个「反正 Builder 不检查它」的硬填，
+		// 会在检查它的那天才暴露，而那天离写下它已经很远。
+		expire := types.NewTradingDay(2027, 1, 15)
 		if s, ok := specs[m.sym]; ok {
 			if !s.mult.Equal(mult) || !s.tick.Equal(tick) {
 				t.Errorf("⚠️ %s 的乘数/tick：手抄 %s/%s，上游字典 %s/%s —— "+
 					"两条独立通路对不上", m.sym, mult, tick, s.mult, s.tick)
 			}
+			expire = s.expire
+		} else {
+			t.Errorf("⚠️ %s 不在规格文件里 —— 到期日只能回落到硬填值", m.sym)
 		}
 		b.AddInstrument(refdata.Instrument{
 			ID:             id,
@@ -78,7 +86,7 @@ func TestBuildFromMeasuredDataStopsAtWhatIsMissing(t *testing.T) {
 			// 填一个「上期所就是 UseHistory」的猜测，会让整条测试失去意义 ——
 			// 而那也正是这条设计约束要防的动作。
 			IsTrading:          true,
-			ExpireDate:         types.NewTradingDay(2027, 1, 15),
+			ExpireDate:         expire,
 			PriceLimitRatio:    decimal.RequireFromString(m.limitRatio),
 			HasPriceLimitRatio: true,
 		})
@@ -111,8 +119,20 @@ func TestBuildFromMeasuredDataStopsAtWhatIsMissing(t *testing.T) {
 			"那说明还有**别的**缺口，先查清楚它是什么", err)
 	}
 	t.Logf("Builder 如期拦下，报的是：%v", err)
-	t.Logf("ⓘ 实测已备齐：乘数 / 最小变动价位 / 保证金率 / 手续费率 / 涨跌幅比例（%d 个合约）",
+	t.Logf("ⓘ 实测已备齐：乘数 / 最小变动价位 / 到期日 / 保证金率 / 手续费率 / 涨跌幅比例（%d 个合约）",
 		len(measured))
+	// ⚠️ 到期日不是硬填的了 —— 而两家交易所的到期日**不同**（上期所 15 号、
+	// 大商所 14 号），所以「照一个合约抄一个数」在另一家上必然错。
+	// 这条把那件事钉住：若哪天规格文件里两家变成同一天，先查数据。
+	shfe := specs["SHFE.rb2701"].expire
+	dce := specs["DCE.m2701"].expire
+	if shfe == dce {
+		t.Errorf("⚠️ 上期所与大商所的到期日都是 %s —— "+
+			"实测是 20270115 / 20270114（15 号 / 14 号）。"+
+			"两家同天的话，「到期日按合约取」这件事在本样本上就没有判别力了", shfe)
+	}
+	t.Logf("ⓘ 到期日取自规格文件：rb2701 %s、m2701 %s —— "+
+		"⚠️ 两家不同，硬填一个数必然在另一家上错", shfe, dce)
 	t.Log("⚠️ 仍缺：PositionDateType（今天测出了**行为**，但单一来源，" +
 		"而快照要的是**规则**）；MaxMarginSideAlgorithm（此口子未启用，测不出）")
 
@@ -137,7 +157,7 @@ func TestBuildFromMeasuredDataStopsAtWhatIsMissing(t *testing.T) {
 			// 它出现在这里是为了证明**除它之外都齐了**，不是主张它对。
 			PositionDateType:   pdt,
 			IsTrading:          true,
-			ExpireDate:         types.NewTradingDay(2027, 1, 15),
+			ExpireDate:         specs[m.sym].expire,
 			PriceLimitRatio:    decimal.RequireFromString(m.limitRatio),
 			HasPriceLimitRatio: true,
 		})
@@ -185,7 +205,10 @@ func TestBuildFromMeasuredDataStopsAtWhatIsMissing(t *testing.T) {
 		"**今天新测出来的涨跌幅比例第一次被用上，且用对了**", up, lo)
 }
 
-type specRow struct{ mult, tick decimal.Decimal }
+type specRow struct {
+	mult, tick decimal.Decimal
+	expire     types.TradingDay
+}
 
 func loadSpecFile(t *testing.T) map[string]specRow {
 	t.Helper()
@@ -198,6 +221,7 @@ func loadSpecFile(t *testing.T) map[string]specRow {
 			Instrument string      `json:"instrument"`
 			Mult       json.Number `json:"volume_multiple"`
 			Tick       json.Number `json:"price_tick"`
+			Expire     string      `json:"expire_date"`
 		} `json:"specs"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -205,9 +229,14 @@ func loadSpecFile(t *testing.T) map[string]specRow {
 	}
 	out := map[string]specRow{}
 	for _, r := range raw.Specs {
+		exp, err := types.ParseTradingDay(r.Expire)
+		if err != nil {
+			t.Fatalf("合约 %s 的到期日 %q：%v", r.Instrument, r.Expire, err)
+		}
 		out[r.Instrument] = specRow{
 			decimal.RequireFromString(r.Mult.String()),
 			decimal.RequireFromString(r.Tick.String()),
+			exp,
 		}
 	}
 	return out

@@ -268,6 +268,16 @@ func dumpSpecs(path, source string, syms map[string]live.Symbol) (int, error) {
 		PriceDecs      int     `json:"price_decs"`
 		MaxLimitVolume int     `json:"max_limit_order_volume,omitempty"`
 		MinLimitVolume int     `json:"min_limit_order_volume,omitempty"`
+		// ExpireDate 是**最后交易日**，八位。
+		//
+		// ⚠️ 字典给的是 `expire_datetime`（Unix 秒），那是一个**时刻**，
+		// 而 ExpireDate 是一个**交易日** —— 两者的换算需要一个约定。
+		//
+		// 实测：全部条目的时刻都是 **15:00:00 +0800**，即最后交易日的日盘收盘。
+		// 所以约定是「取 +08:00 时区下的日期部分」，而下面的 expireCheck
+		// 会在时刻不是 15:00 时**报错而不是照取** —— 那个假设一旦变了，
+		// 取日期就可能整体偏一天，而偏一天不会有任何动静。
+		ExpireDate string `json:"expire_date"`
 	}
 	// ⚠️ 只留 FUTURE，并**计数**跳过了多少。
 	//
@@ -287,11 +297,17 @@ func dumpSpecs(path, source string, syms map[string]live.Symbol) (int, error) {
 		if err := sm.Validate(); err != nil {
 			return 0, fmt.Errorf("合约 %s 规格不全，**不落盘**：%w", id, err)
 		}
+		exp, err := expireDate(sm.ExpireDatetime)
+		if err != nil {
+			return 0, fmt.Errorf("合约 %s 的到期时刻 %v：%w —— **不落盘**",
+				id, sm.ExpireDatetime, err)
+		}
 		rows = append(rows, wire{
 			Instrument: id, Exchange: sm.ExchangeID, Product: sm.ProductID,
 			VolumeMultiple: sm.VolumeMultiple, PriceTick: sm.PriceTick,
 			PriceDecs:      sm.PriceDecs,
 			MaxLimitVolume: sm.MaxLimitVolume, MinLimitVolume: sm.MinLimitVolume,
+			ExpireDate: exp,
 		})
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Instrument < rows[j].Instrument })
@@ -331,4 +347,25 @@ func dumpSpecs(path, source string, syms map[string]live.Symbol) (int, error) {
 			"字典给不出，且**不在这里填零值凑数**：那样的文件会让人以为规格齐了。",
 		Specs: rows,
 	})
+}
+
+// expireDate 把字典的 expire_datetime（Unix 秒）换成八位最后交易日。
+//
+// ⚠️ 换算的**全部依据**是一条实测约定：那个时刻恒为 15:00:00 +08:00，
+// 即最后交易日的日盘收盘。于是取该时区下的日期部分就是最后交易日。
+//
+// ⚠️ 时刻不是 15:00 时**报错而不是照取**：那说明约定变了，
+// 而变了之后取日期可能整体偏一天 —— 偏一天不会有任何动静，
+// 它只会在交割月的保证金递增与到期处理上安静地错。
+func expireDate(ts float64) (string, error) {
+	if ts <= 0 {
+		return "", fmt.Errorf("到期时刻缺失或非正")
+	}
+	t := time.Unix(int64(ts), 0).In(refdata.CNZone())
+	if t.Hour() != 15 || t.Minute() != 0 || t.Second() != 0 {
+		return "", fmt.Errorf("到期时刻是 %s，而实测约定是 15:00:00 +08:00 —— "+
+			"⚠️ 约定变了，取日期部分可能整体偏一天，而偏一天不会有任何动静",
+			t.Format("2006-01-02 15:04:05-0700"))
+	}
+	return t.Format("20060102"), nil
 }

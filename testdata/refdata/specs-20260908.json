@@ -1,6 +1,6 @@
 {
  "source": "https://openmd.shinnytech.com/t/md/symbols/latest.json",
- "generated_at": "2026-09-08T15:30:41+08:00",
+ "generated_at": "2026-09-08T17:15:24+08:00",
  "note": "只含字典真的给了的规格项。⚠️ 六个费率、四个保证金率、PositionDateType、MaxMarginSideAlgorithm 均**不在**本文件内 —— 字典给不出，且**不在这里填零值凑数**：那样的文件会让人以为规格齐了。",
  "specs": [
   {
@@ -11,7 +11,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20260914"
   },
   {
    "instrument": "DCE.i2610",
@@ -21,7 +22,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261021"
   },
   {
    "instrument": "DCE.i2611",
@@ -31,7 +33,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261113"
   },
   {
    "instrument": "DCE.i2612",
@@ -41,7 +44,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261214"
   },
   {
    "instrument": "DCE.i2701",
@@ -51,7 +55,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270114"
   },
   {
    "instrument": "DCE.i2702",
@@ -61,7 +66,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270212"
   },
   {
    "instrument": "DCE.i2703",
@@ -71,7 +77,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270312"
   },
   {
    "instrument": "DCE.i2704",
@@ -81,7 +88,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270414"
   },
   {
    "instrument": "DCE.i2705",
@@ -91,7 +99,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270514"
   },
   {
    "instrument": "DCE.i2706",
@@ -101,7 +110,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270614"
   },
   {
    "instrument": "DCE.i2707",
@@ -111,7 +121,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270714"
   },
   {
    "instrument": "DCE.i2708",
@@ -121,7 +132,8 @@
    "price_tick": 0.5,
    "price_decs": 1,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270813"
   },
   {
    "instrument": "DCE.m2609",
@@ -131,7 +143,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20260914"
   },
   {
    "instrument": "DCE.m2611",
@@ -141,7 +154,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261113"
   },
   {
    "instrument": "DCE.m2612",
@@ -151,7 +165,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261214"
   },
   {
    "instrument": "DCE.m2701",
@@ -161,7 +176,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270114"
   },
   {
    "instrument": "DCE.m2703",
@@ -171,7 +187,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270312"
   },
   {
    "instrument": "DCE.m2705",
@@ -181,7 +198,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270514"
   },
   {
    "instrument": "DCE.m2707",
@@ -191,7 +209,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270714"
   },
   {
    "instrument": "DCE.m2708",
@@ -201,7 +220,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 1000,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270813"
   },
   {
    "instrument": "SHFE.ag2609",
@@ -211,7 +231,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20260915"
   },
   {
    "instrument": "SHFE.ag2610",
@@ -221,7 +242,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261015"
   },
   {
    "instrument": "SHFE.ag2611",
@@ -231,7 +253,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261116"
   },
   {
    "instrument": "SHFE.ag2612",
@@ -241,7 +264,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261215"
   },
   {
    "instrument": "SHFE.ag2701",
@@ -251,7 +275,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270115"
   },
   {
    "instrument": "SHFE.ag2702",
@@ -261,7 +286,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270215"
   },
   {
    "instrument": "SHFE.ag2703",
@@ -271,7 +297,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270315"
   },
   {
    "instrument": "SHFE.ag2704",
@@ -281,7 +308,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270415"
   },
   {
    "instrument": "SHFE.ag2705",
@@ -291,7 +319,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270517"
   },
   {
    "instrument": "SHFE.ag2706",
@@ -301,7 +330,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270615"
   },
   {
    "instrument": "SHFE.ag2707",
@@ -311,7 +341,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270715"
   },
   {
    "instrument": "SHFE.ag2708",
@@ -321,7 +352,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270816"
   },
   {
    "instrument": "SHFE.cu2609",
@@ -331,7 +363,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20260915"
   },
   {
    "instrument": "SHFE.cu2610",
@@ -341,7 +374,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261015"
   },
   {
    "instrument": "SHFE.cu2611",
@@ -351,7 +385,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261116"
   },
   {
    "instrument": "SHFE.cu2612",
@@ -361,7 +396,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261215"
   },
   {
    "instrument": "SHFE.cu2701",
@@ -371,7 +407,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270115"
   },
   {
    "instrument": "SHFE.cu2702",
@@ -381,7 +418,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270215"
   },
   {
    "instrument": "SHFE.cu2703",
@@ -391,7 +429,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270315"
   },
   {
    "instrument": "SHFE.cu2704",
@@ -401,7 +440,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270415"
   },
   {
    "instrument": "SHFE.cu2705",
@@ -411,7 +451,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270517"
   },
   {
    "instrument": "SHFE.cu2706",
@@ -421,7 +462,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270615"
   },
   {
    "instrument": "SHFE.cu2707",
@@ -431,7 +473,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270715"
   },
   {
    "instrument": "SHFE.cu2708",
@@ -441,7 +484,8 @@
    "price_tick": 10,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270816"
   },
   {
    "instrument": "SHFE.rb2609",
@@ -451,7 +495,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20260915"
   },
   {
    "instrument": "SHFE.rb2610",
@@ -461,7 +506,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261015"
   },
   {
    "instrument": "SHFE.rb2611",
@@ -471,7 +517,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261116"
   },
   {
    "instrument": "SHFE.rb2612",
@@ -481,7 +528,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20261215"
   },
   {
    "instrument": "SHFE.rb2701",
@@ -491,7 +539,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270115"
   },
   {
    "instrument": "SHFE.rb2702",
@@ -501,7 +550,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270215"
   },
   {
    "instrument": "SHFE.rb2703",
@@ -511,7 +561,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270315"
   },
   {
    "instrument": "SHFE.rb2704",
@@ -521,7 +572,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270415"
   },
   {
    "instrument": "SHFE.rb2705",
@@ -531,7 +583,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270517"
   },
   {
    "instrument": "SHFE.rb2706",
@@ -541,7 +594,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270615"
   },
   {
    "instrument": "SHFE.rb2707",
@@ -551,7 +605,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270715"
   },
   {
    "instrument": "SHFE.rb2708",
@@ -561,7 +616,8 @@
    "price_tick": 1,
    "price_decs": 0,
    "max_limit_order_volume": 500,
-   "min_limit_order_volume": 1
+   "min_limit_order_volume": 1,
+   "expire_date": "20270816"
   }
  ]
 }

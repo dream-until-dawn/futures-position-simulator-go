@@ -58,10 +58,10 @@
   "name": "6 今昨拆分守卫：夹具目录读不到",
   "dir": "",
   "file": "view/position_test.go",
-  "old": "\tpaths, err := filepath.Glob(filepath.Join(\"..\", \"testdata\", \"probes\", \"*.json\"))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tsplit := []string{",
-  "new": "\tpaths, err := filepath.Glob(filepath.Join(\"..\", \"testdata\", \"nowhere\", \"*.json\"))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tsplit := []string{",
+  "old": "\tpaths, err := filepath.Glob(filepath.Join(\"..\", \"testdata\", \"probes\", \"*.json\"))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\t// 这两类**任何时候**都不该是真实数字。",
+  "new": "\tpaths, err := filepath.Glob(filepath.Join(\"..\", \"testdata\", \"nowhere\", \"*.json\"))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\t// 这两类**任何时候**都不该是真实数字。",
   "pkg": "./view/",
-  "test": "TestOracleLeavesTodayHisCostAtZero",
+  "test": "TestOracleTodayHisSplit",
   "want": "本条可能在空转",
   "expect": "red"
  },
@@ -662,6 +662,28 @@
   "pkg": "./",
   "test": "TestVersionMatchesDocComment",
   "want": "找不到当前版本",
+  "expect": "red"
+ },
+ {
+  "name": "7 涨跌停取整方向反过来",
+  "dir": "",
+  "file": "refdata/refdata.go",
+  "old": "\tcase TickFloor:\n\t\tn = n.Floor()\n\tcase TickCeil:\n\t\tn = n.Ceil()",
+  "new": "\tcase TickFloor:\n\t\tn = n.Ceil()\n\tcase TickCeil:\n\t\tn = n.Floor()",
+  "pkg": "./conformance/fixture/",
+  "test": "TestLimitRatioFromQuotes",
+  "want": "反解得 向上取整，登记的是 向下取整",
+  "expect": "red"
+ },
+ {
+  "name": "8 涨跌停不取整（直接返回理论值）",
+  "dir": "",
+  "file": "refdata/refdata.go",
+  "old": "\treturn snapToTick(up, i.PriceTick, rounding),\n\t\tsnapToTick(lo, i.PriceTick, rounding), true",
+  "new": "\treturn up, lo, true",
+  "pkg": "./conformance/fixture/",
+  "test": "TestLimitRatioFromQuotes",
+  "want": "没有任何 (比例, 取整) 组合",
   "expect": "red"
  }
 ]
