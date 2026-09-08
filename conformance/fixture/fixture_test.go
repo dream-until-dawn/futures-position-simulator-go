@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
+	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
 	"github.com/shopspring/decimal"
@@ -271,14 +272,18 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 // 只可能来自把未实现项渲染成 0 再与柜台的 0 比。
 func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	all := loadAll(t)
+	// ⚠️ 用**带行情**的那一份：没有昨结算价就算不出保证金，
+	// 而保证金缺席时那 3 个字段会落进「还没实现」——
+	// 那不是本库的状态，是这份证据不自足。
+	const targetName = "status-20260908-7.json"
 	var target *Fixture
 	for _, f := range all {
-		if f.Path == "avg-price-20260908.json" {
+		if f.Path == targetName {
 			target = f
 		}
 	}
 	if target == nil {
-		t.Skip("找不到 avg-price-20260908.json")
+		t.Skipf("找不到 %s", targetName)
 	}
 	const sym = "SHFE.rb2701"
 	trades := target.TradesOf(sym)
@@ -290,11 +295,26 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 		t.Fatal(err)
 	}
 	oracle := target.Positions[sym]
+	pre, hasPre := target.PreSettlement(sym)
+	if !hasPre {
+		t.Fatalf("⚠️ %s 里 %s 没有昨结算价 —— 这份夹具不自足", targetName, sym)
+	}
+	rates, ok := ratesFor("rb")
+	if !ok {
+		t.Fatal("rb 没有登记保证金率")
+	}
+	mult := decimal.NewFromInt(10)
+	// ⚠️ 保证金由 margin 包算再传进来，**不在 view 里重算**：
+	// 重算会产生第二个实现，而两个实现一起退化时测试全绿。
+	mLong, mShort, err := MarginOf(p, rates, mult, pre, false,
+		margin.PreSettleAll, margin.ByInstrument)
+	if err != nil {
+		t.Fatalf("算保证金失败：%v", err)
+	}
 	lib, err := view.PositionOf(p, view.PositionInput{
-		Multiplier: decimal.NewFromInt(10),
+		Multiplier: mult,
 		LastPrice:  oracle["last_price"].Number, HasLast: true,
-		// ⚠️ 保证金不给：本视图不重算，而 margin 包的接线是另一层。
-		// 于是 margin_* 会判失败，那是**正确**的结果 —— 本库这一层确实还没接上。
+		MarginLong: mLong, MarginShort: mShort, HasMargin: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -311,18 +331,23 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	//
 	// 现状（交易日 20260908，SHFE.rb2701，3 手多头 @{3151,3151,3171}）：
 	//
-	//	32  对得上   手数、今昨拆分、开仓/持仓均价与成本、浮盈与持仓盈亏、最新价
+	//	34  对得上   手数、今昨拆分、开仓/持仓均价与成本、浮盈与持仓盈亏、
+	//	             最新价，**以及保证金合计与多头保证金**
 	//	 3  不建模   期权市值 ×3，带 v1.0.0 到期版本
-	//	15  没实现   保证金 ×6、报单冻结 ×6、volume_*_yd ×2、盘口状态 ×1
+	//	13  没实现   保证金今昨拆分 ×4、报单冻结 ×6、volume_*_yd ×2、盘口状态 ×1
 	//	 2  失败     open_cost_long_today / position_cost_long_today
 	//	             —— 柜台恒填 0 而本库算真值（kq_facts 14），至今无裁决者
 	//
-	// ⚠️ 「失败」只有 2 个不代表快接近了：真正的缺口在「没实现」那 15 个上，
+	// ⚠️ 保证金那三个字段是**接线**接上的，不是 view 里重算的：
+	// margin 包算、MarginOf 翻译、view 只承载。重算会产生第二个实现，
+	// 而两个实现一起退化时测试全绿。
+	//
+	// ⚠️ 「失败」只有 2 个不代表快接近了：真正的缺口在「没实现」那 13 个上，
 	// 而它们**不比值**。把这两个数加起来看才是离 100% 的距离。
 	want := map[conformance.Verdict]int{
-		conformance.Matched:        32,
+		conformance.Matched:        34,
 		conformance.NotModeled:     3,
-		conformance.NotImplemented: 15,
+		conformance.NotImplemented: 13,
 		conformance.Untriggered:    0,
 		conformance.Failed:         2,
 		conformance.KnownDeviation: 0,
@@ -404,7 +429,8 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	type key struct{ fixture, sym string }
 	totals := map[conformance.Verdict]int{}
 	failedFields := map[string]int{}
-	samples, exchanges := 0, map[types.Exchange]bool{}
+	samples, withMargin := 0, 0
+	exchanges := map[types.Exchange]bool{}
 	fieldCounts := map[int][]key{}
 
 	for _, f := range all {
@@ -424,10 +450,29 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			}
 			oracle := f.Positions[sym]
 			last := oracle["last_price"]
-			lib, err := view.PositionOf(p, view.PositionInput{
+			in := view.PositionInput{
 				Multiplier: decimal.RequireFromString(multStr),
 				LastPrice:  last.Number, HasLast: !last.Absent,
-			})
+			}
+			// ⚠️ 有昨结算价才算保证金；没有就**不给**，让那几个字段落进
+			// 「还没实现」并被记账 —— 而不是拿别处的数补上。
+			if pre, ok := f.PreSettlement(sym); ok {
+				product, _ := splitProduct(trades[0].Instrument.Product)
+				if rates, ok := ratesFor(product); ok {
+					l, s, err := MarginOf(p, rates, in.Multiplier, pre, false,
+						margin.PreSettleAll, margin.ByInstrument)
+					switch {
+					case IsNoPosition(err):
+						// 空仓：不给保证金，view 会渲染成「明确无值」。
+					case err != nil:
+						t.Errorf("⚠️ %s %s 算保证金失败：%v", f.Path, sym, err)
+					default:
+						in.MarginLong, in.MarginShort, in.HasMargin = l, s, true
+						withMargin++
+					}
+				}
+			}
+			lib, err := view.PositionOf(p, in)
 			if err != nil {
 				t.Errorf("%s %s 渲染失败：%v", f.Path, sym, err)
 				continue
@@ -455,7 +500,8 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		}
 	}
 
-	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家", samples, len(exchanges))
+	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家；其中 %d 个接上了保证金",
+		samples, len(exchanges), withMargin)
 	for _, v := range []conformance.Verdict{
 		conformance.Matched, conformance.NotModeled, conformance.NotImplemented,
 		conformance.Untriggered, conformance.KnownDeviation, conformance.Failed,
