@@ -23,6 +23,14 @@ type Runner struct {
 	// Every 是 settle-watch 的采样间隔。其余实验不用它。
 	Every time.Duration
 
+	// Specs 是合约规格文件的路径（refdata-sync -specs 的产物）。
+	//
+	// ⚠️ **没有默认值**，用到它的实验读不到就报错。理由是免费行情**不下发**
+	// price_tick：q.PriceTick 恒为 0，而 0 是个看起来完全合理的数。
+	// 拿它去构造「不是最小变动价位的整数倍」，构造出来的价格是整数倍，
+	// 于是那一项**根本没被违反** —— 而实验照样会跑完、照样打印结果。
+	Specs string
+
 	cli *kq.Client
 }
 
@@ -75,6 +83,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expSettleWatch(ctx)
 	case "close-profit-sign":
 		return r.expCloseProfitSign(ctx)
+	case "reject-priority":
+		return r.expRejectPriority(ctx)
 	case "reject-code":
 		return r.expRejectCode(ctx)
 	case "overnight-setup":

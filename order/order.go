@@ -18,10 +18,19 @@
 //
 // # 校验顺序照文档，不照方便
 //
-// cn-futures-rules.md §9 给了**拒绝优先级**。顺序要紧是因为
+// cn-futures-rules.md §9 给了一张**文档**上的拒绝优先级表。顺序要紧是因为
 // 柜台只回一个拒因：同一笔单可能同时违反两项，而报哪一个决定了
 // 使用者去改哪里。乱序会让本库与柜台在「拒因是什么」上分岔，
 // 而两边都判「拒绝」，差异不会以失败的形式出现。
+//
+// ⚠️ **那张文档表在第一对上就是错的。** 20260909 实测：同时越涨停又不是
+// 最小变动价位整数倍的单，快期模拟答「价格超出涨停板」——
+// 于是本包把涨跌停排到了最小变动价位前面，与文档表相反。
+// 其余四对（tick/limit 各与可平量）实测与文档一致。
+//
+// ⚠️ 这条的边界要一起记住：**一个口子、一个合约、一家交易所**，
+// 而且只覆盖了五对里的五对中的这五对 —— 八项两两有 28 对，
+// 剩下的 23 对至今没有任何证据。顺序在那 23 对上是**猜的**。
 package order
 
 import (
@@ -45,10 +54,18 @@ const (
 	CheckTradable
 	// CheckSession 是否在交易时段内。⚠️ 本库目前查不了，见 Result.Unchecked。
 	CheckSession
+	// CheckPriceLimit 价格是否在涨跌停之内。
+	//
+	// ⚠️ 它排在 CheckPriceTick **前面**，与 cn-futures-rules.md §9 那张
+	// 文档表的顺序**相反**。改成这样是实测的结果，不是手滑：
+	// 一笔同时越界又不是整数倍的单，快期模拟答的是「价格超出涨停板」，
+	// 不是「不是价格单位的整倍数」（20260909，SHFE.ag2702，
+	// 夹具 testdata/probes/exp-reject-priority-20260909.json）。
+	// ⚠️ 边界：**一个口子、一个合约、一家交易所**。真实 CTP 未裁决，
+	// 见 state.md 的 simnow_pending#11。
+	CheckPriceLimit
 	// CheckPriceTick 价格是否为最小变动价位的整数倍。
 	CheckPriceTick
-	// CheckPriceLimit 价格是否在涨跌停之内。
-	CheckPriceLimit
 	// CheckVolumeRange 手数是否在上下限内。
 	CheckVolumeRange
 	// CheckClosable 平仓量是否超过可平量。⚠️ **今昨分别校验**。
@@ -87,7 +104,7 @@ func (c Check) String() string {
 // 加了一项而忘了加进这里，那一项就永远不在分母里 ——
 // 而覆盖率看起来只会更好。
 var allChecks = []Check{
-	CheckTradable, CheckSession, CheckPriceTick, CheckPriceLimit,
+	CheckTradable, CheckSession, CheckPriceLimit, CheckPriceTick,
 	CheckVolumeRange, CheckClosable, CheckFunds, CheckPositionLimit,
 }
 
@@ -233,7 +250,7 @@ func Validate(req Request, f Facts) Result {
 		add(CheckSession, "不在交易时段内")
 	}
 
-	// —— 3 最小变动价位 ——
+	// —— 3 涨跌停 ——
 	switch {
 	case !f.HasInstrument:
 		skip(CheckPriceTick, "合约规格里的 PriceTick")
@@ -244,7 +261,7 @@ func Validate(req Request, f Facts) Result {
 			req.Price, f.Instrument.PriceTick)
 	}
 
-	// —— 4 涨跌停 ——
+	// —— 4 最小变动价位 ——
 	up, lo, ok := f.Instrument.PriceLimits(f.PreSettlement, f.HasPreSettlement, f.Rounding)
 	switch {
 	case !f.HasInstrument:

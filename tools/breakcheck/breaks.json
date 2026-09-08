@@ -1597,5 +1597,60 @@
   "test": "TestFrozenTotals",
   "want": "开仓挂单竟然算出了冻结",
   "expect": "red"
+ },
+ {
+  "name": "144 拒绝优先级改回文档顺序（tick 排在 limit 前）",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "\tCheckPriceLimit\n\t// CheckPriceTick 价格是否为最小变动价位的整数倍。\n\tCheckPriceTick\n",
+  "new": "\tCheckPriceTick\n\t// CheckPriceTick 价格是否为最小变动价位的整数倍。\n\tCheckPriceLimit\n",
+  "pkg": "./order/",
+  "test": "TestPriceLimitBeforePriceTick|TestRejectionPriorityMatchesCounter",
+  "want": "应当排在",
+  "expect": "red"
+ },
+ {
+  "name": "145 allChecks 与常量的优先级分岔",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "\tCheckTradable, CheckSession, CheckPriceLimit, CheckPriceTick,",
+  "new": "\tCheckTradable, CheckSession, CheckPriceTick, CheckPriceLimit,",
+  "pkg": "./order/",
+  "test": "TestPriorityIsSaidOnce",
+  "want": "两处分岔了",
+  "expect": "red"
+ },
+ {
+  "name": "146 违规按倒序叠加（加零头的先应用，被后面的改写覆盖掉）",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_reject_priority.go",
+  "old": "\treq := base\n\tfor _, v := range violations {\n\t\tif keys[v.Key] {\n\t\t\tv.Apply(q, tick, &req)\n\t\t}\n\t}",
+  "new": "\treq := base\n\tfor i := len(violations) - 1; i >= 0; i-- {\n\t\tv := violations[i]\n\t\tif keys[v.Key] {\n\t\t\tv.Apply(q, tick, &req)\n\t\t}\n\t}",
+  "pkg": "./probe/",
+  "test": "TestApplyAllBuildsWhatItClaims",
+  "want": "构造出来的单子对不上",
+  "expect": "red"
+ },
+ {
+  "name": "147 整数倍判据的容差改成不随 tick 缩放的大数",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_reject_priority.go",
+  "old": "\treturn math.Abs(n-math.Round(n)) > 1e-3",
+  "new": "\treturn math.Abs(n-math.Round(n)) > 0.4",
+  "pkg": "./probe/",
+  "test": "TestOffTickToleranceScalesWithTick",
+  "want": "offTick(",
+  "expect": "red"
+ },
+ {
+  "name": "148 夹具侧所有委托共用同一句原话（两组分不开）",
+  "dir": "",
+  "file": "conformance/fixture/reject_priority_test.go",
+  "old": "\t\t\tmsg, ok := o[\"last_msg\"]",
+  "new": "\t\t\tmsg, ok := Value{IsText: true, Text: \"同一句\"}, true",
+  "pkg": "./conformance/fixture/",
+  "test": "TestRejectPriorityFromFixtures",
+  "want": "与只违反整数倍的单子报了",
+  "expect": "red"
  }
 ]

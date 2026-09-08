@@ -44,6 +44,7 @@ func usage() {
 实验名称（当日即可跑）:
   status           连通性自检（做到协议层登录，不是 TCP 层）
   reject-code      实验 6：报单被拒时柜台的原话
+  reject-priority  拒绝优先级：一笔单同时违反两项时柜台报哪一个（⚠️ 需要 -specs）
   max-margin-side  实验 3：单向大边按品种还是按合约合并（需两个同品种不同月份合约）
   max-margin-lock  实验 3b：同一合约双向持仓下，单向大边启没启用
   margin-price     实验 1/2 今仓版：只能排除「连续重估」这一个候选
@@ -123,6 +124,7 @@ func runProbe(args []string) error {
 	dump := fs.String("dump", "", "夹具落盘目录（留空则用 .env 的 PROBE_DUMP_DIR）")
 	timeout := fs.Duration("timeout", 90*time.Second, "整体超时（settle-watch 用它当观察时长）")
 	every := fs.Duration("every", 5*time.Second, "settle-watch 的采样间隔")
+	specs := fs.String("specs", "", "合约规格文件路径（reject-priority 用它取最小变动价位；⚠️ 无默认值）")
 	if args[1] == "status" {
 		_ = fs.Parse(args[2:])
 		*exp = "status"
@@ -148,6 +150,7 @@ func runProbe(args []string) error {
 		Env:     env,
 		Symbols: syms,
 		DumpDir: *dump,
+		Specs:   *specs,
 		Every:   *every,
 		Logf:    func(f string, a ...any) { fmt.Printf(f+"\n", a...) },
 	}
