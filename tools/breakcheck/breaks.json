@@ -1905,5 +1905,16 @@
   "test": "TestKQFactRefsResolve",
   "want": "那一条已被推翻",
   "expect": "red"
+ },
+ {
+  "name": "172 wip 名单放行任何提交（第四个 wip 混进去也不红）",
+  "dir": "",
+  "file": "wiplog_test.go",
+  "old": "\t\tif why, ok := wipAllowed[sha]; ok {",
+  "new": "\t\tif why, ok := \"放行\", true; ok {\n\t\t\t_ = sha",
+  "pkg": "./",
+  "test": "TestNoNewWipCommits",
+  "want": "名单和历史对不上了",
+  "expect": "red"
  }
 ]
