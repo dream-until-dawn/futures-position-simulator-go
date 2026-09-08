@@ -159,7 +159,7 @@
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 83 |
-| `docs/roadmap.md` | 26 |
+| `docs/roadmap.md` | 27 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 10 |
 
