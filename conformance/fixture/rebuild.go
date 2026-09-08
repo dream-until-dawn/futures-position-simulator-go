@@ -20,13 +20,7 @@ import (
 // 一个「差不多能用」的规格会在平今平昨和大边上静默算错
 // （refdata.Builder 的零值报错也是这个理由）。
 type Spec struct {
-	Multiplier decimal.Decimal
-	// PositionDate 是该合约区不区分今昨仓。
-	//
-	// ⚠️ 与本结构其余字段同理：**没有默认值**。零值会让 position.New 报错，
-	// 那正是要的 —— 猜错的后果是今昨仓不滚动（silent-risks.md 第 1 条），
-	// 账永远是平的，只是每一天都错。
-	PositionDate  refdata.PositionDateType
+	Multiplier    decimal.Decimal
 	Commission    refdata.CommissionRates
 	Margin        refdata.MarginRates
 	MaxMarginSide bool
@@ -137,7 +131,12 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 
 		// —— 重放：持仓与已实现平仓 ——
 		p, realized, err := ReplayRealized(nil, trades[0].Instrument,
-			types.Speculation, spec.PositionDate, f.TradingDay, trades)
+			types.Speculation,
+			// ⚠️ 显式给「未测」，而不是给一个猜的值：本函数**永不结算**
+			// （有昨仓的合约在上面就报错了，要走 Carry），
+			// 所以 PositionDateType 在这条路上用不上。
+			// 给一个编出来的值，会被后来的人当成实测值。
+			refdata.PositionDateUnknown, f.TradingDay, trades)
 		if err != nil {
 			return zero, fmt.Errorf("%s 重放：%w", sym, err)
 		}
