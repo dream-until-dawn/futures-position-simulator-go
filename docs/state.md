@@ -199,7 +199,7 @@
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 83 |
-| `docs/roadmap.md` | 28 |
+| `docs/roadmap.md` | 29 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 12 |
 

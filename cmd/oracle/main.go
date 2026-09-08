@@ -172,6 +172,11 @@ func runConformance(args []string) error {
 	settlePath := fs.String("settle", "", "**交易所**给的结算价（cmd/settlement -out 的产物）")
 	symbols := fs.String("symbols", "", "要订阅行情的合约，逗号分隔；留空则用 .env 的")
 	timeout := fs.Duration("timeout", 90*time.Second, "整体超时")
+	// ⚠️ 没有默认路径：**落盘是一次显式的决定**。这条命令平时只读、不落盘
+	// （LiveFixtureJSON 的注释写着理由：实时那条路不该悄悄往夹具树里加东西）。
+	// 而要把一次实时对拍**当作产物交给评审**时，报告之外还需要那一刻的原始截面 ——
+	// 「我验产物，不验你的转述」是这个仓库一贯的做法，对实时那条路也该成立。
+	dump := fs.String("dump", "", "把这次用到的**实时截面**落盘到该目录（⚠️ 无默认值）")
 	_ = fs.Parse(args[2:])
 
 	// ⚠️ 两份规则数据都**必须显式给**，没有默认路径。
@@ -231,6 +236,16 @@ func runConformance(args []string) error {
 	raw, err := r.LiveFixtureJSON(ctx, syms)
 	if err != nil {
 		return err
+	}
+	if *dump != "" {
+		path, derr := probe.WriteFixtureJSON(*dump, "live-conformance", raw,
+			func(f string, a ...any) { fmt.Printf(f+"\n", a...) })
+		if derr != nil {
+			// ⚠️ 落盘失败**就是失败**，不降级成警告：这条路存在的理由
+			// 就是产出可核对的证据，产不出来时说「跑过了」等于回到转述。
+			return fmt.Errorf("落盘实时截面：%w", derr)
+		}
+		fmt.Printf("实时截面已落盘 %s\n", path)
 	}
 	carry, err := loadCarry(*carryPath, *settlePath)
 	if err != nil {

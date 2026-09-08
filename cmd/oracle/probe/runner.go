@@ -416,10 +416,14 @@ func (r *Runner) LiveFixtureJSON(ctx context.Context, symbols []string) ([]byte,
 		return nil, err
 	}
 	defer r.cli.Close()
+	// ⚠️ **无条件连行情**。原先是 `if len(symbols) > 0` 才连 ——
+	// 于是不带 -symbols 跑实时对拍时，整份截面**一个行情都没有**，
+	// 而且没有任何东西说这件事：昨结算价缺席只表现为「那几个字段比不了」。
+	// 20260909 把这份截面当产物落盘之后，缺行情那条棘轮当场把它顶了出来。
+	if err := r.cli.ConnectQuote(ctx); err != nil {
+		return nil, err
+	}
 	if len(symbols) > 0 {
-		if err := r.cli.ConnectQuote(ctx); err != nil {
-			return nil, err
-		}
 		if err := r.cli.SubscribeQuotes(symbols...); err != nil {
 			return nil, err
 		}
@@ -435,6 +439,14 @@ func (r *Runner) LiveFixtureJSON(ctx context.Context, symbols []string) ([]byte,
 	// ⚠️ 先等截面静默再读。DIFF 是增量 merge patch，早读一拍会读到半截截面，
 	// 而半截截面里的 0 看起来像一个合法数值。
 	r.cli.WaitTrade(1500 * time.Millisecond)
+
+	// ⚠️ 与 dump 同一条理由：把**出现过的合约**全订上、等行情到齐，
+	// 否则这份截面拿去做对拍时，缺行情的合约会被**静默跳过**。
+	// ⚠️ 这一处是补 dump 那次修复时漏掉的另一半 —— 同一个采样缺口，
+	// 两条路各有一份代码，我只修了落盘那条。
+	// 「补上判据之后立刻暴露出另一半」正是 silent-risks 方法论 38 说的形状，
+	// 而这次暴露它的是缺行情那条棘轮：实时截面落盘之后它当场从 72 涨到 73。
+	r.fillQuotes()
 
 	f := kq.Sanitize(r.cli.Account(), r.cli.Positions(), r.cli.Trades(),
 		observedQuotes(r.cli), r.cli.Orders(), r.cli.Notifies(), r.cli.TradingDay(),
@@ -510,4 +522,40 @@ func (r *Runner) fillQuotes() {
 		// ⚠️ 不存在的合约永远等不到 —— 那不是故障，但也要说出来。
 		r.Logf("  ⚠️ 这些合约 10 秒内没等到行情，夹具里会缺它们：%v", m)
 	}
+}
+
+// WriteFixtureJSON 把一份**已经脱敏过的**夹具 JSON 落盘，返回落到哪。
+//
+// ⚠️ 它只做落盘，不做脱敏 —— 脱敏发生在 LiveFixtureJSON 里，
+// 在这段字节存在之前。顺序反过来（先落盘再擦）是 dump 的注释里
+// 明确不许做的事：原始文件已经上过磁盘、可能已经进过 git index。
+//
+// ⚠️ 与 dump 共用 freeFixturePath，所以**同名不同内容时不会静默覆盖**：
+// 两份都是证据，而覆盖掉的那份没有任何东西会提起。
+func WriteFixtureJSON(dir, name string, raw []byte, logf func(string, ...any)) (string, error) {
+	var head struct {
+		TradingDay string `json:"trading_day"`
+	}
+	if err := json.Unmarshal(raw, &head); err != nil {
+		return "", fmt.Errorf("读不出 trading_day：%w", err)
+	}
+	if head.TradingDay == "" {
+		// ⚠️ 交易日进文件名，缺了就拒绝落盘：一份不知道属于哪一天的截面，
+		// 与一份没落盘的截面在证据上是同一个位置。
+		return "", fmt.Errorf("这份截面没有 trading_day —— 不落盘")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	path, err := freeFixturePath(dir, name, head.TradingDay, raw, logf)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, raw, 0o644); err != nil {
+		return "", err
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		return abs, nil
+	}
+	return path, nil
 }
