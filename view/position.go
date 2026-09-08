@@ -31,6 +31,19 @@ type PositionInput struct {
 // sideStats 是一个方向上从逐笔明细算出来的量。
 type sideStats struct {
 	volToday, volHis int
+	// volPrevDay 是**开仓日早于当前交易日**的手数。
+	//
+	// ⚠️ 它与 volHis 不是一回事，而实测把两者分开了（kq_facts 27）：
+	//
+	//	volHis      「按平今平昨规则算，有多少是昨仓」—— 判据是经历过结算
+	//	volPrevDay  「实际上有多少是昨天开的」        —— 判据是开仓日
+	//
+	// 大商所（NoUseHistory）结算后：volume_long_today=3、volume_long_his=0，
+	// 而 volume_long_yd=3、pos_long_his=3。**同一批持仓，两套口径给出相反的答案。**
+	//
+	// ⚠️ `Lot.IsHistory()` 的注释早就写着「判据是有没有经历过结算，
+	// 不是开仓日是不是今天」—— 本库一直有这两样信息，只是此前没有样本要求分开。
+	volPrevDay int
 	// openCost 是 Σ(开仓价 × 手数)，尚未乘乘数。
 	openCost, posCost decimal.Decimal
 	openCostToday     decimal.Decimal
@@ -39,9 +52,12 @@ type sideStats struct {
 	posCostHis        decimal.Decimal
 }
 
-func statsOf(s *position.Side) sideStats {
+func statsOf(s *position.Side, day types.TradingDay) sideStats {
 	var st sideStats
 	for _, l := range s.Lots() {
+		if l.OpenDay.Before(day) {
+			st.volPrevDay += l.Volume
+		}
 		v := decimal.NewFromInt(int64(l.Volume))
 		oc := l.OpenPrice.Mul(v)
 		pc := l.Basis.Mul(v)
@@ -124,7 +140,7 @@ func PositionOf(p *position.Position, in PositionInput) (Position, error) {
 			"乘数漏乘会得到一个量级正确到肉眼看不出的错值", in.Multiplier)
 	}
 	m := in.Multiplier
-	ls, ss := statsOf(long), statsOf(short)
+	ls, ss := statsOf(long, p.Day), statsOf(short, p.Day)
 
 	v := Position{}
 	num := func(k string, d decimal.Decimal) { v[k] = Num(d) }
@@ -139,12 +155,17 @@ func PositionOf(p *position.Position, in PositionInput) (Position, error) {
 		i64("volume_"+n, st.volume())
 		i64("volume_"+n+"_today", st.volToday)
 		i64("volume_"+n+"_his", st.volHis)
-		// ⚠️ pos_*_today / pos_*_his 与 volume_*_today / _his 在实测样本里同值，
-		// 但「同值」不等于「同义」—— 本次样本从未把它们分开过。
-		// 渲染成同一个数是本库的**建模选择**，而它在对拍时会落进
-		// 「值对得上但未触发」那一档，那正是它该待的地方。
-		i64("pos_"+n+"_today", st.volToday)
-		i64("pos_"+n+"_his", st.volHis)
+		// ⚠️ pos_* 与 volume_* **不是**同一个东西 —— 实测把它们分开了。
+		//
+		// 上一版把两者渲染成同一个数，注释里写着「同值不等于同义，
+		// 本次样本从未把它们分开过」。2026-09-08 的结算把它们分开了：
+		// 大商所合约上 volume_long_today=3 / volume_long_his=0，
+		// 而 pos_long_today=0 / pos_long_his=3。
+		//
+		// 判据是**开仓日**而不是「经历过结算」：pos_*_his 数的是
+		// 「实际上有多少是前一个交易日开的」。
+		i64("pos_"+n+"_today", st.volume()-st.volPrevDay)
+		i64("pos_"+n+"_his", st.volPrevDay)
 
 		if st.volume() == 0 {
 			// ⚠️ 空仓方向**没有**成本，不是成本为零 —— 与均价、盈亏、保证金同一条理由：
@@ -252,9 +273,17 @@ func PositionOf(p *position.Position, in PositionInput) (Position, error) {
 		v["volume_"+n+"_frozen_today"] = Todo("同上")
 		v["volume_"+n+"_frozen_his"] = Todo("同上")
 
-		// —— ⚠️ volume_*_yd：与 _his 的差别是待实测第 7 条 ——
-		v["volume_"+n+"_yd"] = Todo("⚠️ 它与 volume_" + n + "_his 的差别**尚未实测**" +
-			"（cn-futures-rules.md §13 第 7 条）。猜一个映射就是把待实测项当成已知")
+		// —— volume_*_yd：与 _his 的差别**已经实测出来了** ——
+		//
+		// ⚠️ 2026-09-08 的结算给出判据：大商所合约上
+		// volume_long_his=0 而 volume_long_yd=3、pos_long_his=3。
+		//
+		//	volume_*_his  按平今平昨规则算的昨仓 —— 判据是经历过结算
+		//	volume_*_yd   实际上是前一交易日开的 —— 判据是开仓日
+		//
+		// ⚠️ 单一来源（快期），所以它进 kq_facts 而不是 rules_measured；
+		// 但本库这一侧已经算得出，不再是「还没实现」。
+		i64("volume_"+n+"_yd", st.volPrevDay)
 
 		// —— 期权 ——
 		v["market_value_"+n] = Skip("v1.0.0", "期权市值；v1.0 不含期权")

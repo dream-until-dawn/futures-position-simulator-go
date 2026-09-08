@@ -331,10 +331,15 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	//
 	// 现状（交易日 20260908，SHFE.rb2701，3 手多头 @{3151,3151,3171}）：
 	//
-	//	34  对得上   手数、今昨拆分、开仓/持仓均价与成本、浮盈与持仓盈亏、
-	//	             最新价，**以及保证金合计与多头保证金**
+	//	36  对得上   手数、今昨拆分、开仓/持仓均价与成本、浮盈与持仓盈亏、
+	//	             最新价、保证金合计与多头保证金，**以及 volume_*_yd ×2**
 	//	 3  不建模   期权市值 ×3，带 v1.0.0 到期版本
-	//	13  没实现   保证金今昨拆分 ×4、报单冻结 ×6、volume_*_yd ×2、盘口状态 ×1
+	//	11  没实现   保证金今昨拆分 ×4、报单冻结 ×6、盘口状态 ×1
+	//
+	// ⚠️ volume_*_yd 是 2026-09-08 结算之后才实现得了的：那次结算把
+	// 「按平今平昨算的昨仓」与「实际上是昨天开的」**分开了**（kq_facts 27），
+	// 而本库的 Lot 一直同时带着 Settled 与 OpenDay 两样信息 ——
+	// 只是此前没有样本要求把它们分开。
 	//	 2  失败     open_cost_long_today / position_cost_long_today
 	//	             —— 柜台恒填 0 而本库算真值（kq_facts 14），至今无裁决者
 	//
@@ -345,9 +350,9 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	// ⚠️ 「失败」只有 2 个不代表快接近了：真正的缺口在「没实现」那 13 个上，
 	// 而它们**不比值**。把这两个数加起来看才是离 100% 的距离。
 	want := map[conformance.Verdict]int{
-		conformance.Matched:        34,
+		conformance.Matched:        36,
 		conformance.NotModeled:     3,
-		conformance.NotImplemented: 13,
+		conformance.NotImplemented: 11,
 		conformance.Untriggered:    0,
 		conformance.Failed:         2,
 		conformance.KnownDeviation: 0,

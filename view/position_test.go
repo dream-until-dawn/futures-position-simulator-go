@@ -251,24 +251,35 @@ func TestPositionArithmeticMatchesFixture(t *testing.T) {
 	t.Logf("与 exp3b 夹具逐字段一致的字段 %d 个", len(want))
 }
 
-// TestOracleLeavesTodayHisCostAtZero 把一条**实测的口子行为**钉在测试里。
+// TestOracleTodayHisSplit 把今昨拆分这条**实测行为**钉在测试里。
 //
-// ⚠️ 它断言的不是本库，是**夹具**：柜台的 open_cost_*_today / _his 与
-// position_cost_*_today / _his 在全部截面上恒为 0，包括那些确实有今仓的方向。
-// 本库这边照算真值，于是这四类字段在对拍时会红 —— 红是对的，
-// 它说的是「两边不一样且还没人裁决」。这条测试保证：
-// 哪天柜台开始填这些字段了，**会有动静**，而不是被当成一直如此。
-func TestOracleLeavesTodayHisCostAtZero(t *testing.T) {
+// ⚠️ 它断言的不是本库，是**夹具**。而它已经被自己抓到过一次修正：
+//
+// 上一版叫 `TestOracleLeavesTodayHisCostAtZero`，断言「今昨拆分柜台一律填 0」，
+// 依据是交易日 20260908 的 188 份截面。20260909 的结算一发生它就红了 ——
+// **那正是它写下来的理由**：「哪天柜台开始填这些字段了，会有动静，
+// 而不是被当成一直如此」。
+//
+// 修正后的事实分两条，各有各的形状：
+//
+//	open_cost_* / margin_* 的今昨拆分   **从未**是一个真实数字
+//	                                    有量的那侧是 0，空的那侧是 "-"
+//	position_cost_* 的今昨拆分          盘中新开的仓上是 0；
+//	                                    **经历过结算之后被填上**
+//
+// 一致的解释：这个拆分是在**日终结算时**算出来的。
+func TestOracleTodayHisSplit(t *testing.T) {
 	paths, err := filepath.Glob(filepath.Join("..", "testdata", "probes", "*.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	split := []string{
+	// 这两类**任何时候**都不该是真实数字。
+	neverFilled := []string{
 		"open_cost_%s_today", "open_cost_%s_his",
-		"position_cost_%s_today", "position_cost_%s_his",
 		"margin_%s_today", "margin_%s_his",
 	}
-	withToday, checked := 0, 0
+	withVolume, checked := 0, 0
+	costFilled, costZero := 0, 0
 	for _, p := range paths {
 		b, err := os.ReadFile(p)
 		if err != nil {
@@ -282,32 +293,63 @@ func TestOracleLeavesTodayHisCostAtZero(t *testing.T) {
 		}
 		for inst, pos := range f.Positions {
 			for _, side := range []string{"long", "short"} {
-				vt, ok := pos["volume_"+side+"_today"].(float64)
-				if !ok || vt <= 0 {
+				today, _ := pos["volume_"+side+"_today"].(float64)
+				his, _ := pos["volume_"+side+"_his"].(float64)
+				if today+his <= 0 {
 					continue
 				}
-				withToday++
-				for _, pat := range split {
+				withVolume++
+				// 有量的那一侧：today 有量看 today，his 有量看 his。
+				which := "today"
+				if his > 0 {
+					which = "his"
+				}
+				for _, pat := range neverFilled {
 					name := fmtSide(pat, side)
 					checked++
 					got, ok := pos[name].(float64)
-					if !ok || got != 0 {
-						t.Errorf("⚠️ %s 的 %s.%s = %v（非 0）—— "+
-							"柜台开始填今昨拆分了？那 view.Position 上那几条注释与"+
-							"probes.md §9 都要重新量", filepath.Base(p), inst, name, pos[name])
+					if ok && got != 0 {
+						t.Errorf("⚠️ %s 的 %s.%s = %v —— "+
+							"open_cost / margin 的今昨拆分**第一次**出现真实数字。"+
+							"那是新行为，去重新量并改这条测试与 probes.md §9/§13",
+							filepath.Base(p), inst, name, pos[name])
 					}
+				}
+				// position_cost 的那一侧：0（未经结算）或真实数字（已结算）。
+				name := "position_cost_" + side + "_" + which
+				v, ok := pos[name].(float64)
+				if !ok {
+					t.Errorf("⚠️ %s 的 %s.%s 不是数字（%v）—— "+
+						"有量的那一侧不该是 \"-\"", filepath.Base(p), inst, name, pos[name])
+					continue
+				}
+				if v == 0 {
+					costZero++
+				} else {
+					costFilled++
 				}
 			}
 		}
 	}
-	// ⚠️ 下界必须卡在**有今仓的方向数**上，不是夹具数：
-	// 若一个有今仓的方向都没有，上面的循环一次都不进，而本条照样绿 ——
+	t.Logf("有量的方向 %d 个；open_cost/margin 拆分检查 %d 个字段，"+
+		"无一是真实数字", withVolume, checked)
+	t.Logf("position_cost 拆分：填了 %d 个、为零 %d 个", costFilled, costZero)
+
+	// ⚠️ 下界必须卡在**有量的方向数**上，不是夹具数：
+	// 一个有量的方向都没有时，上面的循环一次都不进，而本条照样绿 ——
 	// 那时它断言的是「没有反例」，而没有样本时那句话恒真。
-	if withToday < 20 {
-		t.Fatalf("只有 %d 个有今仓的方向 —— 太少，本条可能在空转"+
-			"（没有样本时「没有反例」恒真）", withToday)
+	if withVolume < 20 {
+		t.Fatalf("只有 %d 个有量的方向 —— 太少，本条可能在空转", withVolume)
 	}
-	t.Logf("有今仓的方向 %d 个，检查 %d 个今昨拆分字段，全部为 0", withToday, checked)
+	// ⚠️ 两侧都要有样本，否则「结算前为零、结算后被填」这句话只被验了一半。
+	if costFilled == 0 {
+		t.Errorf("⚠️ position_cost 的今昨拆分一个都没被填过 —— " +
+			"「结算之后被填」这半句没有样本支持")
+	}
+	if costZero == 0 {
+		t.Errorf("⚠️ position_cost 的今昨拆分没有一个是零 —— " +
+			"「结算之前是零」这半句没有样本支持")
+	}
 }
 
 func fmtSide(pattern, side string) string {

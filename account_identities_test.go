@@ -90,6 +90,31 @@ func TestToleranceOrderingIsAsserted(t *testing.T) {
 
 type acctSnap struct {
 	Account map[string]any `json:"account"`
+	// Positions 只用来回答一个问题：**这份夹具里有没有昨仓**。
+	//
+	// ⚠️ 它决定下面第 ③ 条断言的方向，而不是被拿去算钱。
+	// 今仓下两条盈亏基线本就相同；有昨仓之后它们**应当**分开。
+	Positions map[string]map[string]any `json:"positions"`
+}
+
+// hasHistory 报告这份夹具里有没有昨仓。
+//
+// ⚠️ 判据用 `volume_*_his`，而**不是** `volume_*_yd`：
+// 两者的差别是 cn-futures-rules §13 的第 7 条，至今未实测 ——
+// 拿一个待实测项去支撑另一条断言，是把它当成已知。
+func (s acctSnap) hasHistory() bool {
+	for _, p := range s.Positions {
+		for _, k := range []string{"volume_long_his", "volume_short_his"} {
+			n, ok := p[k].(json.Number)
+			if !ok {
+				continue
+			}
+			if f, err := n.Float64(); err == nil && f > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // num 取一个数值字段。
@@ -124,6 +149,10 @@ func TestAccountIdentitiesHoldOnEveryFixture(t *testing.T) {
 	maxResidual := decimal.Zero
 	// 判别力计数：这批夹具**分别覆盖到了什么**。
 	var withGain, withLoss, withPosClose, withFrozen, withDeposit, withWithdraw int
+	// withHistory 是带昨仓的夹具数，diverged 是其中两条盈亏基线真的分开的份数。
+	// ⚠️ 后者是本项目最核心那条区分的**验收计数**：它为零时，
+	// 「逐日盯市 vs 逐笔对冲」在实测上仍然没被验证过。
+	var withHistory, diverged int
 
 	for _, p := range paths {
 		b, err := os.ReadFile(p)
@@ -210,11 +239,22 @@ func TestAccountIdentitiesHoldOnEveryFixture(t *testing.T) {
 			maxResidual = r
 		}
 
-		// ③ 今仓下 position_profit 与 float_profit 必须相等。
-		// ⚠️ 本批夹具**全是今仓**（种子还没过结算），这一条在有昨仓之后会分岔。
-		if !posP.Equal(floatP) {
-			t.Errorf("%s 今仓下 position_profit(%s) != float_profit(%s) —— "+
-				"若此时账上仍无昨仓，本项目对 ByDate/ByTrade 的理解要改", p, posP, floatP)
+		// ③ 两条盈亏基线：**今仓下必须相等，有昨仓之后应当分开**。
+		//
+		// ⚠️ 这一条第一版写的是「无条件相等」，注释里写着
+		// 「本批夹具全是今仓（种子还没过结算）」——
+		// 而 2026-09-08 16:0x 结算一发生，那个前提就假了，
+		// 于是它以四条失败的形式报出来。**那不是缺陷，是它在按设计工作**：
+		// 一条把自己的前提写进注释、前提变了就红的断言，正是要的东西。
+		if s.hasHistory() {
+			withHistory++
+			if !posP.Equal(floatP) {
+				diverged++
+			}
+		} else if !posP.Equal(floatP) {
+			t.Errorf("%s **无昨仓**却 position_profit(%s) != float_profit(%s) —— "+
+				"今仓下两条基线本就相同，分开了说明本项目对 ByDate/ByTrade 的理解要改",
+				p, posP, floatP)
 		}
 	}
 
@@ -234,6 +274,20 @@ func TestAccountIdentitiesHoldOnEveryFixture(t *testing.T) {
 
 	t.Logf("判别力：浮盈 %d / 浮亏 %d / 平仓盈利为正 %d / 有冻结 %d / 有入金 %d / 有出金 %d（共 %d 份）",
 		withGain, withLoss, withPosClose, withFrozen, withDeposit, withWithdraw, checked)
+	t.Logf("        带昨仓 %d 份，其中两条盈亏基线**真的分开** %d 份", withHistory, diverged)
+
+	// ⚠️ 这一段是本项目最核心那条区分的验收位置。
+	//
+	// 带昨仓的夹具出现之前，「逐日盯市 vs 逐笔对冲」在实测上**从未被验证过** ——
+	// 今仓下两条基线本就相同，无论实现对不对都相等。
+	if withHistory == 0 {
+		t.Log("ⓘ 还没有带昨仓的夹具 —— 「逐日盯市 vs 逐笔对冲」这条区分" +
+			"在实测上仍未被验证。今仓下两条基线本就相同，相等不说明任何事")
+	} else if diverged == 0 {
+		t.Errorf("⚠️ %d 份夹具带昨仓，却**没有一份**让两条基线分开 —— "+
+			"要么结算价恰好等于开仓均价（那这批样本没有判别力），"+
+			"要么柜台根本没有两套口径。两种都要查清楚，不能当成「一致」", withHistory)
+	}
 
 	if withDeposit == 0 {
 		t.Error("⚠️ 没有一份夹具有入金 —— `static_balance = pre + deposit − withdraw` 这条恒等式空转")
