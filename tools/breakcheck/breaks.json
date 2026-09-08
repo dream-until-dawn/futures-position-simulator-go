@@ -1652,5 +1652,16 @@
   "test": "TestRejectPriorityFromFixtures",
   "want": "与只违反整数倍的单子报了",
   "expect": "red"
+ },
+ {
+  "name": "149 平今档的每手费额被改动（三档本该分得开时要红）",
+  "dir": "",
+  "file": "conformance/fixture/fee_tiers_test.go",
+  "old": "\t\t\teach := tr.Commission.Div(decimal.NewFromInt(int64(tr.Volume)))",
+  "new": "\t\t\teach := tr.Commission.Div(decimal.NewFromInt(int64(tr.Volume)))\n\t\t\tif tr.Offset == types.CloseToday {\n\t\t\t\teach = each.Mul(decimal.NewFromInt(2))\n\t\t\t}",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFeeRateTiersAreIndistinguishable",
+  "want": "三档第一次分得开了",
+  "expect": "red"
  }
 ]
