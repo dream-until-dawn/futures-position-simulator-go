@@ -70,11 +70,18 @@ func TestRebuildAccountFieldByField(t *testing.T) {
 		t.Skip("找不到带行情的夹具")
 	}
 
-	snap, err := Rebuild(target, specsFor(t, target))
+	rb, err := Rebuild(target, specsFor(t, target))
 	if err != nil {
 		t.Fatalf("重建失败：%v", err)
 	}
-	lib, err := view.AccountOf(snap, view.AccountInput{})
+	// ⚠️ 把浮动盈亏也交给视图 —— 它是本项目核心那对区分的**另一半**，
+	// 而在此之前它在账户对拍里一直被**跳过**：
+	// view.AccountInput 的注释写着「本库的 account.Snapshot 不承载浮动盈亏，
+	// 调用方需从 pnl 侧提供」，而调用方（就是这里）一直没提供。
+	// 一个「等着别人给」的字段，没人给的时候不会有任何动静。
+	lib, err := view.AccountOf(rb.Account, view.AccountInput{
+		FloatProfit: rb.FloatProfit, HasFloatProfit: rb.HasFloatProfit,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,6 +185,26 @@ func TestRebuildAccountFieldByField(t *testing.T) {
 	if nComputed < 3 {
 		t.Fatalf("⚠️ 本库自己算的字段只有 %d 个 —— 判别力不足", nComputed)
 	}
+	// ⚠️ float_profit 必须**真的参与了比对**，而不是被跳过。
+	//
+	// 它是本项目核心那对区分的另一半，而在此之前它一直落在「跳过」里 ——
+	// 因为 view.AccountInput 等着调用方提供，而调用方一直没提供。
+	if _, ok := r.Verdicts["float_profit"]; !ok {
+		t.Error("⚠️ float_profit 没进比对 —— 它等着调用方从 pnl 侧提供，" +
+			"而没人提供时不会有任何动静")
+	}
+	// ⚠️ 而「对上了」在**今仓样本上没有判别力**：两条基线都是开仓价，
+	// 无论实现对不对它都等于 position_profit。这句必须写出来，
+	// 否则一个 0 失败的报告会被读成「两套口径都验过了」。
+	if rb.HasFloatProfit && rb.FloatProfit.Equal(rb.Account.PositionProfit) {
+		t.Logf("ⓘ float_profit(%s) == position_profit(%s) —— "+
+			"⚠️ 本样本全是今仓，两条基线本就相同，"+
+			"**这条一致不构成对「逐笔对冲」的验证**", rb.FloatProfit, rb.Account.PositionProfit)
+	} else if rb.HasFloatProfit {
+		t.Logf("ⓘ float_profit(%s) != position_profit(%s) —— "+
+			"两套口径在账户层第一次分开", rb.FloatProfit, rb.Account.PositionProfit)
+	}
+
 	// ⚠️ 关键的三个必须**真的对上了**，而不是落进未触发或被跳过。
 	for _, name := range []string{"balance", "available", "risk_ratio"} {
 		if got := r.Verdicts[name]; got != conformance.Matched {

@@ -26,6 +26,23 @@ type Spec struct {
 	MaxMarginSide bool
 }
 
+// Rebuilt 是重建的结果。
+//
+// ⚠️ FloatProfit 单独放在这里而不是塞进 account.Snapshot，
+// 是因为**本库的账户快照里根本没有它** —— 那不是疏漏，是 view.AccountInput
+// 的注释里写着的事实：浮动盈亏是逐笔对冲口径，账户侧不承载它，
+// 由调用方从 pnl 侧提供。
+//
+// ⚠️ 而它正是本项目核心那对区分的另一半：
+// account.Snapshot.PositionProfit 是逐日盯市，这里的 FloatProfit 是逐笔对冲。
+type Rebuilt struct {
+	Account account.Snapshot
+	// FloatProfit 是全部持仓的浮动盈亏合计（逐笔对冲口径）。
+	// HasFloatProfit 为假表示**算不出**（缺最新价），那是「没有」不是「零」。
+	FloatProfit    decimal.Decimal
+	HasFloatProfit bool
+}
+
 // Rebuild 从一份夹具**重建整个账户**，然后与柜台的账户截面逐字段比。
 //
 // 链条：
@@ -46,8 +63,8 @@ type Spec struct {
 //
 // ⚠️ 本函数**不处理昨仓**：有昨仓的合约要先走 Carry。
 // 调用方用 Fixture.HasHistoryPosition 判，这里只在撞上时报错。
-func Rebuild(f *Fixture, specs map[string]Spec) (account.Snapshot, error) {
-	var zero account.Snapshot
+func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
+	var zero Rebuilt
 	pre, ok := numberOf(f.Account, "pre_balance")
 	if !ok {
 		return zero, fmt.Errorf("夹具 %s 的账户截面里没有 pre_balance —— "+
@@ -75,6 +92,10 @@ func Rebuild(f *Fixture, specs map[string]Spec) (account.Snapshot, error) {
 
 	totalMarginCompany, totalMarginExchange := decimal.Zero, decimal.Zero
 	totalPositionProfit := decimal.Zero
+	// ⚠️ 浮动盈亏与持仓盈亏**分开累加**：两者用的是不同的基线，
+	// 而在今仓上它们恒等 —— 合并累加会让「它们本该不同」这件事永远看不出来。
+	totalFloatProfit := decimal.Zero
+	floatOK := true
 
 	for _, sym := range f.Symbols() {
 		trades := f.TradesOf(sym)
@@ -139,11 +160,15 @@ func Rebuild(f *Fixture, specs map[string]Spec) (account.Snapshot, error) {
 		default:
 			totalMarginExchange = totalMarginExchange.Add(long).Add(short)
 			totalMarginCompany = totalMarginCompany.Add(long).Add(short)
-			pp, err := positionProfitOf(f, sym, p, spec.Multiplier)
+			pp, fp, err := profitsOf(f, sym, p, spec.Multiplier)
 			if err != nil {
-				return zero, fmt.Errorf("%s 持仓盈亏：%w", sym, err)
+				// ⚠️ 缺最新价时**不当成零**：那会让一个算不出的合约
+				// 悄悄按「不盈不亏」计入合计，而合计看起来完全正常。
+				floatOK = false
+				return zero, fmt.Errorf("%s 盈亏：%w", sym, err)
 			}
 			totalPositionProfit = totalPositionProfit.Add(pp)
+			totalFloatProfit = totalFloatProfit.Add(fp)
 		}
 	}
 
@@ -159,7 +184,10 @@ func Rebuild(f *Fixture, specs map[string]Spec) (account.Snapshot, error) {
 		return zero, fmt.Errorf("重建出来的账户内部不自洽：%w —— "+
 			"⚠️ 此时与柜台比出的差异指向本库内部，不是两边的差异", err)
 	}
-	return acc.Snapshot(), nil
+	return Rebuilt{
+		Account:     acc.Snapshot(),
+		FloatProfit: totalFloatProfit, HasFloatProfit: floatOK,
+	}, nil
 }
 
 func toLegs(lots []position.Lot) []pnl.Leg {
@@ -170,31 +198,47 @@ func toLegs(lots []position.Lot) []pnl.Leg {
 	return out
 }
 
-// positionProfitOf 用夹具里的最新价算持仓盈亏（逐日盯市口径）。
-func positionProfitOf(f *Fixture, sym string, p *position.Position,
-	multiplier decimal.Decimal) (decimal.Decimal, error) {
+// profitsOf 用夹具里的最新价算**两套口径**的盈亏。
+//
+// ⚠️ 一次算两个而不是各调一遍，是为了让「它们用的是同一批 leg、同一个价」
+// 在代码上是显然的 —— 分两次取 leg 的话，一次改动只改了其中一处，
+// 两个数就在不同的输入上算出来了，而它们本来就该相等的那些场合会掩盖它。
+//
+//	持仓盈亏 PositionProfit  逐日盯市，基线是 Lot.Basis
+//	浮动盈亏 FloatProfit     逐笔对冲，基线是 Lot.OpenPrice
+//
+// ⚠️ 今仓上两者必然相等（两条基线都是开仓价）。
+// 它们分开只发生在昨仓上 —— 那正是本项目最核心的那条区分。
+func profitsOf(f *Fixture, sym string, p *position.Position,
+	multiplier decimal.Decimal) (posProfit, floatProfit decimal.Decimal, err error) {
 
 	last, ok := f.Positions[sym]["last_price"]
 	if !ok || last.Absent || last.IsText || !last.Number.IsPositive() {
-		return decimal.Zero, fmt.Errorf("没有最新价 —— 这是「没有」不是「零」")
+		return decimal.Zero, decimal.Zero,
+			fmt.Errorf("没有最新价 —— 这是「没有」不是「零」")
 	}
-	total := decimal.Zero
+	prices := pnl.Prices{Last: last.Number, HasLast: true}
 	for _, d := range []types.Direction{types.Buy, types.Sell} {
 		s, err := p.Side(d)
 		if err != nil {
-			return decimal.Zero, err
+			return decimal.Zero, decimal.Zero, err
 		}
 		if s.Volume() == 0 {
 			continue
 		}
-		v, err := pnl.PositionProfit(toLegs(s.Lots()), d,
-			pnl.Prices{Last: last.Number, HasLast: true}, pnl.MarkLast, multiplier)
+		legs := toLegs(s.Lots())
+		pp, err := pnl.PositionProfit(legs, d, prices, pnl.MarkLast, multiplier)
 		if err != nil {
-			return decimal.Zero, err
+			return decimal.Zero, decimal.Zero, err
 		}
-		total = total.Add(v)
+		fp, err := pnl.FloatProfit(legs, d, prices, pnl.MarkLast, multiplier)
+		if err != nil {
+			return decimal.Zero, decimal.Zero, err
+		}
+		posProfit = posProfit.Add(pp)
+		floatProfit = floatProfit.Add(fp)
 	}
-	return total, nil
+	return posProfit, floatProfit, nil
 }
 
 func numberOf(m map[string]Value, key string) (decimal.Decimal, bool) {
