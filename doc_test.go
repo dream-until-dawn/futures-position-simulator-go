@@ -1,0 +1,812 @@
+package futsim
+
+// 文档守卫：把 docs/state.md 里的「派生禁语」规则落成机械检查。
+//
+// 只用 stdlib，不引入任何依赖——它跑在主模块里，而主模块的依赖树硬约束是
+// 只有 shopspring/decimal 一个。
+//
+// ⚠️ 这份文件里**同一条规则被独立实现了两遍**（深度计数 / 布尔开关），
+// 并断言两者给出同一个答案。理由见 TestForbiddenPhraseRuleIsWellDefined：
+//
+//	一份自然语言规则，只有当两个独立实现给出同一个答案时，才算被验证过。
+//	不一致的时候，先别问哪一版对——先认定规则本身还没写完。
+
+import (
+	"bufio"
+	"fmt"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+const (
+	archiveStart = "<!-- 历史留档:start -->"
+	archiveEnd   = "<!-- 历史留档:end -->"
+	sourceOfTrue = "state.md"
+)
+
+// ⚠️⚠️ 共享面清单 —— 双实现机制的**盲区清单**
+//
+// 双实现的判别力**全部来自两个实现的独立性**。任何被它们共享的东西，
+// 都在一致性检查的射程之外：共享的代码一起变，两版一致地错，
+// 而一致性检查只看是否一致。
+//
+//	可以共享（输入）：forbidden 表、archiveStart/End 常量、readLines、docFiles
+//	                  —— 共享它们正是为了让两版跑在同一批数据上
+//	不可共享（判定）：「什么算一个标记」、「什么算围栏」、豁免的四条判据
+//	                  —— 各写各的，哪怕只有一行
+//
+// 这条界线是被实测逼出来的：曾有一个共享的 isMarker(line, marker) helper，
+// 把它从「整行相等」改成「行内含有」，**两个实现一起退化、测试全绿**。
+// 而合成样本里偏偏有一条就叫「标记只是被提到、不独占整行」——
+// **名字精确对准了这个缺陷，结构上却不可能因它而失败。**
+// 一个这样的用例比没有这条用例更糟：它让人以为这块被覆盖了。
+//
+// 界线：**共享数据可以，共享判定不行。**
+
+// forbidden 是 docs/state.md「派生禁语」表的机械副本。
+//
+// ⚠️ 它必须与那张表同步。禁语由**状态键翻转时被删掉的字符串**生成，
+// 不由想象力生成——新增一条的时机是「改状态那次提交」，不是「想起来的时候」。
+var forbidden = []struct{ key, phrase string }{
+	{"kq_login/simnow_login", "尚未实际登录"},
+	{"kq_login/simnow_login", "待注册"},
+	{"kq_login/simnow_login", "柜台账号还没有"},
+	{"kq_login/simnow_login", "需要账号"},
+	{"kq_login/simnow_login", "待用户提供"},
+	{"kq_login/simnow_login", "外部依赖：已解除"},
+	{"rules_pending", "六条"},
+	{"rules_pending", "6 条待实测"},
+	{"position_fields", "持仓 28 字段"},
+}
+
+func docFiles(t *testing.T) []string {
+	t.Helper()
+	var out []string
+	if _, err := os.Stat("README.md"); err == nil {
+		out = append(out, "README.md")
+	}
+	entries, err := os.ReadDir("docs")
+	if err != nil {
+		t.Fatalf("读不到 docs 目录: %v", err)
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+			out = append(out, filepath.Join("docs", e.Name()))
+		}
+	}
+	sort.Strings(out)
+	if len(out) < 7 {
+		// ⚠️ 下界用确切下限而非 > 0：文档被误删时这条先红。
+		t.Fatalf("扫到的文档只有 %d 份，少于预期的 7 份 —— 是不是路径错了或文件被删了？", len(out))
+	}
+	return out
+}
+
+func readLines(t *testing.T, path string) []string {
+	t.Helper()
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("打不开 %s: %v", path, err)
+	}
+	defer f.Close()
+	var lines []string
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 1<<20), 1<<20)
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
+	}
+	if err := sc.Err(); err != nil {
+		t.Fatalf("读 %s 失败: %v", path, err)
+	}
+	return lines
+}
+
+// TestArchiveMarkersBalance 是「守卫的守卫」。
+//
+// ⚠️ 标记写错时，失败方向朝着「什么也不报」：深度计数式实现下，
+// 一个多余的 start 会让该文件之后的内容——甚至按字母序排在它后面的**其他文件**
+// ——被整体豁免。0 处不是因为干净，是因为检查在半路闭了嘴。
+//
+// **一个豁免机制出 bug，比检查本身出 bug 更糟：它让检查更安静，不是更吵。**
+func TestArchiveMarkersBalance(t *testing.T) {
+	files := docFiles(t)
+	for _, path := range files {
+		depth, startLines := 0, []int{}
+		for i, l := range readLines(t, path) {
+			switch {
+			case strings.TrimSpace(l) == archiveStart:
+				depth++
+				startLines = append(startLines, i+1)
+				if depth > 1 {
+					t.Errorf("%s:%d 历史留档块嵌套（depth=%d），规则不允许嵌套", path, i+1, depth)
+				}
+			case strings.TrimSpace(l) == archiveEnd:
+				depth--
+				if depth < 0 {
+					t.Errorf("%s:%d 出现多余的 end（没有对应的 start）", path, i+1)
+					depth = 0
+				}
+			}
+		}
+		if depth != 0 {
+			t.Errorf("%s 文件结束时历史留档块未闭合（depth=%d，start 在 %v）——"+
+				"多余的 start 会让检查静默地闭嘴", path, depth, startLines)
+		}
+	}
+}
+
+// scanDepth 是实现之一：把 start/end 当**深度计数**，逐文件重置。
+func scanDepth(lines []string) map[int]bool {
+	exempt := map[int]bool{}
+	fence, depth := false, 0
+	for i, l := range lines {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "```") {
+			fence = !fence
+			exempt[i+1] = true
+			continue
+		}
+		if trimmed == archiveStart { // 判定之一：整行相等
+			depth++
+			exempt[i+1] = true
+			continue
+		}
+		if trimmed == archiveEnd {
+			if depth > 0 {
+				depth--
+			}
+			exempt[i+1] = true
+			continue
+		}
+		exempt[i+1] = fence || depth > 0 ||
+			strings.Contains(l, "~~") || strings.Contains(l, sourceOfTrue)
+	}
+	return exempt
+}
+
+// scanFlag 是实现之二：把 start/end 当**布尔开关**，写法与 scanDepth 刻意不同。
+//
+// 两个实现都合理，而 2026-09-07 它们在同一份文档上给出过不同答案（0 处 vs 4 处）
+// ——那次分歧的根源不是任何一版有 bug，是**规则缺一条**（漏了字典自己）。
+func scanFlag(lines []string) map[int]bool {
+	exempt := make(map[int]bool, len(lines))
+	inFence, inArchive := false, false
+	for n := 1; n <= len(lines); n++ {
+		l := lines[n-1]
+		if strings.HasPrefix(strings.TrimSpace(l), "```") {
+			inFence = !inFence
+			exempt[n] = true
+			continue
+		}
+		// 判定之二：把它当 HTML 注释解析出内文再比，与 scanDepth 的写法刻意不同。
+		if inner, ok := htmlCommentBody(l); ok && inner == "历史留档:start" {
+			inArchive = true
+			exempt[n] = true
+			continue
+		}
+		if inner, ok := htmlCommentBody(l); ok && inner == "历史留档:end" {
+			inArchive = false
+			exempt[n] = true
+			continue
+		}
+		switch {
+		case inFence, inArchive:
+			exempt[n] = true
+		case strings.Contains(l, "~~"):
+			exempt[n] = true
+		case strings.Contains(l, sourceOfTrue):
+			exempt[n] = true
+		default:
+			exempt[n] = false
+		}
+	}
+	return exempt
+}
+
+// htmlCommentBody 把一整行解析成 HTML 注释的内文。
+//
+// 它是 scanFlag 侧对「什么算一个标记」的**独立判断**，与 scanDepth 的
+// 「整行等于常量」不共用任何代码——见上方共享面清单。
+func htmlCommentBody(line string) (string, bool) {
+	t := strings.TrimSpace(line)
+	if !strings.HasPrefix(t, "<!--") || !strings.HasSuffix(t, "-->") {
+		return "", false
+	}
+	return strings.TrimSpace(t[len("<!--") : len(t)-len("-->")]), true
+}
+
+type hit struct {
+	file, phrase string
+	line         int
+}
+
+func scanWith(t *testing.T, files []string, exemptOf func([]string) map[int]bool) []hit {
+	t.Helper()
+	var hits []hit
+	for _, path := range files {
+		lines := readLines(t, path)
+		// ⚠️ 逐文件重置：块状态绝不跨文件带。
+		exempt := exemptOf(lines)
+		// 规则 ④ 前半句：state.md 是定义处，字典必然包含它定义的每一个词。
+		if filepath.Base(path) == sourceOfTrue {
+			continue
+		}
+		for i, l := range lines {
+			if exempt[i+1] {
+				continue
+			}
+			for _, f := range forbidden {
+				if strings.Contains(l, f.phrase) {
+					hits = append(hits, hit{path, f.phrase, i + 1})
+				}
+			}
+		}
+	}
+	return hits
+}
+
+// TestForbiddenPhraseRuleIsWellDefined 断言两个独立实现给出同一个答案。
+//
+// ⚠️ 有用的不是任何一遍的结果，是**它们一致**。
+// 一份两个合理实现会读出不同答案的规则，还不是规则——落成脚本时，
+// 落成哪一版取决于写它的人当天怎么想。
+//
+// 这与「构造分歧样本」是同一件事，只是对象从数据换成了规则：
+// 分歧样本证伪的是实现，双实现证伪的是**规范**。
+func TestForbiddenPhraseRuleIsWellDefined(t *testing.T) {
+	// ⚠️ 先用**合成样本**逐条豁免地测，再测真实文档。
+	//
+	// 只测真实文档是**空转的**：某条豁免在当下的文档里若没有唯一触发点
+	// （例如唯一一处 `~~` 恰好也在历史留档块内），把那条豁免从其中一个实现里
+	// 整个删掉，两版仍然一致——测试照样绿，而它本该抓到这个分歧。
+	//
+	// 这是本仓库反复在防的那个形状：**判别力取决于样本恰好长什么样，
+	// 而不是取决于测试本身。** 合成样本让四条豁免每条都有唯一触发点。
+	synth := []struct {
+		name  string
+		lines []string
+	}{
+		{"围栏内", []string{"```", "六条", "```"}},
+		{"留档块内", []string{archiveStart, "六条", archiveEnd}},
+		{"删除线", []string{"~~六条~~"}},
+		{"含 state.md 链接", []string{"六条，见 [state.md](./state.md)"}},
+		{"正文裸禁语（应命中）", []string{"六条"}},
+		{"围栏未闭合", []string{"```", "六条"}},
+		{"留档未闭合", []string{archiveStart, "六条"}},
+		{"多余的 end", []string{archiveEnd, "六条"}},
+		{"标记只是被提到、不独占整行", []string{"讲 " + archiveStart + " 这个标记", "六条"}},
+	}
+	if len(synth) != 9 {
+		t.Fatalf("合成样本应为 9 组，实际 %d —— 增删了就同步更新下界", len(synth))
+	}
+	for _, c := range synth {
+		da, db := scanDepth(c.lines), scanFlag(c.lines)
+		for n := 1; n <= len(c.lines); n++ {
+			if da[n] != db[n] {
+				t.Errorf("合成样本「%s」第 %d 行：深度计数版豁免=%v，布尔开关版豁免=%v；"+
+					"⚠️ 先别问哪一版对——先认定 docs/state.md 的豁免规则还没写完。",
+					c.name, n, da[n], db[n])
+			}
+		}
+	}
+
+	files := docFiles(t)
+	a, b := scanWith(t, files, scanDepth), scanWith(t, files, scanFlag)
+	if len(a) != len(b) {
+		t.Fatalf("两个独立实现给出不同答案：深度计数版 %d 处，布尔开关版 %d 处。\n"+
+			"  ⚠️ 先别问哪一版对——先认定 docs/state.md 的豁免规则还没写完。\n"+
+			"  深度计数版: %v\n  布尔开关版: %v", len(a), len(b), a, b)
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			t.Errorf("第 %d 处不一致：%+v vs %+v", i, a[i], b[i])
+		}
+	}
+}
+
+// TestMarkerJudgmentIsAbsolute 是**绝对断言**，而且它打在扫描器的**可观测输出**上。
+//
+// ⚠️ 第一版不是这样写的，它抄了一份判定逻辑来断言，结果守错了东西：
+//
+//	gotStart1 := strings.TrimSpace(c.line) == archiveStart  // 测试自己重抄了一遍
+//	inner, ok := htmlCommentBody(c.line)                    // 调的是真函数
+//
+// 前者是**副本**：改扫描器，副本不动，照样绿。
+// 后者调了真货，但只要扫描器**不再调它**，函数还在、还是对的、还被测着，
+// **只是没人用了**。
+//
+// 于是那一版证明的是「这两份判定逻辑是对的」，
+// **不是「两个扫描器跑的是那两份判定」**——中间那根线没有任何东西在守。
+// 实测：两侧扫描器同时退回「行内含有」、断言一个字不改 → 全绿。
+//
+// 这与前几轮抓到的是同一族，只是又高了一层：
+//
+//	一开始   有东西没被检查
+//	上一轮   检查在某处悄悄降级成更弱的检查
+//	这一轮   检查还在、还是对的，只是被测的代码已经不走它了
+//
+// 共同点仍是：**降级 / 脱钩本身不产生任何信号。**
+//
+// 界线因此有两条，方向相反：
+//
+//	两个实现之间：共享数据可以，共享判定不行
+//	断言与被测代码之间：断言必须打在真实代码路径上
+//
+// **抄一份逻辑来断言，守的是副本；调一个函数来断言，守的是函数；
+// 只有喂进入口，守的才是行为。**
+func TestMarkerJudgmentIsAbsolute(t *testing.T) {
+	cases := []struct {
+		line    string
+		isStart bool
+		isEnd   bool
+		why     string
+	}{
+		{"<!-- 历史留档:start -->", true, false, "标准写法"},
+		{"  <!-- 历史留档:start -->  ", true, false, "两侧空白应被容忍"},
+		{"<!-- 历史留档:end -->", false, true, "结束标记"},
+		{"讲 <!-- 历史留档:start --> 这个标记", false, false, "⚠️ 只是被提到，不独占整行"},
+		{"> ② 不在 `<!-- 历史留档:start -->` … `<!-- 历史留档:end -->` 块内；", false, false,
+			"⚠️ state.md 定义标记的那一行，同时含 start 与 end"},
+		{"<!-- 其它注释 -->", false, false, "别的 HTML 注释"},
+		{"历史留档:start", false, false, "缺注释包裹"},
+		{"", false, false, "空行"},
+	}
+	// 下界用确切条数，不是 > 0。
+	if len(cases) != 8 {
+		t.Fatalf("用例数应为 8，实际 %d —— 增删了就同步更新下界", len(cases))
+	}
+
+	scanners := []struct {
+		name string
+		fn   func([]string) map[int]bool
+	}{{"深度计数版", scanDepth}, {"布尔开关版", scanFlag}}
+
+	for _, c := range cases {
+		// 每条样本造成两行文档：第 1 行是待判定的那一行，第 2 行是一句裸禁语。
+		// 断言第 2 行**是否被豁免**——即扫描器有没有把第 1 行认成开始标记。
+		// 期望值仍是手写死的，但走的是**真实代码路径**。
+		openDoc := []string{c.line, "六条"}
+		for _, sc := range scanners {
+			if got := sc.fn(openDoc)[2]; got != c.isStart {
+				t.Errorf("%s：把 %q 之后的一行判为豁免=%v，期望 %v（%s）",
+					sc.name, c.line, got, c.isStart, c.why)
+			}
+		}
+
+		// 对称地测结束标记：先真开一个块，再看这一行能不能把它关上。
+		closeDoc := []string{archiveStart, c.line, "六条"}
+		for _, sc := range scanners {
+			// 第 3 行仍在块内 ⟺ 第 2 行**没有**关掉块。
+			stillInside := sc.fn(closeDoc)[3]
+			if stillInside == c.isEnd {
+				t.Errorf("%s：%q 关闭留档块的能力判为 %v，期望 %v（%s）",
+					sc.name, c.line, !stillInside, c.isEnd, c.why)
+			}
+		}
+	}
+}
+
+// TestNoStaleForbiddenPhrases 是检查本身：正文叙述行里不得出现禁语。
+func TestNoStaleForbiddenPhrases(t *testing.T) {
+	hits := scanWith(t, docFiles(t), scanDepth)
+	for _, h := range hits {
+		t.Errorf("%s:%d 出现禁语「%s」——该状态已翻转，此处是过期陈述。\n"+
+			"    若它确实是历史留档，用 <!-- %s --> / <!-- %s --> 包起来；\n"+
+			"    若它在讲这套机制，加一条指向 docs/state.md 的链接。",
+			h.file, h.line, h.phrase, archiveStart, archiveEnd)
+	}
+}
+
+// TestForbiddenTableIsNotEmpty 是禁语表自己的下界断言。
+//
+// ⚠️ 一条没人添加的禁语等于没有检查。但「表非空」只防空表、不防漏表——
+// 漏一条和只写一条在这个断言下长得一模一样。**这条断言的局限必须写在这里**，
+// 免得后人看它绿了就以为禁语表是全的。
+func TestForbiddenTableIsNotEmpty(t *testing.T) {
+	const want = 9 // 下界用确切条数，不是 > 0
+	if len(forbidden) != want {
+		t.Fatalf("禁语表应有 %d 条，实际 %d —— 增删了就同步更新这个下界，"+
+			"并确认 docs/state.md 的表也改了", want, len(forbidden))
+	}
+	keys := map[string]int{}
+	for _, f := range forbidden {
+		keys[f.key]++
+	}
+	for _, k := range []string{"kq_login/simnow_login", "rules_pending", "position_fields"} {
+		if keys[k] == 0 {
+			t.Errorf("状态键 %s 一条禁语都没有 —— 它翻转后不会有任何东西报警", k)
+		}
+	}
+	fmt.Fprintf(os.Stderr, "禁语表：%d 条，覆盖 %d 个状态键\n", len(forbidden), len(keys))
+}
+
+// TestPackagesDoneMatchesReality 断言 state.md 的 packages_done 与磁盘一致。
+//
+// ⚠️ 这条针对的是「文档里写着、代码里没有」这类债 —— 上游数据层把它叫做
+// 「从没被代码验证过的类型名与签名」。文档里的规划可以先于代码，
+// 但**声称已完成的那部分必须能被机械核对**，否则「已落地」会悄悄变成「打算做」。
+//
+// 判据只覆盖主模块的顶层包（cmd/ 是嵌套模块，另算）。
+func TestPackagesDoneMatchesReality(t *testing.T) {
+	// 磁盘上：**递归**找含 .go 文件的目录，键是相对仓库根的路径。
+	//
+	// ⚠️ 第一版只扫顶层目录，于是 internal/decimalx 落在了它的视野之外：
+	// state.md 一登记 decimalx 就报「磁盘上没有」。抓到的又是判据 ——
+	// 「怎么算一个包」当时只想到了顶层。这是同一天第四次「守卫的第一次红
+	// 是守卫自己的判据没写全」。
+	onDisk := map[string]bool{}
+	skip := map[string]bool{"docs": true, "testdata": true, "cmd": true}
+	err := filepath.WalkDir(".", func(path string, e fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if e.IsDir() {
+			base := e.Name()
+			if path != "." && (strings.HasPrefix(base, ".") || skip[base]) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(e.Name(), ".go") {
+			return nil
+		}
+		dir := filepath.ToSlash(filepath.Dir(path))
+		if dir == "." {
+			return nil // 根包由 doc.go 代表，不算独立的包目录
+		}
+		// ⚠️ `package main` 是**命令**，不是交付的库包，不进 packages_done。
+		//
+		// 按**种类**跳而不是按名字跳：把 `tools` 加进上面那张 skip 表也能让
+		// 这条绿，但那会造成一个盲区 —— 以后谁在 tools/ 下放一个真的库包，
+		// 它会连同工具一起逃掉。按 package 子句判，逃不掉。
+		if isCommandDir(t, dir) {
+			return nil
+		}
+		onDisk[dir] = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("遍历仓库失败: %v", err)
+	}
+	if len(onDisk) == 0 {
+		t.Fatal("⚠️ 磁盘上一个含 .go 的顶层包都没扫到 —— 判据本身可能坏了")
+	}
+
+	// state.md 里：packages_done 那一行
+	var declared map[string]bool
+	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
+		if !strings.Contains(l, "packages_done") {
+			continue
+		}
+		// ⚠️ 只取表格的**值列**（第 2 个单元格），不扫整行。
+		//
+		// 首次跑这条守卫时它报了两个假阳性：备注列里写着「（`ctperr` / `refdata`
+		// 未开始）」，而按整行扫反引号会把它们当成「已落地」。
+		// 抓到的是**解析规则没写清楚**，不是文档写错——与标记判定那次同族：
+		// 「怎么算一个值」当时没有定义。
+		cells := strings.Split(l, "|")
+		if len(cells) < 3 {
+			t.Fatalf("⚠️ packages_done 那一行不是三列表格：%q", l)
+		}
+		declared = map[string]bool{}
+		for _, tok := range strings.Split(cells[2], "`") {
+			if tok = strings.TrimSpace(tok); tok != "" && isPackageName(tok) {
+				declared[tok] = true
+			}
+		}
+		break
+	}
+	if declared == nil {
+		t.Fatal("⚠️ state.md 里找不到 packages_done —— 单一状态源缺了这一项")
+	}
+
+	for pkg := range onDisk {
+		if !declared[pkg] {
+			t.Errorf("包 %s 已在磁盘上，但 state.md 的 packages_done 没写它 —— "+
+				"单一状态源落后于代码", pkg)
+		}
+	}
+	for pkg := range declared {
+		if !onDisk[pkg] {
+			t.Errorf("⚠️ state.md 声称 %s 已落地，磁盘上却没有含 .go 的该目录 —— "+
+				"「已落地」不能是打算做", pkg)
+		}
+	}
+}
+
+// isPackageName 过滤掉值列里那些不是包名的记号。
+//
+// 包名是相对仓库根的路径，允许 `/`（如 internal/decimalx）。
+func isPackageName(tok string) bool {
+	for _, r := range tok {
+		if !(r >= 'a' && r <= 'z' || r == '_' || r == '/') {
+			return false
+		}
+	}
+	return tok != ""
+}
+
+// ⚠️ 「怎么算一张计数表里的一行」——判据先写死在这里，再写检查逻辑。
+//
+// 这一步是被方法论第 7 条逼出来的：守卫的第一次红有很大概率是判据自己没写全，
+// 而共同病因永远是「怎么算一个 X」当时根本没写。所以先写定义：
+//
+// 一行是**一条在册项**，当且仅当：
+//
+//	① 它在 sectionPrefix 开头的那个二级标题与下一个 "## " 之间；
+//	② 它以 "|" 开头（是表格行）；
+//	③ 第 2 个单元格去空白后是一个**正整数**（表头行、分隔行、说明行都不是）；
+//	④ 第 3 个单元格**不以 "~~" 开头**——删除线表示这条已经收敛、不再在册。
+//
+// 第 ④ 条是关键：收敛的条目**留在表里**（历史可查），但不计数。
+// 若把它们直接删掉，「这条曾经是问题」这件事就没了。
+func numberedTableRows(t *testing.T, path, sectionPrefix string) []string {
+	t.Helper()
+	var rows []string
+	in := false
+	for _, l := range readLines(t, path) {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.HasPrefix(trimmed, sectionPrefix)
+			continue
+		}
+		if !in || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := strings.Split(trimmed, "|")
+		if len(cells) < 4 {
+			continue
+		}
+		if _, err := strconv.Atoi(strings.TrimSpace(cells[1])); err != nil {
+			continue // 表头 / 分隔行 / 别的表
+		}
+		if strings.HasPrefix(strings.TrimSpace(cells[2]), "~~") {
+			continue // 已收敛，留档但不在册
+		}
+		rows = append(rows, trimmed)
+	}
+	return rows
+}
+
+// declaredCount 取 state.md 计数表里某个键的**加粗值**。
+//
+// ⚠️ 两条定义都是踩出来的，缺一条就取错数：
+//
+//	怎么算「声明该键的那一行」 → 键出现在**键列**，不是行里含有
+//	怎么算「该键的值」        → 值列里 **N** 包着的那个，不是行里第一个数字
+//
+// 前一条是本函数第一次跑就红的原因：查 kq_facts 时它取到了 1。
+// 因为 rules_measured 那一行的**备注列**里写着「理由见下方 `kq_facts`」，
+// 而那行排在前面——按「行里含有」判定，先命中的是它，取回的是它的值。
+// ⚠️ 这已经是同一形状的第七次：**「怎么算一个 X」当时根本没写。**
+//
+// 后一条防的是备注列里的历史数字（「从 7 涨到 10」）。
+func declaredCount(t *testing.T, key string) int {
+	t.Helper()
+	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
+		cells := strings.Split(l, "|")
+		if len(cells) < 3 {
+			continue
+		}
+		if strings.TrimSpace(cells[1]) != "`"+key+"`" {
+			continue
+		}
+		v := cells[2]
+		i := strings.Index(v, "**")
+		if i < 0 {
+			continue
+		}
+		j := strings.Index(v[i+2:], "**")
+		if j < 0 {
+			continue
+		}
+		n, err := strconv.Atoi(strings.TrimSpace(v[i+2 : i+2+j]))
+		if err != nil {
+			t.Fatalf("⚠️ %s 的值列不是加粗的整数：%q", key, v)
+		}
+		return n
+	}
+	t.Fatalf("⚠️ state.md 里找不到 `%s` 的加粗值 —— 单一状态源缺了这一项", key)
+	return -1
+}
+
+// assertCountMatchesTable 是两条计数守卫共用的骨架。
+func assertCountMatchesTable(t *testing.T, key, path, sectionPrefix string) {
+	t.Helper()
+	rows := numberedTableRows(t, path, sectionPrefix)
+	if len(rows) == 0 {
+		// ⚠️ 一个「找不到就通过」的检查，在章节改名或表格重排时也会通过——
+		// 而那正是它最该报警的时候。
+		t.Fatalf("⚠️ %s 的 %s 里一条在册项都没解析到 —— 是真的清空了，还是解析规则失效了？"+
+			"两种情形下这条检查都会「通过」，所以这里必须失败", path, sectionPrefix)
+	}
+	if declared := declaredCount(t, key); declared != len(rows) {
+		t.Errorf("⚠️ state.md 的 %s = %d，但 %s 的 %s 里在册 %d 条",
+			key, declared, path, sectionPrefix, len(rows))
+		for _, r := range rows {
+			cells := strings.Split(r, "|")
+			t.Logf("    在册：#%s %s", strings.TrimSpace(cells[1]), strings.TrimSpace(cells[2]))
+		}
+	}
+}
+
+// TestRulesPendingMatchesTable 断言 state.md 的 rules_pending 与 §13 表实际在册的条数一致。
+//
+// ⚠️ 这条守卫针对的正是 state.md 存在的理由。计数类复述栽过两次，
+// 而两次都躲过了禁语扫描——**计数不是状态词，人眼扫过去根本不会停**。
+// 现在这个数有了一个会在提交前红的机械核对。
+func TestRulesPendingMatchesTable(t *testing.T) {
+	assertCountMatchesTable(t, "rules_pending",
+		filepath.Join("docs", "cn-futures-rules.md"), "## 13.")
+}
+
+// TestKQFactsMatchesTable 断言 state.md 的 kq_facts 与它自己那张表的条数一致。
+//
+// ⚠️ 这条是**在 state.md 自己身上**栽了一次之后补的：
+// 表已经长到 9 条，而同一页上方的散文还写着「夜盘量到六条」。
+// 唯一状态源自己也会过期，而它过期时同样不会有任何动静——
+// **「唯一来源」保证的是不该有第二处，不保证那一处是对的。**
+func TestKQFactsMatchesTable(t *testing.T) {
+	assertCountMatchesTable(t, "kq_facts",
+		filepath.Join("docs", "state.md"), "## `kq_facts`")
+}
+
+// TestMethodologyItemsAreContiguous 断言 silent-risks.md 的方法论条目编号
+// 从 1 连续到 N，无空号、无重号。
+//
+// ⚠️ **先说清它抓不到什么。** 它抓的是「条目被删掉 / 被重复编号」，
+// 抓不到「小节标题被删掉」——而后者刚刚真的发生过：
+// 我用脚本替换锚点 `--- \n ## 怎么用这份清单` 时，替换文本的结尾没把锚点带回去，
+// 于是那个小节标题连同分隔线被**静默删除**，正文项目符号照常留着，看不出异样。
+// 那次是我自己核出来的，不是守卫。**这条守卫不掩盖那个缺口。**
+//
+// 它仍然值得存在：这份文档的价值全在这串编号上——
+// 别处引用它们时写的是「见第 11 条」，编号一乱，所有引用同时失效而没有任何动静。
+func TestMethodologyItemsAreContiguous(t *testing.T) {
+	re := regexp.MustCompile(`^\*\*(\d+)\. `)
+	var got []int
+	for _, l := range readLines(t, filepath.Join("docs", "silent-risks.md")) {
+		if m := re.FindStringSubmatch(l); m != nil {
+			n, err := strconv.Atoi(m[1])
+			if err != nil {
+				t.Fatalf("条目编号 %q 不是整数", m[1])
+			}
+			got = append(got, n)
+		}
+	}
+	// ⚠️ 迭代次数下界：一条都没解析到时，下面的循环空转，本测试会「通过」。
+	if len(got) < 20 {
+		t.Fatalf("只解析到 %d 条方法论条目 —— 是真的这么少，还是编号格式变了？"+
+			"两种情形下本条都会「通过」，所以这里必须失败", len(got))
+	}
+	for i, n := range got {
+		if n != i+1 {
+			t.Errorf("⚠️ 第 %d 个条目的编号是 %d，应为 %d —— 编号断了，"+
+				"而别处「见第 N 条」的引用会同时失效且不会有任何动静", i+1, n, i+1)
+			break
+		}
+	}
+
+	// 引用完整性：正文里出现的「第 N 条」不得超出实际条数。
+	ref := regexp.MustCompile(`第 (\d+) 条`)
+	for i, l := range readLines(t, filepath.Join("docs", "silent-risks.md")) {
+		for _, m := range ref.FindAllStringSubmatch(l, -1) {
+			n, _ := strconv.Atoi(m[1])
+			if n > len(got) {
+				t.Errorf("silent-risks.md:%d 引用了「第 %d 条」，但只有 %d 条", i+1, n, len(got))
+			}
+		}
+	}
+}
+
+// TestDocSectionCountsMatch 断言各文档的小节数与 state.md 登记的一致。
+//
+// ⚠️ 它针对的是一次**真实发生过的静默丢失**：脚本替换锚点时，替换文本的结尾
+// 没把锚点带回来，`silent-risks.md` 的一个小节标题连同分隔线被删掉。
+// 正文照常留着，渲染没有异样，全库测试全绿——是人核编号时撞见的。
+//
+// ⚠️ 为什么不扫「历史里出现过、现在没有的标题」：评审试过，13 个候选**全是改名**
+// （多为证据等级变了导致标题跟着变）。一个今天就 100% 误报的检查会被关掉，
+// 与 `restatement-count.sh` 注释里那种死法同族。
+//
+// **小节数则是干净的判据：改名不动它，删除会动它。**
+// 代价是增删小节要同步改 state.md 一行——这是刻意的摩擦。
+//
+// ⚠️ **这条抓的是「净减少」，不是「有东西被删」。**
+//
+// 评审实测过一个补偿性改动：删掉一个标题、同时在别处加一个，小节数不变，**全绿**。
+// 我复现了：`## 怎么用这份清单` 确实没了，而守卫一声不吭。
+// 现实相关性不是零——我踩的那次正是脚本替换锚点区域而没把锚点带回来，
+// 同一个脚本再多改一段，就会是「吞掉一个标题、引入另一个」。
+//
+// 不修，而且理由要写下来：堵住它得把**标题列表**而不是标题数登记进 state.md，
+// 那样每次改名都要改表——而全库历史里 13 次标题变动**全部是改名**，
+// 误报率正是我和评审一起否掉「历史标题扫描」的理由。
+// 把同一个问题从一个机制搬到另一个机制，它会原样跟过来。
+//
+// ⚠️ 取舍依据是实测的变动分布，不是「聚合更简单」；
+// 若哪天删除比改名更频繁，这个选择就该翻过来。见 silent-risks.md 第 27 条。
+//
+// ⚠️ 这条也**不覆盖**「小节被改成了错的内容」，只覆盖「小节整个没了」。
+func TestDocSectionCountsMatch(t *testing.T) {
+	// state.md 里那张表。按 "|" 切列、去掉反引号 —— 不用正则：
+	// 这个表达式要匹配 markdown 的反引号，写成 Go 字符串字面量既难读又容易错转义。
+	want := map[string]int{}
+	in := false
+	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.HasPrefix(trimmed, "## `doc_sections`")
+			continue
+		}
+		if !in || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := strings.Split(trimmed, "|")
+		if len(cells) < 3 {
+			continue
+		}
+		name := strings.Trim(strings.TrimSpace(cells[1]), "`")
+		if !strings.HasSuffix(name, ".md") {
+			continue // 表头、分隔行
+		}
+		n, err := strconv.Atoi(strings.TrimSpace(cells[2]))
+		if err != nil {
+			t.Fatalf("%s 那一行的小节数 %q 不是整数", name, strings.TrimSpace(cells[2]))
+		}
+		want[filepath.ToSlash(name)] = n
+	}
+	// ⚠️ 迭代次数下界：表没解析到时下面的循环空转，本条会「通过」。
+	if len(want) < 8 {
+		t.Fatalf("只从 state.md 解析到 %d 个文档的小节数 —— 是真的这么少，还是表格格式变了？"+
+			"两种情形下本条都会「通过」，所以这里必须失败", len(want))
+	}
+
+	head := regexp.MustCompile(`^###? `)
+	for path, n := range want {
+		got := 0
+		for _, l := range readLines(t, filepath.FromSlash(path)) {
+			if head.MatchString(l) {
+				got++
+			}
+		}
+		if got != n {
+			t.Errorf("⚠️ %s 有 %d 个小节，state.md 登记 %d 个 —— "+
+				"若是有意增删，同步改 state.md 那一行；否则很可能是一次**静默删除**",
+				path, got, n)
+		}
+	}
+}
+
+// isCommandDir 报告一个目录里的包是不是 `package main`。
+//
+// ⚠️ 解析包子句而不是看目录名：目录名是约定，包子句是事实。
+// 而这里要的正是事实 —— 「它是不是一个命令」。
+func isCommandDir(t *testing.T, dir string) bool {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("读目录 %s 失败：%v", dir, err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
+			continue
+		}
+		f, err := parser.ParseFile(token.NewFileSet(),
+			filepath.Join(dir, e.Name()), nil, parser.PackageClauseOnly)
+		if err != nil {
+			t.Fatalf("解析 %s 的包子句失败：%v", filepath.Join(dir, e.Name()), err)
+		}
+		// ⚠️ 一个目录里只可能有一个包子句（测试包除外），看第一个就够。
+		return f.Name.Name == "main"
+	}
+	return false
+}

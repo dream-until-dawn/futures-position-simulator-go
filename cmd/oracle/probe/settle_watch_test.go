@@ -1,0 +1,166 @@
+package probe
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"testing"
+)
+
+// TestNumOrDashDistinguishesFourStates 断言四种状态互不混淆。
+//
+// ⚠️ 上一版用 kq.MustNum，四种里有三种都变成 "0.0000"：
+// 缺字段、柜台说无值、柜台说 0 —— 全都长得一样。
+// 结算发生时「0 → 3160」照样触发，所以**探测**没坏；
+// 坏的是留在夹具里的那句话：柜台说的是「无值 → 3160」。
+// 事后读证据的人分不出柜台当时报的是 0 还是没有。
+func TestNumOrDashDistinguishesFourStates(t *testing.T) {
+	m := map[string]any{
+		"settlement":     "-",    // 柜台明确说无值
+		"pre_settlement": 3158.0, // 有值
+		"zero":           0.0,    // 真的是 0
+		"weird":          true,   // 不认识的类型
+	}
+	cases := []struct{ key, want string }{
+		{"pre_settlement", "3158.0000"},
+		{"settlement", "-"},
+		{"zero", "0.0000"},
+		{"missing", "(缺字段)"},
+		{"weird", "(bool)"},
+	}
+	if len(cases) != 5 {
+		t.Fatalf("用例 %d 条，应为 5 —— 增删了就同步改这个数", len(cases))
+	}
+	// ⚠️ 判别力：五个用例必须给出五个**互不相同**的结果。
+	// 只要有两个相同，那两种状态在夹具里就分不开了 —— 而那正是要修的病。
+	seen := map[string]string{}
+	for _, c := range cases {
+		got := numOrDash(m, c.key)
+		if got != c.want {
+			t.Errorf("⚠️ %s：得到 %q，应为 %q", c.key, got, c.want)
+		}
+		if prev, dup := seen[got]; dup {
+			t.Errorf("⚠️ %s 与 %s 渲染成同一个 %q —— 两种状态在夹具里分不开了",
+				c.key, prev, got)
+		}
+		seen[got] = c.key
+	}
+	if got := numOrDash(nil, "x"); got != "(无截面)" {
+		t.Errorf("空截面应渲染成 (无截面)，得到 %q", got)
+	}
+}
+
+// TestWatcherUsesNumOrDash 断言采集器**真的走**这个函数。
+//
+// ⚠️ 与 classifyFeeMode 那次同一个教训（方法论第 28 条）：
+// 把渲染抽成函数、写好穷举测试，却忘了在采集路径上用它 ——
+// 那时穷举测试测的是一段死代码，而夹具里照样写着 0.0000。
+//
+// 用 AST 查而不是 grep：注释里到处都是这个函数名。
+func TestWatcherUsesNumOrDash(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "exp_settle_watch.go", nil, 0) // 0 = 丢掉注释
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls, mustNum := 0, 0
+	ast.Inspect(f, func(n ast.Node) bool {
+		ce, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch fn := ce.Fun.(type) {
+		case *ast.Ident:
+			if fn.Name == "numOrDash" {
+				calls++
+			}
+		case *ast.SelectorExpr:
+			// ⚠️ 反向也要查：旧写法留一处，那一处的字段就还是错的，
+			// 而其余字段是对的 —— 混着的证据比全错的更难发现。
+			if fn.Sel.Name == "MustNum" {
+				mustNum++
+			}
+		}
+		return true
+	})
+	// ⚠️ 「调用次数 > 0」不够：采集器有**三处**要渲染（账户 / 持仓 / 行情），
+	// 只查大于零的话，三处里退回去一处是查不出来的 ——
+	// 而**混着两种写法的证据比全错的更难发现**：大部分字段是对的，个别不是。
+	//
+	// 这一条是破坏验证逼出来的：原来那个破坏之所以能红，
+	// 靠的是它同时引入了 kq.MustNum（被下面那条抓到），
+	// 而不是靠这条计数。把 kq.MustNum 换成一个不需要 import 的写法之后，
+	// 计数从 3 掉到 2，**这条照样绿**。
+	const wantCalls = 3
+	if calls < wantCalls {
+		t.Errorf("⚠️ numOrDash 在采集器里只被调用了 %d 次，应当至少 %d 次"+
+			"（账户 / 持仓 / 行情各一处）—— "+
+			"少一处就是那一类字段还在用旧写法，而混着的证据最难发现", calls, wantCalls)
+	}
+	if mustNum != 0 {
+		t.Errorf("⚠️ 采集器里还有 %d 处 MustNum —— "+
+			"混着两种写法的证据比全错的更难发现：大部分字段是对的，个别不是", mustNum)
+	}
+}
+
+// TestWatcherChecksConnectionEachTick 断言盯盘**每一拍都查连接死没死**。
+//
+// ⚠️ 它守的是 probes.md §13.4 那次真实漏测：
+// 结算那天第二段刚起头两条流就断了，而循环继续按秒采样 ——
+// 采到的永远是最后那份截面，45 分钟里一条变动都没有，
+// **日志上与「一切平静」完全一样**。结算恰好落在那段时间里。
+//
+// ⚠️ 查的位置也要对：必须在**采样之前**。采样之后再查，
+// 那一拍已经把陈旧截面当成新数据比过一次了。
+func TestWatcherChecksConnectionEachTick(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "exp_settle_watch.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ⚠️ 只在**采样循环体内**找，不扫整个函数。
+	//
+	// 第一版扫整个函数，于是命中了循环**之前**那次初始采样（`prev := snap()`），
+	// 判成「DeadErr 在采样之后」——**那是本测试自己的误报**。
+	// 初始采样在建连之后立刻做，它本来就该在 DeadErr 之前。
+	var loop *ast.ForStmt
+	ast.Inspect(f, func(n ast.Node) bool {
+		if fs, ok := n.(*ast.ForStmt); ok && loop == nil && fs.Cond == nil && fs.Init == nil {
+			loop = fs // 无条件 for —— 采样循环
+		}
+		return true
+	})
+	if loop == nil {
+		t.Fatal("⚠️ 找不到采样循环 —— 本条的位置判据无从谈起")
+	}
+	var deadPos, snapPos token.Pos
+	ast.Inspect(loop.Body, func(n ast.Node) bool {
+		ce, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch fn := ce.Fun.(type) {
+		case *ast.SelectorExpr:
+			if fn.Sel.Name == "DeadErr" && deadPos == token.NoPos {
+				deadPos = ce.Pos()
+			}
+		case *ast.Ident:
+			if fn.Name == "snap" && snapPos == token.NoPos {
+				snapPos = ce.Pos()
+			}
+		}
+		return true
+	})
+	if deadPos == token.NoPos {
+		t.Fatal("⚠️ 盯盘里一次都没调用 DeadErr —— " +
+			"连接断了不会有任何人被告知，而「断了」与「没有变动」在日志上一样")
+	}
+	if snapPos == token.NoPos {
+		t.Fatal("⚠️ 找不到采样调用 —— 本条的位置判据无从谈起")
+	}
+	if deadPos > snapPos {
+		t.Errorf("⚠️ DeadErr 在采样**之后**才查（%v > %v）—— "+
+			"那一拍已经把陈旧截面当成新数据比过一次了",
+			fset.Position(deadPos), fset.Position(snapPos))
+	}
+}
