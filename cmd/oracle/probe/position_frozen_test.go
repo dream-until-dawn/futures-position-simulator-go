@@ -19,58 +19,60 @@ func pos(kv ...any) map[string]any {
 	return m
 }
 
-// TestClosableSide 穷举「挑哪一边来平」的判定。
+func sig(cands []closable) []string {
+	out := make([]string, 0, len(cands))
+	for _, c := range cands {
+		out = append(out, c.side+"/"+string(c.offset)+"/"+string(c.orderDir()))
+	}
+	return out
+}
+
+// TestClosableCandidates 穷举「平哪一边、按什么顺序试」。
 //
-// ⚠️ 三条性质各自有代价：
+// ⚠️ 四条性质各自有代价：
 //
-//	今优先      挑错了就去补一份已经有的样本，本次实验白跑
-//	方向相反    搞反会在双向持仓上开出反向仓位，柜台**不报错**
-//	读不到≠零   在未知前提上跑出来的结论与真结论长得一模一样
-func TestClosableSide(t *testing.T) {
+//	今仓给两个候选  只给 CLOSETODAY 会在 NoUseHistory 合约上必然拒单，
+//	                而那正是唯一有今仓的那个合约 —— 目标字段永远够不着
+//	零观测优先      排错了就先去补一份已经有的样本
+//	方向相反        搞反会在双向持仓上开出反向仓位，柜台**不报错**
+//	读不到≠零       在未知前提上跑出来的结论与真结论长得一模一样
+func TestClosableCandidates(t *testing.T) {
 	cases := []struct {
 		name    string
 		p       map[string]any
 		wantErr bool
-		side    string
-		offset  kq.Offset
-		orderD  kq.Direction
+		want    []string // 期望的**完整顺序**
 	}{
 		{
-			name:   "只有多头今仓 → 平今",
-			p:      pos("volume_long_today", 3.0, "volume_long_his", 0.0, "volume_short_today", 0.0, "volume_short_his", 0.0),
-			side:   "long",
-			offset: kq.CloseToday,
-			orderD: kq.Sell,
+			// 大商所今晚的形状：只有今仓。CLOSETODAY 很可能被拒，
+			// 所以 CLOSE 必须作为下一手跟在后面 —— 否则这一边测不到。
+			name: "只有多头今仓 → 平今在前，裸平兜底",
+			p:    pos("volume_long_today", 3.0, "volume_long_his", 0.0, "volume_short_today", 0.0, "volume_short_his", 0.0),
+			want: []string{"long/CLOSETODAY/SELL", "long/CLOSE/SELL"},
 		},
 		{
-			name:   "只有多头昨仓 → 平昨",
-			p:      pos("volume_long_today", 0.0, "volume_long_his", 3.0, "volume_short_today", 0.0, "volume_short_his", 0.0),
-			side:   "long",
-			offset: kq.Close,
-			orderD: kq.Sell,
+			// 上期所今晚的形状：结算后全成了昨仓。
+			name: "只有多头昨仓 → 只有裸平一个候选",
+			p:    pos("volume_long_today", 0.0, "volume_long_his", 3.0, "volume_short_today", 0.0, "volume_short_his", 0.0),
+			want: []string{"long/CLOSE/SELL"},
 		},
 		{
-			name:   "多头今昨都有 → 今优先",
-			p:      pos("volume_long_today", 2.0, "volume_long_his", 3.0, "volume_short_today", 0.0, "volume_short_his", 0.0),
-			side:   "long",
-			offset: kq.CloseToday,
-			orderD: kq.Sell,
+			name: "多头今昨都有 → 两个候选，不重复发裸平",
+			p:    pos("volume_long_today", 2.0, "volume_long_his", 3.0, "volume_short_today", 0.0, "volume_short_his", 0.0),
+			want: []string{"long/CLOSETODAY/SELL", "long/CLOSE/SELL"},
 		},
 		{
-			name:   "只有空头昨仓 → 平昨，下单方向为买",
-			p:      pos("volume_long_today", 0.0, "volume_long_his", 0.0, "volume_short_today", 0.0, "volume_short_his", 2.0),
-			side:   "short",
-			offset: kq.Close,
-			orderD: kq.Buy,
+			// ⚠️ 空头三个字段全是零观测，所以空头的候选必须排在多头昨仓前面。
+			name: "多头只有昨仓、空头有今仓 → 空头（零观测）排前面",
+			p:    pos("volume_long_today", 0.0, "volume_long_his", 5.0, "volume_short_today", 1.0, "volume_short_his", 0.0),
+			want: []string{"short/CLOSETODAY/BUY", "short/CLOSE/BUY", "long/CLOSE/SELL"},
 		},
 		{
-			// ⚠️ 这一条是「今优先」真正的考验：今仓在**另一边**。
-			// 只在同一边比今昨的实现会在这里选中多头昨仓，而那份样本已经有了。
-			name:   "多头只有昨仓、空头有今仓 → 跨边也今优先",
-			p:      pos("volume_long_today", 0.0, "volume_long_his", 5.0, "volume_short_today", 1.0, "volume_short_his", 0.0),
-			side:   "short",
-			offset: kq.CloseToday,
-			orderD: kq.Buy,
+			// 多头昨仓已有样本（volume_long_frozen_his 观测到过一次），
+			// 空头昨仓没有 —— 所以空头在前。
+			name: "两边都只有昨仓 → 空头（零观测）在前",
+			p:    pos("volume_long_today", 0.0, "volume_long_his", 2.0, "volume_short_today", 0.0, "volume_short_his", 2.0),
+			want: []string{"short/CLOSE/BUY", "long/CLOSE/SELL"},
 		},
 		{
 			name:    "两边全空 → 报错",
@@ -91,13 +93,13 @@ func TestClosableSide(t *testing.T) {
 	}
 	okN, errN := 0, 0
 	for _, c := range cases {
-		got, err := closableSide(c.p)
+		got, err := closableCandidates(c.p)
 		if c.wantErr {
 			errN++
 			if err == nil {
-				t.Errorf("%s：本该报错，却选了 %s/%s —— "+
+				t.Errorf("%s：本该报错，却给出 %v —— "+
 					"一个在错误前提下跑出来的结论，与真结论长得一模一样",
-					c.name, got.side, got.offset)
+					c.name, sig(got))
 			}
 			continue
 		}
@@ -106,23 +108,40 @@ func TestClosableSide(t *testing.T) {
 			t.Errorf("%s：%v", c.name, err)
 			continue
 		}
-		if got.side != c.side {
-			t.Errorf("%s：选了 %s，应为 %s", c.name, got.side, c.side)
-		}
-		if got.offset != c.offset {
-			t.Errorf("%s：offset 为 %s，应为 %s —— "+
-				"⚠️ 挑错了就去补一份已经有的样本，本次实验白跑",
-				c.name, got.offset, c.offset)
-		}
-		if d := got.orderDir(); d != c.orderD {
-			t.Errorf("%s：下单方向 %s，应为 %s —— "+
-				"⚠️ 方向搞反会在双向持仓上开出反向仓位，且柜台不报错",
-				c.name, d, c.orderD)
+		g := sig(got)
+		if strings.Join(g, ",") != strings.Join(c.want, ",") {
+			t.Errorf("%s：\n  得到 %v\n  应为 %v", c.name, g, c.want)
 		}
 	}
 	// ⚠️ 两侧都要有样本，否则这张表在测一个恒真（或恒假）的判定。
 	if okN == 0 || errN == 0 {
 		t.Fatalf("⚠️ 用例只覆盖一侧（成立 %d / 报错 %d）", okN, errN)
+	}
+}
+
+// TestClosableTargetIsHonestAboutCloseOrder 断言 CLOSE 在今昨都有时
+// **不谎称**自己打中哪个字段。
+//
+// ⚠️ 消耗顺序是 close-order 实验的问题，本实验没有答案。
+// 在日志里写死一个「想打中 _today」，会让读日志的人以为这一点已经定了。
+func TestClosableTargetIsHonestAboutCloseOrder(t *testing.T) {
+	both := closable{kq.Buy, "long", kq.Close, 2, 3}
+	if got := both.target(); !strings.Contains(got, "由柜台定") {
+		t.Errorf("⚠️ 今昨都有时裸平的目标写成了 %q —— "+
+			"消耗顺序本实验没有答案，写死会让人以为它定了", got)
+	}
+	// 而只有一边时是确定的，必须说准。
+	for _, c := range []struct {
+		c    closable
+		want string
+	}{
+		{closable{kq.Buy, "long", kq.Close, 0, 3}, "volume_long_frozen_his"},
+		{closable{kq.Buy, "long", kq.Close, 3, 0}, "volume_long_frozen_today"},
+		{closable{kq.Sell, "short", kq.CloseToday, 3, 9}, "volume_short_frozen_today"},
+	} {
+		if got := c.c.target(); got != c.want {
+			t.Errorf("target()=%q，应为 %q", got, c.want)
+		}
 	}
 }
 
@@ -166,14 +185,44 @@ func TestFmtFrozenKeepsNonZero(t *testing.T) {
 	}
 }
 
+// TestZeroObservedIsNotEverything 断言「零观测」表**不是全集**。
+//
+// ⚠️ 六个字段全列进去的话，排序退化成恒等 —— 那时
+// TestClosableCandidates 里那几条关于顺序的断言全都平凡成立，
+// 而它们看起来仍然在测顺序。
+//
+// ⚠️ 这张表会过期：观测到一个就该挪走一个。挪空了本条会红，那是对的 ——
+// 到那时这个实验的目的已经达成，排序规则该重写而不是留着空转。
+func TestZeroObservedIsNotEverything(t *testing.T) {
+	if len(zeroObserved) == 0 {
+		t.Fatal("⚠️ 零观测表空了 —— 六个冻结字段都取到过非零值的话，" +
+			"本实验的排序规则已经没有意义，该重写而不是留着空转")
+	}
+	if len(zeroObserved) >= len(frozenFields) {
+		t.Fatalf("⚠️ 零观测表有 %d 项，冻结字段共 %d 个 —— "+
+			"全列进去会让排序退化成恒等，而关于顺序的断言全都平凡成立",
+			len(zeroObserved), len(frozenFields))
+	}
+	known := map[string]bool{}
+	for _, k := range frozenFields {
+		known[k] = true
+	}
+	for k := range zeroObserved {
+		if !known[k] {
+			t.Errorf("⚠️ 零观测表里的 %q 不是冻结字段之一 —— "+
+				"拼错的键谁都打不中，而排序会静默退化", k)
+		}
+	}
+}
+
 // TestPositionFrozenUsesTheGuards 断言几个判定**真的在实验路径上**。
 //
 // ⚠️ 方法论第 28 条：把判定抽成纯函数、穷举它，却忘了在生产路径上调用 ——
-// 那时穷举测的是一段死代码。这里一次查三个。
+// 那时穷举测的是一段死代码。
 func TestPositionFrozenUsesTheGuards(t *testing.T) {
 	body := funcBody(t, "exp_position_frozen.go", "expPositionFrozen")
 	for _, want := range []struct{ name, why string }{
-		{"closableSide", "前提判定抽出来了却没接回去，穷举测试测的是一段死代码"},
+		{"closableCandidates", "前提判定抽出来了却没接回去，穷举测试测的是一段死代码"},
 		{"orderDir", "⚠️ 方向搞反会在双向持仓上开出反向仓位，且柜台不报错"},
 		{"waitFrozen", "⚠️ 睡固定秒数会在慢的那一次把「还没冻」记成「不冻结」"},
 	} {
@@ -191,10 +240,30 @@ func TestPositionFrozenUsesTheGuards(t *testing.T) {
 	}
 }
 
+// TestPositionFrozenStopsOnFill 断言**成交了就停**，不接着发下一笔。
+//
+// ⚠️ 挂不上的价却成交了，说明前提已经不成立；此时接着按候选表往下发单，
+// 会一笔笔把种子吃光 —— 而日志读起来仍然是「实验在正常推进」。
+func TestPositionFrozenStopsOnFill(t *testing.T) {
+	body := funcBody(t, "exp_position_frozen.go", "expPositionFrozen")
+	i := strings.Index(body, "VolumeLeft == 0")
+	if i < 0 {
+		t.Fatal("⚠️ 找不到成交判定 —— 本条守卫落空了")
+	}
+	tail := body[i:]
+	if j := strings.Index(tail, "\n\t\t\t}"); j > 0 {
+		tail = tail[:j]
+	}
+	if !strings.Contains(tail, "return") {
+		t.Error("⚠️ 委托成交那一支没有 return —— " +
+			"会接着按候选表往下发单，一笔笔把种子吃光，而日志读起来仍像正常推进")
+	}
+}
+
 // TestPositionFrozenLimitPriceIsFar 断言**下单用的那个价**来自 FarPrice。
 //
 // ⚠️ 这一条刻意不用「正文里出现 FarPrice」来判 —— 那条判据是假的：
-// FarPrice 在同一个函数的日志里也出现一次，
+// FarPrice 在同一个函数的日志里也出现，
 // 于是把 LimitPrice 换成写死的数之后，文本检查照样通过。
 // 判据必须落在**那个字段**上。
 func TestPositionFrozenLimitPriceIsFar(t *testing.T) {
