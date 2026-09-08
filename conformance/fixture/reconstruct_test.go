@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
+	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -48,6 +50,7 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 
 	var fields []conformance.Field
 	reconstructed, withToday := 0, 0
+	skippedStalePre, skippedInconsistent := 0, 0
 	for _, f := range all {
 		if f.TradingDay.String() != "20260909" {
 			continue
@@ -117,6 +120,72 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 			}
 		}
 		fields = append(fields, opField)
+		// —— 保证金：两个方向一起 ——
+		//
+		// ⚠️ 它**不**受「本库用结算价、柜台用收盘价」那条差异影响：
+		// 保证金的基准是**昨结算价**（kq_facts 1），而 D+1 日的昨结算价
+		// 就是 D 日的结算价 3163 —— 两边取的是同一个数。
+		// position_price 那条差异挂在逐日盯市基线上，与这里无关。
+		//
+		// ⚠️ 空头一起比：空仓侧至今没被这条链子碰过，而它是昨晚才有的
+		// （开了一手空今仓）。只比多头的话，「结转对空头做了什么」一点没验。
+		// ⚠️ 只在**柜台自己的昨结算价与交易所的结算价一致**时才比保证金。
+		//
+		// 不一致时比的是「行情侧滚没滚到新交易日」，不是保证金算得对不对 ——
+		// 那是已登记的类 C（kq_facts 29）：账户侧已滚到 20260909，
+		// 而行情侧仍停在昨天收盘，于是柜台拿**旧的**昨结算价 3158 算，
+		// 得 3×3158×10×0.07 = 6631.8，本库用 3163 得 6642.3。
+		//
+		// ⚠️ 判据落在**夹具自己报的昨结算价**上，不落在拍摄时间上：
+		// 时间要人去查「那时候滚了没有」，而 pre_settlement 是当场可比的。
+		// 20 个失败一开始全是这个原因 —— 拿时间去挑会挑错，拿这个数不会。
+		curPre, hasPre := f.PreSettlement(sym)
+		if !hasPre || !curPre.Equal(settle) {
+			skippedStalePre++
+			continue
+		}
+		// ⚠️ 再查一层：**这份截面自己内部自不自洽**。
+		//
+		// 实测抓到过换挡的那一瞬：18:39:50.268 那份的 quotes.pre_settlement
+		// 已经是 3163，而 margin_long 仍是 6631.8（= 3×**3158**×10×0.07）；
+		// 1.3 秒后（18:39:51.5）两者都到位。柜台把「行情的昨结算价」与
+		// 「持仓的保证金」分成两条消息推，中间有个不到两秒的窗口。
+		//
+		// ⚠️ 一份自己就不自洽的截面，拿它去比本库**没有意义**：
+		// 比出来的差异指向的是采样时刻，不是两边的口径。
+		// 这与「重建出来的账户先自查内部不变式再拿去比」是同一条纪律。
+		//
+		// ⚠️ 判据不引用本库的任何计算：反解柜台自己的基线，与它自己报的昨结算价比。
+		if implied, ok := impliedMarginBasis(oracle, "long",
+			marginRatesOf(t, sym), multiplierOf(t, sym)); ok &&
+			!implied.Sub(curPre).Abs().LessThan(decimal.RequireFromString("0.5")) {
+			skippedInconsistent++
+			t.Logf("ⓘ %s：柜台**自己内部不自洽** —— margin_long 反解出的基线是 %s，"+
+				"而它自己报的 pre_settlement 是 %s（quotes.datetime=%s）。"+
+				"换挡瞬间的截面，跳过", f.Path, implied, curPre, oracleDatetime(f, sym))
+			continue
+		}
+		ml, ms, merr := MarginOf(p, marginRatesOf(t, sym), multiplierOf(t, sym),
+			settle, false, margin.PreSettleAll, margin.ByInstrument)
+		if merr != nil && !IsNoPosition(merr) {
+			t.Errorf("%s 算保证金失败：%v", f.Path, merr)
+		} else if merr == nil {
+			for _, mc := range []struct {
+				name string
+				lib  decimal.Decimal
+			}{{"margin_long", ml}, {"margin_short", ms}} {
+				oc := oracle[mc.name]
+				fields = append(fields, conformance.Field{
+					Name:          key + "." + mc.name,
+					Library:       mc.lib,
+					LibraryAbsent: mc.lib.IsZero(),
+					Oracle:        oc.Number,
+					OracleAbsent:  oc.Absent,
+					Triggered:     !mc.lib.IsZero(),
+				})
+			}
+		}
+
 		// 今昨划分也要对上 —— 它才是「结转真的发生了」的证据。
 		fields = append(fields, conformance.Field{
 			Name:      key + ".volume_his",
@@ -132,6 +201,14 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		})
 	}
 
+	// ⚠️ 跳掉的要报出来，而且要求**至少有一个没跳的**：
+	// 全跳了的话「保证金对得上」这句话一次都没被验，而本条照样绿。
+	t.Logf("ⓘ 保证金比对跳过：行情侧未滚（类 C）%d 个、柜台自己内部不自洽（换挡瞬间）%d 个",
+		skippedStalePre, skippedInconsistent)
+	if skippedStalePre >= reconstructed && reconstructed > 0 {
+		t.Error("⚠️ **每一个**截面的保证金都被跳过了 —— " +
+			"那一段等于没跑。要一份行情已滚（pre_settlement 与交易所结算价一致）的夹具")
+	}
 	if reconstructed == 0 {
 		t.Fatal("⚠️ 一个截面都没重建 —— 本条在空转。" +
 			"要 20260909 的、rb2701 多头有昨仓的夹具")
@@ -184,4 +261,68 @@ func closedOnSide(f *Fixture, sym string, side types.Direction) bool {
 		}
 	}
 	return false
+}
+
+// marginRates / multiplierOf 取某合约的规则数据，**没登记就报错**。
+//
+// ⚠️ 两个都不给默认值：一个「差不多能用」的保证金率会静默算错，
+// 而算出来的数看起来完全正常。
+func marginRatesOf(t *testing.T, sym string) refdata.MarginRates {
+	t.Helper()
+	inst, err := types.ParseSymbol(sym, types.NewTradingDay(2026, 9, 9))
+	if err != nil {
+		t.Fatal(err)
+	}
+	product, _ := splitProduct(inst.Product)
+	r, ok := ratesFor(product)
+	if !ok {
+		t.Fatalf("品种 %s 没有登记保证金率", product)
+	}
+	return r
+}
+
+func multiplierOf(t *testing.T, sym string) decimal.Decimal {
+	t.Helper()
+	m, ok := multipliers[sym]
+	if !ok {
+		t.Fatalf("%s 没有登记乘数", sym)
+	}
+	return decimal.RequireFromString(m)
+}
+
+// impliedMarginBasis 从柜台**自己的** margin 反解它用的基准价。
+//
+//	基准价 = margin ÷ (手数 × 乘数 × 保证金率)
+//
+// ⚠️ 它一处都不引用本库的计算，所以拿它去判「柜台自不自洽」不是循环论证。
+// 第二个返回值报告解不解得出（空仓、缺字段、率为零时解不出）。
+func impliedMarginBasis(oracle map[string]Value, side string,
+	rates refdata.MarginRates, mult decimal.Decimal) (decimal.Decimal, bool) {
+
+	m, ok := numberOf(oracle, "margin_"+side)
+	if !ok || !m.IsPositive() {
+		return decimal.Zero, false
+	}
+	vol := numOr(oracle, "volume_"+side+"_today").Add(numOr(oracle, "volume_"+side+"_his"))
+	if !vol.IsPositive() {
+		return decimal.Zero, false
+	}
+	rate := rates.LongByMoney
+	if side == "short" {
+		rate = rates.ShortByMoney
+	}
+	den := vol.Mul(mult).Mul(rate)
+	if !den.IsPositive() {
+		return decimal.Zero, false
+	}
+	return m.Div(den), true
+}
+
+// oracleDatetime 取行情截面的时间戳，纯粹为了让日志能定位到那一瞬。
+func oracleDatetime(f *Fixture, sym string) string {
+	v, ok := f.Quotes[sym]["datetime"]
+	if !ok || !v.IsText {
+		return "(无)"
+	}
+	return v.Text
 }

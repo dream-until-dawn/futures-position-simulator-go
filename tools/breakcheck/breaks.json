@@ -1118,5 +1118,50 @@
   "test": "TestReplayDetectsAmbiguity",
   "want": "重放却没报歧义",
   "expect": "red"
+ },
+ {
+  "name": "102 保证金比对不再查行情侧滚没滚（类 C 混进来）",
+  "dir": "",
+  "file": "conformance/fixture/reconstruct_test.go",
+  "old": "\t\tif !hasPre || !curPre.Equal(settle) {\n\t\t\tskippedStalePre++\n\t\t\tcontinue\n\t\t}",
+  "new": "\t\t_ = curPre\n\t\tif !hasPre {\n\t\t\tskippedStalePre++\n\t\t\tcontinue\n\t\t}",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReconstructCoversCarriedSides",
+  "want": "margin_long：失败",
+  "expect": "red"
+ },
+ {
+  "name": "103 不再查柜台截面自不自洽（换挡瞬间混进来）",
+  "dir": "",
+  "file": "conformance/fixture/reconstruct_test.go",
+  "old": "\t\t\t!implied.Sub(curPre).Abs().LessThan(decimal.RequireFromString(\"0.5\")) {",
+  "new": "\t\t\tfalse {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReconstructCoversCarriedSides",
+  "want": "margin_long：失败",
+  "expect": "red"
+ },
+ {
+  "name": "104 反解基线时用本库的结算价代替柜台自己报的昨结算价（循环论证）",
+  "dir": "",
+  "file": "conformance/fixture/reconstruct_test.go",
+  "old": "\t\t\t!implied.Sub(curPre).Abs().LessThan(decimal.RequireFromString(\"0.5\")) {",
+  "new": "\t\t\t!implied.Sub(settle).Abs().LessThan(decimal.RequireFromString(\"9999\")) {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReconstructCoversCarriedSides",
+  "want": "margin_long：失败",
+  "expect": "red"
+ },
+ {
+  "name": "105 保证金比对全跳时不报错",
+  "dir": "",
+  "file": "conformance/fixture/reconstruct_test.go",
+  "old": "\tif skippedStalePre >= reconstructed && reconstructed > 0 {",
+  "new": "\tif false {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReconstructCoversCarriedSides",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ 这条守卫防的是「每一个截面的保证金都被跳过」，而当前 30 个里跳了 20 个、还剩 10 个在比 —— 前提不成立，去掉它当然还是绿。声明的盲区：它只在**样本全部落进跳过条件**时起作用（例如哪天全部夹具都拍在行情滚动之前），而那种情形今天不存在。它的价值是将来的。"
  }
 ]
