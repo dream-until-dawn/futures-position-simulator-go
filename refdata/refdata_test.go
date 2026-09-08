@@ -167,7 +167,9 @@ func TestInstrumentValidate(t *testing.T) {
 // 而不是读成「没有涨跌停限制」。
 func TestPriceLimitsDistinguishAbsentFromZero(t *testing.T) {
 	inst := spec(t, types.SHFE, "rb2701") // 涨跌幅 5%
-	up, lo, ok := inst.PriceLimits(d("3160"), true)
+	// ⚠️ 取整方向要显式给 —— 两家交易所不同（probes.md §12）。
+	// 这里用 TickNone 是为了保住这条测试原来的意思：验的是「有没有值」，不是取整。
+	up, lo, ok := inst.PriceLimits(d("3160"), true, TickNone)
 	if !ok {
 		t.Fatal("有比例有昨结算价时应能推出")
 	}
@@ -191,7 +193,7 @@ func TestPriceLimitsDistinguishAbsentFromZero(t *testing.T) {
 		t.Fatalf("反例数应为 3，实际 %d", len(cases))
 	}
 	for _, c := range cases {
-		if _, _, ok := c.inst.PriceLimits(c.pre, c.has); ok {
+		if _, _, ok := c.inst.PriceLimits(c.pre, c.has, TickNone); ok {
 			t.Errorf("⚠️ %s，本该报「推不出来」", c.name)
 		}
 	}
@@ -199,7 +201,7 @@ func TestPriceLimitsDistinguishAbsentFromZero(t *testing.T) {
 	// ⚠️ 比例为零是**合法**的（意味着不许波动），必须与「没有比例」分开。
 	zeroRatio := inst
 	zeroRatio.PriceLimitRatio = decimal.Zero
-	u2, l2, ok2 := zeroRatio.PriceLimits(d("3160"), true)
+	u2, l2, ok2 := zeroRatio.PriceLimits(d("3160"), true, TickNone)
 	if !ok2 {
 		t.Fatal("⚠️ 比例为零是合法的，不该报「推不出来」")
 	}
@@ -322,5 +324,77 @@ func TestSnapshotSatisfiesProvider(t *testing.T) {
 	var p Provider = snap
 	if p.Version() != 1 {
 		t.Errorf("通过接口取版本应为 1，实为 %d", p.Version())
+	}
+}
+
+// TestPriceLimitsRounding 把**实测的**取整行为钉在测试里。
+//
+// ⚠️ 两家交易所的取整方向不同（probes.md §12，各两个品种）：
+//
+//	上期所  rb2701 昨结 3158、5%  理论 3315.9 / 3000.1  柜台给 3315 / 3000  向下
+//	大商所  i2701  昨结 734.5、9%  理论 800.605 / 668.395 柜台给 800.5 / 668.5 四舍五入
+//
+// 而这两组数**同时**排除了「上下各取一边」这个很自然的猜测：
+// 上期所两边都向下（3315.9→3315 是向下，3000.1→3000 也是向下），
+// 大商所两边都四舍五入（800.605→800.5 是向下，668.395→668.5 是**向上**）。
+// 若规则是「上取下、下取上」，大商所的上限应当是 800.5、下限 668.0 —— 与实测不符。
+func TestPriceLimitsRounding(t *testing.T) {
+	rb := spec(t, types.SHFE, "rb2701")
+	rb.PriceLimitRatio, rb.HasPriceLimitRatio = d("0.05"), true
+	rb.PriceTick = d("1")
+
+	i := spec(t, types.DCE, "i2701")
+	i.PriceLimitRatio, i.HasPriceLimitRatio = d("0.09"), true
+	i.PriceTick = d("0.5")
+
+	cases := []struct {
+		name           string
+		inst           Instrument
+		pre            string
+		rounding       TickRounding
+		wantUp, wantLo string
+	}{
+		{"上期所 rb 向下取整（实测）", rb, "3158", TickFloor, "3315", "3000"},
+		{"大商所 i 四舍五入（实测）", i, "734.5", TickHalfUp, "800.5", "668.5"},
+		// ⚠️ 反例：拿另一家的取整方向去算，会得到与实测**不同**的数 ——
+		// 那正是「默认挑一种会在另一家上静默错」的具体形状。
+		{"⚠️ 用错方向：rb 四舍五入", rb, "3158", TickHalfUp, "3316", "3000"},
+		{"⚠️ 用错方向：i 向下取整", i, "734.5", TickFloor, "800.5", "668"},
+		{"不取整", rb, "3158", TickNone, "3315.9", "3000.1"},
+	}
+	if len(cases) != 5 {
+		t.Fatalf("用例 %d 条，应为 5", len(cases))
+	}
+	for _, c := range cases {
+		up, lo, ok := c.inst.PriceLimits(d(c.pre), true, c.rounding)
+		if !ok {
+			t.Errorf("%s：推不出来", c.name)
+			continue
+		}
+		if !up.Equal(d(c.wantUp)) || !lo.Equal(d(c.wantLo)) {
+			t.Errorf("%s：得到 %s / %s，应为 %s / %s",
+				c.name, up, lo, c.wantUp, c.wantLo)
+		}
+	}
+	// ⚠️ 用错方向确实会得出不同的数 —— 这一条把「默认挑一种是危险的」变成可见的。
+	rightUp, _, _ := rb.PriceLimits(d("3158"), true, TickFloor)
+	wrongUp, _, _ := rb.PriceLimits(d("3158"), true, TickHalfUp)
+	if rightUp.Equal(wrongUp) {
+		t.Error("⚠️ 两种取整给出同一个数 —— 那本条就没有判别力了，换个样本")
+	}
+	t.Logf("ⓘ 同一个合约：向下取整 %s，四舍五入 %s —— 差一个 tick，"+
+		"而那个价**报不出去**", rightUp, wrongUp)
+
+	// ⚠️ 零值必须报「推不出来」，而不是悄悄不取整。
+	if _, _, ok := rb.PriceLimits(d("3158"), true, TickRoundingUnknown); ok {
+		t.Error("⚠️ 没指定取整方向却推出了结果 —— " +
+			"零值落进某一种会静默算错，而错的量级不到一个 tick：" +
+			"数字看起来完全正常，只是那个价报不出去")
+	}
+	// ⚠️ 要取整却没有 tick，也是「推不出来」，不是「不用取整」。
+	noTick := rb
+	noTick.PriceTick = decimal.Zero
+	if _, _, ok := noTick.PriceLimits(d("3158"), true, TickFloor); ok {
+		t.Error("⚠️ 没有最小变动价位却取整成功了")
 	}
 }

@@ -141,19 +141,100 @@ func (i Instrument) Validate() error {
 	return nil
 }
 
-// PriceLimits 从昨结算价推出涨跌停价。
+// TickRounding 是把理论涨跌停价对齐到最小变动价位的方式。
+//
+// ⚠️ 零值是 TickRoundingUnknown，使用即报错。
+//
+// 一个默认落进某一种的零值会静默算错，而错的量级正好是**不到一个 tick** ——
+// 那是最不容易被看见的错法：数字看起来完全正常，只是报单会被拒。
+type TickRounding uint8
+
+const (
+	// TickRoundingUnknown 是零值：没指定。⚠️ 使用即报错。
+	TickRoundingUnknown TickRounding = iota
+	// TickFloor 向下取整到最小变动价位。⚠️ 实测上期所是这一种（probes.md §12）。
+	TickFloor
+	// TickCeil 向上取整。
+	TickCeil
+	// TickHalfUp 四舍五入。⚠️ 实测大商所是这一种（probes.md §12）。
+	TickHalfUp
+	// TickNone 不取整，返回理论值。
+	//
+	// ⚠️ 它**不是**「默认」，是一个要显式选的选项：
+	// 不取整的涨跌停价不是一个合法价格（3315.9 不是 tick 的整数倍），
+	// 拿它去下单会被拒。选它只应当出于「我要看理论值」这一个理由。
+	TickNone
+)
+
+func (r TickRounding) String() string {
+	switch r {
+	case TickFloor:
+		return "向下取整"
+	case TickCeil:
+		return "向上取整"
+	case TickHalfUp:
+		return "四舍五入"
+	case TickNone:
+		return "不取整"
+	}
+	return "未指定"
+}
+
+// PriceLimits 从昨结算价推出涨跌停价，并对齐到最小变动价位。
 //
 // ⚠️ 基线是**昨结算价**，不是昨收盘价。
 //
-// ok 为 false 表示**推不出来**（没有涨跌幅比例，或没有昨结算价）。
+// ⚠️ rounding 必须显式给，零值报错。理由是实测：
+// **两家交易所的取整方向不同** —— 上期所向下取整、大商所四舍五入
+// （probes.md §12，各两个品种）。默认挑一种会在另一家上静默错，
+// 而错的量级不到一个 tick：数字看起来完全正常，只是那个价报不出去。
+//
+// ⚠️ 而「按交易所硬编码」同样不行 —— 那正是 PositionDateType 上栽过的形状：
+// 在绝大多数合约上都对，于是错的那几个不会被测出来。
+// 取整方向应当随规则数据来，本结构体尚未承载它，所以由调用方传。
+//
+// ok 为 false 表示**推不出来**（没有涨跌幅比例、没有昨结算价、或没指定取整）。
 // 调用方必须把它当成「跳过涨跌停校验并给出原因」，而**不是**「没有涨跌停限制」。
-func (i Instrument) PriceLimits(preSettlement decimal.Decimal, hasPreSettlement bool) (upper, lower decimal.Decimal, ok bool) {
+func (i Instrument) PriceLimits(preSettlement decimal.Decimal, hasPreSettlement bool,
+	rounding TickRounding) (upper, lower decimal.Decimal, ok bool) {
+
 	if !i.HasPriceLimitRatio || !hasPreSettlement || !preSettlement.IsPositive() {
 		return decimal.Zero, decimal.Zero, false
 	}
+	if rounding == TickRoundingUnknown {
+		return decimal.Zero, decimal.Zero, false
+	}
 	one := decimal.NewFromInt(1)
-	return preSettlement.Mul(one.Add(i.PriceLimitRatio)),
-		preSettlement.Mul(one.Sub(i.PriceLimitRatio)), true
+	up := preSettlement.Mul(one.Add(i.PriceLimitRatio))
+	lo := preSettlement.Mul(one.Sub(i.PriceLimitRatio))
+	if rounding == TickNone {
+		return up, lo, true
+	}
+	if !i.PriceTick.IsPositive() {
+		// ⚠️ 要取整却没有最小变动价位 —— 那是「推不出来」，不是「不用取整」。
+		return decimal.Zero, decimal.Zero, false
+	}
+	return snapToTick(up, i.PriceTick, rounding),
+		snapToTick(lo, i.PriceTick, rounding), true
+}
+
+// snapToTick 把价格对齐到最小变动价位。
+//
+// ⚠️ 上下两边用**同一个**方向，不是「上取上、下取下」。
+// 实测支持这一点：上期所 rb2701 昨结 3158、5%，理论 3315.9 / 3000.1，
+// 柜台给 3315 / 3000 —— **两边都是向下**（probes.md §12）。
+// 「上下各取一边」是个很自然的猜测，而它在这个样本上是错的。
+func snapToTick(px, tick decimal.Decimal, r TickRounding) decimal.Decimal {
+	n := px.Div(tick)
+	switch r {
+	case TickFloor:
+		n = n.Floor()
+	case TickCeil:
+		n = n.Ceil()
+	case TickHalfUp:
+		n = n.Round(0)
+	}
+	return n.Mul(tick)
 }
 
 // Provider 提供规则数据查询。
