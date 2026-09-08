@@ -2151,5 +2151,38 @@
 		"test": "TestTickScanInSessionCoverage",
 		"want": "一个**盘中的、带零头的**样本都没有",
 		"expect": "red"
+	},
+	{
+		"name": "194 tick 未知时 tickFrac 返回 0（读起来就是「整数倍」）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/exp_reject_priority.go",
+		"old": "func tickFrac(price, tick float64) float64 {\n\tif tick <= 0 {\n\t\treturn -1\n\t}",
+		"new": "func tickFrac(price, tick float64) float64 {\n\tif tick <= 0 {\n\t\treturn 0\n\t}",
+		"pkg": "./probe/",
+		"test": "TestTickFracIsTheConstructedFraction",
+		"want": "tick 未知 → -1，不是 0",
+		"expect": "red"
+	},
+	{
+		"name": "195 零头反算丢掉 Floor：负价或大价上整个错位",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/exp_reject_priority.go",
+		"old": "\treturn price/tick - math.Floor(price/tick)\n}",
+		"new": "\treturn price/tick - math.Trunc(price/tick-0.5)\n}",
+		"pkg": "./probe/",
+		"test": "TestTickFracIsTheConstructedFraction",
+		"want": "想要",
+		"expect": "red"
+	},
+	{
+		"name": "196 半个 tick 的边界挪到 0.4：0.45 那一档跟着变",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/exp_reject_priority.go",
+		"old": "\treturn frac > 1e-3 && frac < 0.5\n}",
+		"new": "\treturn frac > 1e-3 && frac < 0.4\n}",
+		"pkg": "./probe/",
+		"test": "TestTickFracAndOffTickAgreeOnTheHalfBoundary",
+		"want": "offTick 却说不是",
+		"expect": "red"
 	}
 ]

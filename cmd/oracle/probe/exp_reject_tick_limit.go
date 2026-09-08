@@ -68,7 +68,22 @@ func (r *Runner) expRejectTickVsLimit(ctx context.Context) error {
 		{"价内·非整数倍（标尺）", q.LowerLimit + tick/3},
 		{"越界·零头 1/10", over + tick/10},
 		{"越界·零头 1/3", over + tick/3},
+
+		// —— 0.5 附近这四个是 20260909 补的，目的与外面那几个**不同** ——
+		//
+		// 外面那一圈（1/10、1/3、7/10、9/10）问的是「零头这一维起不起作用」，
+		// 它已经答完了。⚠️ 剩下的问题是**边界在哪**：
+		// 盘中至今只有 1/3（报不是整数倍）与 0.7（报涨跌停）两个点，
+		// 而 (0.34, 0.69) 这一整段是空的 —— 落在这段里的任何边界
+		// 都同样解释得了现有的盘中样本（守卫 TestTickScanInSessionCoverage）。
+		//
+		// ⚠️ 四个都要：只加 0.5 的话，若它报「不是整数倍」（与盘后相反），
+		// 边界就落在 (0.5, 0.7) 里而这一轮同样定不了位。
+		{"越界·零头 2/5", over + tick*2/5},
+		{"越界·零头 45/100", over + tick*45/100},
 		{"越界·零头 1/2", over + tick/2},
+		{"越界·零头 55/100", over + tick*55/100},
+		{"越界·零头 3/5", over + tick*3/5},
 		{"越界·零头 7/10", over + tick*7/10},
 		{"越界·零头 9/10", over + tick*9/10},
 		// ⚠️ 20260909 02:0x 那一笔的**原样重现**：涨停价 × 1.05。
@@ -89,14 +104,15 @@ func (r *Runner) expRejectTickVsLimit(ctx context.Context) error {
 		{"价内·零头 9/10", q.LowerLimit + tick*9/10},
 	}
 
-	type row struct{ name, price, status, msg string }
+	type row struct{ name, price, frac, status, msg string }
 	var rows []row
 	for _, c := range cases {
 		req := kq.OrderReq{Exchange: ex, Instrument: inst, Direction: kq.Buy,
 			Offset: kq.Open, Volume: 1, LimitPrice: c.price}
 		id, err := cli.InsertOrder(r.guard(), req)
 		if err != nil {
-			rows = append(rows, row{c.name, fmt.Sprintf("%.4f", c.price), "本地拦截", err.Error()})
+			rows = append(rows, row{c.name, fmt.Sprintf("%.4f", c.price),
+				fracLabel(c.price, tick), "本地拦截", err.Error()})
 			continue
 		}
 		st, done := cli.WaitOrderFinished(id, 15*time.Second)
@@ -107,13 +123,14 @@ func (r *Runner) expRejectTickVsLimit(ctx context.Context) error {
 				_ = cli.CancelOrder(id)
 			}
 		}
-		rows = append(rows, row{c.name, fmt.Sprintf("%.4f", c.price), status, st.LastMsg})
+		rows = append(rows, row{c.name, fmt.Sprintf("%.4f", c.price),
+			fracLabel(c.price, tick), status, st.LastMsg})
 	}
 
 	r.Logf("")
 	msgs := map[string]int{}
 	for _, x := range rows {
-		r.Logf("  %-26s @%-12s %s", x.name, x.price, x.status)
+		r.Logf("  %-26s @%-12s 零头=%-8s %s", x.name, x.price, x.frac, x.status)
 		r.Logf("      柜台：%s", x.msg)
 		msgs[x.msg]++
 	}
@@ -146,4 +163,16 @@ func (r *Runner) expRejectTickVsLimit(ctx context.Context) error {
 	}
 	return r.dump("exp-reject-tick-vs-limit",
 		"越涨停 vs 不是整数倍：固定越界幅度，只扫价格零头这一维")
+}
+
+// fracLabel 把**实际构造出来的**零头打成一列，供人一眼核对。
+//
+// ⚠️ 打的是从价格反算的零头，不是构造时写的那个分数 ——
+// 两者不一致正是要看见的东西（涨停价没对齐 tick 时就会不一致）。
+func fracLabel(price, tick float64) string {
+	f := tickFrac(price, tick)
+	if f < 0 {
+		return "tick未知"
+	}
+	return fmt.Sprintf("%.4f", f)
 }

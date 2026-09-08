@@ -106,8 +106,26 @@ func offTick(price, tick float64) bool {
 	if tick <= 0 {
 		return false
 	}
-	frac := price/tick - math.Floor(price/tick)
+	frac := tickFrac(price, tick)
 	return frac > 1e-3 && frac < 0.5
+}
+
+// tickFrac 是价格除以 tick 之后的小数部分，即「零头占几个 tick」。
+//
+// ⚠️ 它是 reject-tick-vs-limit 那张表的**零层**：
+// 那条实验按 `over + tick*45/100` 这样构造价格，而**构造出来的零头
+// 是不是 0.45，是一件要看的事，不是一件想当然的事** ——
+// 涨停价本身若没对齐 tick，整张表的零头就全错位，
+// 而每一笔照样发得出去、照样被拒、照样打印出一行结论。
+//
+// tick <= 0 时返回 -1：那是「答不了」，不是「零头是 0」。
+// ⚠️ 返回 0 会让调用方把它读成「整数倍」，而免费行情**不下发 price_tick**
+// （q.PriceTick 恒为 0），那正是最容易走到这里的一条路。
+func tickFrac(price, tick float64) float64 {
+	if tick <= 0 {
+		return -1
+	}
+	return price/tick - math.Floor(price/tick)
 }
 
 // applyAll 按 violations 的次序叠加若干项违规，然后**逐项核对它们真的成立**。
