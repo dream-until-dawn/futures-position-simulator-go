@@ -70,7 +70,17 @@ var (
 	offsetDIFF    = map[Offset]string{
 		Open: "OPEN", Close: "CLOSE", CloseToday: "CLOSETODAY",
 	}
-	hedgeDIFF = map[HedgeFlag]string{Speculation: "SPEC", Arbitrage: "ARBI", Hedge: "HEDGE"}
+	// ⚠️ 只有**投机**这一个取值是实测的：`"SPECULATION"`，
+	// 交易日 20260908 的成交截面里 417 笔无一例外（probes.md §10.5）。
+	//
+	// 原先这里写的是 `SPEC`/`ARBI`/`HEDGE`，**三个都没有出处** ——
+	// 不在 probes.md，也没有注释说它们从哪来。而实测把第一个证伪了。
+	//
+	// 套利与套保**不写进来**，理由是「照着投机类推」正是被证伪的那种做法：
+	// `SPECULATION` 不是 `SPEC` 的展开，`ARBITRAGE` 也就不必是 `ARBI` 的展开。
+	// 缺失会让 `DIFF()` 返回 false、让 `HedgeFromDIFF` 报错 —— 两处都是响的；
+	// 而一个猜错的线值会被原样发出去，是哑的。
+	hedgeDIFF = map[HedgeFlag]string{Speculation: "SPECULATION"}
 )
 
 // CTP 返回 CTP 线格式取值；第二个返回值报告该取值在 CTP 侧是否存在。

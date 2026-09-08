@@ -46,9 +46,31 @@ const (
 	// 所以它有三条硬门槛（见 Deviation），缺一不成立。
 	KnownDeviation
 
+	// NotImplemented 本库**还没实现**这个字段。
+	//
+	// ⚠️ 它必须与 Failed 分开计数，因为两者是不同的缺口：
+	// Failed 是「两边都算了，值不同」；这一档是「本库这边根本没算」。
+	// 合并会让「还差多少没做」这个数消失在「有多少对不上」里。
+	//
+	// ⚠️ 而它**绝不能**退化成「用 0 去比」。柜台那边大量字段本来就是 0
+	// （空仓、无期权、无冻结），一比就「一致」——
+	// **一个缺失的实现伪装成了一致**，而那比算错更坏：
+	// 算错会在某个样本上露出来，缺失永远不会。
+	NotImplemented
+
 	// Failed 三档之外的一律判失败。
 	Failed
 )
+
+// allVerdicts 是全部判定档位，供报告与守卫遍历。
+//
+// ⚠️ 新增一档必须同时加进这里。忘了会让那一档的字段在报告里隐形，
+// 而 Summary 的合计守卫会当场把它报出来 —— 那条守卫存在的理由就是
+// 「不指望有人记得改这个列表」。
+var allVerdicts = []Verdict{
+	Matched, NotModeled, Untriggered, KnownDeviation, NotImplemented,
+	Failed, VerdictUnclassified,
+}
 
 func (v Verdict) String() string {
 	switch v {
@@ -60,6 +82,8 @@ func (v Verdict) String() string {
 		return "对得上但未触发"
 	case KnownDeviation:
 		return "已知口子差异"
+	case NotImplemented:
+		return "本库还没实现"
 	case Failed:
 		return "失败"
 	}
@@ -137,6 +161,14 @@ type Field struct {
 
 	// Deviation 非 nil 表示这是一处已知口子差异。
 	Deviation *Deviation
+
+	// LibraryUnimplemented 表示本库**还没实现**这个字段。
+	//
+	// ⚠️ 它一律判 NotImplemented，**不看值**。
+	// 调用方若把未实现项填成 0 再交过来，柜台那边恰好也是 0 时就会判一致 ——
+	// 本仓库在写这个包的调用方时当场犯过这个错：
+	// `volume_long_frozen_*` 两边都是 0，于是「未实现」被判成了「对得上」。
+	LibraryUnimplemented bool
 }
 
 // Report 是一批字段的判定结果。
@@ -186,6 +218,14 @@ func classifyOne(f Field, tol decimal.Decimal, r *Report) Verdict {
 	// 否则一个声明了不建模的字段还会因为值对不上而被判失败。
 	if f.NotModeledUntil != "" {
 		return NotModeled
+	}
+	// ⚠️ 未实现先于一切值比较判定，而且**不看值**。见 LibraryUnimplemented。
+	if f.LibraryUnimplemented {
+		if f.NotModeledUntil != "" || f.Deviation != nil {
+			r.Errs = append(r.Errs, fmt.Errorf("字段 %s 既声明未实现又声明了别的档位 —— "+
+				"两种声明谁覆盖谁是未定义的", f.Name))
+		}
+		return NotImplemented
 	}
 	if f.Deviation != nil {
 		if err := f.Deviation.Validate(f.Name); err != nil {
@@ -254,11 +294,21 @@ func (r *Report) Passed() bool {
 func (r *Report) Summary() string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "样本 %s：%d 个字段\n", r.Sample, len(r.Fields))
-	order := []Verdict{Matched, NotModeled, Untriggered, KnownDeviation, Failed, VerdictUnclassified}
-	for _, v := range order {
+	// ⚠️ 这张表漏一档，那一档的字段就在报告里**变成隐形的**。
+	// 加了 NotImplemented 之后当场发生过：52 个字段的报告只印出 37 个的计数，
+	// 剩下 15 个既不在任何一行里、也不在下面的逐字段行里 ——
+	// **看报告的人不会发现少了东西**。
+	// 下面的合计守卫为此而加：它不指望有人记得改这张表。
+	shown := 0
+	for _, v := range allVerdicts {
 		if n := r.Counts[v]; n > 0 {
 			fmt.Fprintf(&sb, "  %-16s %d\n", v.String(), n)
+			shown += n
 		}
+	}
+	if shown != len(r.Fields) {
+		fmt.Fprintf(&sb, "  ❌ ⚠️ 计数合计 %d 与字段数 %d 对不上 —— "+
+			"有档位没进 allVerdicts，那一档的字段在报告里是隐形的\n", shown, len(r.Fields))
 	}
 	names := make([]string, 0, len(r.Verdicts))
 	for n := range r.Verdicts {
@@ -271,8 +321,12 @@ func (r *Report) Summary() string {
 			fmt.Fprintf(&sb, "  ⚠️ %s：值对得上，但本次样本内从未触发 —— 不算通过\n", n)
 		case KnownDeviation:
 			fmt.Fprintf(&sb, "  ⚠️ %s：已知口子差异 —— 记在账上的欠款，不是一次验收\n", n)
+		case NotImplemented:
+			fmt.Fprintf(&sb, "  ⛔ %s：本库还没实现 —— 不比值，也不算通过\n", n)
 		case Failed:
 			fmt.Fprintf(&sb, "  ❌ %s：失败\n", n)
+		case VerdictUnclassified:
+			fmt.Fprintf(&sb, "  ❌ %s：未分类 —— 判定本身出了问题\n", n)
 		}
 	}
 	for _, e := range r.Errs {

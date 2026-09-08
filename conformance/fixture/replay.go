@@ -1,0 +1,159 @@
+package fixture
+
+import (
+	"fmt"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/types"
+)
+
+// Replay 把一个合约的成交重放成本库的持仓。
+//
+// ⚠️ 重放有一个**未知输入**：平仓从哪一笔明细消耗。
+// 那是 cn-futures-rules.md §13 的第 4 条，至今未实测。
+// 所以本函数不挑一个顺序偷偷用，而是**三种候选各跑一遍**：
+//
+//	三者结果相同  重放无歧义 —— 这次样本对消耗顺序不敏感，可以拿去对拍
+//	三者结果不同  ⚠️ 重放**有歧义**，报错。此时任何一个结果都是猜的，
+//	              而猜出来的持仓会与柜台比出一堆看起来像真差异的差异
+//
+// 换句话说：把一个待实测项当成已知，代价不是「可能错」，
+// 是「错了之后所有别的字段的对拍结论都不可信」。
+//
+// ⚠️ 反过来说，三者相同**不等于**消耗顺序不重要，只等于**这次样本分不开它们**。
+// 那正是实验 4 要造的样本：让三者分开。
+func Replay(inst types.InstrumentID, hedge types.HedgeFlag,
+	day types.TradingDay, trades []Trade) (*position.Position, error) {
+	return ReplayFrom(nil, inst, hedge, day, trades)
+}
+
+// ReplayFrom 在一个**已有持仓**上重放当日成交。
+//
+// ⚠️ 它不是 Replay 的可选增强，是**跨交易日对拍的必需品**，理由很具体：
+//
+//	柜台的成交截面按交易日重置。今晚的持仓截面里会有昨仓，
+//	而今晚的成交里**没有任何一笔能解释它** —— 那几手是昨天开的。
+//
+// 也就是说 Replay(空仓, 今日成交) 会漏掉全部昨仓，
+// 而漏掉之后重放出来的持仓仍然是一个**看起来完全正常**的持仓，
+// 只是手数少了几手。它会与柜台比出一堆看起来像真差异的差异。
+//
+// 正确的链条是：上一日的夹具 → 按当日结算价结算 → 得到昨仓 → 在其上重放今日成交。
+// start 就是那个「结算之后的昨仓」，由调用方按这条链子备好。
+//
+// ⚠️ 另记一条：Replay 的「三种消耗顺序一致」检查在 start 为 nil 时
+// **结构上不可能触发** —— 全是今仓，三种顺序消耗的是同一批。
+// 它只有在这里、start 带着昨仓时才真正开始工作。
+func ReplayFrom(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag,
+	day types.TradingDay, trades []Trade) (*position.Position, error) {
+
+	orders := []position.CloseOrder{position.YesterdayFirst, position.TodayFirst, position.FIFO}
+	var first *position.Position
+	var firstSig string
+	for i, ord := range orders {
+		p, err := replayWith(start, inst, hedge, day, trades, ord)
+		if err != nil {
+			return nil, fmt.Errorf("按「%v」重放失败：%w", ord, err)
+		}
+		sig := signature(p)
+		if i == 0 {
+			first, firstSig = p, sig
+			continue
+		}
+		if sig != firstSig {
+			return nil, fmt.Errorf("⚠️ 重放有歧义：按「%v」得到 %s，按「%v」得到 %s —— "+
+				"平仓消耗顺序是待实测第 4 条，本次样本把它们分开了。"+
+				"此时任何一个结果都是猜的，不拿去对拍",
+				orders[0], firstSig, ord, sig)
+		}
+	}
+	return first, nil
+}
+
+func replayWith(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag,
+	day types.TradingDay, trades []Trade, ord position.CloseOrder) (*position.Position, error) {
+
+	p, err := position.New(inst, hedge, day)
+	if err != nil {
+		return nil, err
+	}
+	if start != nil {
+		// ⚠️ 必须**逐笔**拷贝起始持仓，不能只搬手数与均价：
+		// 均价是有损压缩，而三种消耗顺序的分别恰恰只在明细上显形。
+		// 从均价重建的起始持仓，会让下面的歧义检查永远判「一致」。
+		if err := copyLots(p, start); err != nil {
+			return nil, err
+		}
+	}
+	for _, t := range trades {
+		switch {
+		case t.Offset == types.Open:
+			if err := p.Open(t.Direction, day, t.Price, t.Volume); err != nil {
+				return nil, fmt.Errorf("成交 %s：%w", t.TradeID, err)
+			}
+		case t.Offset.IsClose() || t.Offset == types.Close:
+			// ⚠️ 平仓成交的 direction 是**下单方向**，不是被平持仓的方向：
+			// SELL/CLOSETODAY 平的是**多头**。反过来用会把多头平成空头，
+			// 而在双向持仓的样本上它不会报错 —— 两边都有仓可平。
+			closing := opposite(t.Direction)
+			if _, err := p.Close(closing, t.Offset, day, t.Volume, ord); err != nil {
+				return nil, fmt.Errorf("成交 %s（%v/%v %d 手）：%w",
+					t.TradeID, t.Direction, t.Offset, t.Volume, err)
+			}
+		default:
+			return nil, fmt.Errorf("成交 %s 的开平标志 %v 不认识", t.TradeID, t.Offset)
+		}
+	}
+	return p, nil
+}
+
+func opposite(d types.Direction) types.Direction {
+	if d == types.Buy {
+		return types.Sell
+	}
+	return types.Buy
+}
+
+// signature 是持仓的可比较摘要：两个方向的逐笔明细。
+//
+// ⚠️ 摘要必须含**逐笔**而不只是均价：三种消耗顺序完全可能给出同一个均价
+// 而留下不同的明细，而明细的差别会在下一次平仓或结算时才显形。
+// 用均价做摘要，等于把「暂时看不出来」当成「相同」。
+func signature(p *position.Position) string {
+	s := ""
+	for _, d := range []types.Direction{types.Buy, types.Sell} {
+		side, err := p.Side(d)
+		if err != nil {
+			return "错误:" + err.Error()
+		}
+		s += fmt.Sprintf("|%v:", d)
+		for _, l := range side.Lots() {
+			s += fmt.Sprintf("(%s×%d,基线%s,昨仓%t)", l.OpenPrice, l.Volume, l.Basis, l.Settled)
+		}
+	}
+	return s
+}
+
+// copyLots 把起始持仓的逐笔明细拷进目标持仓。
+//
+// ⚠️ 用 Side.Append 而不是重新 Open：Open 会把这一笔当成**今仓**
+// （Basis = 开仓价、Settled = false），而起始持仓里的昨仓恰恰
+// Basis = 昨结算价、Settled = true。走 Open 会把昨仓悄悄变成今仓，
+// 而变完之后平今平昨的判定、手续费、保证金基线全部错位且不报错
+// —— 那是 silent-risks.md 的第 1 条。
+func copyLots(dst, src *position.Position) error {
+	for _, d := range []types.Direction{types.Buy, types.Sell} {
+		from, err := src.Side(d)
+		if err != nil {
+			return err
+		}
+		to, err := dst.Side(d)
+		if err != nil {
+			return err
+		}
+		for _, l := range from.Lots() {
+			to.Append(l)
+		}
+	}
+	return nil
+}

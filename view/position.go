@@ -146,8 +146,21 @@ func PositionOf(p *position.Position, in PositionInput) (Position, error) {
 		i64("pos_"+n+"_today", st.volToday)
 		i64("pos_"+n+"_his", st.volHis)
 
-		num("open_cost_"+n, st.openCost.Mul(m))
-		num("position_cost_"+n, st.posCost.Mul(m))
+		if st.volume() == 0 {
+			// ⚠️ 空仓方向**没有**成本，不是成本为零 —— 与均价、盈亏、保证金同一条理由：
+			// 「一个不存在的持仓的开仓成本」不是 0，是没有。
+			//
+			// ⚠️ 而柜台在这里是**路径依赖**的：144 个空仓样本里 139 个给 "-"、5 个给 0
+			// （probes.md §9.1），那 5 个是当天平过仓的合约。
+			// 本库复现不了这条，也不假装能，于是必然在其中一侧对不上：
+			// 渲染成 0 会输掉 139 个，渲染成「无值」会输掉 5 个。
+			// **选边的理由不是哪边输得少**，是「不存在的持仓没有成本」这句话本身对。
+			v["open_cost_"+n] = None("该方向空仓，没有开仓成本")
+			v["position_cost_"+n] = None("该方向空仓，没有持仓成本")
+		} else {
+			num("open_cost_"+n, st.openCost.Mul(m))
+			num("position_cost_"+n, st.posCost.Mul(m))
+		}
 		// ⚠️ 今昨拆分的四个成本字段：本库算得出，而**实测柜台一律给 0**。
 		//
 		// 188 份持仓截面里，open_cost_*_today / _his 与

@@ -341,3 +341,75 @@ func TestAbsentMustNotCarryNumber(t *testing.T) {
 		t.Error("⚠️ 带错误的报告不能算通过")
 	}
 }
+
+// TestSummaryAccountsForEveryField 断言报告不会让任何字段变成隐形的。
+//
+// ⚠️ 这条是从一次真实的疏漏来的：加了 NotImplemented 这一档之后，
+// Summary 里那张硬编码的档位表没同步改，于是 52 个字段的报告只印出 37 个的计数，
+// 剩下 15 个既不在任何一行里，也不在逐字段行里 —— **看报告的人不会发现少了东西**。
+//
+// 判据不查那张表本身，查的是**合计**：印出来的计数之和必须等于字段数。
+// 查表要求测试跟着表一起改，查合计不用。
+func TestSummaryAccountsForEveryField(t *testing.T) {
+	fields := []Field{
+		{Name: "a", Library: d("1"), Oracle: d("1"), Triggered: true},            // Matched
+		{Name: "b", Library: d("1"), Oracle: d("1"), Triggered: false},           // Untriggered
+		{Name: "c", NotModeledUntil: "v1.0.0", Triggered: true},                  // NotModeled
+		{Name: "e", LibraryUnimplemented: true, Oracle: d("0"), Triggered: true}, // NotImplemented
+		{Name: "f", Library: d("1"), Oracle: d("2"), Triggered: true},            // Failed
+		{Name: "g", Library: d("1"), Oracle: d("1"), Triggered: true,
+			Deviation: &Deviation{Fixture: "x", Arbiter: "y", Chose: "z"}}, // KnownDeviation
+	}
+	r := Classify("合成样本", fields, tol)
+	// ⚠️ 判别力：六个用例要覆盖六个不同的档位，否则「合计对得上」只考验了其中几档。
+	seen := map[Verdict]bool{}
+	for _, v := range r.Verdicts {
+		seen[v] = true
+	}
+	if len(seen) < 6 {
+		t.Fatalf("⚠️ 只覆盖了 %d 个档位：%v —— 合计守卫没被完整考验", len(seen), seen)
+	}
+	sum := 0
+	for _, v := range allVerdicts {
+		sum += r.Counts[v]
+	}
+	if sum != len(fields) {
+		t.Errorf("⚠️ 计数合计 %d ≠ 字段数 %d —— 有档位不在 allVerdicts 里，"+
+			"那一档的字段在报告里是隐形的", sum, len(fields))
+	}
+	if strings.Contains(r.Summary(), "对不上 ——") {
+		t.Errorf("⚠️ Summary 自己报了合计不符：\n%s", r.Summary())
+	}
+	// 每个字段都要有逐字段行或计数行的归属 —— 这里查 Verdicts 全覆盖。
+	if len(r.Verdicts) != len(fields) {
+		t.Errorf("判定了 %d 个字段，输入 %d 个", len(r.Verdicts), len(fields))
+	}
+}
+
+// TestUnimplementedNeverMatchesEvenWhenBothAreZero 是本包最要紧的一条。
+//
+// ⚠️ 起因是一次真实的错误：ComparePosition 曾把未实现字段填成 0 再交过来，
+// 而柜台那边大量字段本来就是 0（空仓、无期权、无冻结），于是判成一致。
+// `volume_long_frozen_*` 当场就这么假通过了 —— **一个缺失的实现伪装成了一致**。
+func TestUnimplementedNeverMatchesEvenWhenBothAreZero(t *testing.T) {
+	r := Classify("合成样本", []Field{
+		{Name: "volume_long_frozen", LibraryUnimplemented: true,
+			Library: decimal.Zero, Oracle: decimal.Zero, Triggered: true},
+	}, tol)
+	if got := r.Verdicts["volume_long_frozen"]; got != NotImplemented {
+		t.Errorf("⚠️ 两边都是 0 的未实现字段判为 %v —— "+
+			"缺失的实现伪装成了一致，那比算错更坏："+
+			"算错会在某个样本上露出来，缺失永远不会", got)
+	}
+	if r.Passed() {
+		t.Error("⚠️ 只含未实现字段的一批被判通过")
+	}
+	// 对照：同样两个 0，没声明未实现时是 Matched —— 说明上面那条不是靠「0 一律不通过」。
+	r2 := Classify("合成样本", []Field{
+		{Name: "x", Library: decimal.Zero, Oracle: decimal.Zero, Triggered: true},
+	}, tol)
+	if got := r2.Verdicts["x"]; got != Matched {
+		t.Errorf("对照组应判 Matched，实为 %v —— "+
+			"若这里也不通过，上面那条证明的是别的东西", got)
+	}
+}

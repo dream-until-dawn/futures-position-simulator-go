@@ -204,7 +204,10 @@ func TestWireRoundTrip(t *testing.T) {
 		} {
 			s, ok := pair.get()
 			if !ok {
-				t.Errorf("%v 没有 %s 取值", h, pair.wire)
+				// ⚠️ 缺失是**合法状态**：套利与套保的 DIFF 线值至今未实测，
+				// 而缺失会让调用方当场拿到 false，比一个猜错的线值安全得多。
+				// 哪些可以缺、缺的是不是这两个，由
+				// TestHedgeDIFFTokensAreMeasuredNotGuessed 单独钉住。
 				continue
 			}
 			if back, err := pair.parse(s); err != nil || back != h {
@@ -307,5 +310,39 @@ func TestTradingDay(t *testing.T) {
 	if err := TradingDay(20260230).Validate(); err == nil ||
 		!strings.Contains(err.Error(), "真实存在") {
 		t.Errorf("2 月 30 日应被日历核出来，实得 %v", err)
+	}
+}
+
+// TestHedgeDIFFTokensAreMeasuredNotGuessed 断言 DIFF 的投机套保线值是**实测**的那个。
+//
+// ⚠️ 它补的是往返测试的一个盲区：只查往返的测试对线值本身**没有判别力** ——
+// `SPEC`、`SPECULATION`、`banana` 都能通过，只要编码解码两边一致。
+// 而线值是给**别人**看的，一致性只保证自己人内部说得通。
+//
+// 实测：交易日 20260908 的成交截面里 hedge_flag 全是 `"SPECULATION"`，
+// 417 笔无一例外。原先写的 `"SPEC"` 被这一批证伪。
+func TestHedgeDIFFTokensAreMeasuredNotGuessed(t *testing.T) {
+	s, ok := Speculation.DIFF()
+	if !ok || s != "SPECULATION" {
+		t.Errorf("⚠️ 投机的 DIFF 线值应为 \"SPECULATION\"（实测 417/417），得到 %q/%v —— "+
+			"这个值是给柜台看的，往返一致证明不了它对", s, ok)
+	}
+	// ⚠️ 套利与套保**必须缺失**，而不是被照着投机类推出来。
+	//
+	// `SPECULATION` 不是 `SPEC` 的展开（那一版就是这么猜的，被证伪了），
+	// `ARBITRAGE` 也就不必是 `ARBI` 的展开。
+	// 缺失是响的：DIFF() 返回 false、HedgeFromDIFF 报错。猜错是哑的：原样发出去。
+	for _, h := range []HedgeFlag{Arbitrage, Hedge} {
+		if s, ok := h.DIFF(); ok {
+			t.Errorf("⚠️ %v 的 DIFF 线值 %q 是从哪来的？至今零观测 —— "+
+				"照着投机类推正是上一版被证伪的那种做法", h, s)
+		}
+	}
+	// 反向：CTP 侧三个取值都有出处（ThostFtdcUserApiDataType.h，probes.md §3），
+	// 所以那边不该缺。⚠️ 少了这一句，上面那条可以靠「全都缺失」通过。
+	for _, h := range []HedgeFlag{Speculation, Arbitrage, Hedge} {
+		if _, ok := h.CTP(); !ok {
+			t.Errorf("%v 没有 CTP 取值 —— CTP 侧三个都是从头文件清点出来的，不该缺", h)
+		}
 	}
 }
