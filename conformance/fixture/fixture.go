@@ -297,3 +297,30 @@ func (f *Fixture) Multiplier(symbol string) (decimal.Decimal, bool) {
 	}
 	return v.Number, true
 }
+
+// HasHistoryPosition 报告某个合约的持仓截面里有没有**昨仓**。
+//
+// ⚠️ 它是「只重放当日成交」这条路径的**适用性判据**：
+//
+//	柜台的成交截面按交易日重置。有昨仓时，那几手是昨天开的，
+//	今天的成交里**没有任何一笔能解释它**。
+//
+// 于是 Replay(nil, 今日成交) 会漏掉全部昨仓，
+// 而漏掉之后重放出来的持仓**看起来完全正常**，只是手数少了几手 ——
+// 它会与柜台比出一堆看起来像真差异的差异。
+//
+// 有昨仓时正确的做法是走 Carry + ReplayFrom（上一日夹具 → 结算 → 昨仓），
+// 而不是把结果将就着拿去对拍。
+func (f *Fixture) HasHistoryPosition(symbol string) bool {
+	p, ok := f.Positions[symbol]
+	if !ok {
+		return false
+	}
+	for _, k := range []string{"volume_long_his", "volume_short_his"} {
+		v, ok := p[k]
+		if ok && !v.Absent && !v.IsText && v.Number.IsPositive() {
+			return true
+		}
+	}
+	return false
+}

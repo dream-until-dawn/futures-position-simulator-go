@@ -429,7 +429,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	type key struct{ fixture, sym string }
 	totals := map[conformance.Verdict]int{}
 	failedFields := map[string]int{}
-	samples, withMargin := 0, 0
+	samples, withMargin, skippedHistory := 0, 0, 0
 	exchanges := map[types.Exchange]bool{}
 	fieldCounts := map[int][]key{}
 
@@ -437,6 +437,18 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		for _, sym := range f.Symbols() {
 			trades := f.TradesOf(sym)
 			if len(trades) == 0 {
+				continue
+			}
+			// ⚠️ 有昨仓的截面**不能**用「只重放当日成交」的路径对拍。
+			//
+			// 柜台的成交截面按交易日重置：昨仓那几手是昨天开的，
+			// 今天的成交里没有一笔能解释它。硬跑会漏掉那几手，
+			// 而漏掉之后的持仓看起来完全正常，只是手数少了几手 ——
+			// 它会与柜台比出一堆看起来像真差异的差异。
+			//
+			// 跳过并**计数**，不静默：那个数是「这批夹具里有多少份需要 Carry」。
+			if f.HasHistoryPosition(sym) {
+				skippedHistory++
 				continue
 			}
 			multStr, ok := multipliers[sym]
@@ -502,6 +514,15 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 
 	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家；其中 %d 个接上了保证金",
 		samples, len(exchanges), withMargin)
+	if skippedHistory > 0 {
+		// ⚠️ 这个数从 0 变成非 0，说明**第一份带昨仓的夹具进来了** ——
+		// 那是个里程碑，不是故障：本项目最核心那对区分要等它才可观测。
+		// 它同时是一张待办：这些截面要走 Carry + ReplayFrom 才能对拍。
+		t.Logf("⚠️ 跳过 %d 个**带昨仓**的截面 —— "+
+			"只重放当日成交解释不了昨仓（成交截面按交易日重置）。"+
+			"它们要走 Carry（上一日夹具 → 按结算价结算 → 昨仓）+ ReplayFrom。"+
+			"⚠️ 这个数第一次非零，意味着两条基线第一次真的分开了", skippedHistory)
+	}
 	for _, v := range []conformance.Verdict{
 		conformance.Matched, conformance.NotModeled, conformance.NotImplemented,
 		conformance.Untriggered, conformance.KnownDeviation, conformance.Failed,
@@ -586,5 +607,81 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	if totals[conformance.Matched] < 300 {
 		t.Errorf("⚠️ 全批只有 %d 个「对得上且被触发过」—— 太少，疑似大面积退化",
 			totals[conformance.Matched])
+	}
+}
+
+// TestHasHistoryPositionDiscriminates 断言昨仓判据真的会判。
+//
+// ⚠️ 现在全部夹具的昨仓都是 0，于是 HasHistoryPosition 恒返回 false ——
+// 那条守卫在**今天**的数据上一次都不会触发。
+// 一条从没被触发过的守卫，与写死 `return false` 在样本上完全同值。
+//
+// 今晚的夹具会带昨仓，而那时它必须真的拦住。这里用合成截面提前验一次。
+func TestHasHistoryPositionDiscriminates(t *testing.T) {
+	mk := func(long, short string) *Fixture {
+		p := map[string]Value{}
+		set := func(k, v string) {
+			if v == "-" {
+				p[k] = Value{Absent: true}
+				return
+			}
+			p[k] = Value{Number: decimal.RequireFromString(v)}
+		}
+		set("volume_long_his", long)
+		set("volume_short_his", short)
+		return &Fixture{Positions: map[string]map[string]Value{"SHFE.rb2701": p}}
+	}
+	cases := []struct {
+		name        string
+		long, short string
+		want        bool
+	}{
+		{"两边都没有昨仓", "0", "0", false},
+		{"多头有昨仓", "2", "0", true},
+		{"空头有昨仓", "0", "3", true},
+		{"两边都有", "1", "1", true},
+		{"柜台给的是无值", "-", "-", false},
+	}
+	if len(cases) != 5 {
+		t.Fatalf("用例 %d 条，应为 5", len(cases))
+	}
+	yes, no := 0, 0
+	for _, c := range cases {
+		if got := mk(c.long, c.short).HasHistoryPosition("SHFE.rb2701"); got != c.want {
+			t.Errorf("⚠️ %s：得到 %v，应为 %v —— "+
+				"判错的后果是拿一份缺了昨仓的重放去对拍，"+
+				"而那会比出一堆看起来像真差异的差异", c.name, got, c.want)
+		}
+		if c.want {
+			yes++
+		} else {
+			no++
+		}
+	}
+	if yes == 0 || no == 0 {
+		t.Fatalf("⚠️ 用例只覆盖一侧（真 %d / 假 %d）", yes, no)
+	}
+	// 没有这个合约时不该说「有昨仓」。
+	if mk("2", "0").HasHistoryPosition("SHFE.zzz9999") {
+		t.Error("⚠️ 不存在的合约被判成有昨仓")
+	}
+	// ⚠️ 现状记录：今天全部入库夹具的昨仓都是 0。
+	// 这个数第一次非零时，本项目最核心那对区分才第一次可观测。
+	all := loadAll(t)
+	withHistory := 0
+	for _, f := range all {
+		for _, sym := range f.Symbols() {
+			if f.HasHistoryPosition(sym) {
+				withHistory++
+			}
+		}
+	}
+	if withHistory == 0 {
+		t.Logf("ⓘ 全部入库夹具里**一个昨仓截面都没有** —— " +
+			"这条守卫在真实数据上还一次没触发过，上面靠合成样本验。" +
+			"今晚结算之后它会第一次真的工作")
+	} else {
+		t.Logf("⚠️ 已有 %d 个带昨仓的截面 —— "+
+			"去把它们接进 Carry + ReplayFrom，别让它们停在「跳过」上", withHistory)
 	}
 }
