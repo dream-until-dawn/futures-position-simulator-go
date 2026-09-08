@@ -1839,5 +1839,27 @@
   "test": "TestNoStaleForbiddenPhrasesInPackageDocs",
   "want": "那一棵子树很可能整个没走到",
   "expect": "red"
+ },
+ {
+  "name": "166 把一处欠账的到期版本悄悄往后推（v0.8.0 → v1.0.0）",
+  "dir": "",
+  "file": "view/view.go",
+  "old": "\t\t\"ctp_available\": Skip(\"v0.8.0\", \"同 ctp_balance\"),",
+  "new": "\t\t\"ctp_available\": Skip(\"v1.0.0\", \"同 ctp_balance\"),",
+  "pkg": "./",
+  "test": "TestNotModeledDebtDistributionIsRecorded",
+  "want": "欠账的分布变了",
+  "expect": "red"
+ },
+ {
+  "name": "167 Version 推到 v0.8.0（那两处欠账应当当场到期）",
+  "dir": "",
+  "file": "version.go",
+  "old": "const Version = \"v0.4.0\"",
+  "new": "const Version = \"v0.8.0\"",
+  "pkg": "./",
+  "test": "TestNotModeledDeclarationsHaveNotExpired",
+  "want": "声明不建模到 v0.8.0，而当前版本已是 v0.8.0",
+  "expect": "red"
  }
 ]

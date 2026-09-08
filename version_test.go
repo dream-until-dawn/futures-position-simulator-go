@@ -401,3 +401,63 @@ func TestExpiryMechanismActuallyFires(t *testing.T) {
 	t.Logf("到期机制自检：当前 %s 到期 0 处；假想 %s 到期 %d 处；假想 %s 到期 %d 处",
 		Version, earliest, byVersion[earliest], latest, len(decls))
 }
+
+// notModeledDebt 是「不建模」欠账的**到期分布**，入库的那一份。
+//
+// ⚠️ 它是**金文件**（golden），不是一个需要有人记得同步的参数：
+// 下面那条测试拿它与实算的分布逐档比，任何一处对不上都会红。
+var notModeledDebt = map[string]int{
+	"v0.8.0": 2,
+	"v1.0.0": 8,
+}
+
+// TestNotModeledDebtDistributionIsRecorded 钉住**欠账的到期分布**。
+//
+// # 它补的是现有到期机制看不见的那一半
+//
+// `TestNotModeledDeclarationsHaveNotExpired` 的错误信息里写着
+// 「不许默默改数字」—— 而它**发现不了**这件事：把一处声明的到期版本
+// 从 v0.8.0 悄悄改成 v1.0.0，那一条照样绿（v1.0.0 仍然晚于当前版本），
+// 欠账就这么被推后了一整个版本，**而没有任何东西会响**。
+//
+// 这里比的是**分布**，所以那种改动会当场红在「v0.8.0 少了一处、v1.0.0 多了一处」。
+//
+// # 它同时是一道减速带
+//
+// 把 Version 推向 v0.8.0 的那一刻，上面那条会为两处欠账报错；
+// 而这一条要求推它的人**把这份记录一起改** —— 改记录时人恰好
+// 处在「正在处理这两条欠账」的心智状态里。
+// ⚠️ 这与 silent-risks 方法论第 26 条是正面用法：写条目时人不在做那个
+// 动作的状态里，而**推版本号时他恰好在**。
+//
+// ⚠️ 它**不重新定义「版本算不算做完」**，因此不属于闸口宽度那一类
+// （本条由评审方 20260909 提出，采纳前已核过这一点）。
+func TestNotModeledDebtDistributionIsRecorded(t *testing.T) {
+	decls := collectNotModeled(t)
+	got := map[string]int{}
+	total := 0
+	for _, d := range decls {
+		got[d.Until]++
+		total++
+	}
+	// ⚠️ 判别力：至少两档、且总数有下界，否则「分布一致」是空话。
+	if len(notModeledDebt) < 2 || total < 5 {
+		t.Fatalf("⚠️ 记录里只有 %d 档、实算只有 %d 处 —— 太少，本条没有判别力",
+			len(notModeledDebt), total)
+	}
+	for v, want := range notModeledDebt {
+		if got[v] != want {
+			t.Errorf("⚠️ 到期版本 %s 记录 %d 处，实算 %d 处 —— "+
+				"欠账的分布变了。⚠️ 若是把某处的到期版本**往后推**，"+
+				"那条「有没有到期」的测试是**看不见的**（推后之后仍然晚于当前版本），"+
+				"这一条就是为此存在：不许默默改数字", v, want, got[v])
+		}
+	}
+	for v, n := range got {
+		if _, ok := notModeledDebt[v]; !ok {
+			t.Errorf("⚠️ 冒出一个没记录过的到期版本 %s（%d 处）—— "+
+				"新增「不建模」声明要连同这份记录一起改", v, n)
+		}
+	}
+	t.Logf("欠账分布：实算 %d 处，%v", total, got)
+}
