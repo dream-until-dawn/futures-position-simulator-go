@@ -5,6 +5,7 @@ import (
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
+	"github.com/shopspring/decimal"
 )
 
 // Replay 把一个合约的成交重放成本库的持仓。
@@ -51,7 +52,7 @@ func ReplayFrom(start *position.Position, inst types.InstrumentID, hedge types.H
 	var first *position.Position
 	var firstSig string
 	for i, ord := range orders {
-		p, err := replayWith(start, inst, hedge, day, trades, ord)
+		p, err := replayWith(start, inst, hedge, day, trades, ord, nil)
 		if err != nil {
 			return nil, fmt.Errorf("按「%v」重放失败：%w", ord, err)
 		}
@@ -70,8 +71,44 @@ func ReplayFrom(start *position.Position, inst types.InstrumentID, hedge types.H
 	return first, nil
 }
 
+// Realized 是一次平仓的已实现结果。
+//
+// ⚠️ 它必须带着**被消耗的明细片段**，而不只是手数与均价：
+// 两套平仓盈亏口径都要逐片算 —— 逐笔对冲用片的 OpenPrice，
+// 逐日盯市用片的 Basis。压成均价之后就只剩一套了。
+type Realized struct {
+	TradeID    string
+	Instrument types.InstrumentID
+	// Direction 是**被平掉的持仓**的方向，不是下单方向。
+	Direction  types.Direction
+	Offset     types.Offset
+	ClosePrice decimal.Decimal
+	Consumed   []position.Lot
+}
+
+// ReplayRealized 在重放的同时收集全部平仓的已实现片段。
+//
+// ⚠️ 它固定用 position.YesterdayFirst，**而这在本批样本上无所谓**：
+// ReplayFrom 已经断言过三种消耗顺序给出同一个结果，
+// 顺序有分歧时它会报错而不是返回一个猜的。
+// 这里再挑一次顺序不是第二个判断，是复用那个已经被检查过的结论。
+func ReplayRealized(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag,
+	day types.TradingDay, trades []Trade) (*position.Position, []Realized, error) {
+	// 先走一遍歧义检查 —— 有歧义就整个不给结果。
+	if _, err := ReplayFrom(start, inst, hedge, day, trades); err != nil {
+		return nil, nil, err
+	}
+	var out []Realized
+	p, err := replayWith(start, inst, hedge, day, trades, position.YesterdayFirst, &out)
+	if err != nil {
+		return nil, nil, err
+	}
+	return p, out, nil
+}
+
 func replayWith(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag,
-	day types.TradingDay, trades []Trade, ord position.CloseOrder) (*position.Position, error) {
+	day types.TradingDay, trades []Trade, ord position.CloseOrder,
+	realized *[]Realized) (*position.Position, error) {
 
 	p, err := position.New(inst, hedge, day)
 	if err != nil {
@@ -96,9 +133,16 @@ func replayWith(start *position.Position, inst types.InstrumentID, hedge types.H
 			// SELL/CLOSETODAY 平的是**多头**。反过来用会把多头平成空头，
 			// 而在双向持仓的样本上它不会报错 —— 两边都有仓可平。
 			closing := opposite(t.Direction)
-			if _, err := p.Close(closing, t.Offset, day, t.Volume, ord); err != nil {
+			res, err := p.Close(closing, t.Offset, day, t.Volume, ord)
+			if err != nil {
 				return nil, fmt.Errorf("成交 %s（%v/%v %d 手）：%w",
 					t.TradeID, t.Direction, t.Offset, t.Volume, err)
+			}
+			if realized != nil {
+				*realized = append(*realized, Realized{
+					TradeID: t.TradeID, Instrument: inst, Direction: closing,
+					Offset: t.Offset, ClosePrice: t.Price, Consumed: res.Consumed,
+				})
 			}
 		default:
 			return nil, fmt.Errorf("成交 %s 的开平标志 %v 不认识", t.TradeID, t.Offset)

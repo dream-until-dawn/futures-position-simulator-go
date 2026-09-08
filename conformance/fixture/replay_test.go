@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/pnl"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -188,4 +189,69 @@ func mustSide(t *testing.T, p *position.Position) *position.Side {
 		t.Fatal(err)
 	}
 	return s
+}
+
+// TestReplayRealizedKeepsEveryConsumedLot 断言一次平仓吃掉的**每一片**都被留下。
+//
+// ⚠️ 这条是破坏验证逼出来的：把 Consumed 截成 [:1] 之后，
+// 全部夹具对拍照样绿 —— 因为 PROBE_MAX_VOLUME=1，本批每一笔成交都是 1 手，
+// 每一次平仓恰好只消耗一个片段。
+//
+// 也就是说「一次平仓消耗多片」这条路径**对着柜台一次都没被走过**，
+// 而它正是两套盈亏口径分岔的地方：
+//
+//	(2 手 @100, 1 手 @130) 一次平掉 3 手 @120
+//	逐笔对冲 = (120−100)×2 + (120−130)×1 = +30
+//	只算第一片        = (120−100)×1        = +20
+//
+// ⚠️ 合成样本盖得住代码，**盖不住柜台**：柜台在这种情形下怎么算仍未实测。
+// 那要一次 volume > 1 的平仓，而安全阀现在把手数限制成 1。
+func TestReplayRealizedKeepsEveryConsumedLot(t *testing.T) {
+	p, err := position.New(testInst, types.Speculation, dayD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range [][2]any{{"100", 2}, {"130", 1}} {
+		if err := p.Open(types.Buy, dayD, dd(l[0].(string)), l[1].(int)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// 一次平掉 3 手 —— 必然跨两个片段。
+	trades := []Trade{{
+		TradeID: "t1", Instrument: testInst,
+		Direction: types.Sell, Offset: types.CloseToday,
+		Hedge: types.Speculation, Price: dd("120"), Volume: 3, At: 1,
+	}}
+	_, realized, err := ReplayRealized(p, testInst, types.Speculation, dayD, trades)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(realized) != 1 {
+		t.Fatalf("应有 1 次平仓，得到 %d", len(realized))
+	}
+	rz := realized[0]
+	if len(rz.Consumed) != 2 {
+		t.Fatalf("⚠️ 一次平仓吃掉两个片段，只留下 %d 个 —— "+
+			"少一片就少一段盈亏，而结果仍然是个看起来合理的数", len(rz.Consumed))
+	}
+	total := 0
+	for _, l := range rz.Consumed {
+		total += l.Volume
+	}
+	if total != 3 {
+		t.Errorf("⚠️ 片段手数合计 %d，平的是 3 手 —— 对不上就是丢了片", total)
+	}
+	// 盈亏必须按两片算：(120−100)×2 + (120−130)×1 = 30（乘数 1）
+	legs := make([]pnl.Leg, 0, len(rz.Consumed))
+	for _, l := range rz.Consumed {
+		legs = append(legs, pnl.Leg{Volume: l.Volume, OpenPrice: l.OpenPrice, Basis: l.Basis})
+	}
+	res, err := pnl.CloseProfit(legs, rz.Direction, rz.ClosePrice, decimal.NewFromInt(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.ByTrade.Equal(decimal.NewFromInt(30)) {
+		t.Errorf("⚠️ 逐笔对冲应为 30，得到 %s —— "+
+			"只算第一片会得到 20，那是个完全合理的数", res.ByTrade)
+	}
 }
