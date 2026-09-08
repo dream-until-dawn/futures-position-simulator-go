@@ -113,7 +113,7 @@ func assertCoversEveryPackage(t *testing.T, what string, seen map[string]bool) {
 // 把偶然变成写下来的，而不是因为它现在多做了什么。
 func touchSourceBytes(t *testing.T) {
 	t.Helper()
-	seen := map[string]bool{}
+	seen, read := map[string]bool{}, map[string]bool{}
 	files, total := 0, 0
 	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -134,8 +134,9 @@ func touchSourceBytes(t *testing.T) {
 		}
 		files++
 		total += len(b)
-		if abs, aerr := filepath.Abs(filepath.Dir(p)); aerr == nil {
-			seen[filepath.Clean(abs)] = true
+		if abs, aerr := filepath.Abs(p); aerr == nil {
+			read[filepath.Clean(abs)] = true
+			seen[filepath.Clean(filepath.Dir(abs))] = true
 		}
 		return nil
 	})
@@ -146,7 +147,61 @@ func touchSourceBytes(t *testing.T) {
 		t.Fatal("⚠️ 一个字节都没读到 —— 读源码那一步坏了，而坏掉之后测试会静默还原成可缓存")
 	}
 	assertCoversEveryPackage(t, "读源码", seen)
+	assertReadEveryGoFile(t, read)
 	t.Logf("读了 %d 个 .go、共 %d 字节", files, total)
+}
+
+// assertReadEveryGoFile 断言**每一个 .go 文件**都被读到了，不只是每个包一个。
+//
+// ⚠️ 粒度这一格是评审方 20260909 找出来的，而它恰好是这两条守卫**要求不同**
+// 的那一格：
+//
+//	packagetree  触发 = 多了一个包        → 包级覆盖**正好够**
+//	deps         触发 = 某个 .go 多一行 import → ⚠️ 那一行可能在任何一个文件里，
+//	                                       包级覆盖**不够**
+//
+// 具体形态：过滤器哪天变窄（多一个 SkipDir、后缀条件改动、跳过 _test.go），
+// 它仍可能**每个包读到一个文件** —— 于是包级覆盖照样通过，
+// 而没被读到的那些文件里新增 import，缓存不会失效。
+//
+// ⚠️ 判据仍是两个独立来源，仍不需要有人维护数字：
+// `go list` 报出的每一个 .go 都必须在读过的集合里。
+//
+// ⚠️ 方向是**包含**不是相等：走目录还会读到 `go list ./...` 报不出的文件
+// （嵌套模块 cmd/oracle、被 build tag 排除的文件）—— 多读是安全的，
+// 少读才是漏。把它写成相等会在嵌套模块上误报。
+func assertReadEveryGoFile(t *testing.T, read map[string]bool) {
+	t.Helper()
+	out, err := exec.Command("go", "list",
+		"-f", "{{.Dir}}|{{.GoFiles}}|{{.TestGoFiles}}|{{.XTestGoFiles}}", "./...").Output()
+	if err != nil {
+		t.Fatalf("⚠️ go list 失败：%v —— 文件级判据没法算", err)
+	}
+	want := 0
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		parts := strings.Split(strings.TrimSpace(line), "|")
+		if len(parts) < 2 {
+			continue
+		}
+		dir := parts[0]
+		for _, group := range parts[1:] {
+			group = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(group), "["), "]")
+			for _, name := range strings.Fields(group) {
+				want++
+				p := filepath.Clean(filepath.Join(dir, name))
+				if !read[p] {
+					t.Errorf("⚠️ 没读到 %s —— 包级覆盖挡不住这一格："+
+						"过滤器变窄之后仍可能每个包读到一个文件，"+
+						"而**没被读到的那些文件里新增 import，缓存不会失效**", p)
+				}
+			}
+		}
+	}
+	// ⚠️ 一个文件都没报出来时下面是空真 —— 那正是最该报警的时候。
+	if want == 0 {
+		t.Fatal("⚠️ go list 一个 .go 都没报出来 —— 文件级判据会空真通过")
+	}
+	t.Logf("文件级覆盖：go list 报出 %d 个 .go，全部读到", want)
 }
 
 // touchGitState 让 `go test` 的缓存**看得见 git 的状态**。

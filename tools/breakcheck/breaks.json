@@ -1973,5 +1973,16 @@
   "test": "TestNoNewWipCommits",
   "want": "个 git 状态文件",
   "expect": "red"
+ },
+ {
+  "name": "178 读源码时跳过 _test.go（每个包仍读到一个文件，包级覆盖照样通过）",
+  "dir": "",
+  "file": "gitcache_test.go",
+  "old": "\t\tif !strings.HasSuffix(p, \".go\") {\n\t\t\treturn nil\n\t\t}",
+  "new": "\t\tif !strings.HasSuffix(p, \".go\") || strings.HasSuffix(p, \"_test.go\") {\n\t\t\treturn nil\n\t\t}",
+  "pkg": "./",
+  "test": "TestMainModuleHasOneDependency",
+  "want": "没读到",
+  "expect": "red"
  }
 ]
