@@ -760,7 +760,7 @@
   "new": "\t\tLimitPrice: 1.0,",
   "pkg": "./probe/",
   "test": "TestPositionFrozenLimitPriceIsFar",
-  "want": "不是 FarPrice 算出来的",
+  "want": "LimitPrice 不是个调用",
   "expect": "red"
  },
  {
@@ -774,5 +774,16 @@
   "want": "",
   "expect": "green",
   "why": "删掉这一段之后，柜台拒单会走到 timedOut，于是被记成「该柜台不在持仓侧记冻结手数」——一条关于柜台的**错误结论**，而它看起来与真结论一模一样。全套单测照样绿。⚠️ 这是本实验声明的盲区：waitFrozen 的三态只有连着真柜台才验得了，单测这一层覆盖不到它。跑 position-frozen 时必须**亲眼看那三行日志分支**，不能只看它没报错。"
+ },
+ {
+  "name": "71 下单限价换成对手价（是个调用，但不是 FarPrice）",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_position_frozen.go",
+  "old": "\t\tLimitPrice: q.FarPrice(pick.orderDir()),",
+  "new": "\t\tLimitPrice: q.AggressivePrice(pick.orderDir()),",
+  "pkg": "./probe/",
+  "test": "TestPositionFrozenLimitPriceIsFar",
+  "want": "不是 FarPrice 算出来的",
+  "expect": "red"
  }
 ]

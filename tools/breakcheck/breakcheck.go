@@ -211,12 +211,21 @@ func run(b Break) (verdict, detail string) {
 	if err != nil {
 		return "零层未成立", fmt.Sprintf("读不到 %s：%v", b.File, err)
 	}
-	if n := strings.Count(string(orig), b.Old); n != 1 {
+	// ⚠️ 锚点在清单里一律写 LF，而**本仓库的换行是混的**：
+	// git 签出的文件是 CRLF，后来新建的是 LF。裸字节比对会让
+	// CRLF 文件上的每一条多行锚点都匹配不上 —— 而那报出来是「零层未成立」，
+	// 看起来像锚点写错了。实测踩过一次，查了很久才想到是换行。
+	old, broken := adaptEOL(string(orig), b.Old), adaptEOL(string(orig), b.New)
+	if n := strings.Count(string(orig), old); n != 1 {
+		hint := ""
+		if old != b.Old {
+			hint = "（该文件通篇 CRLF，锚点已按它转换过再找）"
+		}
 		return "零层未成立", fmt.Sprintf(
-			"锚点在 %s 里出现 %d 次（要恰好 1 次）—— **破坏本身没发生**，"+
-				"下面无论红绿都不说明任何事", b.File, n)
+			"锚点在 %s 里出现 %d 次（要恰好 1 次）%s—— **破坏本身没发生**，"+
+				"下面无论红绿都不说明任何事", b.File, n, hint)
 	}
-	if err := os.WriteFile(b.File, []byte(strings.Replace(string(orig), b.Old, b.New, 1)), 0o644); err != nil {
+	if err := os.WriteFile(b.File, []byte(strings.Replace(string(orig), old, broken, 1)), 0o644); err != nil {
 		return "零层未成立", err.Error()
 	}
 	defer func() {
@@ -298,4 +307,23 @@ func hasTrackedChanges(porcelain string) bool {
 		}
 	}
 	return false
+}
+
+// adaptEOL 把锚点的换行改成**目标文件实际用的**那种。
+//
+// ⚠️ 只在文件通篇是 CRLF 时才转。换行混着的文件一律不猜 ——
+// 那时转与不转都可能匹配不上，而上面那条「恰好 1 次」会把它拦下来。
+// 拦下来比蒙对一半强：蒙对的那一半会让另一半静默失效，
+// 而「静默失效的破坏」正是这个工具存在的理由。
+//
+// ⚠️ 还原走的是没动过的 orig 字节，所以这里的转换不影响逐字节还原那一条。
+func adaptEOL(content, anchor string) string {
+	if anchor == "" || strings.Contains(anchor, "\r\n") {
+		return anchor
+	}
+	crlf := strings.Count(content, "\r\n")
+	if crlf == 0 || crlf != strings.Count(content, "\n") {
+		return anchor // 全 LF，或换行是混的
+	}
+	return strings.ReplaceAll(anchor, "\n", "\r\n")
 }
