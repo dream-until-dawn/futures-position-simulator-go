@@ -49,6 +49,25 @@ const (
 	// ⚠️ 但**手续费仍可能区分平今**。「持仓不分今昨」不等于「费用不分今昨」，
 	// 这两件事各由一个字段控制。
 	NoUseHistory
+	// PositionDateNotNeeded 是调用方**显式声明**「这条路上用不到它」。
+	//
+	// ⚠️ 它与零值 PositionDateUnknown 的区别是本枚举最要紧的一处：
+	//
+	//	PositionDateUnknown    调用方**忘了传**，或者规则数据缺失 —— 建仓即报错
+	//	PositionDateNotNeeded  调用方**查过了，确实用不上** —— 建仓放行，结算仍报错
+	//
+	// 两者共用零值时，`position.New` 只有两个选择：要么拦零值（于是
+	// 只重放、永不结算的调用方被逼着**为一个用不上的参数编一个值**，
+	// 而编出来的值会被后来的人当成实测值），要么不拦（于是「忘了传」
+	// 一路滑到结算才报）。⚠️ 这个「非此即彼」的全部来源，
+	// 就是拿同一个零值表示了「忘了」和「不需要」两件事。
+	//
+	// ⚠️ 它**不是**「随便挑一种」的许可证：`Settle` 照样拒绝它，
+	// 理由是结算必须知道今仓变不变昨仓。用它换来的只有构造期的检查。
+	//
+	// ⚠️ 也**不落盘**：refdata 快照里没有它的令牌（见 posDateTokens）——
+	// 一份规则数据快照里出现「不需要」是自相矛盾的。
+	PositionDateNotNeeded
 )
 
 func (p PositionDateType) String() string {
@@ -57,6 +76,8 @@ func (p PositionDateType) String() string {
 		return "区分今昨仓"
 	case NoUseHistory:
 		return "不区分今昨仓"
+	case PositionDateNotNeeded:
+		return "本路径用不到（显式声明）"
 	}
 	return "未知"
 }
@@ -126,6 +147,14 @@ func (i Instrument) Validate() error {
 	if i.PositionDateType == PositionDateUnknown {
 		return fmt.Errorf("%s 的 PositionDateType 未知 —— 它决定报单要不要显式声明平今平昨，"+
 			"不能默认；按交易所硬编码在绝大多数合约上都对，而错的那几个不会被测出来",
+			i.ID.Native())
+	}
+	if i.PositionDateType == PositionDateNotNeeded {
+		// ⚠️ 「本路径用不到」是**调用方**的声明，不是合约的属性。
+		// 一份规则数据里出现它是自相矛盾的：规则数据的存在理由就是承载它。
+		return fmt.Errorf("%s 的 PositionDateType 是 PositionDateNotNeeded —— "+
+			"那是给 position.New 的调用方用的声明（「这条路不结算」），"+
+			"**不是合约的属性**；规则数据里必须是 UseHistory 或 NoUseHistory",
 			i.ID.Native())
 	}
 	if i.MinLimitOrderVolume < 0 || i.MaxLimitOrderVolume < 0 {

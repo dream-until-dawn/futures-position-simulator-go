@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
@@ -160,39 +161,48 @@ func TestCrossDayConformance(t *testing.T) {
 	// ⚠️ 一条靠错误分类维持「活着」的守卫，比没有守卫更难发现。
 	known := map[string]string{
 		// —— A：本库用**结算价** 3163，柜台用**收盘价** 3177（kq_facts 26/37）——
-		"position_price_long":    "A",
-		"position_price_short":   "A",
-		"position_cost_long":     "A", // 成本 = 均价 × 手数 × 乘数，基线不同则成本不同
-		"position_cost_long_his": "A",
-		"position_profit_long":   "A", // 基线不同则持仓盈亏不同
-		"position_profit":        "A",
+		"position_price_long":    "跨日-A",
+		"position_price_short":   "跨日-A",
+		"position_cost_long":     "跨日-A", // 成本 = 均价 × 手数 × 乘数，基线不同则成本不同
+		"position_cost_long_his": "跨日-A",
+		"position_profit_long":   "跨日-A", // 基线不同则持仓盈亏不同
+		"position_profit":        "跨日-A",
 
 		// —— D：**今昨拆分柜台不填**（kq_facts 28/33）——
 		//
-		// ⚠️ 与类 B 不是一回事，此前被混在一起了：
-		//	open_cost_* 的拆分**从来**不是真实数字（本库算得出，柜台给 0 或 "-"）
-		//	position_cost_* 的拆分只在**结算时**写，且写哪一侧由 PositionDateType 定
-		"open_cost_long_his":        "D",
-		"open_cost_long_today":      "D",
-		"open_cost_short_his":       "D",
-		"open_cost_short_today":     "D",
-		"position_cost_long_today":  "D",
-		"position_cost_short_his":   "D",
-		"position_cost_short_today": "D",
-
-		// —— E：空仓方向上本库说「明确无值」，柜台给 0 ——
+		// ⚠️ 只剩 position_cost_long_today 一个够格：它在 DCE.m2701 上
+		// **非零过**（102450 = 3×3415×10），所以「柜台在结算时写这一侧」
+		// 是有观测支撑的因果断言。
 		//
-		// ⚠️ 这是 kq_facts 15：`"-"` 与 `0` 在**成本与盈亏**字段上是**路径依赖**的。
-		// 本库没有「这个字段今天被设过没有」这个状态，**复现不了**。
-		"position_cost_short":   "E",
-		"position_profit_short": "E",
+		// ⚠️ 其余原本标 D 的那几个（open_cost_* 的四个、position_cost_short_*）
+		// 全部改成了「跨日-?」—— 它们一次都没有非零过，
+		// 而下面那条机械断言当场把它们拎了出来。评审只点名了空头那三个，
+		// 机械规则连 open_cost_long_his/_today 一起找到了：
+		// **手工分类漏掉的正是自己以为最熟的那几个。**
+		"open_cost_long_his":        "跨日-?",
+		"open_cost_long_today":      "跨日-?",
+		"open_cost_short_his":       "跨日-?",
+		"open_cost_short_today":     "跨日-?",
+		"position_cost_long_today":  "跨日-D",
+		"position_cost_short_his":   "跨日-?",
+		"position_cost_short_today": "跨日-?",
+
+		// —— 原来的 E（空仓侧「明确无值」vs 柜台 0）——
+		//
+		// ⚠️ 全部降级成「跨日-?」。原来的解释是 kq_facts 15（路径依赖），
+		// 而**空头昨仓从来没有存在过**（419 条持仓记录里 0 次），
+		// 于是「路径依赖」「柜台不填拆分」「压根没有这个仓」三种解释
+		// 给出同一个观测 —— 挑其中任何一个都是猜。
+		"position_cost_short":   "跨日-?",
+		"position_profit_short": "跨日-?",
 
 		// —— B：NoUseHistory 不滚今昨（kq_facts 24）——
 		// ⚠️ 留着这几个键是因为**它们确实属于 B**，只是本条现在观测不到 B。
-		"volume_long_today":  "B",
-		"volume_long_his":    "B",
-		"volume_short_today": "B",
-		"volume_short_his":   "B",
+		// ⚠️ volume_short_his 不在其中：它一次都没非零过，机械断言把它降成了「?」。
+		"volume_long_today":  "跨日-B",
+		"volume_long_his":    "跨日-B",
+		"volume_short_today": "跨日-B",
+		"volume_short_his":   "跨日-?",
 		// 类 C：⚠️ **行情侧还没滚到新交易日**。
 		//
 		// 柜台的 margin_long = 6631.8，而 6631.8 ÷ (10 × 3 × 0.07) = **3158** ——
@@ -204,9 +214,35 @@ func TestCrossDayConformance(t *testing.T) {
 		// 而行情侧仍停在昨天收盘**，保证金取的是行情侧的昨结算价。
 		//
 		// ⚠️ 这不是规则差异，是**时序**：两侧不同步。
-		"margin":      "C",
-		"margin_long": "C",
+		"margin":      "跨日-C",
+		"margin_long": "跨日-C",
 	}
+	// ⚠️⚠️ **机械断言：从未取到过非零值的字段，不许被指派一个「机制」。**
+	//
+	// 这一条是评审 F1 的核心，也是唯一能**自动**抓住类 B 那次错标签的东西。
+	//
+	// 那次的形状是：6 个字段被标成「NoUseHistory 不滚今昨」，而它们全在
+	// UseHistory 合约上；错标签活下来的条件是**这批字段的观测撑不起任何机制断言** ——
+	// 两边都是 0 时，「柜台不填」「路径依赖」「压根没有这个仓」给出同一个观测。
+	// 我把那次的错标签清掉了，**而让它活下来的那个条件还在**。
+	//
+	// 空头就是现成的例子：419 条持仓记录里 volume_short_his > 0 出现 **0 次**，
+	// 空头昨仓从来没有存在过。给 position_cost_short_his 指派「柜台不填拆分」，
+	// 是在一个从未被观测过的字段上下机制结论。
+	//
+	// ⚠️ 所以规则是机械的：`?` 之外的类别都是**因果断言**，
+	// 而因果断言要求这个字段至少非零过一次。
+	neverNonZero := fieldsNeverNonZero(all)
+	for name, class := range known {
+		if !neverNonZero[name] || strings.HasSuffix(class, "-?") {
+			continue
+		}
+		t.Errorf("⚠️ 字段 %s 被指派了类别 %q，而它在全部 %d 份夹具里**一次都没有非零过** —— "+
+			"两边都是 0 时，几种机制给出同一个观测，此时任何因果类别都是猜的。"+
+			"⚠️ 改成「跨日-?」（样本区分不了），或者去取一份能区分它们的样本"+
+			"（空头那几个要一次**空头过夜**）", name, class, len(all))
+	}
+
 	names := make([]string, 0, len(failedFields))
 	for n := range failedFields {
 		names = append(names, n)
@@ -229,7 +265,7 @@ func TestCrossDayConformance(t *testing.T) {
 	// 它只出现在 NoUseHistory 合约上，而唯一那个（DCE.m2701）
 	// 因为大商所日行情 412 未打通、拿不到结算价，在上面被 continue 掉了。
 	// ⚠️ 把 B 留在这个列表里，就会像此前那样被错误标签喂饱。
-	for _, c := range []string{"A", "C", "D", "E"} {
+	for _, c := range []string{"跨日-A", "跨日-C", "跨日-D"} {
 		if seen[c] == 0 {
 			t.Errorf("⚠️ 失败类 %s 一次都没出现 —— "+
 				"要么它被修好了（那就把它从表里删掉并把这条一起改），"+
@@ -239,15 +275,15 @@ func TestCrossDayConformance(t *testing.T) {
 	// ⚠️ 反过来卡住 B：它现在**应当**是 0。
 	// 哪天它非零了，说明 DCE 真的被结转进来了 —— 那是好消息，但清单要跟着改，
 	// 而好消息同样需要有人被通知到。
-	if seen["B"] > 0 {
+	if seen["跨日-B"] > 0 {
 		t.Errorf("⚠️ 类 B（NoUseHistory 不滚）出现了 %d 次 —— "+
 			"本条此前观测不到它（DCE 拿不到结算价被跳过）。"+
 			"若是大商所日行情打通了，**去核对本库的 NoUseHistory 结算分支**"+
-			"（position.Settle 的 RebaseAll 那一支）并更新本清单", seen["B"])
+			"（position.Settle 的 RebaseAll 那一支）并更新本清单", seen["跨日-B"])
 	}
 	t.Logf("失败归类：A（结算价 vs 收盘价）%d、B（NoUseHistory 不滚，本条观测不到）%d、"+
-		"C（行情侧未滚到新交易日）%d、D（今昨拆分柜台不填）%d、E（空仓侧 \"-\" vs 0）%d",
-		seen["A"], seen["B"], seen["C"], seen["D"], seen["E"])
+		"C（行情侧未滚到新交易日）%d、D（今昨拆分柜台不填）%d、?（样本区分不了）%d",
+		seen["跨日-A"], seen["跨日-B"], seen["跨日-C"], seen["跨日-D"], seen["跨日-?"])
 
 	// 类 C 是个可证伪的预测，而它**已经被验过了**：
 	// 20260909 夜盘 21:00 行情滚到新交易日之后，柜台的 margin_long 从 6631.8

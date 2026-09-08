@@ -68,22 +68,25 @@ type Position struct {
 //
 // dateType 是该合约区不区分今昨仓（CTP 的 `PositionDateType`）。
 //
-// ⚠️ 它**允许是零值** `PositionDateUnknown`，而零值的含义是「没测过 / 用不上」，
-// 不是「随便挑一种」。带着零值的持仓**结算会报错**，见 Settle。
+// ⚠️ 零值 `PositionDateUnknown` **在这里就报错**。只重放当日成交、
+// 永不结算的调用方请显式传 `refdata.PositionDateNotNeeded` ——
+// **不要编一个值**：编出来的值会被后来的人当成实测值。
 //
-// # ⚠️ 为什么判据在 Settle 而不在这里
+// # ⚠️ 这里曾经是一次假的取舍
 //
-// 第一版把它做成 New 的硬性要求，零值直接报错。结果是：只重放当日成交、
-// **永不结算**的那批调用方（Replay 及其全部测试）被逼着为一个用不上的参数
-// 编一个值出来 —— 而它们手上根本没有这个数据（天勤字典不给，只能靠柜台行为测，
-// 而实测过的只有两个合约）。
+// 第一版拦零值，于是 Replay 那批调用方被逼着为一个用不上的参数编值
+// （天勤字典不给这个字段，实测过的只有两个合约）。我据此把关口整个撤了，
+// 判据只留在 Settle —— 代价是「忘了传」要滑到结算才报。
 //
-// **一个逼人编数据的守卫比没有守卫更坏**：编出来的值会被后来的人当成实测值。
+// 评审指出第三条路：**零值同时表示「忘了传」和「不需要」，
+// 才是这个取舍看起来非此即彼的全部原因。** 加一个非零的
+// `PositionDateNotNeeded` 之后两件事分开了，两道关口各司其职：
 //
-// 所以判据落在真正需要它的那一步：`Settle` 拿它决定今仓变不变昨仓，
-// 拿不到就报错，且错误信息说得出「这个合约没人量过」。
-// 而 `dateType` 仍然放在 New 上（不放在 Settle 的参数里），
-// 因为合约的性质在持仓的一生里不变 —— 声明一次就不会在两次结算之间漂移。
+//	New    拒绝零值，接受 NotNeeded  —— 「忘了传」在构造期就报
+//	Settle 两个都拒                  —— 「我不结算」不等于「可以结算」
+//
+// ⚠️ dateType 放在 New 而不是 Settle 的参数里：合约的性质在持仓的一生里不变，
+// 声明一次就不会在两次结算之间漂移。
 func New(inst types.InstrumentID, hedge types.HedgeFlag, day types.TradingDay,
 	dateType refdata.PositionDateType) (*Position, error) {
 
@@ -93,6 +96,14 @@ func New(inst types.InstrumentID, hedge types.HedgeFlag, day types.TradingDay,
 	if hedge == types.HedgeUnknown {
 		// ⚠️ 投机套保标志决定保证金率，不能默认。
 		return nil, fmt.Errorf("投机套保标志未指定 —— 它决定保证金率，不是标签")
+	}
+	if dateType == refdata.PositionDateUnknown {
+		return nil, fmt.Errorf("合约 %s 的 PositionDateType 未指定 —— "+
+			"它决定结算时今仓变不变昨仓，而那一步只发生一次。"+
+			"⚠️ 若这条路上**确实用不到**它（只重放当日成交、永不结算），"+
+			"请显式传 refdata.PositionDateNotNeeded —— **不要编一个值**，"+
+			"编出来的值会被后来的人当成实测值",
+			inst.Canonical())
 	}
 	return &Position{Instrument: inst, Hedge: hedge, Day: day, dateType: dateType}, nil
 }

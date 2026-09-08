@@ -228,7 +228,8 @@ func copyLots(dst, src *position.Position) error {
 // 这里讲的是**重放柜台已经成交的记录**：那笔单柜台已经按平昨执行了，
 // 要复现它就得照它执行。两件事一个是「该不该接受」，一个是「发生了什么」。
 //
-// ⚠️ `PositionDateUnknown` 时**不翻**：不知道合约属于哪一型就不猜，
+// ⚠️ 不是 `UseHistory` 时一律**不翻**（含零值与 `PositionDateNotNeeded`）：
+// 不知道合约属于哪一型就不猜，
 // 让歧义检查去拦。翻错的后果是平错一边，而那不会报错。
 func closeOffsetOf(offset types.Offset, dateType refdata.PositionDateType) types.Offset {
 	if offset == types.Close && dateType == refdata.UseHistory {

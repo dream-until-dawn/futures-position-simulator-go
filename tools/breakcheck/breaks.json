@@ -997,13 +997,13 @@
   "expect": "red"
  },
  {
-  "name": "91 结算不再拦零值 PositionDateType",
+  "name": "91 结算把 NotNeeded 当成 NoUseHistory 处理",
   "dir": "",
   "file": "position/position.go",
-  "old": "\tdefault:\n\t\t// ⚠️ 这里是**唯一**的关口，New 刻意不拦（理由见 New 的注释）。",
-  "new": "\tdefault:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)\n\tcase refdata.PositionDateType(200):",
+  "old": "\tcase refdata.NoUseHistory:\n\t\tp.long.RebaseAll(settlementPrice)",
+  "new": "\tcase refdata.NoUseHistory, refdata.PositionDateNotNeeded:\n\t\tp.long.RebaseAll(settlementPrice)",
   "pkg": "./position/",
-  "test": "TestSettleRefusesUnknownDateType",
+  "test": "TestSettleRefusesNotNeeded",
   "want": "却结算成功了",
   "expect": "red"
  },
@@ -1011,8 +1011,8 @@
   "name": "92 跨日分类表把「拆分不填」重新贴回类 B",
   "dir": "",
   "file": "conformance/fixture/crossday_test.go",
-  "old": "\t\t\"open_cost_long_his\":        \"D\",",
-  "new": "\t\t\"open_cost_long_his\":        \"B\",",
+  "old": "\t\t\"position_cost_long_today\":  \"跨日-D\",",
+  "new": "\t\t\"position_cost_long_today\":  \"跨日-B\",",
   "pkg": "./conformance/fixture/",
   "test": "TestCrossDayConformance",
   "want": "类 B（NoUseHistory 不滚）出现了",
@@ -1112,7 +1112,7 @@
   "name": "101 歧义检查的用例改回 UseHistory（于是永远绿）",
   "dir": "",
   "file": "conformance/fixture/replay_test.go",
-  "old": "\t_, err := ReplayFrom(seeded(t), testInst, types.Speculation,\n\t\trefdata.PositionDateUnknown, dayD1, trades)",
+  "old": "\t_, err := ReplayFrom(seeded(t), testInst, types.Speculation,\n\t\trefdata.PositionDateNotNeeded, dayD1, trades)",
   "new": "\t_, err := ReplayFrom(seeded(t), testInst, types.Speculation,\n\t\trefdata.UseHistory, dayD1, trades)",
   "pkg": "./conformance/fixture/",
   "test": "TestReplayDetectsAmbiguity",
@@ -1163,5 +1163,72 @@
   "want": "",
   "expect": "green",
   "why": "⚠️ 这条守卫防的是「每一个截面的保证金都被跳过」，而当前 30 个里跳了 20 个、还剩 10 个在比 —— 前提不成立，去掉它当然还是绿。声明的盲区：它只在**样本全部落进跳过条件**时起作用（例如哪天全部夹具都拍在行情滚动之前），而那种情形今天不存在。它的价值是将来的。"
+ },
+ {
+  "name": "106 New 不再拦零值 PositionDateType（回到假取舍那一版）",
+  "dir": "",
+  "file": "position/position.go",
+  "old": "\tif dateType == refdata.PositionDateUnknown {\n\t\treturn nil, fmt.Errorf(\"合约 %s 的 PositionDateType 未指定 —— \"+",
+  "new": "\tif false {\n\t\treturn nil, fmt.Errorf(\"合约 %s 的 PositionDateType 未指定 —— \"+",
+  "pkg": "./position/",
+  "test": "TestNewRefusesUnknownButAcceptsNotNeeded",
+  "want": "零值 PositionDateType 建仓成功了",
+  "expect": "red"
+ },
+ {
+  "name": "107 New 把 NotNeeded 也当成忘了传（又变回逼人编数据）",
+  "dir": "",
+  "file": "position/position.go",
+  "old": "\tif dateType == refdata.PositionDateUnknown {",
+  "new": "\tif dateType != refdata.UseHistory && dateType != refdata.NoUseHistory {",
+  "pkg": "./position/",
+  "test": "TestNewRefusesUnknownButAcceptsNotNeeded",
+  "want": "显式声明 PositionDateNotNeeded 却建不了仓",
+  "expect": "red"
+ },
+ {
+  "name": "108 NotNeeded 放行进规则数据快照",
+  "dir": "",
+  "file": "refdata/refdata.go",
+  "old": "\tif i.PositionDateType == PositionDateNotNeeded {",
+  "new": "\tif false {",
+  "pkg": "./position/",
+  "test": "TestNotNeededNeverEntersRefdata",
+  "want": "通过了合约规格校验",
+  "expect": "red"
+ },
+ {
+  "name": "109 分类表允许给零观测字段指派机制（评审 F1 的那条机械断言）",
+  "dir": "",
+  "file": "conformance/fixture/crossday_test.go",
+  "old": "\t\tif !neverNonZero[name] || strings.HasSuffix(class, \"-?\") {",
+  "new": "\t\tif !neverNonZero[name] || strings.HasSuffix(class, \"\") {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestCrossDayConformance",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ 去掉这条断言之后测试仍绿 —— 因为我已经按它的指引把 6 个字段改成了「跨日-?」，此刻**没有反例**。声明的盲区：一条断言「没有反例」的守卫，破坏验证只能证明它现在没被违反，不能证明它将来会拦住。真正的证据是它**加进来的那一刻**当场抓到了 3 个我手工分类漏掉的（open_cost_long_his/_today、volume_short_his），而评审只点名了空头那三个。⚠️ 顺带一条教训：这条破坏的前两版都因为「声明未使用 / 未用导入」而编译失败，被第二层拦下 —— **改坏一处代码时，别顺手把一个变量或导入也改没了**，那时红的是编译器，不是断言。"
+ },
+ {
+  "name": "110 包树守卫按叶子名比对（回到解析错的那一版）",
+  "dir": "",
+  "file": "packagetree_test.go",
+  "old": "\t\t\tfull = parent + \"/\" + name",
+  "new": "\t\t\tfull = name",
+  "pkg": "./",
+  "test": "TestPackageTreeMatchesReality",
+  "want": "而它**不存在**",
+  "expect": "red"
+ },
+ {
+  "name": "111 包树画了一个不存在也没归属的包",
+  "dir": "",
+  "file": "docs/design.md",
+  "old": "  risk/                 风险度",
+  "new": "  ghost/                幽灵包\n  risk/                 风险度",
+  "pkg": "./",
+  "test": "TestPackageTreeMatchesReality",
+  "want": "包树里画着 `ghost/`",
+  "expect": "red"
  }
 ]

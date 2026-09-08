@@ -198,6 +198,36 @@ func TestFrozenFieldsAreTheThinnestEvidence(t *testing.T) {
 	}
 }
 
+// fieldsNeverNonZero 算出**从未取到过非零值**的持仓字段。
+//
+// ⚠️ 它被抽出来是因为要**给两处用**：`TestPositionFieldEvidence` 报这个数，
+// 而 `crossday_test.go` 的分类表要拿它做机械断言 ——
+// 一个从未非零过的字段，观测上支撑不起任何**机制**断言。
+//
+// 这条联结是评审 F1 的核心：类 B 那次错标签之所以能活下来，
+// 正是因为「这批字段的观测撑不起机制断言」这句话只写在一处、
+// 而分类表在另一处自顾自地指派机制。
+func fieldsNeverNonZero(all []*Fixture) map[string]bool {
+	seen, nonZero := map[string]bool{}, map[string]bool{}
+	for _, f := range all {
+		for _, sym := range f.Symbols() {
+			for k, v := range f.Positions[sym] {
+				seen[k] = true
+				if !v.Absent && !v.IsText && !v.Number.IsZero() {
+					nonZero[k] = true
+				}
+			}
+		}
+	}
+	out := map[string]bool{}
+	for k := range seen {
+		if !nonZero[k] {
+			out[k] = true
+		}
+	}
+	return out
+}
+
 // positionDates 是**实测过的** PositionDateType，逐合约。
 //
 // ⚠️ 刻意不按交易所推。CTP 里 PositionDateType 是**逐合约**的字段，

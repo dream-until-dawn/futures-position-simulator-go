@@ -78,7 +78,7 @@ func TestAccountAggregatesFromTrades(t *testing.T) {
 
 		// —— 平仓盈亏：从重放的已实现片段算 ——
 		_, realized, err := ReplayRealized(nil, trades[0].Instrument,
-			types.Speculation, refdata.PositionDateUnknown, target.TradingDay, trades)
+			types.Speculation, refdata.PositionDateNotNeeded, target.TradingDay, trades)
 		if err != nil {
 			t.Fatalf("%s 重放失败：%v", sym, err)
 		}

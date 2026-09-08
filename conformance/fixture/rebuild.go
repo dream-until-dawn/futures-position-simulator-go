@@ -136,7 +136,7 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 			// （有昨仓的合约在上面就报错了，要走 Carry），
 			// 所以 PositionDateType 在这条路上用不上。
 			// 给一个编出来的值，会被后来的人当成实测值。
-			refdata.PositionDateUnknown, f.TradingDay, trades)
+			refdata.PositionDateNotNeeded, f.TradingDay, trades)
 		if err != nil {
 			return zero, fmt.Errorf("%s 重放：%w", sym, err)
 		}

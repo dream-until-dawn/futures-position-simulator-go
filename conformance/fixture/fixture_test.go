@@ -128,7 +128,7 @@ func TestReplayIsUnambiguous(t *testing.T) {
 				withCloses++
 			}
 			inst := trades[0].Instrument
-			_, err := Replay(inst, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
+			_, err := Replay(inst, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
 			if err != nil {
 				if strings.Contains(err.Error(), "重放有歧义") {
 					ambiguous++
@@ -171,7 +171,7 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 			if len(trades) == 0 {
 				continue
 			}
-			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
+			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
 			if err != nil {
 				continue // 歧义与失败在上一条测试里已经报过
 			}
@@ -322,7 +322,7 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	if len(trades) == 0 {
 		t.Fatalf("%s 在 %s 里没有成交", sym, target.Path)
 	}
-	p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, target.TradingDay, trades)
+	p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, target.TradingDay, trades)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +493,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 				t.Errorf("⚠️ %s 没有登记乘数 —— 漏乘会得到一个量级正确到肉眼看不出的错值", sym)
 				continue
 			}
-			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
+			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
 			if err != nil {
 				continue
 			}
@@ -599,11 +599,18 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	// （那一档要出处、裁决者、选边理由三样齐全，现在只有出处）。
 	// 于是它们留在失败里 —— 红是正确的结果。
 	failClass := map[string]string{
-		// 类 A：今昨拆分，柜台恒填 0 而本库算真值（kq_facts 14，188/188）。
-		"open_cost_long_today": "A", "position_cost_long_today": "A",
-		"open_cost_short_today": "A", "position_cost_short_today": "A",
-		"open_cost_long_his": "A", "position_cost_long_his": "A",
-		"open_cost_short_his": "A", "position_cost_short_his": "A",
+		// 字段-A：今昨拆分，柜台不填而本库算真值。
+		//
+		// ⚠️ 原来这里引的是 **kq_facts 14（188/188）**，而第 14 条
+		// **已被第 28 条推翻**（20260909 结算后 position_cost_* 的拆分
+		// 确实被填上了）。一条已被推翻的事实还在分类表里当依据，
+		// 是门禁① 说的「文档里的过期陈述」搬进了代码注释。
+		// 现在的依据是 kq_facts 28/33：open_cost_* 的拆分从来不是真实数字，
+		// position_cost_* 的拆分只在**结算时**写。
+		"open_cost_long_today": "字段-A", "position_cost_long_today": "字段-A",
+		"open_cost_short_today": "字段-A", "position_cost_short_today": "字段-A",
+		"open_cost_long_his": "字段-A", "position_cost_long_his": "字段-A",
+		"open_cost_short_his": "字段-A", "position_cost_short_his": "字段-A",
 		// 类 B：空仓边的 "-" 与 0 是**路径依赖**的（kq_facts 15）。
 		//
 		// ⚠️ 本库判「无值」（不存在的持仓没有成本/盈亏），柜台给什么取决于
@@ -612,18 +619,18 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		// 而 open_cost_short 空仓时 117/185 给 0。
 		// **那个不对称只反映这个账户历史上做多更多**，不是一条规则 ——
 		// 幸好当初选边是按「不存在的持仓没有成本」这句话本身，不是按哪边输得少。
-		"open_cost_long": "B", "open_cost_short": "B",
-		"position_cost_long": "B", "position_cost_short": "B",
-		"float_profit_long": "B", "float_profit_short": "B",
-		"position_profit_long": "B", "position_profit_short": "B",
-		"float_profit": "B", "position_profit": "B",
+		"open_cost_long": "字段-B", "open_cost_short": "字段-B",
+		"position_cost_long": "字段-B", "position_cost_short": "字段-B",
+		"float_profit_long": "字段-B", "float_profit_short": "字段-B",
+		"position_profit_long": "字段-B", "position_profit_short": "字段-B",
+		"float_profit": "字段-B", "position_profit": "字段-B",
 	}
 	seenClass := map[string]int{}
 	for _, n := range names {
 		c, ok := failClass[n]
 		if !ok {
 			t.Errorf("⚠️ 多出一个**第三类**失败字段 %s（%d 个样本）—— "+
-				"已记录的只有两类：今昨拆分柜台恒填 0（kq_facts 14）与"+
+				"已记录的只有两类：今昨拆分柜台不填（kq_facts 28/33）与"+
 				"空仓边 \"-\"/0 路径依赖（kq_facts 15）。"+
 				"新出现的失败要先查清楚是哪一类，不许直接加进这张表",
 				n, failedFields[n])
@@ -632,7 +639,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		seenClass[c] += failedFields[n]
 	}
 	// ⚠️ 两类都必须**真的出现过**：一类没出现时，上面的分类判断只走了一半。
-	for _, c := range []string{"A", "B"} {
+	for _, c := range []string{"字段-A", "字段-B"} {
 		if seenClass[c] == 0 {
 			t.Errorf("⚠️ 失败类 %s 一次都没出现 —— "+
 				"要么它被修好了（那就把它从表里删掉并把这条一起改），"+
@@ -640,7 +647,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		}
 	}
 	t.Logf("失败归类：类 A（今昨拆分）%d 处，类 B（空仓路径依赖）%d 处",
-		seenClass["A"], seenClass["B"])
+		seenClass["字段-A"], seenClass["字段-B"])
 	if totals[conformance.Matched] < 300 {
 		t.Errorf("⚠️ 全批只有 %d 个「对得上且被触发过」—— 太少，疑似大面积退化",
 			totals[conformance.Matched])

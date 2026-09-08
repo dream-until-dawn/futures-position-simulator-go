@@ -67,7 +67,7 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 				continue
 			}
 			withQuote++
-			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
+			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
 			if err != nil {
 				continue
 			}
