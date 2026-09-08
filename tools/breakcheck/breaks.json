@@ -829,5 +829,49 @@
   "test": "TestZeroObservedIsNotEverything",
   "want": "全列进去会让排序退化成恒等",
   "expect": "red"
+ },
+ {
+  "name": "76 证据棘轮的钉子调高一格",
+  "dir": "",
+  "file": "conformance/fixture/coverage_test.go",
+  "old": "\tconst pinnedOnlyZero = 17",
+  "new": "\tconst pinnedOnlyZero = 18",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionFieldEvidence",
+  "want": "从 18 降到 17",
+  "expect": "red"
+ },
+ {
+  "name": "77 证据棘轮的钉子调低一格",
+  "dir": "",
+  "file": "conformance/fixture/coverage_test.go",
+  "old": "\tconst pinnedOnlyZero = 17",
+  "new": "\tconst pinnedOnlyZero = 16",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionFieldEvidence",
+  "want": "从 16 涨到 17",
+  "expect": "red"
+ },
+ {
+  "name": "78 证据统计把 \"-\" 当成零",
+  "dir": "",
+  "file": "conformance/fixture/coverage_test.go",
+  "old": "\t\t\t\t\tobs[k] = o\n\t\t\t\t}\n\t\t\t\tswitch {\n\t\t\t\tcase v.Absent:\n\t\t\t\t\to.absent++",
+  "new": "\t\t\t\t\tobs[k] = o\n\t\t\t\t}\n\t\t\t\tswitch {\n\t\t\t\tcase v.Absent:\n\t\t\t\t\to.zero++",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionFieldEvidence",
+  "want": "涨到 20",
+  "expect": "red"
+ },
+ {
+  "name": "79 冻结字段扫描把零也算成非零观测",
+  "dir": "",
+  "file": "conformance/fixture/coverage_test.go",
+  "old": "\t\t\t\tcase v.Number.IsZero():\n\t\t\t\t\to.zero++\n\t\t\t\tdefault:\n\t\t\t\t\to.nonZero++\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\tvar never []string",
+  "new": "\t\t\t\tdefault:\n\t\t\t\t\to.nonZero++\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\tvar never []string",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenFieldsAreTheThinnestEvidence",
+  "want": "六个冻结字段都拿到非零观测了",
+  "expect": "red"
  }
 ]
