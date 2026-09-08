@@ -928,5 +928,50 @@
   "test": "TestNoFileMixesLineEndings",
   "want": "**内部**混着 CRLF 与 LF",
   "expect": "red"
+ },
+ {
+  "name": "85 收盘价缺席时把整行丢掉（拖垮结算价）",
+  "dir": "",
+  "file": "refdata/exchange/shfe.go",
+  "old": "\t\tif c, ok := numText(row.Close); ok {\n\t\t\tif p, err := decimal.NewFromString(c); err == nil && p.IsPositive() {\n\t\t\t\trec.Close, rec.HasClose = p, true\n\t\t\t}\n\t\t}",
+  "new": "\t\tc, ok := numText(row.Close)\n\t\tif !ok {\n\t\t\trep.drop(dropEmptyPrice, label)\n\t\t\tcontinue\n\t\t}\n\t\tif p, err := decimal.NewFromString(c); err == nil && p.IsPositive() {\n\t\t\trec.Close, rec.HasClose = p, true\n\t\t}",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionPriceIsExchangeClose",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ 收盘价是**旁证**，不是结算链条的输入 —— 让它把整行否掉，会在上游哪天不发这个字段时把结算价一起弄没。而本条测的是「柜台用收盘价」，它读的是**已落盘的夹具**，不是现场解析，所以照样绿。声明的盲区：解析器丢行这件事只有 refdata/exchange 自己的测试盯得住，跨模块的对拍盯不住它。"
+ },
+ {
+  "name": "86 跨来源核对改回拿柜台自己的结算价",
+  "dir": "",
+  "file": "conformance/fixture/baseline_source_test.go",
+  "old": "\t\t\tif !pp.Equal(d.Close) {",
+  "new": "\t\t\tif !pp.Equal(d.Settlement) {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionPriceIsExchangeClose",
+  "want": "「柜台用收盘价」这条结论要重查",
+  "expect": "red"
+ },
+ {
+  "name": "87 组合式里今仓也用收盘价（而不是开仓价）",
+  "dir": "",
+  "file": "conformance/fixture/baseline_source_test.go",
+  "old": "\t\twant := his.Mul(d.Close).Add(today.Mul(todayOpen)).Div(total)",
+  "new": "\t\twant := his.Mul(d.Close).Add(today.Mul(d.Close)).Div(total)",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionPriceIsExchangeClose",
+  "want": "基线的组合方式与已登记的不符",
+  "expect": "red"
+ },
+ {
+  "name": "88 平仓冲减守卫去掉「要一张手数更多的」判别力要求",
+  "dir": "",
+  "file": "conformance/fixture/baseline_source_test.go",
+  "old": "\t\tif !ok1 || v.LessThanOrEqual(snaps[0].vol) {",
+  "new": "\t\tif !ok1 {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestCloseReducesCostAtAverage",
+  "want": "均价变了",
+  "expect": "red"
  }
 ]

@@ -1424,7 +1424,7 @@ Go 在编译期用任意精度折叠 —— 它恒真，整条测试**恒被 ski
 | 四个冻结项在 `Available` 里的作用 | ✅ **已验证**（§7.2）：`FrozenMargin` / `FrozenCommission` 从 `Available` 扣、不进 `Balance`、不进 `Margin`、撤单完整释放。⚠️ `FrozenCash` / `frozen_premium` 属期权，全程为 0，未测 |
 | **持仓侧**的冻结手数 `volume_*_frozen_*` | ✅ **六个里补掉五个（20260909）**：挂单冻结按今昨拆分、撤单逐字段完整释放（kq_facts 31/32）。⚠️ 与上一行**不是一回事**：那是账户侧的金额，这是持仓侧的手数。⚠️ 只剩 `volume_short_frozen_his` 零观测 —— 它要一手**过夜的空仓**，昨仓只能等结算。今晚 `rb2701` 上留了一手空今仓，明天结算后就够得着 |
 | 手续费的取整口径 | ⚠️ **「到分」两个候选已排除**（`ag2702` 每手 `12.07125`）；「不取整」与「取到更细的位数」仍分不开 |
-| `position_price` 那个 3177 到底是不是**收盘价** | ⚠️ **缺独立来源**：目前只有柜台自己的数据支撑。上期所日行情里有收盘价，但 `refdata/exchange.ParseSHFE` 只留了结算价与昨结算价，**把它丢了**。⚠️ 拿柜台的数去验柜台自己的基线是同义反复，这一格补上之前 kq_facts 26/35 的那个标签只是个标签 |
+| `position_price` 那个 3177 到底是不是**收盘价** | ✅ **已独立确认（20260909）**：上期所 `kx20260908.dat` 里 `CLOSEPRICE=3177`、`SETTLEMENTPRICE=3163`、`PRESETTLEMENTPRICE=3158`。`ParseSHFE` 已接上 `CLOSEPRICE`，`cmd/settlement` 落盘多一个 `close` 键，`TestPositionPriceIsExchangeClose` 用它做跨来源核对。⚠️ 顺带把组合式刻画清楚了（kq_facts 37/38）|
 | 交易日跳变的**秒级时刻** | ⚠️ **未测到**：20:55 采样点错过了，21:03 的读数只能说明「21:03 之前已跳」（§7.0） |
 
 ---

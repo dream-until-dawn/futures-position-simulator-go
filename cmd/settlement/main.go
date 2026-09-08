@@ -68,7 +68,10 @@ func run(dayStr, symbols, out string, back int, timeout time.Duration) error {
 	}
 	if len(want) > 0 {
 		fmt.Println()
-		fmt.Printf("  %-14s %12s %12s\n", "合约", "今结算", "昨结算")
+		// ⚠️ 收盘价单独一列，不与结算价并列成一个「价」。
+		// 20260908 的 rb2701 收盘 3177、结算 3163，差 14 ——
+		// 而柜台的 position_price 用前者、本库的逐日盯市用后者。
+		fmt.Printf("  %-14s %12s %12s %12s\n", "合约", "今结算", "昨结算", "收盘")
 		missing := 0
 		for _, sym := range want {
 			d, ok := got[sym]
@@ -83,7 +86,11 @@ func run(dayStr, symbols, out string, back int, timeout time.Duration) error {
 			if d.HasPre {
 				pre = d.PreSettlement.String()
 			}
-			fmt.Printf("  %-14s %12s %12s\n", sym, d.Settlement, pre)
+			cl := "无"
+			if d.HasClose {
+				cl = d.Close.String()
+			}
+			fmt.Printf("  %-14s %12s %12s %12s\n", sym, d.Settlement, pre, cl)
 		}
 		if missing > 0 {
 			return fmt.Errorf("⚠️ %d 个要的合约不在这份日行情里 —— "+
@@ -98,12 +105,20 @@ func run(dayStr, symbols, out string, back int, timeout time.Duration) error {
 		Instrument    string `json:"instrument"`
 		Settlement    string `json:"settlement"`
 		PreSettlement string `json:"pre_settlement,omitempty"`
+		// ⚠️ 收盘价与结算价是**两个数**，落盘时也分两个键。
+		// 20260908 的 rb2701 收盘 3177、结算 3163，差 14 ——
+		// 而柜台的 position_price 用前者、本库的逐日盯市用后者。
+		// 合成一个键会让那条已知差异永远查不出来源。
+		Close string `json:"close,omitempty"`
 	}
 	rows := make([]wire, 0, len(got))
 	for sym, d := range got {
 		w := wire{Instrument: sym, Settlement: d.Settlement.String()}
 		if d.HasPre {
 			w.PreSettlement = d.PreSettlement.String()
+		}
+		if d.HasClose {
+			w.Close = d.Close.String()
 		}
 		rows = append(rows, w)
 	}

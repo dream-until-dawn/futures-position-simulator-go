@@ -46,6 +46,14 @@ type Daily struct {
 	// PreSettlement 是上一交易日结算价；HasPre 报告它在不在。
 	PreSettlement decimal.Decimal
 	HasPre        bool
+	// Close 是**收盘价**；HasClose 报告它在不在。
+	//
+	// ⚠️ 它与 Settlement 是两个数，混用会静默算错：20260908 的 rb2701
+	// 收盘 3177、结算 3163，差 14 —— 而逐日盯市的每一分钱都挂在结算价上。
+	// 留着它是为了能**独立核对**柜台的 position_price 用的是哪一个
+	// （实测：柜台用收盘价，本库用结算价，那是一条已知口子差异）。
+	Close    decimal.Decimal
+	HasClose bool
 }
 
 // Report 记录一次解析里发生了什么，尤其是**丢了什么**。
@@ -100,6 +108,14 @@ type shfeRow struct {
 	DeliveryMonth string          `json:"DELIVERYMONTH"`
 	Settlement    json.RawMessage `json:"SETTLEMENTPRICE"`
 	PreSettlement json.RawMessage `json:"PRESETTLEMENTPRICE"`
+	// Close 是**收盘价**，与结算价是两个数。
+	//
+	// ⚠️ 它此前被丢掉了，而丢掉它的代价在 20260909 才显出来：
+	// 柜台的 `position_price` 结算后给 3177 而不是结算价 3163，
+	// 「3177 是收盘价」这个说法**只有柜台自己的数据支撑** ——
+	// 拿柜台的数去解释柜台自己的基线是同义反复。
+	// 上期所这份文件里一直有 CLOSEPRICE，只是解析器没要。
+	Close json.RawMessage `json:"CLOSEPRICE"`
 }
 
 // 丢弃原因。⚠️ 用常量而不是字面量：判据里要按原因取数，
@@ -203,6 +219,14 @@ func ParseSHFE(r io.Reader, day types.TradingDay) (map[string]Daily, Report, err
 		if pre, ok := numText(row.PreSettlement); ok {
 			if p, err := decimal.NewFromString(pre); err == nil && p.IsPositive() {
 				rec.PreSettlement, rec.HasPre = p, true
+			}
+		}
+		// ⚠️ 收盘价缺席**不丢行**：它是核对用的旁证，不是结算链条的输入。
+		// 让它把一整行否掉，会在上游哪天不发这个字段时，
+		// 把整份结算价一起弄没 —— 而结算价才是逐日盯市真正要的。
+		if c, ok := numText(row.Close); ok {
+			if p, err := decimal.NewFromString(c); err == nil && p.IsPositive() {
+				rec.Close, rec.HasClose = p, true
 			}
 		}
 		key := inst.Canonical()
