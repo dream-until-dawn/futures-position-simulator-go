@@ -65,6 +65,16 @@ var forbidden = []struct{ key, phrase string }{
 	{"rules_pending", "六条"},
 	{"rules_pending", "6 条待实测"},
 	{"position_fields", "持仓 28 字段"},
+	// ⚠️ 2026-09-09 新增。fidelity.md 开头挂着「当前状态：文档阶段，尚无实现」
+	// 从 09-07 一直挂到 09-09，而这期间 16 个包落地、跨日对拍跑通、
+	// oracle conformance 已能连着柜台跑。
+	//
+	// ⚠️ 它是一条**低报**，而低报同样是过期陈述：
+	// 把「已实现」说成「尚无实现」，读的人会以为整份文档写的都是计划，
+	// 于是不会去核对那些**已经有结论**的条目。
+	// 评审门禁① 明写「含文档里的过期陈述，**低报也算**」。
+	{"packages_done", "文档阶段，尚无实现"},
+	{"packages_done", "尚无实现"},
 }
 
 func docFiles(t *testing.T) []string {
@@ -411,7 +421,7 @@ func TestNoStaleForbiddenPhrases(t *testing.T) {
 // 漏一条和只写一条在这个断言下长得一模一样。**这条断言的局限必须写在这里**，
 // 免得后人看它绿了就以为禁语表是全的。
 func TestForbiddenTableIsNotEmpty(t *testing.T) {
-	const want = 9 // 下界用确切条数，不是 > 0
+	const want = 11 // 下界用确切条数，不是 > 0
 	if len(forbidden) != want {
 		t.Fatalf("禁语表应有 %d 条，实际 %d —— 增删了就同步更新这个下界，"+
 			"并确认 docs/state.md 的表也改了", want, len(forbidden))

@@ -1564,5 +1564,16 @@
   "test": "TestFrozenAccountAgainstOracle",
   "want": "平仓单被当成开仓冻了保证金",
   "expect": "red"
+ },
+ {
+  "name": "141 README 的状态横幅退回「尚无实现」",
+  "dir": "",
+  "file": "README.md",
+  "old": "> ### 状态（2026-09-09）：核算内核已实现并对拍；**口子只有一个**",
+  "new": "> ### 状态：文档阶段，尚无实现",
+  "pkg": "./",
+  "test": "TestNoStaleForbiddenPhrases",
+  "want": "出现禁语「文档阶段，尚无实现」",
+  "expect": "red"
  }
 ]
