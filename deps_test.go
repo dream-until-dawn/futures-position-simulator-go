@@ -37,9 +37,16 @@ import (
 // ⚠️ 两者的区别要说清楚，否则下一个人会以为这条已经被完整验过了。
 // 要补上那个洞，得让 breakcheck 支持多文件破坏。
 func TestMainModuleHasOneDependency(t *testing.T) {
-	out, err := exec.Command("go", "list", "-deps", "./...").Output()
+	cmd := exec.Command("go", "list", "-deps", "./...")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("go list -deps 失败：%v", err)
+		// ⚠️ 必须把 stderr 打出来。`exec.Command(...).Output()` 只捕获 stdout，
+		// 于是报错只有一句「exit status 1」—— 那句话什么都没说，
+		// 而 go list 真正的原因（模块声明、go.sum 缺条目、语法错）全在 stderr 里。
+		// 一条只说「失败了」的错误信息，会让人去查错的地方。
+		t.Fatalf("go list -deps 失败：%v\n%s", err, stderr.String())
 	}
 	const self = "github.com/dream-until-dawn/futures-position-simulator-go"
 	const allowed = "github.com/shopspring/decimal"

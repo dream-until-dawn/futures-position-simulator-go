@@ -1284,8 +1284,8 @@
   "also": [
    {
     "file": "go.mod",
-    "old": "require github.com/shopspring/decimal v1.4.0 // indirect",
-    "new": "require (\n\tgithub.com/coder/websocket v1.8.15\n\tgithub.com/shopspring/decimal v1.4.0 // indirect\n)"
+    "old": "go 1.22\n\nrequire github.com/shopspring/decimal v1.4.0 // indirect",
+    "new": "go 1.23\n\nrequire (\n\tgithub.com/coder/websocket v1.8.15\n\tgithub.com/shopspring/decimal v1.4.0 // indirect\n)"
    },
    {
     "file": "go.sum",
