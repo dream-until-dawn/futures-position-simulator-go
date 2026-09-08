@@ -69,6 +69,7 @@ const sampleDict = `{
     "class": "FUTURE_INDEX",
     "instrument_id": "KQ.i@CFFEX.IF",
     "exchange_id": "KQ",
+    "product_id": "IF",
     "volume_multiple": 300,
     "price_tick": 0.2,
     "trading_time": {"day": [["09:30:00","11:30:00"]], "night": []}
@@ -303,5 +304,54 @@ func TestFloatRoundTripGuard(t *testing.T) {
 	// 而 tick 差一点点意味着报价校验会在极少数价位上放过本该被拒的单。
 	if _, err := fromFloat(0.1+0.2, "price_tick", "测试"); err != nil {
 		t.Logf("（记录）0.1+0.2 的往返：%v", err)
+	}
+}
+
+// TestSessionTablesSkipNonFuture 断言非 FUTURE 的条目被**显式跳过**，不是静默混入。
+//
+// ⚠️ 这条守的是一个真实的坑：**期权合约的代码以同一个品种前缀开头**
+// （SHFE.rb2701C3000 与 SHFE.rb2701 前缀相同），
+// 于是按代码前缀筛出来的集合里必然混进期权与合成指数。
+// 实测：拉 5 个品种时，前 3485 条里「命中」了 692 条 —— 那个比例本身就是信号。
+func TestSessionTablesSkipNonFuture(t *testing.T) {
+	srv := serve(t, sampleDict, http.StatusOK)
+	defer srv.Close()
+	// 这次**不**过滤掉 KQ.（它的 class 是 FUTURE_INDEX）。
+	syms, err := FetchSymbols(context.Background(), srv.URL, func(string) bool { return true }, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(syms) != 4 {
+		t.Fatalf("样本应有 4 条，实得 %d 条", len(syms))
+	}
+	tabs, err := SessionTablesOf(syms)
+	if err != nil {
+		t.Fatalf("非 FUTURE 的条目应当被跳过而不是报错：%v", err)
+	}
+	// ⚠️ 只该有 rb 与 IF 两个品种；FUTURE_INDEX 那条不该贡献时段表。
+	if len(tabs) != 2 {
+		got := make([]string, 0, len(tabs))
+		for _, tb := range tabs {
+			got = append(got, string(tb.Exchange)+"."+tb.Product)
+		}
+		t.Errorf("⚠️ 应当只汇总出 2 个品种，实得 %d 个：%v —— "+
+			"非 FUTURE 的条目混进来了", len(tabs), got)
+	}
+}
+
+// TestSessionTablesRefuseAllNonFuture 断言「筛出来的全是非 FUTURE」时报错而不是返回空。
+//
+// ⚠️ 返回一个空的时段表列表，与「这些品种没有时段表」长得一样，
+// 而后者会让调用方以为上游数据缺失，实际是筛选写错了。
+func TestSessionTablesRefuseAllNonFuture(t *testing.T) {
+	syms := map[string]Symbol{
+		"KQ.i@CFFEX.IF": {Class: "FUTURE_INDEX", InstrumentID: "KQ.i@CFFEX.IF",
+			ExchangeID: "KQ", ProductID: "IF", VolumeMultiple: 300, PriceTick: 0.2,
+			TradingTime: TradingTime{Day: [][]string{{"09:30:00", "11:30:00"}}}},
+	}
+	tabs, err := SessionTablesOf(syms)
+	if err == nil {
+		t.Errorf("⚠️ 全是非 FUTURE 却返回了 %d 个时段表、没有报错 —— "+
+			"空列表与「这些品种没有时段表」长得一样，而实际是筛选写错了", len(tabs))
 	}
 }

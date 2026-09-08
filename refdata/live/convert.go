@@ -86,6 +86,16 @@ func ToSessionTable(s Symbol) (refdata.SessionTable, error) {
 	if err := s.Validate(); err != nil {
 		return refdata.SessionTable{}, err
 	}
+	// ⚠️ class 必须查，而且这不是形式：**期权合约的代码以同一个品种前缀开头**
+	// （`SHFE.rb2701C3000` 与 `SHFE.rb2701` 前缀相同），
+	// 于是按代码前缀筛出来的集合里会混进期权。
+	// 期权带着自己的时段表进汇总时，「同品种内一致」那道检查未必抓得住 ——
+	// 它们的 product_id 可能相同，也可能不同，两种都会出问题：
+	// 相同则被当成同品种的冲突（错误的原因），不同则悄悄多出一个品种。
+	if s.Class != "FUTURE" {
+		return refdata.SessionTable{}, fmt.Errorf("合约 %s 的 class 是 %q，本函数只处理 FUTURE —— "+
+			"按代码前缀筛选会把期权一起带进来（%s 与期货前缀相同）", s.InstrumentID, s.Class, s.InstrumentID)
+	}
 	ex, _, ok := strings.Cut(s.InstrumentID, ".")
 	if !ok {
 		return refdata.SessionTable{}, fmt.Errorf("合约代码 %q 里没有交易所前缀", s.InstrumentID)
@@ -144,7 +154,15 @@ func SessionTablesOf(syms map[string]Symbol) ([]refdata.SessionTable, error) {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	skipped := map[string]int{}
 	for _, k := range keys {
+		// ⚠️ 非 FUTURE 的**显式跳过并计数**，不是静默丢掉。
+		// 计数会打给调用方，因为「筛出来的东西里混了多少期权」本身是个信号：
+		// 它说明代码前缀这个筛法有多粗。
+		if c := syms[k].Class; c != "FUTURE" {
+			skipped[c]++
+			continue
+		}
 		t, err := ToSessionTable(syms[k])
 		if err != nil {
 			return nil, err
@@ -164,6 +182,10 @@ func SessionTablesOf(syms map[string]Symbol) ([]refdata.SessionTable, error) {
 		return nil, fmt.Errorf("同品种内时段表不一致，**不自动取第一个**：%s —— "+
 			"要么上游数据有问题，要么「时段按品种」这个假设错了，两种都得人看",
 			strings.Join(conflicts, "；"))
+	}
+	if len(byProduct) == 0 {
+		return nil, fmt.Errorf("一个 FUTURE 合约都没有（按 class 跳过了 %v）—— "+
+			"筛出来的可能全是期权或合成指数", skipped)
 	}
 	out := make([]refdata.SessionTable, 0, len(byProduct))
 	pks := make([]string, 0, len(byProduct))
