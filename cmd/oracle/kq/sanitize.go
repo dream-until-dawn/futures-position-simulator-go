@@ -138,6 +138,7 @@ var tradeKeep = map[string]string{
 	"price":             "保留：**成交价** —— 逐笔对冲口径的基线，本库的 Lot.OpenPrice",
 	"volume":            "保留：成交手数",
 	"trade_date_time":   "保留：成交时刻（纳秒）",
+	"hedge_flag":        "保留：投机套保标志 —— ⚠️ 它决定保证金率，白名单初稿照 DIFF 文档列时漏了，是实况采集当场报出来的",
 	"commission":        "保留：这一笔的手续费",
 	"seqno":             "保留：序号",
 }
