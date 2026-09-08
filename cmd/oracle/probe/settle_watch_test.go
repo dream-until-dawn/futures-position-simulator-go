@@ -102,3 +102,65 @@ func TestWatcherUsesNumOrDash(t *testing.T) {
 			"混着两种写法的证据比全错的更难发现：大部分字段是对的，个别不是", mustNum)
 	}
 }
+
+// TestWatcherChecksConnectionEachTick 断言盯盘**每一拍都查连接死没死**。
+//
+// ⚠️ 它守的是 probes.md §13.4 那次真实漏测：
+// 结算那天第二段刚起头两条流就断了，而循环继续按秒采样 ——
+// 采到的永远是最后那份截面，45 分钟里一条变动都没有，
+// **日志上与「一切平静」完全一样**。结算恰好落在那段时间里。
+//
+// ⚠️ 查的位置也要对：必须在**采样之前**。采样之后再查，
+// 那一拍已经把陈旧截面当成新数据比过一次了。
+func TestWatcherChecksConnectionEachTick(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "exp_settle_watch.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ⚠️ 只在**采样循环体内**找，不扫整个函数。
+	//
+	// 第一版扫整个函数，于是命中了循环**之前**那次初始采样（`prev := snap()`），
+	// 判成「DeadErr 在采样之后」——**那是本测试自己的误报**。
+	// 初始采样在建连之后立刻做，它本来就该在 DeadErr 之前。
+	var loop *ast.ForStmt
+	ast.Inspect(f, func(n ast.Node) bool {
+		if fs, ok := n.(*ast.ForStmt); ok && loop == nil && fs.Cond == nil && fs.Init == nil {
+			loop = fs // 无条件 for —— 采样循环
+		}
+		return true
+	})
+	if loop == nil {
+		t.Fatal("⚠️ 找不到采样循环 —— 本条的位置判据无从谈起")
+	}
+	var deadPos, snapPos token.Pos
+	ast.Inspect(loop.Body, func(n ast.Node) bool {
+		ce, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch fn := ce.Fun.(type) {
+		case *ast.SelectorExpr:
+			if fn.Sel.Name == "DeadErr" && deadPos == token.NoPos {
+				deadPos = ce.Pos()
+			}
+		case *ast.Ident:
+			if fn.Name == "snap" && snapPos == token.NoPos {
+				snapPos = ce.Pos()
+			}
+		}
+		return true
+	})
+	if deadPos == token.NoPos {
+		t.Fatal("⚠️ 盯盘里一次都没调用 DeadErr —— " +
+			"连接断了不会有任何人被告知，而「断了」与「没有变动」在日志上一样")
+	}
+	if snapPos == token.NoPos {
+		t.Fatal("⚠️ 找不到采样调用 —— 本条的位置判据无从谈起")
+	}
+	if deadPos > snapPos {
+		t.Errorf("⚠️ DeadErr 在采样**之后**才查（%v > %v）—— "+
+			"那一拍已经把陈旧截面当成新数据比过一次了",
+			fset.Position(deadPos), fset.Position(snapPos))
+	}
+}

@@ -127,6 +127,25 @@ func (r *Runner) expSettleWatch(ctx context.Context) error {
 			return nil
 		case <-tick.C:
 		}
+		// ⚠️ 每一拍先查连接死没死，再采样。
+		//
+		// 起因是一次真实的漏测：2026-09-08 结算那天，第二段刚起头两条流就断了
+		// （`failed to read frame header: EOF`），而本循环继续按秒采样 ——
+		// 采到的永远是最后那份截面，于是 45 分钟里一条变动都没有，
+		// **日志上与「一切平静」完全一样**。结算恰好落在那段时间里。
+		//
+		// ⚠️ 靠「多久没消息」判断不行：休市时长时间没消息是正常的。
+		// 而读循环早就看见了那个 EOF —— 准确的信号一直在，只是没被查。
+		//
+		// 查到就**返回错误**而不是继续：分段脚本会起下一段，
+		// 那一段带着新连接。继续跑只会产出一段看起来平静的假证据。
+		if err := cli.DeadErr(); err != nil {
+			r.Logf("")
+			r.Logf("  ⚠️⚠️ **连接已断，本段就此结束**：%v", err)
+			r.Logf("     已记录 %d 次变动。⚠️ 断开之后的这段时间**没有观测**，", changes)
+			r.Logf("     不要把它读成「没有变动」——**它是一段空白，不是一段平静**。")
+			return fmt.Errorf("读循环终止，观测中断：%w", err)
+		}
 		cur := snap()
 		var diff []string
 		keys := make([]string, 0, len(cur))

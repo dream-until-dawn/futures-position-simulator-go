@@ -68,6 +68,19 @@ type Client struct {
 	tdUpdated chan struct{} // 每次合并完补丁后广播
 	mdUpdated chan struct{}
 
+	// deadTd / deadMd 记录读循环**终止的原因**。
+	//
+	// ⚠️ 它们存在的理由是一次真实的漏测：连接断了（`failed to read frame header: EOF`），
+	// 读循环打印了一行日志就退出了，而**没有任何人被告知**。
+	// 上层的盯盘还在按秒采样，采到的永远是最后那份截面 ——
+	// 于是「连接死了」与「什么都没变」在日志上长得一模一样，
+	// 而结算恰好发生在那段时间里。
+	//
+	// ⚠️ 靠「多久没消息」判断不行：休市时长时间没消息是**正常**的。
+	// 而读循环**已经看见了那个 EOF** —— 准确的信号一直在，只是没被暴露出来。
+	deadTd error
+	deadMd error
+
 	logf func(string, ...any)
 }
 
@@ -322,6 +335,15 @@ func (c *Client) readLoop(conn *websocket.Conn, snap map[string]any, updated cha
 		_, data, err := conn.Read(c.baseCtx())
 		if err != nil {
 			c.logf("[%s] 读取结束: %v", tag, err)
+			// ⚠️ 记下来，别只打印。打印进日志的东西**没有人在读**，
+			// 而上层需要的是一个能查的状态。
+			c.mu.Lock()
+			if tag == "td" {
+				c.deadTd = err
+			} else {
+				c.deadMd = err
+			}
+			c.mu.Unlock()
 			return
 		}
 		var pack struct {
@@ -515,4 +537,31 @@ func (c *Client) Close() {
 	if c.mdConn != nil {
 		_ = c.mdConn.Close(websocket.StatusNormalClosure, "")
 	}
+}
+
+// Dead 报告两条读循环有没有终止，以及终止的原因。
+//
+// ⚠️ 它回答的是「连接还在不在」，**不是**「最近有没有消息」——
+// 后者在休市时长时间为假，而那正是最容易把「死了」读成「安静」的时候。
+//
+// 用法：任何长时间运行的观测都应当每一拍查一次。
+// 不查的话，采到的永远是最后那份截面，而日志上看不出区别。
+func (c *Client) Dead() (trade, quote error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.deadTd, c.deadMd
+}
+
+// DeadErr 把两条读循环的终止原因合成一个 error；都活着时返回 nil。
+func (c *Client) DeadErr() error {
+	td, md := c.Dead()
+	switch {
+	case td != nil && md != nil:
+		return fmt.Errorf("交易与行情两条流都断了（交易：%v；行情：%v）", td, md)
+	case td != nil:
+		return fmt.Errorf("**交易流断了**：%v —— 账户与持仓截面从此不再更新", td)
+	case md != nil:
+		return fmt.Errorf("行情流断了：%v —— 行情字段从此不再更新", md)
+	}
+	return nil
 }
