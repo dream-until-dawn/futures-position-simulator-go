@@ -91,7 +91,7 @@
 | 文档 | 小节数 |
 |---|---|
 | `README.md` | 6 |
-| `docs/design.md` | 27 |
+| `docs/design.md` | 28 |
 | `docs/cn-futures-rules.md` | 39 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 35 |
