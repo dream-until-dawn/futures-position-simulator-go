@@ -134,7 +134,7 @@ func replayWith(start *position.Position, inst types.InstrumentID, hedge types.H
 			// SELL/CLOSETODAY 平的是**多头**。反过来用会把多头平成空头，
 			// 而在双向持仓的样本上它不会报错 —— 两边都有仓可平。
 			closing := opposite(t.Direction)
-			res, err := p.Close(closing, t.Offset, day, t.Volume, ord)
+			res, err := p.Close(closing, closeOffsetOf(t.Offset, dateType), day, t.Volume, ord)
 			if err != nil {
 				return nil, fmt.Errorf("成交 %s（%v/%v %d 手）：%w",
 					t.TradeID, t.Direction, t.Offset, t.Volume, err)
@@ -201,4 +201,38 @@ func copyLots(dst, src *position.Position) error {
 		}
 	}
 	return nil
+}
+
+// closeOffsetOf 把柜台成交里的开平标志翻成**本库的**平仓语义。
+//
+// # ⚠️ 这不是「宽松处理」，是把一条实测结论用上
+//
+// 柜台的裸 `CLOSE` 在 `UseHistory` 合约上**就是平昨**，两条独立证据：
+//
+//	冻结字段  20260909 在 今1/昨3 的同一截面上，CLOSE 冻的是
+//	          volume_long_frozen_his（CLOSETODAY 冻 _today）
+//	持仓截面  同日那笔平昨成交前后：今1/昨3 → **今1/昨2**。
+//	          若吃的是今仓会变成 今0/昨3
+//
+// （另有 2026-09-07 的拒因原话「平昨手数超过昨仓持仓量」，见 cn-futures-rules.md）
+//
+// 不翻的话，重放会把 `types.Close` 交给 `CloseOrder` 去挑一边，
+// 于是「先平昨」与「先平今」给出不同结果、被判成**歧义**而整份样本作废 ——
+// 而柜台那一侧根本没有歧义，它是确定的。
+// ⚠️ 把一个**已经量出来**的确定行为当成未知，代价是丢掉整份样本。
+//
+// # ⚠️ 这与「本库拒收裸 CLOSE」不矛盾
+//
+// 那条讲的是**报单语义**：用户发一笔裸 `CLOSE` 时本库报错，
+// 因为证据来自快期模拟、simnow_pending#1 未裁决（cn-futures-rules.md）。
+// 这里讲的是**重放柜台已经成交的记录**：那笔单柜台已经按平昨执行了，
+// 要复现它就得照它执行。两件事一个是「该不该接受」，一个是「发生了什么」。
+//
+// ⚠️ `PositionDateUnknown` 时**不翻**：不知道合约属于哪一型就不猜，
+// 让歧义检查去拦。翻错的后果是平错一边，而那不会报错。
+func closeOffsetOf(offset types.Offset, dateType refdata.PositionDateType) types.Offset {
+	if offset == types.Close && dateType == refdata.UseHistory {
+		return types.CloseYesterday
+	}
+	return offset
 }

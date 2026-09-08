@@ -56,6 +56,19 @@ func seeded(t *testing.T) *position.Position {
 //
 // 它只有在起始持仓带着昨仓时才开始工作，而那正是今晚的形状：
 // 今晚的持仓截面里有昨仓，今晚的成交里没有一笔能解释它。
+//
+// # ⚠️ 20260909 起用的是 PositionDateUnknown，不是 UseHistory
+//
+// 原来这里传 `refdata.UseHistory`，而 `closeOffsetOf` 现在会把
+// `UseHistory` 上的裸 `CLOSE` **翻成平昨**（两条实测证据见那个函数的注释）——
+// 于是三种消耗顺序给出同一个结果，这条测试当场红了。
+//
+// ⚠️ 那次红是**对的**：在 `UseHistory` 合约上裸 `CLOSE` 已经不再有歧义，
+// 歧义检查在那条路上结构性地不会触发了。改成 `PositionDateUnknown`
+// 才是这条测试真正要考验的场合 ——「不知道合约属于哪一型，所以不敢翻」。
+//
+// ⚠️ 顺手别把它改回去：改回 `UseHistory` 会让本条**永远绿**，
+// 而它检查的是「歧义检查会不会触发」。
 func TestReplayDetectsAmbiguity(t *testing.T) {
 	// 一笔 CLOSE（不分今昨），2 手 —— 顺序不同则消耗不同：
 	//   先平昨 → 吃掉两手昨仓，剩今仓 3300
@@ -65,7 +78,8 @@ func TestReplayDetectsAmbiguity(t *testing.T) {
 		Direction: types.Sell, Offset: types.Close,
 		Hedge: types.Speculation, Price: dd("3250"), Volume: 2, At: 1,
 	}}
-	_, err := ReplayFrom(seeded(t), testInst, types.Speculation, refdata.UseHistory, dayD1, trades)
+	_, err := ReplayFrom(seeded(t), testInst, types.Speculation,
+		refdata.PositionDateUnknown, dayD1, trades)
 	if err == nil {
 		t.Fatal("⚠️ 三种消耗顺序会给出不同的持仓，重放却没报歧义 —— " +
 			"此时返回的持仓是三个候选里随手挑的一个，而它看起来完全正常")

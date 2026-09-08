@@ -1063,5 +1063,60 @@
   "want": "",
   "expect": "green",
   "why": "⚠️ 手数不可能为负，所以把判据从「>0」改成「<0」之后计数照样是 0，本条照样绿。**声明的盲区**：这条测试断言的是「没有反例」，而一个恒假的判据与一个真的没有反例**长得一模一样**。真正能守住它的只有「大商所哪天出现昨仓」——那时正确的判据会红，而这个改坏的不会。破坏验证在这里只能演示盲区，不能消除它。"
+ },
+ {
+  "name": "97 重放不再把 UseHistory 的裸 CLOSE 翻成平昨",
+  "dir": "",
+  "file": "conformance/fixture/replay.go",
+  "old": "\tif offset == types.Close && dateType == refdata.UseHistory {\n\t\treturn types.CloseYesterday\n\t}",
+  "new": "",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReconstructCoversCarriedSides",
+  "want": "重放有歧义",
+  "expect": "red"
+ },
+ {
+  "name": "98 结转+重放的「今昨并存」判别力要求去掉",
+  "dir": "",
+  "file": "conformance/fixture/reconstruct_test.go",
+  "old": "\t\tif numOr(oracle, \"volume_long_today\").IsPositive() {\n\t\t\twithToday++\n\t\t}",
+  "new": "",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReconstructCoversCarriedSides",
+  "want": "没有一个**今昨并存**的样本",
+  "expect": "red"
+ },
+ {
+  "name": "99 已知口子差异的声明去掉（open_price 分岔变成失败）",
+  "dir": "",
+  "file": "conformance/fixture/reconstruct_test.go",
+  "old": "\t\tif closedOnSide(f, sym, types.Buy) {",
+  "new": "\t\tif false {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReconstructCoversCarriedSides",
+  "want": "结转+重放之后有 1 个字段对不上",
+  "expect": "red"
+ },
+ {
+  "name": "100 裁决者引用指向一个不存在的条目",
+  "dir": "",
+  "file": "conformance/fixture/reconstruct_test.go",
+  "old": "Arbiter: \"simnow_pending#10：真实 CTP 的 OpenCost 在部分平仓时按均价冲减\" +",
+  "new": "Arbiter: \"simnow_pending#77：真实 CTP 的 OpenCost 在部分平仓时按均价冲减\" +",
+  "pkg": "./",
+  "test": "TestSimnowRefsResolve",
+  "want": "而 state.md 的表里没有这一条",
+  "expect": "red"
+ },
+ {
+  "name": "101 歧义检查的用例改回 UseHistory（于是永远绿）",
+  "dir": "",
+  "file": "conformance/fixture/replay_test.go",
+  "old": "\t_, err := ReplayFrom(seeded(t), testInst, types.Speculation,\n\t\trefdata.PositionDateUnknown, dayD1, trades)",
+  "new": "\t_, err := ReplayFrom(seeded(t), testInst, types.Speculation,\n\t\trefdata.UseHistory, dayD1, trades)",
+  "pkg": "./conformance/fixture/",
+  "test": "TestReplayDetectsAmbiguity",
+  "want": "重放却没报歧义",
+  "expect": "red"
  }
 ]

@@ -79,3 +79,50 @@ func Split(p *position.Position, dir types.Direction) (openAvg, basisAvg decimal
 	}
 	return o, b, !o.Equal(b), nil
 }
+
+// Reconstruct 重建一份夹具里**完整的**持仓 —— 昨仓那部分从前一交易日结转来，
+// 今仓那部分由当日成交重放上去。
+//
+// # ⚠️ 它补的是什么洞
+//
+// `Replay` 只回放**当日**成交。20260909 夜盘第一次出现「同一合约既有昨仓、
+// 又有当日成交」的截面之后，凡是带昨仓的方向，重放出来的手数与均价
+// 必然比柜台少一块 —— 那不是本库算错，是夹具的边界。
+//
+// 当时两条对拍（重放、保证金）的处理是**跳过**那些方向，各 7 处。
+// 跳过是诚实的，但它把覆盖让出去了，而让出去的正好是新出现的、
+// 最值得对的那批截面（今昨并存）。本函数把它们接回来。
+//
+// # ⚠️ 三个前提，缺一不可，缺了就报错而不是凑
+//
+//	prev 是**紧邻的**前一交易日          不相邻的话中间少了一次结算，结转出来的昨仓是错的
+//	settlement 来自**交易所**            拿柜台自己的结算价去验柜台自己的逐日盯市是同义反复
+//	dateType 实测过                      它决定结算时今仓变不变昨仓，猜错则今昨仓不滚动
+//
+// ⚠️ 本函数**不判断**这三条里的前两条能不能满足 —— 满足不了的合约
+// （例如大商所：日行情 412 未打通，拿不到结算价）应当由调用方跳过，
+// 并把跳过**记数报出来**。在这里悄悄回退成「只重放当日」是最坏的选择：
+// 结果看起来完整，实际少了昨仓那一块。
+func Reconstruct(prev, cur *Fixture, symbol string, hedge types.HedgeFlag,
+	dateType refdata.PositionDateType, settlement decimal.Decimal) (*position.Position, error) {
+
+	if prev.TradingDay >= cur.TradingDay {
+		return nil, fmt.Errorf("⚠️ 前一份夹具的交易日 %s 不早于当前的 %s —— "+
+			"结转方向反了，或者拿错了夹具", prev.TradingDay, cur.TradingDay)
+	}
+	carried, err := Carry(prev, symbol, hedge, dateType, settlement, cur.TradingDay)
+	if err != nil {
+		return nil, fmt.Errorf("结转 %s：%w", symbol, err)
+	}
+	inst, err := types.ParseSymbol(symbol, cur.TradingDay)
+	if err != nil {
+		return nil, err
+	}
+	// ⚠️ 当日没有成交是**正常**的（那天只是持有），此时结转结果就是答案。
+	// ReplayFrom 对空成交也成立，这里不特判，免得两条路分岔。
+	p, err := ReplayFrom(carried, inst, hedge, dateType, cur.TradingDay, cur.TradesOf(symbol))
+	if err != nil {
+		return nil, fmt.Errorf("在结转结果上重放 %s 的当日成交：%w", symbol, err)
+	}
+	return p, nil
+}
