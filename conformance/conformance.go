@@ -109,6 +109,22 @@ type Field struct {
 	Library decimal.Decimal
 	Oracle  decimal.Decimal
 
+	// LibraryAbsent / OracleAbsent 表示该侧**声明此处没有值**，而不是值为零。
+	//
+	// ⚠️ 这一对不是可有可无的精细化，它堵的是一个能双向全绿的洞：
+	// 快期在空仓方向上对 open_price / position_price / margin 返回字符串 "-"
+	// 而不是 0（实测 188/188，probes.md §9）。
+	// 对拍侧若把 "-" 解析成 0，那些字段会**碰巧一致**；
+	// 若把 "-" 当成缺失整个跳过，它们会全部落进「未触发」。
+	// **两条路都能让测试全绿，而它们互相矛盾** —— 所以「无值」必须有自己的表示。
+	//
+	// 判定规则（见 classifyOne）：
+	//
+	//	两侧都无值    按一致处理，但仍要求 Triggered 才算 Matched
+	//	一侧无值      **一律 Failed** —— 这正是要抓的那一类
+	LibraryAbsent bool
+	OracleAbsent  bool
+
 	// Triggered 报告这个字段在本次样本里**是否被真正触发过**。
 	//
 	// ⚠️ 它必须由**造样本的人**判定，不能由「值是不是零」推。
@@ -185,8 +201,23 @@ func classifyOne(f Field, tol decimal.Decimal, r *Report) Verdict {
 		}
 		return KnownDeviation
 	}
-	if f.Library.Sub(f.Oracle).Abs().GreaterThan(tol) {
+	// ⚠️ 「无值」先于数值比较判定，且**不许**退化成与零比较。
+	switch {
+	case f.LibraryAbsent && f.OracleAbsent:
+		// 两侧都说没有 —— 一致。但这恰恰是最容易碰巧一致的形状
+		// （空仓时几乎每个字段两边都「没有」），所以下面的 Triggered 照查。
+		if !f.Library.IsZero() || !f.Oracle.IsZero() {
+			r.Errs = append(r.Errs, fmt.Errorf("字段 %s 声明为无值，却带着数值 "+
+				"(本库 %s / 口子 %s) —— 读它的人会各按各的理解取用",
+				f.Name, f.Library, f.Oracle))
+			return Failed
+		}
+	case f.LibraryAbsent != f.OracleAbsent:
 		return Failed
+	default:
+		if f.Library.Sub(f.Oracle).Abs().GreaterThan(tol) {
+			return Failed
+		}
 	}
 	if !f.Triggered {
 		return Untriggered

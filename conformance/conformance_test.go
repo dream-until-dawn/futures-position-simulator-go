@@ -273,3 +273,71 @@ func TestFeeConformanceShowsTheKnownDeviation(t *testing.T) {
 	t.Logf("本库（成交价）%s vs 快期（昨结算价）%s，差 %s\n%s",
 		byTrade, bySettle, bySettle.Sub(byTrade), r.Summary())
 }
+
+// TestAbsentIsNotZero 断言「无值」与「零」在判定里是两回事。
+//
+// ⚠️ 这条堵的是一个**能双向全绿**的洞，而它是从数据里逼出来的：
+// 快期在空仓方向上对 open_price / position_price / margin
+// 返回字符串 "-" 而不是 0（实测 188/188，probes.md §9）。
+// 对拍侧若把 "-" 解析成 0，这些字段会碰巧一致；
+// 若把 "-" 当成缺失整个跳过，它们会全部落进「未触发」。
+// 两条路都能让测试全绿，而它们互相矛盾 —— 所以「无值」必须有自己的表示，
+// 且**一侧无值一侧有值必须判失败**。
+func TestAbsentIsNotZero(t *testing.T) {
+	// ① 一侧说没有、一侧给 0 —— 这正是要抓的那一类。
+	r := Classify("合成样本", []Field{
+		{Name: "open_price_short", LibraryAbsent: true, Oracle: decimal.Zero, Triggered: true},
+	}, tol)
+	if got := r.Verdicts["open_price_short"]; got != Failed {
+		t.Errorf("⚠️ 本库说「没有」而口子给 0，应判失败，实为 %v —— "+
+			"判成一致等于把 \"-\" 读成了 0", got)
+	}
+	// ② 反向也一样：口子说没有、本库给 0。
+	r2 := Classify("合成样本", []Field{
+		{Name: "margin_short", Library: decimal.Zero, OracleAbsent: true, Triggered: true},
+	}, tol)
+	if got := r2.Verdicts["margin_short"]; got != Failed {
+		t.Errorf("⚠️ 口子说「没有」而本库给 0，应判失败，实为 %v", got)
+	}
+	// ③ 两侧都说没有 —— 一致，但仍要求触发过才算通过。
+	r3 := Classify("合成样本", []Field{
+		{Name: "margin_short", LibraryAbsent: true, OracleAbsent: true, Triggered: true},
+	}, tol)
+	if got := r3.Verdicts["margin_short"]; got != Matched {
+		t.Errorf("两侧都说没有且触发过，应判 Matched，实为 %v", got)
+	}
+	if !r3.Passed() {
+		t.Errorf("两侧都说没有且触发过应当通过：%s", r3.Summary())
+	}
+	// ④ 两侧都说没有但**未触发** —— 不算通过。
+	//
+	// ⚠️ 这一条比看起来重要：空仓时几乎每个字段两侧都「没有」，
+	// 若「都没有」直接算通过，一份空仓截面能把整套验收刷成全绿。
+	r4 := Classify("合成样本", []Field{
+		{Name: "margin_short", LibraryAbsent: true, OracleAbsent: true, Triggered: false},
+	}, tol)
+	if got := r4.Verdicts["margin_short"]; got != Untriggered {
+		t.Errorf("两侧都说没有但未触发，应判 Untriggered，实为 %v", got)
+	}
+	if r4.Passed() {
+		t.Error("⚠️ 一份「两侧都没有且未触发」的样本被判通过 —— " +
+			"空仓截面上几乎每个字段都是这个形状，那会把整套验收刷成全绿")
+	}
+}
+
+// TestAbsentMustNotCarryNumber 断言既声明无值又带着数的字段被拒。
+//
+// ⚠️ 这样的字段读它的人会各按各的理解取用：
+// 有人看 Absent 就跳过，有人看 Library 就拿数 —— 两种读法都「合理」。
+func TestAbsentMustNotCarryNumber(t *testing.T) {
+	r := Classify("合成样本", []Field{
+		{Name: "margin_short", Library: d("1"), LibraryAbsent: true,
+			OracleAbsent: true, Triggered: true},
+	}, tol)
+	if len(r.Errs) == 0 {
+		t.Error("⚠️ 声明为无值却带着数值 1 的字段应当报错")
+	}
+	if r.Passed() {
+		t.Error("⚠️ 带错误的报告不能算通过")
+	}
+}

@@ -38,6 +38,21 @@ const (
 	NotModeled
 	// NotImplemented 还没实现。⚠️ 对拍时必须判失败，不许当成 0 去比。
 	NotImplemented
+	// Absent 本库**建模了**，而结论是此处**没有值**。
+	//
+	// ⚠️ 它与上面两档都不同，混淆任何一对都会静默出错：
+	//
+	//	与 NotImplemented 的区别   那是欠债，这是结论
+	//	与 NotModeled 的区别       那也是欠债（带到期版本），这是结论
+	//	与 Present+0 的区别        ⚠️ 这一条是本档存在的理由
+	//
+	// 实测（188 份持仓截面，见 probes.md §9）：柜台在空仓方向上
+	// 对 open_price / position_price / margin 返回字符串 "-" 而**不是** 0，
+	// 188/188 无反例。也就是说**柜台自己**把「没有」与「零」分开了。
+	// 本库若把这一档渲染成 0，对拍时会与柜台的 "-" 比较，
+	// 而那时无论把 "-" 读成 0（碰巧一致）还是读成缺失（判未触发），
+	// **两种读法都能全绿，且它们互相矛盾**。
+	Absent
 )
 
 func (p Presence) String() string {
@@ -48,6 +63,8 @@ func (p Presence) String() string {
 		return "明确不建模"
 	case NotImplemented:
 		return "还没实现"
+	case Absent:
+		return "明确无值"
 	}
 	return "未声明"
 }
@@ -78,6 +95,13 @@ func Skip(until, why string) Value {
 // Todo 构造一个「还没实现」的字段。
 func Todo(why string) Value { return Value{Presence: NotImplemented, Why: why} }
 
+// None 构造一个「本库明确判定此处无值」的字段。
+//
+// ⚠️ 与 Todo 的区别不是措辞：Todo 是欠债，None 是结论。
+// 把「空仓方向没有开仓均价」写成 Todo，会让一条**已经完成的建模**
+// 混进待办里；把它写成 Num(0)，会让它与柜台的 "-" 在对拍时碰巧一致。
+func None(why string) Value { return Value{Presence: Absent, Why: why} }
+
 // Validate 检查一个字段的声明是否完整。
 func (v Value) Validate(name string) error {
 	switch v.Presence {
@@ -95,6 +119,16 @@ func (v Value) Validate(name string) error {
 	case NotImplemented:
 		if v.Why == "" {
 			return fmt.Errorf("字段 %s 声明为还没实现，但没写是什么没实现", name)
+		}
+		return nil
+	case Absent:
+		if v.Why == "" {
+			return fmt.Errorf("字段 %s 声明为明确无值，但没写为什么没有 —— "+
+				"「没有值」是一个结论，结论要有理由", name)
+		}
+		if !v.Number.IsZero() {
+			// ⚠️ 一个既声明「无值」又带着数的字段，读它的人会各按各的理解取用。
+			return fmt.Errorf("字段 %s 声明为明确无值，却带着数值 %s", name, v.Number)
 		}
 		return nil
 	}
