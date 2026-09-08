@@ -1577,11 +1577,11 @@
   "expect": "red"
  },
  {
-  "name": "142 金额侧冻结把已终结的委托也算进来",
+  "name": "142 挑「还挂着的委托」时把已终结的也算进来",
   "dir": "",
   "file": "conformance/fixture/frozen.go",
-  "old": "\t\tif !alive {\n\t\t\tcontinue\n\t\t}\n\t\tleft, ok := numberOf(o, \"volume_left\")\n\t\tif !ok || !left.IsPositive() {\n\t\t\tcontinue\n\t\t}\n\t\tsym, ok := textOf(o, \"exchange_id\", \"instrument_id\")\n\t\tif !ok {\n\t\t\treturn decimal.Zero, decimal.Zero, fmt.Errorf(\"委托 %s 读不出合约\", id)\n\t\t}",
-  "new": "\t\t_ = alive\n\t\tleft, ok := numberOf(o, \"volume_left\")\n\t\tif !ok || !left.IsPositive() {\n\t\t\tcontinue\n\t\t}\n\t\tsym, ok := textOf(o, \"exchange_id\", \"instrument_id\")\n\t\tif !ok {\n\t\t\treturn decimal.Zero, decimal.Zero, fmt.Errorf(\"委托 %s 读不出合约\", id)\n\t\t}",
+  "old": "\t\tif !alive {\n\t\t\tcontinue\n\t\t}\n\t\tleft, ok := numberOf(o, \"volume_left\")\n\t\tif !ok || !left.IsPositive() {\n\t\t\tcontinue\n\t\t}\n\t\tout[id] = o",
+  "new": "\t\t_ = alive\n\t\tleft, ok := numberOf(o, \"volume_left\")\n\t\tif !ok || !left.IsPositive() {\n\t\t\tcontinue\n\t\t}\n\t\tout[id] = o",
   "pkg": "./conformance/fixture/",
   "test": "TestFrozenTotals",
   "want": "是不是被算进来了",
