@@ -314,3 +314,90 @@ func TestParseVersionRejectsMalformed(t *testing.T) {
 		}
 	}
 }
+
+// TestExpiryMechanismActuallyFires 证明到期机制**会响**。
+//
+// # 为什么单独要这一条
+//
+// 这套机制被修过两次，而它**一次都没有响过**：现存声明是 v0.8.0 与 v1.0.0，
+// 而 Version 是 v0.4.0，于是没有任何一处到期。
+//
+// > ⚠️ **一条从未响过的守卫，和一条不会响的守卫，在证据上是同一个位置。**
+//
+// 别的守卫都做过破坏验证，唯独这一条没有（本条由评审方 20260909 指出）。
+// 这里不动 Version 常量，直接对**假想的**版本算一遍：
+//
+//	当前版本            一处都不该到期
+//	推到最早的到期版本   恰好那一档到期，**不是全部** —— 证明它不是个总开关
+//	推到最晚的到期版本   全部到期
+//
+// # ⚠️ 期望值是**派生**的，不是抄的
+//
+// 三个数都从同一次扫描的分布算出来。抄成字面量的话，新增一处声明就要
+// 有人记得同步 —— 而「需要有人记得同步的参数」正是这套机制自己栽过的坑
+// （Version 在 v0.1.0 上停了两天）。
+func TestExpiryMechanismActuallyFires(t *testing.T) {
+	decls := collectNotModeled(t)
+	byVersion := map[string]int{}
+	for _, d := range decls {
+		byVersion[d.Until]++
+	}
+	versions := make([]string, 0, len(byVersion))
+	for v := range byVersion {
+		versions = append(versions, v)
+	}
+	sort.Slice(versions, func(i, j int) bool {
+		a, _ := parseVersion(versions[i])
+		b, _ := parseVersion(versions[j])
+		return versionLess(a, b)
+	})
+	// ⚠️ 判别力：至少要有两个**不同**的到期版本，否则「恰好那一档」
+	// 与「全部」是同一个数，中间那条用例什么都不说明。
+	if len(versions) < 2 {
+		t.Fatalf("⚠️ 全仓只有 %d 种到期版本 %v —— "+
+			"「只到期一档」与「全部到期」分不开，本条没有判别力", len(versions), versions)
+	}
+	expiredAt := func(at string) int {
+		cur, err := parseVersion(at)
+		if err != nil {
+			t.Fatalf("假想版本 %q 不合法：%v", at, err)
+		}
+		n := 0
+		for _, d := range decls {
+			got, err := parseVersion(d.Until)
+			if err != nil {
+				continue // 解析不了的由上面那条测试报
+			}
+			if !versionLess(cur, got) {
+				n++
+			}
+		}
+		return n
+	}
+	earliest, latest := versions[0], versions[len(versions)-1]
+	cases := []struct {
+		at   string
+		want int
+		why  string
+	}{
+		{Version, 0, "当前版本下不该有任何欠账到期 —— 有的话上一条测试就该红了"},
+		{earliest, byVersion[earliest], "推到最早的到期版本：**恰好那一档**到期"},
+		{latest, len(decls), "推到最晚的到期版本：全部到期"},
+	}
+	for _, c := range cases {
+		got := expiredAt(c.at)
+		if got != c.want {
+			t.Errorf("⚠️ 假想 Version = %s 时应有 %d 处到期，实际 %d —— %s。"+
+				"⚠️ 这条测试的全部意义是证明这套机制**会响**："+
+				"它此前一次都没响过，而没响过的守卫与不会响的守卫在证据上同位",
+				c.at, c.want, got, c.why)
+		}
+	}
+	// ⚠️ 中间那一档必须**真的少于全部**，否则「恰好那一档」是空话。
+	if byVersion[earliest] >= len(decls) {
+		t.Errorf("⚠️ 最早那一档就占了全部 %d 处声明 —— "+
+			"「只到期一档」与「全部到期」分不开", len(decls))
+	}
+	t.Logf("到期机制自检：当前 %s 到期 0 处；假想 %s 到期 %d 处；假想 %s 到期 %d 处",
+		Version, earliest, byVersion[earliest], latest, len(decls))
+}

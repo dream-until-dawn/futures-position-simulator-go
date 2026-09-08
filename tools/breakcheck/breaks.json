@@ -1817,5 +1817,27 @@
   "test": "TestFakeMonthOf",
   "want": "fakeMonthOf(",
   "expect": "red"
+ },
+ {
+  "name": "164 到期判据恒判「未到期」（机制不会响）",
+  "dir": "",
+  "file": "version_test.go",
+  "old": "\t\t\tif !versionLess(cur, got) {\n\t\t\t\tn++\n\t\t\t}",
+  "new": "\t\t\tif !versionLess(cur, got) && false {\n\t\t\t\tn++\n\t\t\t}",
+  "pkg": "./",
+  "test": "TestExpiryMechanismActuallyFires",
+  "want": "处到期，实际",
+  "expect": "red"
+ },
+ {
+  "name": "165 包注释扫描跳掉嵌套模块",
+  "dir": "",
+  "file": "pkgdoc_test.go",
+  "old": "\t\t\tif name := d.Name(); name == \".git\" || name == \"testdata\" {",
+  "new": "\t\t\tif name := d.Name(); name == \".git\" || name == \"testdata\" || name == \"oracle\" {",
+  "pkg": "./",
+  "test": "TestNoStaleForbiddenPhrasesInPackageDocs",
+  "want": "那一棵子树很可能整个没走到",
+  "expect": "red"
  }
 ]
