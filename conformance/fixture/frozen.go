@@ -6,6 +6,7 @@ import (
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx"
+	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -183,8 +184,8 @@ const (
 // 账户 frozen_margin 恒为 0）。开仓单要冻，而本函数**遇到开仓挂单就报错** ——
 // 冻结保证金要保证金率与乘数，那是调用方的 Spec 里的东西，
 // 而本批样本里一笔开仓挂单都没有。**没见过的情形不猜**。
-func frozenTotals(f *Fixture, specs map[string]Spec) (margin, commission decimal.Decimal, err error) {
-	margin, commission = decimal.Zero, decimal.Zero
+func frozenTotals(f *Fixture, specs map[string]Spec) (marginSum, commission decimal.Decimal, err error) {
+	marginSum, commission = decimal.Zero, decimal.Zero
 	for id, o := range f.Orders {
 		alive, ok := aliveOf(o)
 		if !ok {
@@ -202,25 +203,42 @@ func frozenTotals(f *Fixture, specs map[string]Spec) (margin, commission decimal
 		if !ok {
 			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 读不出合约", id)
 		}
-		_, off, err := dirOffsetOf(o)
+		dir, off, err := dirOffsetOf(o)
 		if err != nil {
 			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s：%w", id, err)
-		}
-		if off == types.Open {
-			return decimal.Zero, decimal.Zero, fmt.Errorf(
-				"⚠️ 委托 %s 是**开仓挂单**，它要冻保证金 —— "+
-					"而本函数没有实现那一支：本批样本里一笔都没有，"+
-					"**没见过的情形不猜**。要支持它得把保证金率接进来", id)
 		}
 		spec, ok := specs[sym]
 		if !ok {
 			return decimal.Zero, decimal.Zero,
 				fmt.Errorf("委托 %s 的合约 %s 没有规格", id, sym)
 		}
+		inst, err := types.ParseSymbol(sym, f.TradingDay)
+		if err != nil {
+			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 的合约 %s：%w", id, sym, err)
+		}
 		pre, ok := f.PreSettlement(sym)
 		if !ok {
 			return decimal.Zero, decimal.Zero,
 				fmt.Errorf("委托 %s 的合约 %s 没有昨结算价 —— 手续费基准缺失", id, sym)
+		}
+		if off == types.Open {
+			// ⚠️ 开仓挂单**要冻保证金**，基准是**昨结算价**，不是报单价。
+			// 20260909 两次独立实测（下面 openFrozenMargin 的注释里有数），
+			// 两笔的报单价都远低于昨结算价，所以这两者被分得干干净净。
+			m, err := openFrozenMargin(sym, inst, dir, spec, pre, int(left.IntPart()))
+			if err != nil {
+				return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s：%w", id, err)
+			}
+			margin_ := m
+			marginSum = marginSum.Add(margin_)
+			// 手续费按开仓档算，基准同样是昨结算价（kq_facts 4）。
+			c, err := fee.Compute(spec.Commission, types.Open, pre, spec.Multiplier,
+				int(left.IntPart()), decimalx.NoRounding)
+			if err != nil {
+				return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 算手续费：%w", id, err)
+			}
+			commission = commission.Add(c)
+			continue
 		}
 		// 裸 CLOSE 在金额上与平昨等价（手续费一样收、保证金一样不冻），
 		// 所以这里当平昨算是安全的 —— 而**手数**那一侧不是，见 FrozenOf。
@@ -234,5 +252,44 @@ func frozenTotals(f *Fixture, specs map[string]Spec) (margin, commission decimal
 		}
 		commission = commission.Add(c)
 	}
-	return margin, commission, nil
+	return marginSum, commission, nil
+}
+
+// openFrozenMargin 算一笔**开仓挂单**冻结的保证金。
+//
+// # 实测（20260909，快期模拟）
+//
+//	SHFE.ag2702  昨结 16262 × 乘数 15  × 22% = 53664.6   账户 frozen_margin 53664.6
+//	DCE.i2701    昨结 740   × 乘数 100 × 11% = 8140      账户 frozen_margin 8140
+//
+// ⚠️ 两笔的**报单价**分别是 13009.9 与 673.95，都远低于昨结算价 ——
+// 于是「按昨结算价」与「按报单价」被分得干干净净：后者会算出
+// 42932.67 与 7413.45，与账户对不上。**这不是一次同值的巧合。**
+//
+// ⚠️ 它与持仓保证金同基准（kq_facts 1），但那是两件事：
+// 一个是挂单占用、一个是持仓占用，同基准是**量出来的**，不是推出来的。
+//
+// ⚠️ 走 margin.Compute 而不是就地写「名义额 × 费率」：那会是第二份实现，
+// 而两份实现里只有一份会被对拍走到。
+func openFrozenMargin(sym string, inst types.InstrumentID, dir types.Direction,
+	spec Spec, pre decimal.Decimal, volume int) (decimal.Decimal, error) {
+
+	leg := margin.Leg{
+		Instrument: inst, Direction: dir, Volume: volume,
+		Multiplier: spec.Multiplier, Rates: spec.Margin,
+		// ⚠️ 挂单还没成交，没有「今昨」可言 —— 记作今仓那一档。
+		// 昨仓档只在两档费率不同的合约上才有差别，而本口子上四档同值
+		// （probes.md §7.2），所以这一步在本口子上**没有判别力**，
+		// 换口子时要重新想。
+		// ⚠️ MaxMarginSide 写死为 false、scope 取 NoNetting：单腿算不出大边，
+		// 而**假装能算**会让这里在多空并存时悄悄少冻一边。真要建模挂单与持仓
+		// 之间的大边合并，得把持仓一起传进来 —— 那是另一件事，本函数不做。
+		IsHistory: false, MaxMarginSide: false,
+		PreSettlement: pre, HasPreSettlement: true,
+	}
+	res, err := margin.Compute([]margin.Leg{leg}, margin.PreSettleAll, margin.NoNetting)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("%s 算开仓冻结保证金：%w", sym, err)
+	}
+	return res.Company, nil
 }

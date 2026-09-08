@@ -1599,13 +1599,13 @@
   "expect": "red"
  },
  {
-  "name": "144 拒绝优先级改回文档顺序（tick 排在 limit 前）",
+  "name": "144 拒绝优先级对调（把翻过案的那一对再翻回去）",
   "dir": "",
   "file": "order/order.go",
-  "old": "\tCheckPriceLimit\n\t// CheckPriceTick 价格是否为最小变动价位的整数倍。\n\tCheckPriceTick\n",
-  "new": "\tCheckPriceTick\n\t// CheckPriceTick 价格是否为最小变动价位的整数倍。\n\tCheckPriceLimit\n",
+  "old": "\tCheckPriceTick\n\t// CheckPriceLimit 价格是否在涨跌停之内。\n\tCheckPriceLimit\n",
+  "new": "\tCheckPriceLimit\n\t// CheckPriceLimit 价格是否在涨跌停之内。\n\tCheckPriceTick\n",
   "pkg": "./order/",
-  "test": "TestPriceLimitBeforePriceTick|TestRejectionPriorityMatchesCounter",
+  "test": "TestPriceTickBeforePriceLimit|TestRejectionPriorityMatchesCounter",
   "want": "应当排在",
   "expect": "red"
  },
@@ -1613,8 +1613,8 @@
   "name": "145 allChecks 与常量的优先级分岔",
   "dir": "",
   "file": "order/order.go",
-  "old": "\tCheckTradable, CheckSession, CheckPriceLimit, CheckPriceTick,",
-  "new": "\tCheckTradable, CheckSession, CheckPriceTick, CheckPriceLimit,",
+  "old": "\tCheckTradable, CheckSession, CheckPriceTick, CheckPriceLimit,",
+  "new": "\tCheckTradable, CheckSession, CheckPriceLimit, CheckPriceTick,",
   "pkg": "./order/",
   "test": "TestPriorityIsSaidOnce",
   "want": "两处分岔了",
@@ -1646,11 +1646,11 @@
   "name": "148 夹具侧所有委托共用同一句原话（两组分不开）",
   "dir": "",
   "file": "conformance/fixture/reject_priority_test.go",
-  "old": "\t\t\tmsg, ok := o[\"last_msg\"]",
-  "new": "\t\t\tmsg, ok := Value{IsText: true, Text: \"同一句\"}, true",
+  "old": "\t\t\tmsg := \"\"\n\t\t\tif v, ok := o[\"last_msg\"]; ok && v.IsText {\n\t\t\t\tmsg = v.Text\n\t\t\t}",
+  "new": "\t\t\tmsg := \"\"\n\t\t\tif v, ok := o[\"last_msg\"]; ok && v.IsText {\n\t\t\t\t_ = v\n\t\t\t\tmsg = \"同一句\"\n\t\t\t}",
   "pkg": "./conformance/fixture/",
   "test": "TestRejectPriorityFromFixtures",
-  "want": "与只违反整数倍的单子报了",
+  "want": "两把标尺一样长",
   "expect": "red"
  },
  {
@@ -1663,5 +1663,39 @@
   "test": "TestFeeRateTiersAreIndistinguishable",
   "want": "三档第一次分得开了",
   "expect": "red"
+ },
+ {
+  "name": "150 整数倍判据去掉半 tick 上界（回到「任何零头都算偏离」）",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_reject_priority.go",
+  "old": "\treturn frac > 1e-3 && frac < 0.5",
+  "new": "\treturn frac > 1e-3",
+  "pkg": "./probe/",
+  "test": "TestOffTickToleranceScalesWithTick",
+  "want": "offTick(",
+  "expect": "red"
+ },
+ {
+  "name": "151 开仓冻结保证金漏乘合约乘数",
+  "dir": "",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tMultiplier: spec.Multiplier, Rates: spec.Margin,",
+  "new": "\t\tMultiplier: decimal.NewFromInt(1), Rates: spec.Margin,",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenTotals|TestFrozenAccountAgainstOracle",
+  "want": "2214.1",
+  "expect": "red"
+ },
+ {
+  "name": "152 【期望仍然绿】挂单的保证金按昨仓档算",
+  "dir": "",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tIsHistory: false, MaxMarginSide: false,",
+  "new": "\t\tIsHistory: true, MaxMarginSide: false,",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenTotals|TestFrozenAccountAgainstOracle",
+  "want": "",
+  "expect": "green",
+  "why": "快期模拟上四档保证金率同值（今仓/昨仓 × 多/空），probes.md §7.2 实测。于是「挂单按今仓档还是昨仓档算」在这个口子上**分不开** —— 选错了也不会红。⚠️ 换一个两档不同的口子，这条会立刻变成实错。"
  }
 ]

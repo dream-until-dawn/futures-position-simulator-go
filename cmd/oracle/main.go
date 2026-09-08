@@ -45,6 +45,7 @@ func usage() {
   status           连通性自检（做到协议层登录，不是 TCP 层）
   reject-code      实验 6：报单被拒时柜台的原话
   reject-priority  拒绝优先级：一笔单同时违反两项时柜台报哪一个（⚠️ 需要 -specs）
+  reject-tick-vs-limit  越涨停 vs 非整数倍：固定越界幅度只扫价格零头（⚠️ 需要 -specs）
   max-margin-side  实验 3：单向大边按品种还是按合约合并（需两个同品种不同月份合约）
   max-margin-lock  实验 3b：同一合约双向持仓下，单向大边启没启用
   margin-price     实验 1/2 今仓版：只能排除「连续重估」这一个候选

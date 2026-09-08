@@ -23,14 +23,18 @@
 // 使用者去改哪里。乱序会让本库与柜台在「拒因是什么」上分岔，
 // 而两边都判「拒绝」，差异不会以失败的形式出现。
 //
-// ⚠️ **那张文档表在第一对上就是错的。** 20260909 实测：同时越涨停又不是
-// 最小变动价位整数倍的单，快期模拟答「价格超出涨停板」——
-// 于是本包把涨跌停排到了最小变动价位前面，与文档表相反。
-// 其余四对（tick/limit 各与可平量）实测与文档一致。
+// 20260909 头三对有了实测（快期模拟，SHFE.ag2702 与 DCE.i2701）：
+// 最小变动价位 > 涨跌停 > 可平量，与文档表一致。
 //
-// ⚠️ 这条的边界要一起记住：**一个口子、一个合约、一家交易所**，
-// 而且只覆盖了五对里的五对中的这五对 —— 八项两两有 28 对，
-// 剩下的 23 对至今没有任何证据。顺序在那 23 对上是**猜的**。
+// ⚠️ 那一轮我先得出过**相反**的结论并真的把两项对调了。翻案的原因不是
+// 又量了一次，是发现**对照组根本不成立**：构造「偏离整数倍」用的零头是
+// 0.7 个 tick，而快期**不把它当偏离**（kq_facts 45：零头 ≥ 半个 tick 照单全收）。
+// 那笔单只违反了一项。⚠️ 更该记住的是零层守卫为什么没拦住：
+// 它用**本库的**判据核对「违规成立了吗」，而分歧恰恰在判据本身。
+//
+// ⚠️ 边界要一起记住：两个合约、两家交易所、一个口子；
+// 八项两两有 28 对，实测只覆盖 3 对，剩下 25 对至今没有任何证据 ——
+// 顺序在那 25 对上是**猜的**。
 package order
 
 import (
@@ -54,18 +58,20 @@ const (
 	CheckTradable
 	// CheckSession 是否在交易时段内。⚠️ 本库目前查不了，见 Result.Unchecked。
 	CheckSession
-	// CheckPriceLimit 价格是否在涨跌停之内。
-	//
-	// ⚠️ 它排在 CheckPriceTick **前面**，与 cn-futures-rules.md §9 那张
-	// 文档表的顺序**相反**。改成这样是实测的结果，不是手滑：
-	// 一笔同时越界又不是整数倍的单，快期模拟答的是「价格超出涨停板」，
-	// 不是「不是价格单位的整倍数」（20260909，SHFE.ag2702，
-	// 夹具 testdata/probes/exp-reject-priority-20260909.json）。
-	// ⚠️ 边界：**一个口子、一个合约、一家交易所**。真实 CTP 未裁决，
-	// 见 state.md 的 simnow_pending#11。
-	CheckPriceLimit
 	// CheckPriceTick 价格是否为最小变动价位的整数倍。
+	//
+	// ⚠️ 它排在 CheckPriceLimit **前面**，与 cn-futures-rules.md §9 的文档表一致，
+	// 且 20260909 有了实测支撑：同时越涨停又偏离整数倍的单，
+	// 快期模拟答「下单价格不是价格单位的整倍数」。
+	//
+	// ⚠️ **我曾据一次实测把这两项对调过，那次是错的**，理由值得留在这里：
+	// 那一笔的价格零头是 0.7 个 tick，而快期**根本没把它当成偏离**
+	// （见 kq_facts 45：零头 ≥ 半个 tick 的价格柜台照单全收）。
+	// 于是那笔单只违反了涨跌停一项，「同时违反两项」从一开始就不成立。
+	// 详见 docs/probes.md §14。
 	CheckPriceTick
+	// CheckPriceLimit 价格是否在涨跌停之内。
+	CheckPriceLimit
 	// CheckVolumeRange 手数是否在上下限内。
 	CheckVolumeRange
 	// CheckClosable 平仓量是否超过可平量。⚠️ **今昨分别校验**。
@@ -104,7 +110,7 @@ func (c Check) String() string {
 // 加了一项而忘了加进这里，那一项就永远不在分母里 ——
 // 而覆盖率看起来只会更好。
 var allChecks = []Check{
-	CheckTradable, CheckSession, CheckPriceLimit, CheckPriceTick,
+	CheckTradable, CheckSession, CheckPriceTick, CheckPriceLimit,
 	CheckVolumeRange, CheckClosable, CheckFunds, CheckPositionLimit,
 }
 
@@ -250,7 +256,7 @@ func Validate(req Request, f Facts) Result {
 		add(CheckSession, "不在交易时段内")
 	}
 
-	// —— 3 涨跌停 ——
+	// —— 3 最小变动价位 ——
 	switch {
 	case !f.HasInstrument:
 		skip(CheckPriceTick, "合约规格里的 PriceTick")
@@ -261,7 +267,7 @@ func Validate(req Request, f Facts) Result {
 			req.Price, f.Instrument.PriceTick)
 	}
 
-	// —— 4 最小变动价位 ——
+	// —— 4 涨跌停 ——
 	up, lo, ok := f.Instrument.PriceLimits(f.PreSettlement, f.HasPreSettlement, f.Rounding)
 	switch {
 	case !f.HasInstrument:

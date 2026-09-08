@@ -91,8 +91,25 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 				t.Errorf("%s 算手续费：%v", f.Path, err)
 				continue
 			}
-			// 平仓单不冻保证金（20260909 实测：三份样本的账户 frozen_margin 都是 0）。
-			in := order.FreezeInput{Margin: decimal.Zero, Commission: c}
+			// 平仓单不冻保证金（20260909 实测：三份样本的账户 frozen_margin 都是 0）；
+			// 开仓单要冻，基准是**昨结算价**（20260909 两次独立实测，见 openFrozenMargin）。
+			m := decimal.Zero
+			if off == types.Open {
+				mr, ok := ratesFor(product)
+				if !ok {
+					t.Logf("ⓘ %s：品种 %s 没有登记保证金率，本份跳过", f.Path, product)
+					skipped = true
+					break
+				}
+				sp := Spec{Multiplier: decimal.RequireFromString(mult),
+					Commission: rates, Margin: mr}
+				m, err = openFrozenMargin(sym, inst, dir, sp, pre, int(left.IntPart()))
+				if err != nil {
+					t.Errorf("%s 算开仓冻结保证金：%v", f.Path, err)
+					continue
+				}
+			}
+			in := order.FreezeInput{Margin: m, Commission: c}
 			req := order.Request{Instrument: inst, Direction: dir, Offset: off,
 				Hedge: types.Speculation, Price: decimal.Zero,
 				Volume: int(left.IntPart())}
@@ -175,14 +192,41 @@ func TestFrozenTotals(t *testing.T) {
 			"已终结的那笔（9 手）是不是被算进来了？", c)
 	}
 
-	// ⚠️ **开仓挂单要报错**：它要冻保证金，而本函数没有实现那一支。
-	// 没见过的情形不猜 —— 猜出来的冻结额会让可用资金错一大截。
+	// ⚠️ 开仓挂单**要冻保证金**，基准是昨结算价而不是报单价。
+	// 这一支原先是「遇到就报错」，20260909 有了两次独立实测之后才实现
+	// （见 openFrozenMargin 的注释）。
+	//
+	// rb2701：昨结 3163 × 乘数 10 × 7% = 2214.1
+	specs["SHFE.rb2701"] = Spec{
+		Multiplier: dd("10"),
+		Commission: mustRates(t, "rb"),
+		Margin:     mustMargin(t, "rb"),
+	}
 	f.Orders["c"] = withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
 		"instrument_id", "rb2701", "direction", "BUY", "offset", "OPEN"), "1")
-	if _, _, err := frozenTotals(f, specs); err == nil {
-		t.Error("⚠️ 开仓挂单竟然算出了冻结 —— 它要冻保证金，而那一支没实现；" +
-			"静默当成 0 会让可用资金多出一大截")
+	m2, c2, err := frozenTotals(f, specs)
+	if err != nil {
+		t.Fatal(err)
 	}
+	if !m2.Equal(dd("2214.1")) {
+		t.Errorf("⚠️ 开仓挂单冻结保证金 %s，应为 2214.1（3163×10×7%%）—— "+
+			"⚠️ 先查基准是不是用成了**报单价**：那一项在这条用例上分得开，"+
+			"因为报单价压根没给", m2)
+	}
+	// 手续费多出开仓那一笔：0.3163 + 0.3163 = 0.6326
+	if !c2.Equal(dd("0.6326")) {
+		t.Errorf("⚠️ 冻结手续费 %s，应为 0.6326（平今一笔 + 开仓一笔）", c2)
+	}
+}
+
+// mustMargin 取某品种的实测保证金率，没登记就报错。
+func mustMargin(t *testing.T, product string) refdata.MarginRates {
+	t.Helper()
+	r, ok := ratesFor(product)
+	if !ok {
+		t.Fatalf("品种 %s 没有登记保证金率", product)
+	}
+	return r
 }
 
 // mustRates 取某品种的实测费率，没登记就报错。

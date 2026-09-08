@@ -83,6 +83,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expSettleWatch(ctx)
 	case "close-profit-sign":
 		return r.expCloseProfitSign(ctx)
+	case "reject-tick-vs-limit":
+		return r.expRejectTickVsLimit(ctx)
 	case "reject-priority":
 		return r.expRejectPriority(ctx)
 	case "reject-code":
@@ -349,10 +351,29 @@ func observedQuotes(cli *kq.Client) map[string]any {
 }
 
 // observedSymbols 列出本次截面里出现过的合约，升序。
+//
+// ⚠️ **委托里的合约也算**。这一条是补的：原先只数持仓与成交，
+// 于是一份「只下过单、全被拒、没有持仓也没有成交」的截面
+// （reject 系列的实验正是这个形状）落盘时**整个行情段是空的**。
+// 后果不是报错，是下游对拍**静默跳过**那份夹具 ——
+// 而「跳过了一份」与「比过了一份且一致」在汇总行里长得一模一样。
+// 20260909 的 exp-reject-tick-vs-limit-20260909-3.json 就是这么丢掉
+// DCE.i2701 的昨结算价的，那份夹具因此永远比不了金额侧冻结。
 func observedSymbols(cli *kq.Client) []string {
 	want := map[string]bool{}
 	for sym := range cli.Positions() {
 		want[sym] = true
+	}
+	for _, raw := range cli.Orders() {
+		o, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		ex, _ := o["exchange_id"].(string)
+		inst, _ := o["instrument_id"].(string)
+		if ex != "" && inst != "" {
+			want[ex+"."+inst] = true
+		}
 	}
 	for _, raw := range cli.Trades() {
 		t, ok := raw.(map[string]any)

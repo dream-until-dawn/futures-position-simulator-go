@@ -17,19 +17,25 @@ import (
 //
 // # 每一条都对应一次真实观测
 //
-// 期望值不是从 cn-futures-rules.md §9 那张**文档**表抄的 —— 那张表在第一对
-// 上就是错的。期望值来自 20260909 在快期模拟 SHFE.ag2702 上的实测，
-// 原始夹具 testdata/probes/exp-reject-priority-20260909.json，
-// 复跑见 docs/probes.md。
+// 期望值来自 20260909 在快期模拟 SHFE.ag2702 与 DCE.i2701 上的实测，
+// 原始夹具 testdata/probes/exp-reject-tick-vs-limit-20260909*.json，
+// 复跑见 docs/probes.md §14。它与 cn-futures-rules.md §9 的文档表一致。
 //
-// ⚠️ 边界：**一个口子、一个合约、一家交易所**，且只覆盖了 28 对里的 5 对。
-// 其余 23 对的顺序至今是猜的 —— 这条测试盖不住它们，别把绿当成「顺序对了」。
+// ⚠️ 中途我据一次实测把前两项对调过，那次是错的：构造「偏离整数倍」用的
+// 零头是 0.7 个 tick，而快期**不把它当偏离**（kq_facts 45）——
+// 那笔单只违反了一项，「同时违反两项」从一开始就不成立。
+//
+// ⚠️ 边界：两个合约、两家交易所、一个口子，且只覆盖了 28 对里的 3 对。
+// 其余 25 对的顺序至今是猜的 —— 这条测试盖不住它们，别把绿当成「顺序对了」。
 func TestRejectionPriorityMatchesCounter(t *testing.T) {
 	// rb2701：昨结 3163，涨跌幅 5%，向下取整 ⇒ 涨停 3321、跌停 3004，tick=1。
+	// ⚠️ 零头一律取 **1/3 个 tick**，不取 0.5：0.5 个 tick 在快期上
+	// **不算偏离**（kq_facts 45），拿它当「同时违反两项」的样本，
+	// 那一项从一开始就不成立 —— 这正是本轮翻案的原因。
 	const (
-		overLimitOffTick = "3400.5" // 越涨停 + 不是整数倍
-		overLimitOnTick  = "3400"   // 只越涨停
-		inLimitOffTick   = "3163.5" // 只不是整数倍
+		overLimitOffTick = "3400.3333" // 越涨停 + 不是整数倍
+		overLimitOnTick  = "3400"      // 只越涨停
+		inLimitOffTick   = "3163.3333" // 只不是整数倍
 	)
 	cases := []struct {
 		name string
@@ -42,7 +48,7 @@ func TestRejectionPriorityMatchesCounter(t *testing.T) {
 		{"只不是整数倍", mkReq(types.Buy, types.Open, d(inLimitOffTick), 1),
 			CheckPriceTick, "柜台原话「下单价格不是价格单位的整倍数」"},
 		{"越涨停 + 不是整数倍", mkReq(types.Buy, types.Open, d(overLimitOffTick), 1),
-			CheckPriceLimit, "⚠️ 与 §9 的文档表**相反**：柜台报的是涨跌停"},
+			CheckPriceTick, "实测：零头 1/3 个 tick 时柜台报的是「不是整倍数」"},
 		{"越涨停 + 超可平量", mkReq(types.Sell, types.CloseYesterday, d(overLimitOnTick), 99),
 			CheckPriceLimit, "实测：柜台报涨跌停，不报可平量"},
 		{"不是整数倍 + 超可平量", mkReq(types.Sell, types.CloseYesterday, d(inLimitOffTick), 99),
@@ -84,19 +90,23 @@ func TestPriorityIsSaidOnce(t *testing.T) {
 	}
 }
 
-// TestPriceLimitBeforePriceTick 单独把那一对钉出来，并写清它的来历。
+// TestPriceTickBeforePriceLimit 单独把那一对钉出来，并写清它被翻过一次案。
 //
-// ⚠️ 单独一条是刻意的：上面的表格里它只是五行之一，
-// 而**它是唯一与文档相反的一行**。混在表里，将来有人「按文档修正」把它改回去时，
-// 红的会是一行没有名字的表项；单独一条，红的是这条测试的名字。
-func TestPriceLimitBeforePriceTick(t *testing.T) {
-	if !(CheckPriceLimit < CheckPriceTick) {
-		t.Errorf("⚠️ CheckPriceLimit(%d) 应当排在 CheckPriceTick(%d) **前面**。\n"+
-			"这与 cn-futures-rules.md §9 的文档表相反，而那是实测的结果：\n"+
-			"  20260909 SHFE.ag2702，同时越涨停又不是整数倍的单，\n"+
-			"  柜台答「已撤单报单被拒绝价格超出涨停板」\n"+
-			"  夹具 testdata/probes/exp-reject-priority-20260909.json\n"+
-			"要改回文档顺序，请先拿出比这份夹具更强的证据。",
-			int(CheckPriceLimit), int(CheckPriceTick))
+// ⚠️ 单独一条是刻意的：混在上面的表里，将来有人再翻一次案时，
+// 红的会是一行没有名字的表项；单独一条，红的是这条测试的名字，
+// 而这段注释就在旁边。
+func TestPriceTickBeforePriceLimit(t *testing.T) {
+	if !(CheckPriceTick < CheckPriceLimit) {
+		t.Errorf("⚠️ CheckPriceTick(%d) 应当排在 CheckPriceLimit(%d) **前面**。\n"+
+			"这一对被翻过一次案，翻回来的理由写在这里，请先读完再改："+
+			"  20260909 02:0x 我据一次实测把两项对调，那次是错的。\n"+
+			"  构造「偏离整数倍」用的零头是 0.7 个 tick，而快期**不把它当偏离**\n"+
+			"  （零头 ≥ 半个 tick 照单全收，kq_facts 45）——\n"+
+			"  那笔单只违反了涨跌停一项，对照组从一开始就不成立。\n"+
+			"  同一时刻把零头扫成 1/10、1/3、1/2、7/10、9/10 才看出这条边界，\n"+
+			"  两个合约两家交易所各一遍：\n"+
+			"  testdata/probes/exp-reject-tick-vs-limit-20260909*.json\n"+
+			"要再改，请先拿出零头 **< 半个 tick** 的反例。",
+			int(CheckPriceTick), int(CheckPriceLimit))
 	}
 }

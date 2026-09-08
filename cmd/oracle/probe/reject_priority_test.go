@@ -106,20 +106,30 @@ func TestApplyAllRefusesWhenOverwritten(t *testing.T) {
 	}
 }
 
-// TestOffTickToleranceScalesWithTick 钉住容差随 tick 缩放。
+// TestOffTickToleranceScalesWithTick 钉住**柜台的**整数倍判据，两端都钉。
 //
-// ⚠️ 绝对容差会在两端各错一次，而错的方向是「以为构造出了违规」。
+// ⚠️ 两条边界，缺一条都会让实验构造出假的违规：
+//
+//	下界  零头太小算不算偏离 —— 容差随 tick 缩放，绝对容差在两端各错一次
+//	上界  零头 ≥ 半个 tick 时柜台**收下**（kq_facts 45）—— 上界此前根本不存在，
+//	      而那正是我把 order 两项优先级对调错的根子
 func TestOffTickToleranceScalesWithTick(t *testing.T) {
 	cases := []struct {
 		price, tick float64
 		want        bool
 	}{
-		{13009, 1, false},
-		{13009.3333, 1, true},
-		{668.5, 0.5, false},     // DCE.i 的 tick
-		{668.6667, 0.5, true},   //
+		{13009, 1, false},       // 正好整数倍
+		{13009.1, 1, true},      // 零头 1/10
+		{13009.3333, 1, true},   // 零头 1/3
+		{13009.5, 1, false},     // ⚠️ 零头 1/2 —— 柜台**收下**它（kq_facts 45）
+		{13009.7, 1, false},     // ⚠️ 零头 7/10 —— 同上，这一笔是翻案的来历
+		{13009.9, 1, false},     // ⚠️ 零头 9/10
+		{668.5, 0.5, false},     // DCE.i 的 tick，正好整数倍
+		{668.6667, 0.5, true},   // 零头 1/3 个 tick
+		{668.75, 0.5, false},    // ⚠️ 零头 1/2 个 tick —— 边界随 tick 缩放
 		{108330, 10, false},     // SHFE.cu 的 tick
-		{108333.3333, 10, true}, //
+		{108333.3333, 10, true}, // 零头 1/3 个 tick
+		{108336, 10, false},     // ⚠️ 零头 6/10 个 tick
 		{100, 0, false},         // tick 缺失时**不声称违规**
 	}
 	for _, c := range cases {

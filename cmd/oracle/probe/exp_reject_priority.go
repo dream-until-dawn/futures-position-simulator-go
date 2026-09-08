@@ -71,6 +71,9 @@ var violations = []violation{
 			return r.LimitPrice > q.UpperLimit || r.LimitPrice < q.LowerLimit
 		}},
 	{Key: "tick", Check: "CheckPriceTick", Rank: order.CheckPriceTick,
+		// ⚠️ 零头取 **1/3 个 tick**，不能取 1/2 或更大：
+		// 快期只在零头 < 半个 tick 时才当成偏离（kq_facts 45）。
+		// 取 0.7 会构造出一笔柜台**根本不认为偏离**的单 —— 那正是翻案的来历。
 		Apply: func(_ kq.Quote, tick float64, r *kq.OrderReq) { r.LimitPrice += tick / 3 },
 		Holds: func(_ kq.Quote, tick float64, r kq.OrderReq) bool { return offTick(r.LimitPrice, tick) }},
 	{Key: "close", Check: "CheckClosable", Rank: order.CheckClosable,
@@ -81,17 +84,30 @@ var violations = []violation{
 		Holds: func(_ kq.Quote, _ float64, r kq.OrderReq) bool { return r.Offset == kq.CloseToday }},
 }
 
-// offTick 判断价格是不是**不**为最小变动价位的整数倍。
+// offTick 判断快期模拟**会不会**把这个价格当成「不是整数倍」。
 //
-// ⚠️ 容差取 tick 的千分之一而不是一个绝对常数：tick 从 0.5（DCE.i）
-// 到 10（SHFE.cu）都有，一个绝对容差在两端各错一次，而错的方向是
-// 「以为构造出了违规」—— 那正是这条实验最怕的方向。
+// ⚠️ 判据是**柜台的**，不是交易所的、也不是本库的：
+// 20260909 实测（kq_facts 45），快期只在零头 **小于半个 tick** 时报
+// 「下单价格不是价格单位的整倍数」；零头 ≥ 半个 tick 的价格它**照单全收**，
+// 价内的直接挂上去，委托记录里还留着那个带零头的价。
+// SHFE.ag2702（tick=1）与 DCE.i2701（tick=0.5）各扫一遍，边界都在半个 tick 上
+// —— 所以它随 tick 缩放，不是某个绝对数。
+//
+// ⚠️ 这个函数**必须**用柜台的判据，因为它的用途是核对
+// 「我构造的这笔单，柜台会认为它违反了这一项吗」。用本库的判据去核对，
+// 得到的是「我自己认为它违规」——而我曾据此把 order 的两项优先级对调，
+// 那次翻案的根子就在这里：零头 0.7 个 tick 的单子，我以为是「两项都违反」，
+// 柜台只当它越了涨停。**一个用自己的定义核对自己的守卫，
+// 对「定义分歧」没有判别力。**
+//
+// ⚠️ 下界容差取 tick 的千分之一而不是一个绝对常数：tick 从 0.5（DCE.i）
+// 到 10（SHFE.cu）都有，一个绝对容差在两端各错一次。
 func offTick(price, tick float64) bool {
 	if tick <= 0 {
 		return false
 	}
-	n := price / tick
-	return math.Abs(n-math.Round(n)) > 1e-3
+	frac := price/tick - math.Floor(price/tick)
+	return frac > 1e-3 && frac < 0.5
 }
 
 // applyAll 按 violations 的次序叠加若干项违规，然后**逐项核对它们真的成立**。
@@ -235,6 +251,31 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 		}
 	}
 
+	// ⚠️ 四种单违规**原话全都相同**是一个有意义的信号，不是「归因不成立」。
+	//
+	// 它的形状是：一个**环境性**的拒因盖过了全部四项 —— 非交易时段、
+	// 合约不可交易、账户被禁止交易，都长这样。那本身是一条观测：
+	// 那个拒因优先于这四项。⚠️ 不把它单独说出来的话，
+	// 下面五对会一律打印「归因不成立」，而一次**问出了东西**的运行
+	// 与一次什么都没问出来的运行，在汇总行里长得一模一样。
+	distinct := map[string]bool{}
+	for _, m := range single {
+		distinct[m] = true
+	}
+	ambient := len(single) > 1 && len(distinct) == 1
+	if ambient {
+		var only string
+		for m := range distinct {
+			only = m
+		}
+		r.Logf("")
+		r.Logf("  ⚠️ 四种单违规的柜台原话**完全相同**：%q", only)
+		r.Logf("     这是一个**环境性**拒因盖过了全部四项的形状"+
+			"（非交易时段 / 合约不可交易 / 账户禁止交易）。")
+		r.Logf("     ⓘ 它优先于 tick、limit、可平量这四项 —— 这是一条观测，")
+		r.Logf("     而下面五对因此**问不出**彼此的先后：标尺全都一样长。")
+	}
+
 	// 第二轮：组合单。
 	r.Logf("")
 	r.Logf("  —— 组合 ——")
@@ -286,7 +327,11 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 	// ⚠️ 「全部归因不成立」要当成失败报出来，不是「跑完了」。
 	// 一次什么都没问出来的实验，与一次全部一致的实验，
 	// 在汇总行里长得一模一样 —— 除非这里分开说。
-	if agree+disagree == 0 {
+	switch {
+	case agree+disagree == 0 && ambient:
+		r.Logf("  ⓘ 一对都没问出来，**但这次运行不是白跑的**：" +
+			"上面那条环境性拒因优先于四项，是本轮唯一也是真实的收获")
+	case agree+disagree == 0:
 		r.Logf("  ⚠️ **一对都没问出来** —— 这次运行对优先级没有任何判别力")
 	}
 
