@@ -9,9 +9,27 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
 )
 
-// guard 从 .env 构造下单安全阀。
+// guard 从 .env 构造下单安全阀，并把受保护的持仓腿一并交给它。
+//
+// ⚠️ protectedLegs 与 TradingDay 必须在**这一处**接上。
+// 这个包里刚发生过一次「抽了纯函数、写了测试、忘了接线」
+// （decideFallback，见 flatten 的注释），那次是评审用一次破坏发现的：
+// 把内联守卫换成 if false，全库仍然全绿。
+// 所以这里配一条专门的接线测试 TestGuardCarriesProtectedLegs ——
+// **接线那一步在被省略时是不可见的**。
 func (r *Runner) guard() kq.Guard {
-	return kq.Guard{AllowOrder: r.Env.AllowOrder, MaxVolume: r.Env.MaxVolume}
+	return kq.Guard{AllowOrder: r.Env.AllowOrder, MaxVolume: r.Env.MaxVolume,
+		Protected: protectedLegs, TradingDay: r.tradingDay()}
+}
+
+// tradingDay 取柜台报的交易日；截面还没回来时返回空串。
+//
+// ⚠️ 空串在 ProtectedLeg.closes 那边是「照拦」，不是「放行」。
+func (r *Runner) tradingDay() string {
+	if r.cli == nil {
+		return ""
+	}
+	return r.cli.TradingDay()
 }
 
 // openOneLot 用涨跌停价下一手限价单，等它成交。

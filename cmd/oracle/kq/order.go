@@ -62,6 +62,65 @@ func (r OrderReq) String() string {
 type Guard struct {
 	AllowOrder bool // 对应 .env 的 PROBE_ALLOW_ORDER
 	MaxVolume  int  // 对应 .env 的 PROBE_MAX_VOLUME，单笔手数上限
+
+	// Protected 是**今天不许平**的持仓腿，见 ProtectedLeg。
+	Protected []ProtectedLeg
+	// TradingDay 是柜台报的当前交易日，Protected 的到期判据。
+	//
+	// ⚠️ 空串表示**还不知道**（截面没回来），那时候按「拦」处理，见 closes。
+	TradingDay string
+}
+
+// ProtectedLeg 是一条**今天不许平**的持仓腿。
+//
+// ⚠️ 它存在的理由是：一句写在文档里的「别平掉它」不是守卫。
+//
+// roadmap.md 写着「⚠️ 别在结算前把这些仓平掉：种子没了就要再等一天」，
+// 而 seedPlan（全仓唯一一处**机器可读**的「今晚账上该有什么」）里
+// 只有两条 Buy 腿 —— 那一手**空**今仓一个字都没提到。
+// 于是这份保护的全部执行力，是有人读到那句话并且记住。
+//
+// 空头昨仓在全语料 466 条持仓记录里**从未存在过**（kq_facts 51），
+// 它是分开「今昨拆分规则方向中性」与「柜台只写多头侧」的**唯一**样本，
+// 而**今仓空头不过夜完全无效**：语料里已有的 27 条今仓空头一条也没给出信息。
+type ProtectedLeg struct {
+	// Symbol 是 "SHFE.rb2701" 这样的全称。
+	Symbol string
+	// Direction 是**持仓**方向，不是委托方向。
+	// 平掉一个 Sell 持仓要发 Buy 委托，两者相反 —— 见 closes。
+	Direction Direction
+	// TradingDay 限定这条保护**只在哪个交易日生效**。
+	//
+	// ⚠️ 它不是可选的：一条没有到期日的保护，会在种子早已用掉之后
+	// 继续拦着正当的收尾平仓 —— 那与 MaxVolume 当初拦住收尾平仓
+	// 是同一个故障（见 Check 的注释）。
+	TradingDay string
+	// Why 说明这条腿为什么金贵，会原样出现在拦下时的错误里。
+	Why string
+}
+
+// closes 判一笔委托是不是在平这条腿。
+func (l ProtectedLeg) closes(r OrderReq, tradingDay string) bool {
+	if l.Symbol != r.Symbol() {
+		return false
+	}
+	if r.Offset != Close && r.Offset != CloseToday {
+		return false
+	}
+	// ⚠️ tradingDay 为空表示**还不知道今天是哪天**（交易截面还没回来）。
+	// 那时候必须**照拦**：这一步的失败方向要朝着「多拦一次」。
+	// 反过来写（不知道就放行）在真账户上是这样发生的 ——
+	// 连上柜台、截面还没到、而收尾平仓已经跑了。
+	if tradingDay != "" && l.TradingDay != tradingDay {
+		return false
+	}
+	// ⚠️ 方向要取反：平**空**仓发的是 BUY。这一步写反的话守卫会掉个个 ——
+	// 放过真正危险的那一笔，转去拦一笔无关的，而两种表现都不像 bug。
+	want := Sell
+	if l.Direction == Sell {
+		want = Buy
+	}
+	return r.Direction == want
 }
 
 // Check 校验一笔委托是否被安全阀放行。
@@ -88,6 +147,16 @@ type Guard struct {
 func (g Guard) Check(r OrderReq) error {
 	if !g.AllowOrder {
 		return fmt.Errorf("下单被安全阀拦下：PROBE_ALLOW_ORDER 未开启（%s）", r)
+	}
+	// ⚠️ 受保护的腿排在手数与限价之前：它拦的是**不可再生**的东西，
+	// 而后面几条拦的是可以重发一笔就修好的参数错。
+	for _, l := range g.Protected {
+		if l.closes(r, g.TradingDay) {
+			return fmt.Errorf("下单被安全阀拦下：这一笔会平掉**受保护的持仓腿** %s %s —— %s"+
+				"（保护在交易日 %q 生效，当前 %q）。"+
+				"⚠️ 确实要平就把它从 protectedLegs 里划掉并说明理由，不要绕过安全阀（%s）",
+				l.Symbol, l.Direction, l.Why, l.TradingDay, g.TradingDay, r)
+		}
 	}
 	if r.Volume <= 0 {
 		return fmt.Errorf("手数必须为正，得到 %d", r.Volume)

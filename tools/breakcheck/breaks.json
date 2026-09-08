@@ -2040,5 +2040,83 @@
 		"test": "TestCostSplitAbsentSideFollowsPositionDateType",
 		"want": "四格都不是",
 		"expect": "red"
+	},
+	{
+		"name": "184 guard() 忘了接线：protectedLegs 声明了但没交给安全阀",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/experiments.go",
+		"old": "\t\tProtected: protectedLegs, TradingDay: r.tradingDay()}",
+		"new": "\t\tTradingDay: r.tradingDay()}",
+		"pkg": "./probe/",
+		"test": "TestGuardCarriesProtectedLegs",
+		"want": "那份声明没有接到下单口上",
+		"expect": "red"
+	},
+	{
+		"name": "185 closes 的方向**不取反**：去拦 SELL，放过真正危险的 BUY",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/kq/order.go",
+		"old": "\twant := Sell\n\tif l.Direction == Sell {\n\t\twant = Buy\n\t}",
+		"new": "\twant := Buy\n\tif l.Direction == Sell {\n\t\twant = Sell\n\t}",
+		"pkg": "./kq/",
+		"test": "TestProtectedLegBlocksTheClosingOrder",
+		"want": "安全阀却放行了",
+		"expect": "red"
+	},
+	{
+		"name": "186 交易日未知时**放行**（失败方向调向「不拦」）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/kq/order.go",
+		"old": "\tif tradingDay != \"\" && l.TradingDay != tradingDay {",
+		"new": "\tif l.TradingDay != tradingDay {",
+		"pkg": "./kq/",
+		"test": "TestProtectedLegBlocksWhenTradingDayUnknown",
+		"want": "失败方向必须朝着",
+		"expect": "red"
+	},
+	{
+		"name": "187 保护不再到期：过了那个交易日还拦",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/kq/order.go",
+		"old": "\tif tradingDay != \"\" && l.TradingDay != tradingDay {\n\t\treturn false\n\t}",
+		"new": "\t_ = tradingDay",
+		"pkg": "./kq/",
+		"test": "TestProtectedLegExpiresWithTradingDay",
+		"want": "仍然在拦",
+		"expect": "red"
+	},
+	{
+		"name": "188 protectedLegs 清空：接线测试**跳过**，接线可以静默烂掉",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/exp_overnight.go",
+		"old": "var protectedLegs = []kq.ProtectedLeg{\n\t{Symbol: \"SHFE.rb2701\", Direction: kq.Sell, TradingDay: \"20260909\",",
+		"new": "var protectedLegs = []kq.ProtectedLeg{}\n\nvar unusedLegs = []kq.ProtectedLeg{\n\t{Symbol: \"SHFE.rb2701\", Direction: kq.Sell, TradingDay: \"20260909\",",
+		"pkg": "./probe/",
+		"test": "TestGuardCarriesProtectedLegs",
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ 演示的盲区：清单空了，TestGuardCarriesProtectedLegs 走 t.Skip，于是**接线可以在没有保护的日子里静默烂掉**，而下一次往清单里加一条时，没有任何东西会告诉你它根本没接上下单口。堵不上的原因是：要在清单为空时仍验接线，只能塞一条**假的**受保护腿进生产数据 —— 那是拿一个真实的坑换一个演习的坑。写在这里，比装作没有强。"
+	},
+	{
+		"name": "189 去掉「多余回车符」那一维，判据退回只比条数",
+		"dir": "",
+		"file": "eol_test.go",
+		"old": "\t\tif cr := bytes.Count(b, []byte(\"\r\")); cr != crlf {",
+		"new": "\t\tif cr := bytes.Count(b, []byte(\"\r\")); false && cr != crlf {",
+		"pkg": "./",
+		"test": "TestStrayCRIsActuallyCaught",
+		"want": "那次真实事故的形状",
+		"expect": "red"
+	},
+	{
+		"name": "190 「多余回车符」永远报坏：三个文件全判出来",
+		"dir": "",
+		"file": "eol_test.go",
+		"old": "\t\tif cr := bytes.Count(b, []byte(\"\r\")); cr != crlf {",
+		"new": "\t\tif cr := bytes.Count(b, []byte(\"\r\")); cr >= 0 {",
+		"pkg": "./",
+		"test": "TestStrayCRIsActuallyCaught",
+		"want": "期望**只有** bad.md",
+		"expect": "red"
 	}
 ]
