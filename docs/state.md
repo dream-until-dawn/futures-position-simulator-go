@@ -116,7 +116,7 @@
 | `docs/design.md` | 28 |
 | `docs/cn-futures-rules.md` | 39 |
 | `docs/fidelity.md` | 21 |
-| `docs/probes.md` | 57 |
+| `docs/probes.md` | 59 |
 | `docs/roadmap.md` | 20 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 10 |
