@@ -219,19 +219,33 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 			Offset: kq.Open, Volume: 1, LimitPrice: q.LowerLimit}
 	}
 
-	send := func(label string, req kq.OrderReq) (status, msg string) {
+	// send 发一笔并等终态。
+	//
+	// ⚠️ reached 说的是**这一笔到没到柜台**，它与 status 是两件事。
+	// 本地安全阀拦下时 msg 是**本库自己的错误文本** —— 拿它当归因标尺，
+	// 组合单也会被同一个阀拦下、给出同一段文本，于是「组合 == 单违规」成立，
+	// 打印出一条漂亮的「归因成立」，而这一轮**什么都没问到柜台**。
+	//
+	// ⚠️ 20260909 这不是假想：protectedLegs 上线之后，可平量那两项
+	// （BUY/CLOSE、BUY/CLOSETODAY 打在 rb2701 上）正好会被安全阀拦下，
+	// 因为账上那一手空今仓是当天的过夜种子。
+	//
+	// ⚠️ **这条判断没有自动化测试**，写出来而不是装作有：send 是个闭包，
+	// 拿到 msg 要一条活的柜台连接。它靠的是「!reached 就 return 出去」——
+	// 一个结构上很难绕过、但也没人替我验过的写法。
+	send := func(label string, req kq.OrderReq) (status, msg string, reached bool) {
 		id, err := cli.InsertOrder(r.guard(), req)
 		if err != nil {
-			return "本地拦截", err.Error()
+			return "本地拦截", err.Error(), false
 		}
 		st, done := cli.WaitOrderFinished(id, 15*time.Second)
 		if !done {
 			if st.Status == "ALIVE" {
 				_ = cli.CancelOrder(id)
 			}
-			return "未在 15s 内到终态(status=" + st.Status + ")", st.LastMsg
+			return "未在 15s 内到终态(status=" + st.Status + ")", st.LastMsg, true
 		}
-		return st.Status, st.LastMsg
+		return st.Status, st.LastMsg, true
 	}
 
 	// 第一轮：每种违规各发一笔，取柜台原话作为**归因的标尺**。
@@ -241,7 +255,14 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		status, msg := send(v.Key, req)
+		status, msg, reached := send(v.Key, req)
+		if !reached {
+			return fmt.Errorf("⚠️ 单违规 %s 被**本地安全阀**拦下，没有到达柜台：%s。"+
+				"⚠️ 它的原话**不能**当归因标尺 —— 那是本库自己的错误文本，"+
+				"而组合单会被同一个阀拦出同一段文本，于是「归因成立」，"+
+				"可这一轮什么都没问到柜台。要么把那条保护划掉再跑，"+
+				"要么换一个不碰受保护持仓的合约（-symbols）", v.Key, msg)
+		}
 		single[v.Key] = msg
 		r.Logf("")
 		r.Logf("  单违规 %-11s %s  status=%s", v.Key, v.Check, status)
@@ -286,7 +307,7 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		status, msg := send(a.Key+"+"+b.Key, req)
+		status, msg, reached := send(a.Key+"+"+b.Key, req)
 
 		// 本库声称谁赢：Rank 小的。
 		winner, loser := a, b
@@ -300,6 +321,10 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 			winner.Key, winner.Check, loser.Key, loser.Check)
 
 		switch {
+		case !reached:
+			unusable++
+			r.Logf("      ⚠️ 归因不成立：这一笔被**本地安全阀**拦下，没到柜台 —— "+
+				"打印出来的原话是本库自己的错误文本")
 		case single[a.Key] == single[b.Key]:
 			unusable++
 			r.Logf("      ⚠️ 归因不成立：两种单违规的柜台原话**一模一样**，" +
