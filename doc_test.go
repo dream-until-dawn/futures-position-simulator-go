@@ -14,6 +14,8 @@ package futsim
 import (
 	"bufio"
 	"fmt"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -460,6 +462,14 @@ func TestPackagesDoneMatchesReality(t *testing.T) {
 		if dir == "." {
 			return nil // 根包由 doc.go 代表，不算独立的包目录
 		}
+		// ⚠️ `package main` 是**命令**，不是交付的库包，不进 packages_done。
+		//
+		// 按**种类**跳而不是按名字跳：把 `tools` 加进上面那张 skip 表也能让
+		// 这条绿，但那会造成一个盲区 —— 以后谁在 tools/ 下放一个真的库包，
+		// 它会连同工具一起逃掉。按 package 子句判，逃不掉。
+		if isCommandDir(t, dir) {
+			return nil
+		}
 		onDisk[dir] = true
 		return nil
 	})
@@ -774,4 +784,29 @@ func TestDocSectionCountsMatch(t *testing.T) {
 				path, got, n)
 		}
 	}
+}
+
+// isCommandDir 报告一个目录里的包是不是 `package main`。
+//
+// ⚠️ 解析包子句而不是看目录名：目录名是约定，包子句是事实。
+// 而这里要的正是事实 —— 「它是不是一个命令」。
+func isCommandDir(t *testing.T, dir string) bool {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("读目录 %s 失败：%v", dir, err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
+			continue
+		}
+		f, err := parser.ParseFile(token.NewFileSet(),
+			filepath.Join(dir, e.Name()), nil, parser.PackageClauseOnly)
+		if err != nil {
+			t.Fatalf("解析 %s 的包子句失败：%v", filepath.Join(dir, e.Name()), err)
+		}
+		// ⚠️ 一个目录里只可能有一个包子句（测试包除外），看第一个就够。
+		return f.Name.Name == "main"
+	}
+	return false
 }
