@@ -32,6 +32,7 @@ func main() {
 	url := flag.String("url", live.SymbolsURL, "合约字典地址")
 	products := flag.String("products", "", "要的品种，形如 SHFE.rb,DCE.m；留空报错")
 	out := flag.String("out", "", "时段表输出文件；留空只打印不落盘")
+	specOut := flag.String("specs", "", "合约规格输出文件（乘数、最小变动价位、到期）")
 	timeout := flag.Duration("timeout", 20*time.Minute, "整体超时（那份文件 334 MiB）")
 	// ⚠️ raw / from 让「拉取」与「转换」分开。
 	//
@@ -42,13 +43,13 @@ func main() {
 	from := flag.String("from", "", "从 -raw 落下的文件读，不联网")
 	flag.Parse()
 
-	if err := run(*url, *products, *out, *raw, *from, *timeout); err != nil {
+	if err := run(*url, *products, *out, *specOut, *raw, *from, *timeout); err != nil {
 		fmt.Fprintf(os.Stderr, "失败：%v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(url, products, out, raw, from string, timeout time.Duration) error {
+func run(url, products, out, specOut, raw, from string, timeout time.Duration) error {
 	// ⚠️ 必须显式给品种。字典约三万条，"全都要" 不是一个合理的默认值，
 	// 而一个默认全要的工具会在第一次被跑起来时把内存吃光。
 	var want []string
@@ -147,6 +148,20 @@ func run(url, products, out, raw, from string, timeout time.Duration) error {
 	fmt.Println("   ⚠️ 这些**不许在这里填默认值** —— refdata.Builder 的零值报错会拦住，")
 	fmt.Println("      而那正是它存在的意义：一个「差不多能用」的规格会在平今平昨和大边上静默算错。")
 
+	// ⚠️ 合约规格与时段表分成两个文件，不合并。
+	//
+	// 时段表是**按品种**汇总出来的（同品种内必须一致，否则报错），
+	// 而乘数与最小变动价位是**按合约**的。混在一份文件里会让
+	// 「这个数是按品种还是按合约」在读的时候消失，
+	// 而那正是本项目栽过的那类问题（PositionDateType 逐合约、不是逐交易所）。
+	if specOut != "" {
+		if err := dumpSpecs(specOut, url, listed); err != nil {
+			return err
+		}
+		fmt.Printf("合约规格已写入 %s（%d 个在市合约）", specOut, len(listed))
+		fmt.Println()
+	}
+
 	if out == "" {
 		return nil
 	}
@@ -233,4 +248,55 @@ func matcher(want []string) func(string) bool {
 		}
 		return false
 	}
+}
+
+// dumpSpecs 落盘合约规格。
+//
+// ⚠️ 只落**字典真的给了**的那几项：乘数、最小变动价位、报价小数位、到期。
+// 六个费率、四个保证金率、PositionDateType、MaxMarginSideAlgorithm
+// 字典里没有 —— 不在这里填零值凑数，那样的文件会让人以为规格齐了。
+func dumpSpecs(path, source string, syms map[string]live.Symbol) error {
+	type wire struct {
+		Instrument     string  `json:"instrument"`
+		Exchange       string  `json:"exchange"`
+		Product        string  `json:"product"`
+		VolumeMultiple float64 `json:"volume_multiple"`
+		PriceTick      float64 `json:"price_tick"`
+		PriceDecs      int     `json:"price_decs"`
+		MaxLimitVolume int     `json:"max_limit_order_volume,omitempty"`
+		MinLimitVolume int     `json:"min_limit_order_volume,omitempty"`
+	}
+	rows := make([]wire, 0, len(syms))
+	for id, sm := range syms {
+		if err := sm.Validate(); err != nil {
+			return fmt.Errorf("合约 %s 规格不全，**不落盘**：%w", id, err)
+		}
+		rows = append(rows, wire{
+			Instrument: id, Exchange: sm.ExchangeID, Product: sm.ProductID,
+			VolumeMultiple: sm.VolumeMultiple, PriceTick: sm.PriceTick,
+			PriceDecs:      sm.PriceDecs,
+			MaxLimitVolume: sm.MaxLimitVolume, MinLimitVolume: sm.MinLimitVolume,
+		})
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Instrument < rows[j].Instrument })
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", " ")
+	return enc.Encode(struct {
+		Source      string `json:"source"`
+		GeneratedAt string `json:"generated_at"`
+		Note        string `json:"note"`
+		Specs       []wire `json:"specs"`
+	}{
+		Source:      source,
+		GeneratedAt: time.Now().In(refdata.CNZone()).Format(time.RFC3339),
+		Note: "只含字典真的给了的规格项。⚠️ 六个费率、四个保证金率、" +
+			"PositionDateType、MaxMarginSideAlgorithm 均**不在**本文件内 —— " +
+			"字典给不出，且**不在这里填零值凑数**：那样的文件会让人以为规格齐了。",
+		Specs: rows,
+	})
 }
