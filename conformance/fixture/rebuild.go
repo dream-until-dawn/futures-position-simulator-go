@@ -198,11 +198,11 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 	// 账户的内部不变式里可用资金要减去冻结，顺序错了 Check 会当场报出来 ——
 	// 那正是它存在的理由。
 	if f.HasOrders {
-		fm, fc, err := frozenTotals(f, specs)
+		fr, err := FrozenAccountOf(f, specs)
 		if err != nil {
 			return zero, fmt.Errorf("算挂单冻结：%w", err)
 		}
-		if err := acc.Freeze(f.TradingDay, fm, fc); err != nil {
+		if err := acc.Freeze(f.TradingDay, fr.Margin, fr.Commission); err != nil {
 			return zero, fmt.Errorf("冻结：%w", err)
 		}
 	}

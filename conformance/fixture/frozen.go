@@ -2,6 +2,7 @@ package fixture
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
@@ -173,7 +174,16 @@ const (
 	NakedCloseIsYesterday
 )
 
-// frozenTotals 算一份夹具里**全部挂着的委托**冻结的金额合计。
+// FrozenAccountOf 算一份夹具里**全部挂着的委托**冻结的金额合计。
+//
+// ⚠️ 它把每一笔委托喂进 `order.Book`，返回 `book.Total()` ——
+// **不自己加**。这是 20260909 收掉的一处重复：账户侧对拍原先自己建一个
+// Book 逐笔 Insert，而 Rebuild 那条路走本函数自己累加，
+// 于是同一件事有了两份实现。⚠️ 两份实现之间**从来没有任何东西比过**，
+// 它们漂移时的表现是「两条路对同一份夹具给出不同的冻结额」，且谁都不报错。
+//
+// 走 Book 还顺带把 order 包的那几条拒绝（开仓单零保证金、平仓单非零保证金、
+// 裸 CLOSE、重复委托号）接进了这条路 —— 它们此前只在单测里被走到。
 //
 // ⚠️ 手续费由本库自己算（fee.Compute，基准是昨结算价），
 // **不抄**柜台委托记录里的 frozen_commission —— 抄了就是同义反复：
@@ -184,75 +194,62 @@ const (
 // 账户 frozen_margin 恒为 0）。开仓单要冻，而本函数**遇到开仓挂单就报错** ——
 // 冻结保证金要保证金率与乘数，那是调用方的 Spec 里的东西，
 // 而本批样本里一笔开仓挂单都没有。**没见过的情形不猜**。
-func frozenTotals(f *Fixture, specs map[string]Spec) (marginSum, commission decimal.Decimal, err error) {
-	marginSum, commission = decimal.Zero, decimal.Zero
-	for id, o := range f.Orders {
-		alive, ok := aliveOf(o)
-		if !ok {
-			return decimal.Zero, decimal.Zero,
-				fmt.Errorf("委托 %s 没有 status 字段", id)
-		}
-		if !alive {
-			continue
-		}
-		left, ok := numberOf(o, "volume_left")
-		if !ok || !left.IsPositive() {
-			continue
-		}
+func FrozenAccountOf(f *Fixture, specs map[string]Spec) (order.Frozen, error) {
+	zero := order.Frozen{Margin: decimal.Zero, Commission: decimal.Zero}
+	live, err := liveOrders(f)
+	if err != nil {
+		return zero, err
+	}
+	book := order.NewBook()
+	for id, o := range live {
+		left, _ := numberOf(o, "volume_left")
 		sym, ok := textOf(o, "exchange_id", "instrument_id")
 		if !ok {
-			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 读不出合约", id)
+			return zero, fmt.Errorf("委托 %s 读不出合约", id)
 		}
 		dir, off, err := dirOffsetOf(o)
 		if err != nil {
-			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s：%w", id, err)
+			return zero, fmt.Errorf("委托 %s：%w", id, err)
 		}
 		spec, ok := specs[sym]
 		if !ok {
-			return decimal.Zero, decimal.Zero,
-				fmt.Errorf("委托 %s 的合约 %s 没有规格", id, sym)
+			return zero, fmt.Errorf("委托 %s 的合约 %s 没有规格", id, sym)
 		}
 		inst, err := types.ParseSymbol(sym, f.TradingDay)
 		if err != nil {
-			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 的合约 %s：%w", id, sym, err)
+			return zero, fmt.Errorf("委托 %s 的合约 %s：%w", id, sym, err)
 		}
 		pre, ok := f.PreSettlement(sym)
 		if !ok {
-			return decimal.Zero, decimal.Zero,
-				fmt.Errorf("委托 %s 的合约 %s 没有昨结算价 —— 手续费基准缺失", id, sym)
+			return zero, fmt.Errorf("委托 %s 的合约 %s 没有昨结算价 —— 手续费基准缺失", id, sym)
 		}
+		m := decimal.Zero
+		feeOffset := off
 		if off == types.Open {
 			// ⚠️ 开仓挂单**要冻保证金**，基准是**昨结算价**，不是报单价。
-			// 20260909 两次独立实测（下面 openFrozenMargin 的注释里有数），
+			// 20260909 两次独立实测（见 openFrozenMargin 的注释）：
 			// 两笔的报单价都远低于昨结算价，所以这两者被分得干干净净。
-			m, err := openFrozenMargin(sym, inst, dir, spec, pre, int(left.IntPart()))
+			m, err = openFrozenMargin(sym, inst, dir, spec, pre, int(left.IntPart()))
 			if err != nil {
-				return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s：%w", id, err)
+				return zero, fmt.Errorf("委托 %s：%w", id, err)
 			}
-			margin_ := m
-			marginSum = marginSum.Add(margin_)
-			// 手续费按开仓档算，基准同样是昨结算价（kq_facts 4）。
-			c, err := fee.Compute(spec.Commission, types.Open, pre, spec.Multiplier,
-				int(left.IntPart()), decimalx.NoRounding)
-			if err != nil {
-				return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 算手续费：%w", id, err)
-			}
-			commission = commission.Add(c)
-			continue
+		} else if off == types.Close {
+			// 裸 CLOSE 在金额上与平昨等价（手续费一样收、保证金一样不冻），
+			// 所以这里当平昨算是安全的 —— 而**手数**那一侧不是，见 FrozenOf。
+			feeOffset = types.CloseYesterday
 		}
-		// 裸 CLOSE 在金额上与平昨等价（手续费一样收、保证金一样不冻），
-		// 所以这里当平昨算是安全的 —— 而**手数**那一侧不是，见 FrozenOf。
-		if off == types.Close {
-			off = types.CloseYesterday
-		}
-		c, err := fee.Compute(spec.Commission, off, pre, spec.Multiplier,
+		c, err := fee.Compute(spec.Commission, feeOffset, pre, spec.Multiplier,
 			int(left.IntPart()), decimalx.NoRounding)
 		if err != nil {
-			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 算手续费：%w", id, err)
+			return zero, fmt.Errorf("委托 %s 算手续费：%w", id, err)
 		}
-		commission = commission.Add(c)
+		req := order.Request{Instrument: inst, Direction: dir, Offset: feeOffset,
+			Hedge: types.Speculation, Price: decimal.Zero, Volume: int(left.IntPart())}
+		if err := book.Insert(id, req, order.FreezeInput{Margin: m, Commission: c}); err != nil {
+			return zero, fmt.Errorf("委托 %s 进簿：%w", id, err)
+		}
 	}
-	return marginSum, commission, nil
+	return book.Total(), nil
 }
 
 // openFrozenMargin 算一笔**开仓挂单**冻结的保证金。
@@ -292,4 +289,51 @@ func openFrozenMargin(sym string, inst types.InstrumentID, dir types.Direction,
 		return decimal.Zero, fmt.Errorf("%s 算开仓冻结保证金：%w", sym, err)
 	}
 	return res.Company, nil
+}
+
+// liveOrders 挑出**还挂着且还有未成交量**的委托。
+//
+// ⚠️ 单独一个函数是为了让「哪些委托要算冻结」只有一份定义。
+// 调用方（对拍要先凑齐这些合约的规格）与 FrozenAccountOf 各写一遍的话，
+// 两份筛法一旦分岔，表现是**对拍悄悄少比几份夹具** —— 不报错，只是覆盖变小。
+func liveOrders(f *Fixture) (map[string]map[string]Value, error) {
+	out := map[string]map[string]Value{}
+	for id, o := range f.Orders {
+		alive, ok := aliveOf(o)
+		if !ok {
+			return nil, fmt.Errorf("委托 %s 没有 status 字段 —— "+
+				"读不到不当成「挂着」也不当成「终结」", id)
+		}
+		if !alive {
+			continue
+		}
+		left, ok := numberOf(o, "volume_left")
+		if !ok || !left.IsPositive() {
+			continue
+		}
+		out[id] = o
+	}
+	return out, nil
+}
+
+// LiveOrderSymbols 列出 FrozenAccountOf 会用到规格的那些合约，升序。
+func LiveOrderSymbols(f *Fixture) ([]string, error) {
+	live, err := liveOrders(f)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	var out []string
+	for id, o := range live {
+		sym, ok := textOf(o, "exchange_id", "instrument_id")
+		if !ok {
+			return nil, fmt.Errorf("委托 %s 读不出合约", id)
+		}
+		if !seen[sym] {
+			seen[sym] = true
+			out = append(out, sym)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
 }

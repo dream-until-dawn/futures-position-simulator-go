@@ -1543,11 +1543,11 @@
   "expect": "red"
  },
  {
-  "name": "139 账户侧冻结对拍抄柜台自己报的手续费（循环论证）",
+  "name": "139 账户侧冻结抄柜台自己报的手续费（循环论证）",
   "dir": "",
-  "file": "conformance/fixture/frozen_account_test.go",
-  "old": "\t\t\tin := order.FreezeInput{Margin: m, Commission: c}",
-  "new": "\t\t\tif oc, ok := numberOf(o, \"frozen_commission\"); ok {\n\t\t\t\tc = oc\n\t\t\t}\n\t\t\tin := order.FreezeInput{Margin: m, Commission: c}",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tc, err := fee.Compute(spec.Commission, feeOffset, pre, spec.Multiplier,\n\t\t\tint(left.IntPart()), decimalx.NoRounding)",
+  "new": "\t\tc, err := fee.Compute(spec.Commission, feeOffset, pre, spec.Multiplier,\n\t\t\tint(left.IntPart()), decimalx.NoRounding)\n\t\tif oc, ok := numberOf(o, \"frozen_commission\"); ok {\n\t\t\tc = oc\n\t\t}",
   "pkg": "./conformance/fixture/",
   "test": "TestFrozenAccountAgainstOracle",
   "want": "",
@@ -1557,12 +1557,12 @@
  {
   "name": "140 平仓挂单也冻保证金（账户侧合计会多出一大截）",
   "dir": "",
-  "file": "conformance/fixture/frozen_account_test.go",
-  "old": "\t\t\tin := order.FreezeInput{Margin: m, Commission: c}",
-  "new": "\t\t\tin := order.FreezeInput{Margin: m.Add(decimal.RequireFromString(\"2214.1\")), Commission: c}",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tm := decimal.Zero\n\t\tfeeOffset := off",
+  "new": "\t\tm := decimal.RequireFromString(\"2214.1\")\n\t\tfeeOffset := off",
   "pkg": "./conformance/fixture/",
-  "test": "TestFrozenAccountAgainstOracle",
-  "want": "平仓单被当成开仓冻了保证金",
+  "test": "TestFrozenTotals|TestFrozenAccountAgainstOracle",
+  "want": "保证金",
   "expect": "red"
  },
  {
@@ -1588,14 +1588,14 @@
   "expect": "red"
  },
  {
-  "name": "143 开仓挂单的冻结保证金回到实现前的静默 0",
+  "name": "143 开仓挂单的冻结保证金回到实现前的静默 0（order.Book 当场拦下）",
   "dir": "",
   "file": "conformance/fixture/frozen.go",
-  "old": "\t\t\tm, err := openFrozenMargin(sym, inst, dir, spec, pre, int(left.IntPart()))",
-  "new": "\t\t\tm, err := decimal.Zero, error(nil)\n\t\t\t_, _ = dir, inst",
+  "old": "\t\t\tm, err = openFrozenMargin(sym, inst, dir, spec, pre, int(left.IntPart()))",
+  "new": "\t\t\tm, err = decimal.Zero, error(nil)\n\t\t\t_, _ = dir, inst",
   "pkg": "./conformance/fixture/",
   "test": "TestFrozenTotals|TestFrozenAccountAgainstOracle",
-  "want": "2214.1",
+  "want": "开仓单的冻结保证金是 0",
   "expect": "red"
  },
  {

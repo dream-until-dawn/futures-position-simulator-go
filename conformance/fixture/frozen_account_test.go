@@ -3,9 +3,6 @@ package fixture
 import (
 	"testing"
 
-	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
-	"github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx"
-	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -37,38 +34,20 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 		if !f.HasOrders {
 			continue
 		}
-		book := order.NewBook()
+		// ⚠️ 先把这份夹具里**委托涉及的每一个合约**的规格凑齐。
+		// 凑不齐就整份跳过并说出来，不算一半 —— 算一半的合计会**偏小**，
+		// 而偏小的方向是「看起来钱更多」。
+		specs := map[string]Spec{}
 		skipped := false
-		for id, o := range f.Orders {
-			alive, ok := aliveOf(o)
-			if !ok || !alive {
-				continue
-			}
-			left, ok := numberOf(o, "volume_left")
-			if !ok || !left.IsPositive() {
-				continue
-			}
-			sym, ok := textOf(o, "exchange_id", "instrument_id")
-			if !ok {
-				t.Errorf("⚠️ %s 的委托 %s 读不出合约", f.Path, id)
-				continue
-			}
-			dir, off, err := dirOffsetOf(o)
-			if err != nil {
-				t.Errorf("⚠️ %s 的委托 %s：%v", f.Path, id, err)
-				continue
-			}
-			if off == types.Close {
-				// 裸 CLOSE：⚠️ 冻的是今仓还是昨仓取决于口子，
-				// 而**账户侧的金额不受它影响**（手续费一样收、保证金一样不冻）。
-				// 所以这里把它当平昨处理是安全的 —— 但要说明为什么安全。
-				off = types.CloseYesterday
-			}
-			pre, hasPre := f.PreSettlement(sym)
+		syms, err := LiveOrderSymbols(f)
+		if err != nil {
+			t.Errorf("⚠️ %s：%v", f.Path, err)
+			continue
+		}
+		for _, sym := range syms {
 			mult, hasMult := multipliers[sym]
+			_, hasPre := f.PreSettlement(sym)
 			if !hasPre || !hasMult {
-				// ⚠️ 缺输入就整份跳过并说出来，不算一半。
-				// 算一半的合计会**偏小**，而偏小的方向是「看起来钱更多」。
 				t.Logf("ⓘ %s：%s 缺昨结算价或乘数，本份跳过", f.Path, sym)
 				skipped = true
 				break
@@ -84,51 +63,34 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 				skipped = true
 				break
 			}
-			// ⚠️ 本库自己算手续费 —— 不抄柜台委托记录里的 frozen_commission。
-			c, err := fee.Compute(rates, off, pre,
-				decimal.RequireFromString(mult), int(left.IntPart()), decimalx.NoRounding)
-			if err != nil {
-				t.Errorf("%s 算手续费：%v", f.Path, err)
-				continue
+			mr, ok := ratesFor(product)
+			if !ok {
+				t.Logf("ⓘ %s：品种 %s 没有登记保证金率，本份跳过", f.Path, product)
+				skipped = true
+				break
 			}
-			// 平仓单不冻保证金（20260909 实测：三份样本的账户 frozen_margin 都是 0）；
-			// 开仓单要冻，基准是**昨结算价**（20260909 两次独立实测，见 openFrozenMargin）。
-			m := decimal.Zero
-			if off == types.Open {
-				mr, ok := ratesFor(product)
-				if !ok {
-					t.Logf("ⓘ %s：品种 %s 没有登记保证金率，本份跳过", f.Path, product)
-					skipped = true
-					break
-				}
-				sp := Spec{Multiplier: decimal.RequireFromString(mult),
-					Commission: rates, Margin: mr}
-				m, err = openFrozenMargin(sym, inst, dir, sp, pre, int(left.IntPart()))
-				if err != nil {
-					t.Errorf("%s 算开仓冻结保证金：%v", f.Path, err)
-					continue
-				}
-			}
-			in := order.FreezeInput{Margin: m, Commission: c}
-			req := order.Request{Instrument: inst, Direction: dir, Offset: off,
-				Hedge: types.Speculation, Price: decimal.Zero,
-				Volume: int(left.IntPart())}
-			if err := book.Insert(id, req, in); err != nil {
-				t.Errorf("%s 的委托 %s 进簿失败：%v", f.Path, id, err)
-			}
+			specs[sym] = Spec{Multiplier: decimal.RequireFromString(mult),
+				Commission: rates, Margin: mr}
 		}
 		if skipped {
 			continue
 		}
-		tot := book.Total()
+		// ⚠️ 走 FrozenAccountOf —— 与 Rebuild 那条路**同一份实现**。
+		// 这里原先自己建一个 order.Book 逐笔 Insert，于是同一件事有两份实现，
+		// 而两份之间从来没有任何东西比过。
+		got, err := FrozenAccountOf(f, specs)
+		if err != nil {
+			t.Errorf("⚠️ %s 算冻结：%v", f.Path, err)
+			continue
+		}
 		for _, c := range []struct {
 			key  string
 			want decimal.Decimal
 		}{
-			{"frozen_margin", tot.Margin},
-			{"frozen_commission", tot.Commission},
+			{"frozen_margin", got.Margin},
+			{"frozen_commission", got.Commission},
 		} {
-			got, ok := numberOf(f.Account, c.key)
+			counter, ok := numberOf(f.Account, c.key)
 			if !ok {
 				t.Errorf("⚠️ %s 的账户截面没有 %s", f.Path, c.key)
 				continue
@@ -137,15 +99,27 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 			if !c.want.IsZero() {
 				nonZero++
 			}
-			if got.Sub(c.want).Abs().GreaterThan(decimal.RequireFromString("0.0000001")) {
+			if counter.Sub(c.want).Abs().GreaterThan(decimal.RequireFromString("0.0000001")) {
 				t.Errorf("⚠️ %s 的 %s：柜台 %s，本库从委托算出 %s —— "+
-					"⚠️ 账户侧冻结对不上。先查是**费额算错**还是"+
-					"**平仓单被当成开仓冻了保证金**", f.Path, c.key, got, c.want)
+					"⚠️ 账户侧冻结对不上。先查是**费额算错**、"+
+					"**平仓单被当成开仓冻了保证金**，还是"+
+					"**开仓单的冻结基准用成了报单价**", f.Path, c.key, counter, c.want)
 			}
 		}
 	}
-	if compared == 0 {
-		t.Skip("还没有记了委托的夹具 —— 账户侧冻结对拍待样本")
+	// ⚠️ 棘轮，不是 `> 0`。少比几份夹具**不会报错**，只会让覆盖悄悄变小 ——
+	// 而那正是筛法漂移（哪些委托要算冻结、哪些夹具凑得齐规格）的表现形式。
+	// 20260909：30 个字段。这个数**只许涨**。
+	const comparedRatchet = 30
+	switch {
+	case compared < comparedRatchet:
+		t.Errorf("⚠️ 只比了 %d 个字段，此前是 %d —— 覆盖变小了。"+
+			"先查是不是有夹具因为凑不齐规格被跳过了，"+
+			"或者 LiveOrderSymbols 的筛法与 FrozenAccountOf 分了岔", compared, comparedRatchet)
+	case compared > comparedRatchet:
+		t.Errorf("ⓘ 比到了 %d 个字段（此前 %d）—— 好消息，"+
+			"把 comparedRatchet 改成 %d 钉住它，否则退化不会红",
+			compared, comparedRatchet, compared)
 	}
 	// ⚠️ 判别力：必须有非零。全零的一致什么都不说明。
 	if nonZero == 0 {
@@ -155,18 +129,15 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 	t.Logf("账户侧冻结对拍：比了 %d 个字段，其中本库算出非零的 %d 个", compared, nonZero)
 }
 
-// TestFrozenTotals 直测金额侧的冻结合计。
-//
-// ⚠️ 它是那段代码**唯一**的验证：Rebuild 里调用它的那一支在现有语料上
-// 跑不到（记了委托的夹具全都带昨仓，而 Rebuild 拒绝昨仓）。
-// 「有实现」与「实现被跑过」是两回事，而它们在代码上长得一模一样。
 func TestFrozenTotals(t *testing.T) {
 	specs := map[string]Spec{"SHFE.rb2701": {
 		Multiplier: dd("10"),
 		Commission: mustRates(t, "rb"),
+		Margin:     mustMargin(t, "rb"),
 	}}
 	f := &Fixture{
-		HasOrders: true,
+		HasOrders:  true,
+		TradingDay: mustDay(t, "20260909"),
 		Quotes: map[string]map[string]Value{
 			"SHFE.rb2701": {"pre_settlement": {Number: dd("3163")}},
 		},
@@ -178,18 +149,18 @@ func TestFrozenTotals(t *testing.T) {
 				"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "9"),
 		},
 	}
-	m, c, err := frozenTotals(f, specs)
+	fr, err := FrozenAccountOf(f, specs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// 平仓单不冻保证金（20260909 实测）。
-	if !m.IsZero() {
-		t.Errorf("⚠️ 平仓挂单冻了 %s 保证金 —— 实测柜台不冻（kq_facts 42）", m)
+	if !fr.Margin.IsZero() {
+		t.Errorf("⚠️ 平仓挂单冻了 %s 保证金 —— 实测柜台不冻（kq_facts 42）", fr.Margin)
 	}
 	// 手续费 = 3163 × 10 × 0.00001 = 0.3163
-	if !c.Equal(dd("0.3163")) {
+	if !fr.Commission.Equal(dd("0.3163")) {
 		t.Errorf("⚠️ 冻结手续费 %s，应为 0.3163 —— "+
-			"已终结的那笔（9 手）是不是被算进来了？", c)
+			"已终结的那笔（9 手）是不是被算进来了？", fr.Commission)
 	}
 
 	// ⚠️ 开仓挂单**要冻保证金**，基准是昨结算价而不是报单价。
@@ -197,26 +168,31 @@ func TestFrozenTotals(t *testing.T) {
 	// （见 openFrozenMargin 的注释）。
 	//
 	// rb2701：昨结 3163 × 乘数 10 × 7% = 2214.1
-	specs["SHFE.rb2701"] = Spec{
-		Multiplier: dd("10"),
-		Commission: mustRates(t, "rb"),
-		Margin:     mustMargin(t, "rb"),
-	}
 	f.Orders["c"] = withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
 		"instrument_id", "rb2701", "direction", "BUY", "offset", "OPEN"), "1")
-	m2, c2, err := frozenTotals(f, specs)
+	fr2, err := FrozenAccountOf(f, specs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !m2.Equal(dd("2214.1")) {
+	if !fr2.Margin.Equal(dd("2214.1")) {
 		t.Errorf("⚠️ 开仓挂单冻结保证金 %s，应为 2214.1（3163×10×7%%）—— "+
 			"⚠️ 先查基准是不是用成了**报单价**：那一项在这条用例上分得开，"+
-			"因为报单价压根没给", m2)
+			"因为报单价压根没给", fr2.Margin)
 	}
 	// 手续费多出开仓那一笔：0.3163 + 0.3163 = 0.6326
-	if !c2.Equal(dd("0.6326")) {
-		t.Errorf("⚠️ 冻结手续费 %s，应为 0.6326（平今一笔 + 开仓一笔）", c2)
+	if !fr2.Commission.Equal(dd("0.6326")) {
+		t.Errorf("⚠️ 冻结手续费 %s，应为 0.6326（平今一笔 + 开仓一笔）", fr2.Commission)
 	}
+}
+
+// mustDay 解析交易日。
+func mustDay(t *testing.T, s string) types.TradingDay {
+	t.Helper()
+	d, err := types.ParseTradingDay(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d
 }
 
 // mustMargin 取某品种的实测保证金率，没登记就报错。
