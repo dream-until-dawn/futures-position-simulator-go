@@ -919,11 +919,11 @@
   "expect": "red"
  },
  {
-  "name": "84 把一行 LF 插进 CRLF 文件（文件内部换行混掉）",
+  "name": "84 把一行 CRLF 插进 LF 文件（文件内部换行混掉）",
   "dir": "",
-  "file": "cmd/oracle/probe/runner.go",
-  "old": "\tcase \"position-frozen\":\r\n",
-  "new": "\tcase \"position-frozen\":\r\n\t\t// 一行 LF 注释\n",
+  "file": "cmd/oracle/main.go",
+  "old": "func main() {\n",
+  "new": "func main() {\n\t// 一行 CRLF 注释\r\n",
   "pkg": "./",
   "test": "TestNoFileMixesLineEndings",
   "want": "**内部**混着 CRLF 与 LF",
@@ -1008,14 +1008,14 @@
   "expect": "red"
  },
  {
-  "name": "92 跨日分类表把「拆分不填」重新贴回类 B",
+  "name": "92 给一个零观测字段指派因果类（绕过机械断言）",
   "dir": "",
-  "file": "conformance/fixture/crossday_test.go",
-  "old": "\t\t\"position_cost_long_today\":  \"跨日-D\",",
-  "new": "\t\t\"position_cost_long_today\":  \"跨日-B\",",
+  "file": "conformance/registry_crossday.go",
+  "old": "\t\t\"volume_short_his\":          {clsQ, whyQ, \"\"},",
+  "new": "\t\t\"volume_short_his\":          {clsB, whyB, \"kq_facts 24\"},",
   "pkg": "./conformance/fixture/",
   "test": "TestCrossDayConformance",
-  "want": "类 B（NoUseHistory 不滚）出现了",
+  "want": "一次都没有非零过",
   "expect": "red"
  },
  {
@@ -1229,6 +1229,50 @@
   "pkg": "./",
   "test": "TestPackageTreeMatchesReality",
   "want": "包树里画着 `ghost/`",
+  "expect": "red"
+ },
+ {
+  "name": "112 依赖守卫按**域名**归并（两个 github 依赖会被并成一个）",
+  "dir": "",
+  "file": "deps_test.go",
+  "old": "\t\tif parts := strings.Split(p, \"/\"); len(parts) >= 3 {\n\t\t\tmods[strings.Join(parts[:3], \"/\")] = true\n\t\t} else {\n\t\t\tmods[p] = true\n\t\t}",
+  "new": "\t\tmods[first] = true",
+  "pkg": "./",
+  "test": "TestMainModuleHasOneDependency",
+  "want": "而硬约束是**只有**",
+  "expect": "red"
+ },
+ {
+  "name": "113 已知差异登记表可以随口填（去掉出处要求）",
+  "dir": "",
+  "file": "conformance/known.go",
+  "old": "\t\tif !unresolved && strings.TrimSpace(k.Evidence) == \"\" {",
+  "new": "\t\tif false {",
+  "pkg": "./conformance/",
+  "test": "TestValidateRejectsSloppyEntries",
+  "want": "因果类别没有出处：本该被拦下",
+  "expect": "red"
+ },
+ {
+  "name": "114 Live 登记表退化成与 CrossDay 相同",
+  "dir": "",
+  "file": "conformance/registry_crossday.go",
+  "old": "func Live() Registry {\n\tr := CrossDay()",
+  "new": "func Live() Registry {\n\treturn CrossDay()\n}\n\nfunc liveUnused() Registry {\n\tr := CrossDay()",
+  "pkg": "./conformance/",
+  "test": "TestRegistriesAreWellFormed",
+  "want": "没有比 CrossDay",
+  "expect": "red"
+ },
+ {
+  "name": "115 分类表的前缀要求去掉（两套 A/B 又能互相冲突）",
+  "dir": "",
+  "file": "conformance/known.go",
+  "old": "\t\tif !strings.Contains(k.Class, \"-\") {",
+  "new": "\t\tif false {",
+  "pkg": "./conformance/",
+  "test": "TestValidateRejectsSloppyEntries",
+  "want": "没有前缀：本该被拦下",
   "expect": "red"
  }
 ]

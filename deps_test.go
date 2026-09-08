@@ -1,0 +1,91 @@
+package futsim
+
+import (
+	"os/exec"
+	"sort"
+	"strings"
+	"testing"
+)
+
+// TestMainModuleHasOneDependency 断言**主模块的依赖树只有 shopspring/decimal 一个**。
+//
+// ⚠️ 这是 design.md §3 写死的硬约束，而它此前**没有任何守卫**。
+//
+// 约束的理由不是洁癖：使用者 `go get` 这个库时，依赖会出现在**他们的**模块图里。
+// 一次随手的 `import "github.com/xxx/yyy"` 就能破掉它，而破掉的方式是
+// **本仓库这边没有任何报错** —— 使用者拉下来才看见多了一个依赖。
+//
+// # ⚠️ 嵌套模块不算，方向是关键
+//
+// `cmd/oracle` 依赖主模块（2026-09-09 加的，为了让实时对拍复用同一套比对代码），
+// 那**不影响**这条约束：方向是 oracle → 主模块，而使用者拿到的是主模块。
+// 反过来（主模块 import cmd/oracle）才会破掉它，那时 WebSocket 客户端
+// 会出现在每一个使用者的模块图里。
+//
+// 本条只看主模块，正是因为方向要紧。
+//
+// # ⚠️ 这条守卫的**破坏验证有个洞**，如实记下来
+//
+// 真正要防的场景是「有人加了一个 import **并且**补上了 require」。
+// 而 `tools/breakcheck` 只改**一个文件**，于是那个场景表达不出来：
+//
+//	只加 import   go.mod 里没有 require → 编译失败，红的是编译器不是断言
+//	只加 require  没有 import → 依赖不进 `go list -deps`，什么都不会变
+//
+// 登记在册的第 112 条因此改成打**本守卫自己的归并逻辑**（域名归并 vs 模块归并），
+// 它验的是「比较那一步没错」，**不是**「真多一个依赖时会被抓到」。
+// ⚠️ 两者的区别要说清楚，否则下一个人会以为这条已经被完整验过了。
+// 要补上那个洞，得让 breakcheck 支持多文件破坏。
+func TestMainModuleHasOneDependency(t *testing.T) {
+	out, err := exec.Command("go", "list", "-deps", "./...").Output()
+	if err != nil {
+		t.Fatalf("go list -deps 失败：%v", err)
+	}
+	const self = "github.com/dream-until-dawn/futures-position-simulator-go"
+	const allowed = "github.com/shopspring/decimal"
+
+	// ⚠️ 归并到**模块**（前三段：github.com/owner/repo），不是域名。
+	// 第一版按域名归并，于是两个不同的 github 依赖会被并成一个
+	// "github.com" —— 那时守卫看起来通过了，而实际上多了一个依赖。
+	// ⚠️ 一条把两个不同的东西并成一个的守卫，与没有守卫是同一回事。
+	mods := map[string]bool{}
+	total := 0
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		p := strings.TrimSpace(line)
+		if p == "" {
+			continue
+		}
+		total++
+		if strings.HasPrefix(p, self) {
+			continue
+		}
+		// stdlib 的包路径第一段不含点号（"fmt"、"encoding/json"）。
+		first := p
+		if i := strings.Index(p, "/"); i >= 0 {
+			first = p[:i]
+		}
+		if !strings.Contains(first, ".") {
+			continue
+		}
+		if parts := strings.Split(p, "/"); len(parts) >= 3 {
+			mods[strings.Join(parts[:3], "/")] = true
+		} else {
+			mods[p] = true
+		}
+	}
+	// ⚠️ 一个包都没列到时本条恒真。卡下界。
+	if total < 20 {
+		t.Fatalf("⚠️ go list -deps 只给出 %d 个包 —— 本条在几乎空的集合上跑", total)
+	}
+	names := make([]string, 0, len(mods))
+	for m := range mods {
+		names = append(names, m)
+	}
+	sort.Strings(names)
+	if len(names) != 1 || names[0] != allowed {
+		t.Errorf("⚠️ 主模块的第三方依赖是 %v，而硬约束是**只有** %s —— "+
+			"⚠️ 使用者 go get 这个库时，多出来的依赖会进**他们的**模块图，"+
+			"而本仓库这边不会有任何报错。见 design.md §3", names, allowed)
+	}
+	t.Logf("主模块共 %d 个包，第三方依赖 %d 个：%v", total, len(names), names)
+}

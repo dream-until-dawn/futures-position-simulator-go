@@ -43,25 +43,10 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		r.DumpDir = abs
 	}
 
-	cli := kq.New(kq.Credentials{User: r.Env.KQUser, Password: r.Env.KQPassword, ClientSecret: r.Env.KQClientSecret}, r.Logf)
-	r.cli = cli
-	defer cli.Close()
-
-	if err := cli.Auth(ctx); err != nil {
+	if err := r.connect(ctx); err != nil {
 		return err
 	}
-	if err := cli.ConnectTrade(ctx); err != nil {
-		return err
-	}
-
-	// ⚠️ 登录成功与否看**状态**，不看回调。等 trade 截面出现即为登录成功。
-	if !cli.WaitUntil(30*time.Second, func() bool { return cli.TradingDay() != "" }) {
-		for _, n := range cli.Notifies() {
-			r.Logf("  notify code=%d level=%s %s", n.Code, n.Level, n.Content)
-		}
-		return fmt.Errorf("30 秒内未拿到交易截面 —— 这只说明没等到，不说明登录失败；先看上面的 notify")
-	}
-	r.Logf("[td] 登录成功  trading_day=%s", cli.TradingDay())
+	defer r.cli.Close()
 
 	switch exp {
 	case "status":
@@ -376,4 +361,84 @@ func observedSymbols(cli *kq.Client) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// LiveFixtureJSON 连上柜台，取一份**此刻的**截面，脱敏后 marshal 成夹具 JSON。
+//
+// ⚠️ 它走的是与 dump **完全同一条**制备路径（Sanitize → BlindSpots → Scrubbed），
+// 只是不落盘。分成两条路会让实时对拍与存档证据看到不同的字节，
+// 而那种分歧的表现是「同一个柜台在两条路上给出不同的判定」。
+//
+// ⚠️ **脱敏照做，即使不落盘**：这份字节会进日志、进报告、可能被贴出去。
+// 「反正不写文件」不是跳过脱敏的理由 —— 泄漏的是内容，不是文件。
+func (r *Runner) LiveFixtureJSON(ctx context.Context, symbols []string) ([]byte, error) {
+	if err := r.connect(ctx); err != nil {
+		return nil, err
+	}
+	defer r.cli.Close()
+	if len(symbols) > 0 {
+		if err := r.cli.ConnectQuote(ctx); err != nil {
+			return nil, err
+		}
+		if err := r.cli.SubscribeQuotes(symbols...); err != nil {
+			return nil, err
+		}
+		for _, s := range symbols {
+			// ⚠️ 行情没到齐就往下走，昨结算价会缺 —— 而它是手续费基准、
+			// 保证金基准与逐日盯市基线。等不到就说出来，不静默继续。
+			if _, ok := r.cli.WaitQuoteReady(s, 20*time.Second); !ok {
+				r.Logf("⚠️ %s 行情未就绪 —— 该合约的昨结算价会缺，"+
+					"保证金那一层比不了（不是「比对通过」）", s)
+			}
+		}
+	}
+	// ⚠️ 先等截面静默再读。DIFF 是增量 merge patch，早读一拍会读到半截截面，
+	// 而半截截面里的 0 看起来像一个合法数值。
+	r.cli.WaitTrade(1500 * time.Millisecond)
+
+	f := kq.Sanitize(r.cli.Account(), r.cli.Positions(), r.cli.Trades(),
+		observedQuotes(r.cli), r.cli.TradingDay(),
+		time.Now().Format(time.RFC3339),
+		"实时对拍取的截面（oracle conformance），**未落盘**")
+
+	secrets := append(r.Env.Secrets(), kq.Secret{Name: "authID", Value: r.cli.AuthID()})
+	if bs := kq.BlindSpots(secrets); len(bs) > 0 {
+		r.Logf("  ⓘ 独立复查的盲区：%v —— 这几个值太短，没有判别力；靠白名单挡", bs)
+	}
+	if err := kq.Scrubbed(f, secrets); err != nil {
+		return nil, fmt.Errorf("脱敏自检失败，**不输出**：%w", err)
+	}
+	return json.Marshal(f)
+}
+
+// connect 建连接并登录。
+//
+// ⚠️ 抽成方法是因为**有两条路要用它**：Run（跑实验）与 LiveFixtureJSON
+// （实时对拍取截面）。写两份连接逻辑，两份就会漂移 ——
+// 而漂移的表现是「实验能连上、对拍连不上」，或者反过来，
+// 且两边的错误信息各说各话。
+//
+// ⚠️ 它**不**负责 Close：谁开的谁关，调用方 defer。
+func (r *Runner) connect(ctx context.Context) error {
+	cli := kq.New(kq.Credentials{
+		User: r.Env.KQUser, Password: r.Env.KQPassword,
+		ClientSecret: r.Env.KQClientSecret,
+	}, r.Logf)
+	r.cli = cli
+	if err := cli.Auth(ctx); err != nil {
+		return err
+	}
+	if err := cli.ConnectTrade(ctx); err != nil {
+		return err
+	}
+	// ⚠️ 登录成功与否看**状态**，不看回调。等 trade 截面出现即为登录成功。
+	if !cli.WaitUntil(30*time.Second, func() bool { return cli.TradingDay() != "" }) {
+		for _, n := range cli.Notifies() {
+			r.Logf("  notify code=%d level=%s %s", n.Code, n.Level, n.Content)
+		}
+		return fmt.Errorf("30 秒内未拿到交易截面 —— " +
+			"这只说明没等到，不说明登录失败；先看上面的 notify")
+	}
+	r.Logf("[td] 登录成功  trading_day=%s", cli.TradingDay())
+	return nil
 }

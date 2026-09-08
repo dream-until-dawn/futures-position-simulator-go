@@ -15,14 +15,19 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe"
+	"github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture"
+	"github.com/shopspring/decimal"
 )
 
 func usage() {
@@ -32,6 +37,9 @@ func usage() {
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
   oracle status                    只读：登录并打印账户与持仓截面
+  oracle conformance -specs <合约规格.json> -rules <实测规则.json>
+                                   **连着柜台**取此刻的截面，与本库逐字段比
+                                   ⚠️ 只读，不下单；与主模块那批离线对拍走同一套比对代码
 
 实验名称（当日即可跑）:
   status           连通性自检（做到协议层登录，不是 TCP 层）
@@ -89,8 +97,10 @@ func main() {
 			os.Exit(1)
 		}
 	case "conformance":
-		fmt.Fprintln(os.Stderr, "conformance 从 v0.2.0 起提供，现在还没有实现可对拍")
-		os.Exit(2)
+		if err := runConformance(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
 	default:
 		usage()
 		os.Exit(2)
@@ -142,4 +152,166 @@ func runProbe(args []string) error {
 		Logf:    func(f string, a ...any) { fmt.Printf(f+"\n", a...) },
 	}
 	return r.Run(ctx, *exp)
+}
+
+// runConformance 是**连着柜台**的逐字段对拍。
+//
+// ⚠️ 它与主模块里那批离线对拍的分工写在 conformance 包的包注释里。
+// 这里只强调一句：本命令**只读**，不下任何单。
+func runConformance(args []string) error {
+	fs := flag.NewFlagSet("conformance", flag.ExitOnError)
+	envPath := fs.String("env", ".env", "凭据文件路径")
+	specsPath := fs.String("specs", "", "合约规格快照（refdata-sync -specs 的产物）")
+	rulesPath := fs.String("rules", "", "实测规则（保证金率与 PositionDateType）")
+	carryPath := fs.String("carry", "", "前一交易日的夹具 —— 没有它，今天之前开的仓一律比不了")
+	settlePath := fs.String("settle", "", "**交易所**给的结算价（cmd/settlement -out 的产物）")
+	symbols := fs.String("symbols", "", "要订阅行情的合约，逗号分隔；留空则用 .env 的")
+	timeout := fs.Duration("timeout", 90*time.Second, "整体超时")
+	_ = fs.Parse(args[2:])
+
+	// ⚠️ 两份规则数据都**必须显式给**，没有默认路径。
+	//
+	// 一个默认路径会让人以为「跑起来了就是对的」，而它可能指向一份
+	// 过期的、或者别的交易日的快照 —— 那时对拍照样跑完，
+	// 只是每一个金额都基于错的乘数或费率。
+	if *specsPath == "" || *rulesPath == "" {
+		return fmt.Errorf("-specs 与 -rules 都必须给 —— " +
+			"⚠️ 不设默认路径：默认值会让人以为「跑起来了就是对的」，" +
+			"而它可能指向一份过期的或别的交易日的快照，" +
+			"那时对拍照样跑完，只是每个金额都基于错的乘数或费率")
+	}
+	specsFile, err := os.Open(*specsPath)
+	if err != nil {
+		return err
+	}
+	defer specsFile.Close()
+	specs, err := fixture.LoadSpecs(specsFile)
+	if err != nil {
+		return err
+	}
+	rulesFile, err := os.Open(*rulesPath)
+	if err != nil {
+		return err
+	}
+	defer rulesFile.Close()
+	rules, err := conformance.LoadMeasuredRules(rulesFile)
+	if err != nil {
+		return err
+	}
+	built := conformance.BuildSpecs(specs, rules)
+	fmt.Printf("规则数据：字典 %d 个合约、实测保证金率 %d 个品种、"+
+		"实测 PositionDateType %d 个合约 → 可对拍 %d 个合约\n",
+		len(specs), len(rules.MarginByProduct), len(rules.PositionDate), len(built))
+
+	env, err := probe.LoadEnv(*envPath)
+	if err != nil {
+		return err
+	}
+	var syms []string
+	for _, s := range strings.Split(*symbols, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			syms = append(syms, s)
+		}
+	}
+	if len(syms) == 0 {
+		syms = env.Symbols
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+
+	r := &probe.Runner{
+		Env: env, Symbols: syms,
+		Logf: func(f string, a ...any) { fmt.Printf(f+"\n", a...) },
+	}
+	raw, err := r.LiveFixtureJSON(ctx, syms)
+	if err != nil {
+		return err
+	}
+	carry, err := loadCarry(*carryPath, *settlePath)
+	if err != nil {
+		return err
+	}
+	res, err := conformance.Compare(raw, built, carry)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	fmt.Print(res.String())
+
+	// ⚠️ 有失败就用非零退出码：这条命令会被脚本/CI 调用，
+	// 而一个永远返回 0 的对拍工具，与不跑它没有区别。
+	// ⚠️ **只在第三类上返回非零**：已登记的口子差异每次都在，
+	// 拿它们让命令失败，会让这个工具永远红 —— 而永远红与永远绿一样会被无视。
+	if len(res.NovelFailures) > 0 {
+		return fmt.Errorf("⚠️ 有 %d 个**第三类**失败（新出现、不在已知差异登记表里）：%s",
+			len(res.NovelFailures), strings.Join(res.NovelFailures, " "))
+	}
+	return nil
+}
+
+// loadCarry 读「前一交易日的夹具」与「交易所结算价」。
+//
+// ⚠️ 两个都不给时返回 nil —— 那是合法的（只对拍当日开的仓），
+// 而 Compare 会把够不着的合约**记数报出来**，不会假装比过了。
+//
+// ⚠️ 只给一个是**错误**，不是「用一半」：结转要两样齐全，
+// 缺一样时静默降级会让人以为结转跑过了。
+func loadCarry(fixturePath, settlePath string) (*conformance.Carry, error) {
+	if fixturePath == "" && settlePath == "" {
+		return nil, nil
+	}
+	if fixturePath == "" || settlePath == "" {
+		return nil, fmt.Errorf("-carry 与 -settle 必须**成对**给 —— " +
+			"结转要「前一日的持仓与成交」和「交易所的结算价」两样齐全；" +
+			"⚠️ 只给一样时静默降级，会让人以为结转跑过了")
+	}
+	pf, err := os.Open(fixturePath)
+	if err != nil {
+		return nil, err
+	}
+	defer pf.Close()
+	prev, err := fixture.Load(pf, filepath.Base(fixturePath))
+	if err != nil {
+		return nil, fmt.Errorf("读前一日夹具：%w", err)
+	}
+	sf, err := os.Open(settlePath)
+	if err != nil {
+		return nil, err
+	}
+	defer sf.Close()
+	var raw struct {
+		Source      string `json:"source"`
+		TradingDay  string `json:"trading_day"`
+		Note        string `json:"note"`
+		Settlements []struct {
+			Instrument    string `json:"instrument"`
+			Settlement    string `json:"settlement"`
+			PreSettlement string `json:"pre_settlement"`
+			Close         string `json:"close"`
+		} `json:"settlements"`
+	}
+	if err := json.NewDecoder(sf).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("读交易所结算价：%w", err)
+	}
+	// ⚠️ 结算价那份文件的交易日必须与前一日夹具**一致**。
+	// 拿错一天的结算价不会有任何动静 —— 数看起来完全正常，只是错了一天。
+	if raw.TradingDay != prev.TradingDay.String() {
+		return nil, fmt.Errorf("⚠️ 结算价文件是交易日 %s，而前一日夹具是 %s —— "+
+			"拿错一天的结算价不会有任何动静：数看起来完全正常，只是错了一天",
+			raw.TradingDay, prev.TradingDay)
+	}
+	m := map[string]decimal.Decimal{}
+	for _, r := range raw.Settlements {
+		d, err := decimal.NewFromString(r.Settlement)
+		if err != nil || !d.IsPositive() {
+			continue // ⚠️ 非正的结算价不放进去：它会让逐日盯市把持仓算成归零
+		}
+		m[r.Instrument] = d
+	}
+	if len(m) == 0 {
+		return nil, fmt.Errorf("⚠️ 结算价文件里一个可用的结算价都没有")
+	}
+	fmt.Printf("结转输入：前一日夹具 %s（交易日 %s）、交易所结算价 %d 个合约\n",
+		filepath.Base(fixturePath), prev.TradingDay, len(m))
+	return &conformance.Carry{Prev: prev, Settlement: m}, nil
 }

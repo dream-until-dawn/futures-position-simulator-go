@@ -149,74 +149,24 @@ func TestCrossDayConformance(t *testing.T) {
 	//
 	// ⚠️ 与「跨夹具那条」同一条纪律：新出现的失败一律报「第三类」，
 	// 不许直接加进这张表。
-	// ⚠️ 这张表**贴错过标签**，而错法很值得记住。
+	// ⚠️ 已知差异的归类表**不在这里**，在 conformance.CrossDay()。
 	//
-	// 原来有 6 个字段（open_cost_*_today/_his、position_cost_*_today）标着
-	// 类 B「NoUseHistory 不滚今昨」。但它们**全部出现在 SHFE.rb2701 上**，
-	// 而 rb2701 是 UseHistory —— 与 NoUseHistory 一点关系都没有。
+	// 它挪出去是因为**两条路要用它**：本条（离线对拍）与
+	// `oracle conformance`（实时对拍）。只有测试有它的话，
+	// 实时那条路会把每一处已知差异都报成失败，于是**永远红** ——
+	// 而一个永远红的对拍工具，和一个永远绿的一样会被无视。
 	//
-	// 真正的 DCE.m2701 因为拿不到大商所的结算价（412 未打通）被 continue 掉了，
-	// 所以**类 B 在这条测试里一次都没有被观测到**。
-	// 而下面那条「每一类都必须出现」的守卫，正是被这 6 个错误标签喂饱的 ——
-	// ⚠️ 一条靠错误分类维持「活着」的守卫，比没有守卫更难发现。
-	known := map[string]string{
-		// —— A：本库用**结算价** 3163，柜台用**收盘价** 3177（kq_facts 26/37）——
-		"position_price_long":    "跨日-A",
-		"position_price_short":   "跨日-A",
-		"position_cost_long":     "跨日-A", // 成本 = 均价 × 手数 × 乘数，基线不同则成本不同
-		"position_cost_long_his": "跨日-A",
-		"position_profit_long":   "跨日-A", // 基线不同则持仓盈亏不同
-		"position_profit":        "跨日-A",
-
-		// —— D：**今昨拆分柜台不填**（kq_facts 28/33）——
-		//
-		// ⚠️ 只剩 position_cost_long_today 一个够格：它在 DCE.m2701 上
-		// **非零过**（102450 = 3×3415×10），所以「柜台在结算时写这一侧」
-		// 是有观测支撑的因果断言。
-		//
-		// ⚠️ 其余原本标 D 的那几个（open_cost_* 的四个、position_cost_short_*）
-		// 全部改成了「跨日-?」—— 它们一次都没有非零过，
-		// 而下面那条机械断言当场把它们拎了出来。评审只点名了空头那三个，
-		// 机械规则连 open_cost_long_his/_today 一起找到了：
-		// **手工分类漏掉的正是自己以为最熟的那几个。**
-		"open_cost_long_his":        "跨日-?",
-		"open_cost_long_today":      "跨日-?",
-		"open_cost_short_his":       "跨日-?",
-		"open_cost_short_today":     "跨日-?",
-		"position_cost_long_today":  "跨日-D",
-		"position_cost_short_his":   "跨日-?",
-		"position_cost_short_today": "跨日-?",
-
-		// —— 原来的 E（空仓侧「明确无值」vs 柜台 0）——
-		//
-		// ⚠️ 全部降级成「跨日-?」。原来的解释是 kq_facts 15（路径依赖），
-		// 而**空头昨仓从来没有存在过**（419 条持仓记录里 0 次），
-		// 于是「路径依赖」「柜台不填拆分」「压根没有这个仓」三种解释
-		// 给出同一个观测 —— 挑其中任何一个都是猜。
-		"position_cost_short":   "跨日-?",
-		"position_profit_short": "跨日-?",
-
-		// —— B：NoUseHistory 不滚今昨（kq_facts 24）——
-		// ⚠️ 留着这几个键是因为**它们确实属于 B**，只是本条现在观测不到 B。
-		// ⚠️ volume_short_his 不在其中：它一次都没非零过，机械断言把它降成了「?」。
-		"volume_long_today":  "跨日-B",
-		"volume_long_his":    "跨日-B",
-		"volume_short_today": "跨日-B",
-		"volume_short_his":   "跨日-?",
-		// 类 C：⚠️ **行情侧还没滚到新交易日**。
-		//
-		// 柜台的 margin_long = 6631.8，而 6631.8 ÷ (10 × 3 × 0.07) = **3158** ——
-		// 那是 20260907 的结算价，也就是**旧的**昨结算价。
-		// 本库用 3163（20260908 的结算价，即 D+1 日真正的昨结算价）得到 6642.3。
-		//
-		// 对上了 quotes.datetime = 2026-09-08 14:59:59.999500：
-		// **账户侧已滚到 20260909（trading_day、pre_balance 都变了），
-		// 而行情侧仍停在昨天收盘**，保证金取的是行情侧的昨结算价。
-		//
-		// ⚠️ 这不是规则差异，是**时序**：两侧不同步。
-		"margin":      "跨日-C",
-		"margin_long": "跨日-C",
+	// 那张表的完整来历（包括它贴错过标签、以及让错标签活下来的那个条件）
+	// 写在 conformance/registry_crossday.go 的注释里。
+	reg := conformance.CrossDay()
+	if err := reg.Validate(); err != nil {
+		t.Fatalf("⚠️ 已知差异登记表本身不合格：%v", err)
 	}
+	known := map[string]string{}
+	for name, k := range reg {
+		known[name] = k.Class
+	}
+
 	// ⚠️⚠️ **机械断言：从未取到过非零值的字段，不许被指派一个「机制」。**
 	//
 	// 这一条是评审 F1 的核心，也是唯一能**自动**抓住类 B 那次错标签的东西。

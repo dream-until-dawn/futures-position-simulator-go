@@ -1,0 +1,16 @@
+{
+ "source": "实测（快期模拟这个口子），不是上游字典",
+ "trading_day": "20260909",
+ "note": "⚠️ 这份文件里的每一项**都只能来自实测**：上游合约字典不给保证金率，也不给 PositionDateType（见 cmd/refdata-sync 的说明）。⚠️ 它与 specs-*.json 是两回事——那份来自字典，这份来自柜台行为。合成一份会让「查过的」和「量出来的」在同一张表里分不开。⚠️ 保证金率见 state.md 的 kq_facts 2（八合约两交易所，三档）；PositionDateType 见 kq_facts 24（20260909 结算：SHFE.rb2701 多今0/多昨3 而 DCE.m2701 多今3/多昨0，且账户层结算已完成）。⚠️ 没实测过的合约**一个都不填**：填一个「按交易所推出来的」值，会让今昨仓在那个合约上悄悄不滚动。",
+ "margin_rate_by_product": [
+  {"product": "rb", "rate": "0.07", "evidence": "kq_facts 2"},
+  {"product": "m", "rate": "0.07", "evidence": "kq_facts 2"},
+  {"product": "i", "rate": "0.11", "evidence": "kq_facts 2"},
+  {"product": "cu", "rate": "0.11", "evidence": "kq_facts 2"},
+  {"product": "ag", "rate": "0.22", "evidence": "kq_facts 2"}
+ ],
+ "position_date_type": [
+  {"instrument": "SHFE.rb2701", "type": "use_history", "evidence": "kq_facts 24：20260909 结算后今仓→昨仓"},
+  {"instrument": "DCE.m2701", "type": "no_use_history", "evidence": "kq_facts 24：20260909 结算后仍是今仓"}
+ ]
+}
