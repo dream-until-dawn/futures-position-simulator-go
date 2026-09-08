@@ -1094,7 +1094,7 @@
   "new": "\t\tif false {",
   "pkg": "./conformance/fixture/",
   "test": "TestReconstructCoversCarriedSides",
-  "want": "结转+重放之后有 1 个字段对不上",
+  "want": "个字段对不上",
   "expect": "red"
  },
  {
@@ -1463,5 +1463,61 @@
   "want": "",
   "expect": "green",
   "why": "⚠️ 现有夹具**一份都没有**接上 order 包（HasFrozen 恒为假），于是合计那一支根本走不到，改坏它照样绿。声明的盲区：冻结这一块要到实时对拍把柜台的 orders 喂进来才验得了 —— 而那正是下一步。⚠️ 本条与「测试写错了」不同：判据本身是对的，只是**没有输入能走到它**。"
+ },
+ {
+  "name": "132 委托冻结把「下单方向」当成「被平持仓方向」",
+  "dir": "",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tif dir == types.Sell {\n\t\t\tinto = &long\n\t\t} else {\n\t\t\tinto = &short\n\t\t}",
+  "new": "\t\tif dir == types.Buy {\n\t\t\tinto = &long\n\t\t} else {\n\t\t\tinto = &short\n\t\t}",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenAgainstOracle",
+  "want": "委托与冻结对不上",
+  "expect": "red"
+ },
+ {
+  "name": "133 已终结的委托也算进冻结",
+  "dir": "",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tif !alive {\n\t\t\tcontinue\n\t\t}",
+  "new": "\t\t_ = alive",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenOfSidesAndDates",
+  "want": "合计冻结",
+  "expect": "red"
+ },
+ {
+  "name": "134 「没记委托」与「没有挂单」不再分开",
+  "dir": "",
+  "file": "conformance/fixture/fixture.go",
+  "old": "\tf.HasOrders = raw.Orders != nil",
+  "new": "\tf.HasOrders = len(raw.Orders) > 0",
+  "pkg": "./conformance/fixture/",
+  "test": "TestLoadDistinguishesEmptyOrdersFromNoOrders",
+  "want": "用 len() > 0 判会把它们混成一个",
+  "expect": "red"
+ },
+ {
+  "name": "135 冻结对拍去掉「必须有非零」的判别力要求",
+  "dir": "",
+  "file": "conformance/fixture/frozen_test.go",
+  "old": "\tif nonZero == 0 {",
+  "new": "\tif false {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenAgainstOracle",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ 现有样本里非零的有 6 个，前提不成立，去掉当然还是绿。声明的盲区：这条只在**全是零**时起作用（例如哪天只留下没挂单时拍的夹具），而那种情形今天不存在。它的价值是将来的 —— 而它此刻的价值是**已经兑现过一次**：加它之前，冻结那一块比的全是 0。"
+ },
+ {
+  "name": "136 委托白名单漏掉 volume_left（冻结量按它算）",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/kq/sanitize.go",
+  "old": "\t\"volume_left\":         \"保留：**未成交手数** —— 冻结量按它算，不是按委托量\",",
+  "new": "",
+  "pkg": "./kq/",
+  "test": "TestSanitizeKeepsOnlyWhitelisted",
+  "want": "volume_left 没保留",
+  "expect": "red"
  }
 ]

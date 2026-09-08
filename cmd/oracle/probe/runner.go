@@ -232,7 +232,7 @@ func (r *Runner) dump(name, note string) error {
 	// ⚠️ 行情只留**被观察到的合约**：持仓里出现过的、或成交里出现过的。
 	// 整份行情有几万个合约，而夹具是证据不是数据库。
 	f := kq.Sanitize(cli.Account(), cli.Positions(), cli.Trades(),
-		observedQuotes(cli), cli.TradingDay(),
+		observedQuotes(cli), cli.Orders(), cli.TradingDay(),
 		time.Now().Format(time.RFC3339), note)
 
 	// 独立复查：与白名单是两套不同原理的机制，因此不会一起失效。
@@ -397,7 +397,7 @@ func (r *Runner) LiveFixtureJSON(ctx context.Context, symbols []string) ([]byte,
 	r.cli.WaitTrade(1500 * time.Millisecond)
 
 	f := kq.Sanitize(r.cli.Account(), r.cli.Positions(), r.cli.Trades(),
-		observedQuotes(r.cli), r.cli.TradingDay(),
+		observedQuotes(r.cli), r.cli.Orders(), r.cli.TradingDay(),
 		time.Now().Format(time.RFC3339),
 		"实时对拍取的截面（oracle conformance），**未落盘**")
 

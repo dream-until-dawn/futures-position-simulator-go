@@ -36,6 +36,13 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 			"account_id":     "12345678", // 丢弃表
 			"bid_price1":     3150.0,     // 行情侧的「不留但也不报漂移」
 		}},
+		map[string]any{"o1": map[string]any{
+			"order_id":    "o1",
+			"offset":      "CLOSETODAY",
+			"volume_left": 2.0,
+			"user_id":     "e3b0c442-98fc-1c14-9afb-4c8996fb9242", // 丢弃表
+			"odd_key":     "x",                                    // 两张表都没有
+		}},
 		"20260908", "2026-09-08T13:00:00+08:00", "单测")
 
 	// ① 白名单里的键原样保留。
@@ -94,7 +101,8 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 	// 静默丢弃与静默保留是两种不同的坏：前者丢证据，后者可能泄漏。
 	// 白名单选的是「漏一个 → 夹具缺字段 → 报错」这一侧，
 	// 而报错的载体就是这个列表。
-	want := []string{"accounts/brand_new", "positions/weird_field", "trades/mystery"}
+	want := []string{"accounts/brand_new", "positions/weird_field", "trades/mystery",
+		"orders/odd_key"}
 	got := strings.Join(f.Unclassified, " ")
 	for _, w := range want {
 		if !strings.Contains(got, w) {
@@ -102,8 +110,24 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 				"字段集漂移就此静默：得到 %v", w, f.Unclassified)
 		}
 	}
-	if len(f.Unclassified) != 3 {
-		t.Errorf("Unclassified 应恰好 3 个，得到 %d 个：%v", len(f.Unclassified), f.Unclassified)
+	if len(f.Unclassified) != 4 {
+		t.Errorf("Unclassified 应恰好 4 个，得到 %d 个：%v", len(f.Unclassified), f.Unclassified)
+	}
+
+	// —— 委托侧（20260909 新增）——
+	//
+	// ⚠️ 委托进夹具的理由：柜台的 volume_*_frozen_* 与 frozen_margin
+	// 都是「挂着的委托」的函数，而夹具里没有委托 ——
+	// 于是本库算出来的冻结拿什么去比都比不了。
+	o := f.Orders["o1"]
+	if o["volume_left"] != 2.0 {
+		t.Errorf("⚠️ 委托的 volume_left 没保留：%v —— 冻结量按它算，不是按委托量", o)
+	}
+	if o["offset"] != "CLOSETODAY" {
+		t.Errorf("⚠️ 委托的 offset 没保留 —— 冻的是今仓还是昨仓全靠它：%v", o)
+	}
+	if _, leaked := o["user_id"]; leaked {
+		t.Error("⚠️⚠️ 委托里的 user_id **进了夹具** —— 那是账户 UUID")
 	}
 }
 
@@ -115,7 +139,7 @@ func TestSanitizeCarriesTrades(t *testing.T) {
 	f := Sanitize(nil, nil, map[string]any{
 		"t1": map[string]any{"price": 3150.0, "volume": 1.0, "offset": "OPEN"},
 		"t2": map[string]any{"price": 3152.0, "volume": 1.0, "offset": "OPEN"},
-	}, nil, "20260908", "2026-09-08T13:00:00+08:00", "")
+	}, nil, nil, "20260908", "2026-09-08T13:00:00+08:00", "")
 	if len(f.Trades) != 2 {
 		t.Fatalf("⚠️ 成交没进夹具：%v", f.Trades)
 	}

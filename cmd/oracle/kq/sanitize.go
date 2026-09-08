@@ -150,6 +150,54 @@ var tradeDrop = map[string]string{
 	"broker_id":   "丢弃：经纪商标识",
 }
 
+// orderKeep 是**委托**截面的白名单。
+//
+// ⚠️ 委托此前不进夹具，而那让**冻结**这一整块永远不可对拍：
+// 柜台的 `volume_*_frozen_*` 与 `frozen_margin` 都是「挂着的委托」的函数，
+// 而夹具里没有委托 —— 于是本库算出来的冻结拿什么去比都比不了。
+// 20260909 加冻结实现时，破坏验证当场演示了这一点：
+// 把冻结合计改成漏掉昨仓那部分，**全套测试照样绿**，
+// 因为没有任何一份夹具能走到那一支。
+//
+// ⚠️ 保留的每一项都是**数量、价格或状态**，无标识性；
+// 账户 / 投资者 / 经纪商那几个标识一律进 orderDrop。
+var orderKeep = map[string]string{
+	"order_id":            "保留：委托编号，同一笔的幂等键；也是成交记录里 order_id 的对端",
+	"exchange_order_id":   "保留：交易所委托号",
+	"exchange_id":         "保留：交易所",
+	"instrument_id":       "保留：合约",
+	"direction":           "保留：买卖方向",
+	"offset":              "保留：开平标志 —— ⚠️ 冻的是今仓还是昨仓全靠它",
+	"volume_orign":        "保留：委托手数（DIFF 的拼写就是 orign，不是 origin）",
+	"volume_left":         "保留：**未成交手数** —— 冻结量按它算，不是按委托量",
+	"limit_price":         "保留：委托价",
+	"price_type":          "保留：价格类型（限价/市价）",
+	"volume_condition":    "保留：成交量类型",
+	"time_condition":      "保留：有效期类型",
+	"hedge_flag":          "保留：投机套保标志 —— 它决定保证金率",
+	"status":              "保留：ALIVE / FINISHED",
+	"last_msg":            "保留：**拒因原话** —— 实验 6 的全部产出都在这个字段上",
+	"insert_date_time":    "保留：报入时刻（纳秒）",
+	"is_dead":             "保留：是否已终结",
+	"is_online":           "保留：是否已报入交易所",
+	"is_error":            "保留：是否出错",
+	"seqno":               "保留：序号",
+	"frozen_margin":       "保留：**这一笔冻结的保证金** —— 与本库 order.Frozen.Margin 对拍",
+	"frozen_commission":   "保留：这一笔冻结的手续费",
+	"frozen_premium":      "保留：期权权利金冻结（本库不建模期权，但照实记）",
+	"exchange_trade_id":   "保留：若有",
+	"order_sys_id":        "保留：交易所系统号",
+	"insert_date_time_ns": "保留：报入时刻的另一种表示（若有）",
+}
+
+var orderDrop = map[string]string{
+	"user_id":     "丢弃：账户 UUID",
+	"investor_id": "丢弃：投资者代码",
+	"account_id":  "丢弃：账号标识",
+	"broker_id":   "丢弃：经纪商标识",
+	"user_key":    "丢弃：会话标识",
+}
+
 // quoteKeep 是行情截面的白名单。
 //
 // ⚠️ 行情进夹具的理由与成交同一条：**让夹具自足**。
@@ -210,6 +258,16 @@ type Fixture struct {
 	// 见 tradeKeep 的注释。
 	Trades map[string]map[string]any `json:"trades"`
 
+	// Orders 是**挂着与已终结的委托**。
+	//
+	// ⚠️ 它此前不进夹具，而那让**冻结**这一整块永远不可对拍：
+	// 柜台的 volume_*_frozen_* 与 frozen_margin 都是「挂着的委托」的函数。
+	// 见 orderKeep 的注释。
+	//
+	// ⚠️ omitempty：20260909 之前的夹具没有这个键，
+	// 而它们**仍然是有效的证据**，不该因为格式加了一项就作废。
+	Orders map[string]map[string]any `json:"orders,omitempty"`
+
 	// Unclassified 记录白名单与丢弃表都没见过的键。
 	//
 	// ⚠️ 它非空即判失败，不是警告。字段集漂移必须自己报出来，
@@ -222,7 +280,7 @@ type Fixture struct {
 //
 // ⚠️ quotes 应当**只含被观察的合约**，由调用方筛好再传进来。
 // 整份行情有几万个合约，而夹具是证据不是数据库。
-func Sanitize(account, positions, trades, quotes map[string]any,
+func Sanitize(account, positions, trades, quotes, orders map[string]any,
 	tradingDay, capturedAt, note string) *Fixture {
 	f := &Fixture{
 		TradingDay: tradingDay,
@@ -231,6 +289,7 @@ func Sanitize(account, positions, trades, quotes map[string]any,
 		Account:    map[string]any{},
 		Positions:  map[string]map[string]any{},
 		Trades:     map[string]map[string]any{},
+		Orders:     map[string]map[string]any{},
 		Quotes:     map[string]map[string]any{},
 	}
 	unknown := map[string]struct{}{}
@@ -282,6 +341,25 @@ func Sanitize(account, positions, trades, quotes map[string]any,
 			unknown["trades/"+k] = struct{}{}
 		}
 		f.Trades[id] = out
+	}
+
+	for id, raw := range orders {
+		o, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		out := map[string]any{}
+		for k, v := range o {
+			if _, ok := orderKeep[k]; ok {
+				out[k] = v
+				continue
+			}
+			if _, ok := orderDrop[k]; ok {
+				continue
+			}
+			unknown["orders/"+k] = struct{}{}
+		}
+		f.Orders[id] = out
 	}
 
 	for sym, raw := range quotes {

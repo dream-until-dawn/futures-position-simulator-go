@@ -70,6 +70,15 @@ type Fixture struct {
 	// 而它此前不在夹具里的任何地方 —— 拿夹具重算这三样，都要先去别处找一个数补进来，
 	// 而「别处」意味着那个数不属于这份证据，它可以被换掉而没人发现。
 	Quotes map[string]map[string]Value
+
+	// Orders 是委托截面（20260909 起）；HasOrders 区分
+	// 「这份夹具里没有挂着的委托」与「这份夹具根本没记委托」。
+	//
+	// ⚠️ 这个区分是冻结那一块能不能对拍的**前提**：
+	// 两种情形下冻结量都是 0，而前者可以拿去比，后者不能 ——
+	// 判成一致什么都不说明。20260909 之前的全部夹具都是后者。
+	Orders    map[string]map[string]Value
+	HasOrders bool
 	// SkippedTrades 记录解析不了的成交，带原因。
 	//
 	// ⚠️ 它不是警告而是**证据缺口**：少一笔成交，重放出来的持仓就是错的，
@@ -87,6 +96,11 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 		Positions  map[string]map[string]any `json:"positions"`
 		Trades     map[string]map[string]any `json:"trades"`
 		Quotes     map[string]map[string]any `json:"quotes"`
+		// Orders 是委托截面（20260909 起）。
+		//
+		// ⚠️ 老夹具没有这个键，而它们**仍然是有效的证据** ——
+		// 缺席解析成空 map，调用方靠 HasOrders 区分「没有委托」与「这份夹具没记委托」。
+		Orders map[string]map[string]any `json:"orders"`
 		// Unclassified 是落盘时白名单与丢弃表都没见过的键。
 		//
 		// ⚠️ 它非空意味着**这份夹具丢过字段**：那些键被记了名字，值没有留下。
@@ -116,6 +130,7 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 		Account:   map[string]Value{},
 		Positions: map[string]map[string]Value{},
 		Quotes:    map[string]map[string]Value{},
+		Orders:    map[string]map[string]Value{},
 	}
 	for k, v := range raw.Account {
 		val, err := toValue(v)
@@ -145,6 +160,22 @@ func Load(r io.Reader, path string) (*Fixture, error) {
 			out[k] = val
 		}
 		f.Quotes[sym] = out
+	}
+	// ⚠️ HasOrders 用 `raw.Orders != nil` 判，不用 `len() > 0`：
+	// 一份记了委托但此刻没有挂单的夹具，与一份根本没记委托的夹具，
+	// 在长度上都是 0 —— 而前者可以拿去对拍冻结（结论是「都是 0」），
+	// 后者不能。这正是本字段存在的全部理由。
+	f.HasOrders = raw.Orders != nil
+	for id, o := range raw.Orders {
+		out := map[string]Value{}
+		for k, v := range o {
+			val, err := toValue(v)
+			if err != nil {
+				return nil, fmt.Errorf("%s 的 orders[%s].%s：%w", path, id, k, err)
+			}
+			out[k] = val
+		}
+		f.Orders[id] = out
 	}
 	for id, t := range raw.Trades {
 		tr, err := toTrade(id, t, day)
