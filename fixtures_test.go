@@ -246,3 +246,132 @@ func f() {
 			len(hits), hits)
 	}
 }
+
+// TestFixtureNameMatchesTradingDay 断言夹具文件名里的日期就是它内部的 `trading_day`。
+//
+// ⚠️ 这条守的是一个此前**存在但从未写下来**的约定：
+// 夹具名用的是**交易日**，不是自然日。20 份夹具全都遵守它，靠的是我记得。
+//
+// 为什么它今晚会撞车：交易日 20260908 的夜盘物理上发生在**自然日 09-07 晚**，
+// 而今晚（自然日 09-08）的夜盘属于**交易日 20260909**。
+// 「2026-09-08 夜盘」这个标签因此同时指向两场不同的实验，
+// 而**没有任何字段能把它们分开**。
+//
+// ⚠️ 靠记得「这是交易日不是自然日」是**条目层**的解法；
+// 把它钉在文件名与内容的一致性上是**动作层**的解法。
+// 本仓库这一周已经因为这个复合标签制造过两次真实的日期错误
+// （实现方与评审方各一次），所以这里不用条目，用守卫。
+func TestFixtureNameMatchesTradingDay(t *testing.T) {
+	dateInName := regexp.MustCompile(`-(\d{8})(?:-\d+)?\.json$`)
+	checked := 0
+	for _, p := range fixturePaths(t) {
+		m := dateInName.FindStringSubmatch(filepath.ToSlash(p))
+		if m == nil {
+			t.Errorf("⚠️ 夹具 %s 的文件名里没有 8 位日期 —— 命名约定被破坏了", p)
+			continue
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var f struct {
+			TradingDay string `json:"trading_day"`
+		}
+		if err := json.Unmarshal(b, &f); err != nil {
+			t.Errorf("%s 不是合法 JSON：%v", p, err)
+			continue
+		}
+		if f.TradingDay == "" {
+			t.Errorf("⚠️ %s 里没有 trading_day —— 那这份证据属于哪一天无从判断", p)
+			continue
+		}
+		if m[1] != f.TradingDay {
+			t.Errorf("⚠️ %s 的文件名日期是 %s，而内部 trading_day 是 %s —— "+
+				"夹具名一律用**交易日**；若这里用了自然日，两场不同的实验会共用一个标签",
+				p, m[1], f.TradingDay)
+		}
+		checked++
+	}
+	if checked < 15 {
+		t.Fatalf("只核到 %d 份夹具 —— 太少，本条可能在空转", checked)
+	}
+}
+
+// TestSessionLabelsAreQualified 断言文档里凡是用 `YYYY-MM-DD` 给一场盘命名的，
+// **同一行**必须写明它是交易日还是自然日。
+//
+// ⚠️ 判据刻意窄：只卡「日期 + 夜盘/日盘」这一种搭配，因为歧义正是从这里来的。
+// 一个宽到会误报的检查会被关掉——那是 restatement-count.sh 注释里写过的死法。
+func TestSessionLabelsAreQualified(t *testing.T) {
+	// ⚠️ 判据不是「这一行提没提交易日」——第一版是那么写的，
+	// 于是 `probes.md` 那行「2026-09-08 夜盘（…，交易日 20260908）」被放过了：
+	// 限定词「交易日」贴在**另一个日期**上，而带横线那个仍然是无限定的自然日格式。
+	//
+	// 正确的判据是位置性的：**带横线的 YYYY-MM-DD 紧接「夜盘/日盘」时，
+	// 它前面必须直接写着「自然日」。** 交易日一律用紧凑形式（`交易日 20260908`），
+	// 两种格式因此在字面上就分得开，不靠读的人记得。
+	label := regexp.MustCompile(`(自然日\s*)?\d{4}-\d{2}-\d{2}\s*(夜盘|日盘)`)
+	files, err := filepath.Glob(filepath.Join("docs", "*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files = append(files, "README.md")
+	if len(files) < 5 {
+		t.Fatalf("只找到 %d 份文档 —— 本条可能在空转", len(files))
+	}
+	// ⚠️ 引号与反引号里的日期是**在讲这个形式**，不是在用它。
+	//
+	// 判据第一版没分这两者，于是它红在了自己的说明文字上——
+	// 那段正是要引用坏形式当反例的。这是本仓库第九次同一个形状，
+	// 而解法早就有了：**讲和用必须分开**（silent-risks.md 第 17 条）。
+	// 这里不加豁免标记，直接把「被引用的片段」从扫描视野里去掉。
+	quoted := regexp.MustCompile("「[^」]*」|`[^`]*`|“[^”]*”")
+	hits := 0
+	for _, f := range files {
+		for i, l := range readLines(t, f) {
+			l = quoted.ReplaceAllString(l, "")
+			if !label.MatchString(l) {
+				continue
+			}
+			for _, m := range label.FindAllStringSubmatch(l, -1) {
+				hits++
+				if m[1] == "" {
+					t.Errorf("⚠️ %s:%d 用带横线的日期直接命名一场盘（%q），"+
+						"而没有在它前面写「自然日」。交易日请用紧凑形式（交易日 20260908），"+
+						"两者在字面上就该分得开：%q",
+						f, i+1, strings.TrimSpace(m[0]), strings.TrimSpace(l))
+				}
+			}
+		}
+	}
+	t.Logf("扫到 %d 处「日期 + 盘」的搭配", hits)
+
+	// ⚠️ 上面那个数今天是 0：全库现在**没有一行**匹配这个搭配。
+	// 于是「自然日 + 日期 + 夜盘」这条**合法路径一次也没被走过**——
+	// 判据在真实文档上只证明了「不误报」，没证明「认得出合法写法」。
+	// 用合成样本把两个方向都走一遍。
+	for _, c := range []struct {
+		line string
+		ok   bool
+	}{
+		{"自然日 2026-09-07 夜盘的记录", true},
+		{"于 自然日 2026-09-07 日盘 建仓", true},
+		{"2026-09-07 夜盘的记录", false},
+		{"交易日 20260908 的夜盘", true},      // 紧凑形式压根不匹配，视为合法
+		{"见「2026-09-07 夜盘」这个坏例子", true}, // 引号里是**讲**，不是**用**
+		{"见 `2026-09-07 夜盘` 这个坏例子", true},
+	} {
+		stripped := quoted.ReplaceAllString(c.line, "")
+		bad := false
+		for _, m := range label.FindAllStringSubmatch(stripped, -1) {
+			if m[1] == "" {
+				bad = true
+			}
+		}
+		if bad == c.ok {
+			t.Errorf("⚠️ 判据对 %q 的判断反了：期望%s，实际%s", c.line,
+				map[bool]string{true: "放行", false: "拦下"}[c.ok],
+				map[bool]string{true: "拦下", false: "放行"}[bad])
+		}
+	}
+}

@@ -23,7 +23,7 @@
 
 | 键 | 值 | 出处 |
 |---|---|---|
-| `rules_pending` | **11** | [cn-futures-rules.md](./cn-futures-rules.md) §13。⚠️ 2026-09-08 夜盘先从 7 涨到 10（新增三条全部由实测本身暴露），当晚补测掉一条；送审后核实评审的重新框定时又撞出两条，净 +4 |
+| `rules_pending` | **11** | [cn-futures-rules.md](./cn-futures-rules.md) §13。⚠️ 交易日 20260908 的夜盘先从 7 涨到 10（新增三条全部由实测本身暴露），当晚补测掉一条；送审后核实评审的重新框定时又撞出两条，净 +4 |
 | `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` 未开始） |
 | `rules_measured` | **1** | 同上。⚠️ **夜盘量了一整晚，这个数只从 0 走到 1**，理由见下方 `kq_facts` |
 | `kq_facts` | **11** | 关于**快期模拟这个口子**的已实测事实，见下节 |
@@ -37,7 +37,7 @@
 
 ⚠️ **这一节与 `rules_measured` 是两回事，分开记是刻意的。**
 
-2026-09-08 夜盘量到下表这些，而 [cn-futures-rules.md](./cn-futures-rules.md) §13
+交易日 20260908 的夜盘量到下表这些，而 [cn-futures-rules.md](./cn-futures-rules.md) §13
 那张待实测表只划掉了一条。原因不是量得不够，是两个问题不同：
 
 > 这里记的是「**快期模拟怎么实现**」；§13 问的是「**规则是什么**」。
@@ -93,7 +93,7 @@
 | `docs/design.md` | 26 |
 | `docs/cn-futures-rules.md` | 39 |
 | `docs/fidelity.md` | 21 |
-| `docs/probes.md` | 32 |
+| `docs/probes.md` | 33 |
 | `docs/roadmap.md` | 20 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 10 |
