@@ -182,7 +182,7 @@ var orderKeep = map[string]string{
 	"is_online":           "保留：是否已报入交易所",
 	"is_error":            "保留：是否出错",
 	"seqno":               "保留：序号",
-	"frozen_margin":       "保留：**这一笔冻结的保证金** —— 与本库 order.Frozen.Margin 对拍",
+	"frozen_margin":       "保留：这一笔冻结的保证金。⚠️ 实测**柜台不发这个字段**（20260909 三份样本里都缺席）—— 留在白名单里是因为它哪天出现时不该被判成漂移；账户侧的 frozen_margin 是另一个字段，那个有",
 	"frozen_commission":   "保留：这一笔冻结的手续费",
 	"frozen_premium":      "保留：期权权利金冻结（本库不建模期权，但照实记）",
 	"exchange_trade_id":   "保留：若有",

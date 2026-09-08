@@ -70,11 +70,16 @@ type FreezeInput struct {
 //
 // ⚠️ **开仓冻金额、平仓冻手数**，而手续费两边都冻。
 //
-// ⚠️ 一处**未实测**的边界，写在这里而不是猜：
-// 平仓挂单**冻不冻保证金**，本库没有观测。持仓的保证金本来就占着，
-// 按 CTP 的模型平仓单不额外冻 —— 本函数照此实现（平仓单 Margin 取零），
-// 但那是**按模型**不是按实测。要测它得在挂平仓单前后各读一次
-// account.frozen_margin，而 20260909 那轮只盯了持仓侧的字段。
+// ⚠️ 那处曾经**未实测**的边界，20260909 有实测了：
+//
+//	平仓挂单的账户 frozen_margin      **0**（三份样本）—— 平仓不冻保证金
+//	平仓挂单的 frozen_commission      一笔的费额        —— 平仓**冻**手续费
+//
+// 与本函数原来**按 CTP 模型**的实现一致（持仓的保证金本来就占着）。
+// ⚠️ 记这一笔是因为「按模型实现」与「有实测支撑」是两种不同的可信度，
+// 而它们在代码上长得一模一样 —— 差别只在注释里。
+// 证据：testdata/probes/position-frozen-held-20260909-{7,8,9}.json，
+// 对拍见 TestFrozenAccountAgainstOracle。
 func FreezeOf(req Request, in FreezeInput) (Frozen, error) {
 	if req.Volume <= 0 {
 		return Frozen{}, fmt.Errorf("委托手数必须为正，得到 %d", req.Volume)
