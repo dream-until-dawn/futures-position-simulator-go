@@ -214,3 +214,108 @@ func mustRates(t *testing.T, product string) refdata.CommissionRates {
 	}
 	return r
 }
+
+// TestFrozenIsNotCopiedFromOracle 用**污染**证明本库不是在抄柜台。
+//
+// # 判据
+//
+// 「手续费由本库自己算，不抄柜台委托记录里的 frozen_commission」——
+// 这句话此前**只写在注释里**：测试查得了两侧相等，查不了这个数**从哪来**。
+// 而一次同义反复的对拍与一次真的对拍，在汇总行里长得一模一样。
+//
+// 污染把它变成一条机械断言：
+//
+//	把柜台那一侧的来源改成一个荒谬值，再算一遍
+//	  值不变  ⇒ 它不是抄来的
+//	  值跟着变 ⇒ 那就是循环论证
+//
+// ⚠️ 这条判据对**所有**「两侧可能同源」的对拍都适用，不只是冻结。
+// 本条由评审方 20260909 提出。
+func TestFrozenIsNotCopiedFromOracle(t *testing.T) {
+	poison := dd("999999")
+	checked, poisoned := 0, 0
+	for _, f := range loadAll(t) {
+		if !f.HasOrders {
+			continue
+		}
+		specs, ok := specsForOrders(t, f)
+		if !ok {
+			continue
+		}
+		clean, err := FrozenAccountOf(f, specs)
+		if err != nil {
+			continue // 缺输入的份数由上面那条测试报，这里不重复
+		}
+		// 复制一份，把柜台自报的两个金额字段改成荒谬值。
+		dirty := *f
+		dirty.Orders = map[string]map[string]Value{}
+		for id, o := range f.Orders {
+			cp := map[string]Value{}
+			for k, v := range o {
+				if k == "frozen_commission" || k == "frozen_margin" {
+					poisoned++
+					v = Value{Number: poison}
+				}
+				cp[k] = v
+			}
+			dirty.Orders[id] = cp
+		}
+		got, err := FrozenAccountOf(&dirty, specs)
+		if err != nil {
+			t.Errorf("⚠️ %s 污染之后算不出来了：%v —— "+
+				"那说明本库**读了**柜台自报的那两个字段", f.Path, err)
+			continue
+		}
+		checked++
+		if !got.Margin.Equal(clean.Margin) || !got.Commission.Equal(clean.Commission) {
+			t.Errorf("⚠️ %s 污染柜台自报的 frozen_* 之后，本库算出来的变了："+
+				"保证金 %s→%s、手续费 %s→%s —— **那就是循环论证**："+
+				"两侧本来就是同一个数，对拍等于拿一个数和它自己比",
+				f.Path, clean.Margin, got.Margin, clean.Commission, got.Commission)
+		}
+	}
+	t.Logf("污染对照：%d 份夹具，改掉 %d 处柜台自报的金额", checked, poisoned)
+	// ⚠️ 判别力两条，缺一条这个测试就是空转：
+	//   没有夹具可算   → 什么都没证
+	//   一处都没污染到 → 「改了也不变」是因为根本没改
+	if checked == 0 {
+		t.Skip("还没有算得出冻结的夹具 —— 污染对照待样本")
+	}
+	if poisoned == 0 {
+		t.Error("⚠️ 一处 frozen_* 都没污染到 —— " +
+			"「改了也不变」不成立，因为根本没改到东西。" +
+			"先确认委托记录里真的带着那两个字段（kq_facts 49）")
+	}
+}
+
+// specsForOrders 凑齐一份夹具里挂单涉及合约的规格；凑不齐就报 false。
+func specsForOrders(t *testing.T, f *Fixture) (map[string]Spec, bool) {
+	t.Helper()
+	syms, err := LiveOrderSymbols(f)
+	if err != nil {
+		return nil, false
+	}
+	specs := map[string]Spec{}
+	for _, sym := range syms {
+		mult, hasMult := multipliers[sym]
+		if _, hasPre := f.PreSettlement(sym); !hasPre || !hasMult {
+			return nil, false
+		}
+		inst, err := types.ParseSymbol(sym, f.TradingDay)
+		if err != nil {
+			return nil, false
+		}
+		product, _ := splitProduct(inst.Product)
+		rates, _, ok := ratesOf(product)
+		if !ok {
+			return nil, false
+		}
+		mr, ok := ratesFor(product)
+		if !ok {
+			return nil, false
+		}
+		specs[sym] = Spec{Multiplier: decimal.RequireFromString(mult),
+			Commission: rates, Margin: mr}
+	}
+	return specs, true
+}

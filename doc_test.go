@@ -712,6 +712,19 @@ func TestRulesPendingMatchesTable(t *testing.T) {
 		filepath.Join("docs", "cn-futures-rules.md"), "## 13.")
 }
 
+// TestRejectPriorityPairsMatchTable 断言「实测判出几对」与那张表一致。
+//
+// ⚠️ 这条守卫是被一次真实的不一致逼出来的：20260909 当天这个数从 3 涨到 4，
+// 而**五处复述里只有一处跟上了**（另有一处就在同一份 state.md 里，
+// 与新值自相矛盾）。而这个数说的正是「生产代码里有多少顺序是猜的」——
+// 它是那一批里最不该含糊的数字。
+//
+// 现在其余各处一律链接、不抄数，这里做机械核对。
+func TestRejectPriorityPairsMatchTable(t *testing.T) {
+	assertCountMatchesTable(t, "reject_priority_measured",
+		filepath.Join("docs", "state.md"), "## `reject_priority_measured`")
+}
+
 // TestKQFactsMatchesTable 断言 state.md 的 kq_facts 与它自己那张表的条数一致。
 //
 // ⚠️ 这条是**在 state.md 自己身上**栽了一次之后补的：
