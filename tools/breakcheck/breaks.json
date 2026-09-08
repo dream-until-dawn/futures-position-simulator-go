@@ -1274,5 +1274,28 @@
   "test": "TestValidateRejectsSloppyEntries",
   "want": "没有前缀：本该被拦下",
   "expect": "red"
+ },
+ {
+  "name": "116 主模块真的多一个第三方依赖（import 与 require 一起加）",
+  "dir": "",
+  "file": "view/view.go",
+  "old": "import (",
+  "new": "import (\n\t_ \"github.com/coder/websocket\"",
+  "also": [
+   {
+    "file": "go.mod",
+    "old": "require github.com/shopspring/decimal v1.4.0 // indirect",
+    "new": "require (\n\tgithub.com/coder/websocket v1.8.15\n\tgithub.com/shopspring/decimal v1.4.0 // indirect\n)"
+   },
+   {
+    "file": "go.sum",
+    "old": "github.com/shopspring/decimal v1.4.0 h1:",
+    "new": "github.com/coder/websocket v1.8.15 h1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=\ngithub.com/coder/websocket v1.8.15/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=\ngithub.com/shopspring/decimal v1.4.0 h1:"
+   }
+  ],
+  "pkg": "./",
+  "test": "TestMainModuleHasOneDependency",
+  "want": "而硬约束是**只有**",
+  "expect": "red"
  }
 ]

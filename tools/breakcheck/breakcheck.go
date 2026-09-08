@@ -60,10 +60,22 @@ type Break struct {
 	// Old 是锚点。⚠️ 必须在文件里**恰好出现一次**：
 	// 零次说明代码变了而这条没跟着改，多次说明改了不止一处 ——
 	// 两种情形下「破坏本身」都没按预期发生，那是零层。
-	Old  string `json:"old"`
-	New  string `json:"new"`
-	Pkg  string `json:"pkg"`
-	Test string `json:"test"`
+	Old string `json:"old"`
+	New string `json:"new"`
+	// Also 是**同一次破坏里要一起改的其余文件**。
+	//
+	// ⚠️ 它补的是一个被如实记过的洞：有些破坏**天然是多文件的**，
+	// 单文件工具表达不出来，于是那条守卫只能验一半。
+	// 典型是「主模块偷偷多一个第三方依赖」——
+	//
+	//	只加 import   go.mod 里没有 require → 编译失败，红的是编译器不是断言
+	//	只加 require  没有 import → 依赖不进 go list -deps，什么都不会变
+	//
+	// 两个都改才是真场景。⚠️ 每一个 Also 文件同样走「锚点恰好一次」
+	// 与「逐字节还原」两道检查 —— 多文件不是放宽，是把同样的严格铺开。
+	Also []AlsoEdit `json:"also,omitempty"`
+	Pkg  string     `json:"pkg"`
+	Test string     `json:"test"`
 	// Want 是期望在测试输出里出现的片段 —— 第三层：红在被测的那个性质上。
 	Want string `json:"want"`
 	// Expect 是 "red" 或 "green"。
@@ -203,48 +215,81 @@ func validate(bs []Break) error {
 	return nil
 }
 
+// AlsoEdit 是一次破坏里**同一批**的另一处改动。
+type AlsoEdit struct {
+	File string `json:"file"`
+	Old  string `json:"old"`
+	New  string `json:"new"`
+}
+
 func run(b Break) (verdict, detail string) {
 	// ⚠️ File 一律相对**仓库根**，而 go test 在 Dir 里跑。
 	// 两者的基准不同是刻意的：破坏改的是源码（按仓库定位），
 	// 测试跑的是模块（按模块定位）。混成一个会在嵌套模块上错。
-	orig, err := os.ReadFile(b.File)
-	if err != nil {
-		return "零层未成立", fmt.Sprintf("读不到 %s：%v", b.File, err)
+	edits := append([]AlsoEdit{{File: b.File, Old: b.Old, New: b.New}}, b.Also...)
+
+	// ⚠️ **先全部读、全部校验锚点，再动手写。**
+	//
+	// 一边写一边校验的话，第二个文件的锚点对不上时，第一个文件已经被改坏了 ——
+	// 那时要么靠 defer 还原（而还原路径此刻还没建立），要么留下一个改了一半的
+	// 工作树。多文件破坏里「改了一半」是最坏的状态：它既不是破坏也不是原状。
+	type staged struct {
+		file   string
+		orig   []byte
+		broken []byte
 	}
-	// ⚠️ 锚点在清单里一律写 LF，而**本仓库的换行是混的**：
-	// git 签出的文件是 CRLF，后来新建的是 LF。裸字节比对会让
-	// CRLF 文件上的每一条多行锚点都匹配不上 —— 而那报出来是「零层未成立」，
-	// 看起来像锚点写错了。实测踩过一次，查了很久才想到是换行。
-	old, broken := adaptEOL(string(orig), b.Old), adaptEOL(string(orig), b.New)
-	if n := strings.Count(string(orig), old); n != 1 {
-		hint := ""
-		if old != b.Old {
-			hint = "（该文件通篇 CRLF，锚点已按它转换过再找）"
+	var plan []staged
+	for _, e := range edits {
+		orig, err := os.ReadFile(e.File)
+		if err != nil {
+			return "零层未成立", fmt.Sprintf("读不到 %s：%v", e.File, err)
 		}
-		return "零层未成立", fmt.Sprintf(
-			"锚点在 %s 里出现 %d 次（要恰好 1 次）%s—— **破坏本身没发生**，"+
-				"下面无论红绿都不说明任何事", b.File, n, hint)
+		// ⚠️ 锚点在清单里一律写 LF，而**本仓库的换行是混的**：
+		// git 签出的文件是 CRLF，后来新建的是 LF。裸字节比对会让
+		// CRLF 文件上的每一条多行锚点都匹配不上 —— 而那报出来是「零层未成立」，
+		// 看起来像锚点写错了。实测踩过一次，查了很久才想到是换行。
+		old, broken := adaptEOL(string(orig), e.Old), adaptEOL(string(orig), e.New)
+		if n := strings.Count(string(orig), old); n != 1 {
+			hint := ""
+			if old != e.Old {
+				hint = "（该文件通篇 CRLF，锚点已按它转换过再找）"
+			}
+			return "零层未成立", fmt.Sprintf(
+				"锚点在 %s 里出现 %d 次（要恰好 1 次）%s—— **破坏本身没发生**，"+
+					"下面无论红绿都不说明任何事", e.File, n, hint)
+		}
+		plan = append(plan, staged{e.File, orig,
+			[]byte(strings.Replace(string(orig), old, broken, 1))})
 	}
-	if err := os.WriteFile(b.File, []byte(strings.Replace(string(orig), old, broken, 1)), 0o644); err != nil {
-		return "零层未成立", err.Error()
-	}
+
+	// ⚠️ defer **先装好再写**：装在写之后的话，第二个文件写失败时
+	// 第一个文件没有任何东西负责还原它。
 	defer func() {
-		if err := os.WriteFile(b.File, orig, 0o644); err != nil {
-			verdict = "⚠️ 还原失败"
-			detail = fmt.Sprintf("%s 没还原回去：%v —— 立刻 git checkout", b.File, err)
-			return
-		}
-		// ⚠️ 写回去了不等于还原了 —— 读回来逐字节比一次。
-		//
-		// 这一条比看起来重要：还原失败会让**后面每一条破坏**都跑在
-		// 一份被改坏的代码上，而它们的红绿从此不说明任何事。
-		back, rerr := os.ReadFile(b.File)
-		if rerr != nil || string(back) != string(orig) {
-			verdict = "⚠️ 还原失败"
-			detail = fmt.Sprintf("%s 写回去了但内容对不上（%v）—— "+
-				"⚠️ 后面每一条破坏都会跑在被改坏的代码上，立刻 git checkout", b.File, rerr)
+		for _, s := range plan {
+			if err := os.WriteFile(s.file, s.orig, 0o644); err != nil {
+				verdict = "⚠️ 还原失败"
+				detail = fmt.Sprintf("%s 没还原回去：%v —— 立刻 git checkout", s.file, err)
+				return
+			}
+			// ⚠️ 写回去了不等于还原了 —— 读回来逐字节比一次。
+			//
+			// 这一条比看起来重要：还原失败会让**后面每一条破坏**都跑在
+			// 一份被改坏的代码上，而它们的红绿从此不说明任何事。
+			back, rerr := os.ReadFile(s.file)
+			if rerr != nil || string(back) != string(s.orig) {
+				verdict = "⚠️ 还原失败"
+				detail = fmt.Sprintf("%s 写回去了但内容对不上（%v）—— "+
+					"⚠️ 后面每一条破坏都会跑在被改坏的代码上，立刻 git checkout",
+					s.file, rerr)
+				return
+			}
 		}
 	}()
+	for _, s := range plan {
+		if err := os.WriteFile(s.file, s.broken, 0o644); err != nil {
+			return "零层未成立", err.Error()
+		}
+	}
 
 	cmd := exec.Command("go", "test", b.Pkg, "-run", "^"+b.Test+"$", "-v")
 	cmd.Dir = b.Dir // 空串表示当前目录
