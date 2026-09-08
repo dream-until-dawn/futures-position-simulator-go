@@ -108,7 +108,17 @@ func run(url, products, out, raw, from string, timeout time.Duration) error {
 		return fmt.Errorf("一条都没命中 —— 品种写法可能不对（要交易所前缀，如 SHFE.rb）")
 	}
 
-	tabs, err := live.SessionTablesOf(syms)
+	// ⚠️ 只用**在市**合约推时段表。到期合约里有一批缺夜盘数据（实测 653 个 FUTURE
+	// 里 31 个），混进来会让同品种内出现多种时段表而无法汇总。
+	// 丢掉多少要打出来 —— 一个静默的筛选会让「上游数据不齐」这件事消失。
+	listed, dropped := live.Listed(syms)
+	fmt.Printf("在市合约 %d 个（丢掉已到期 %d 个）", len(listed), dropped)
+	fmt.Println()
+	if len(listed) == 0 {
+		return fmt.Errorf("一个在市合约都没有 —— 筛出来的全是到期合约，" +
+			"时段表推不出来；这与「上游没有这些品种」长得一样，所以这里报错")
+	}
+	tabs, err := live.SessionTablesOf(listed)
 	if err != nil {
 		return err
 	}

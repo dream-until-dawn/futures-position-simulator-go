@@ -163,6 +163,33 @@ func parseClock(s string) (refdata.ClockTime, error) {
 	return refdata.NewClockTime(h, m, sec)
 }
 
+// Listed 只留下**未到期**的合约，并报告丢掉了多少。
+//
+// ⚠️ 这个筛选是实测逼出来的，不是洁癖。
+//
+// 拉 5 个品种得到 653 个 FUTURE 合约，其中 **31 个没有夜盘时段**
+// （7 个是空数组、1 个是键缺失，两种形态本身就说明这批数据不齐）。
+// 它们**全部已到期** —— 但反过来不成立：`SHFE.rb1601` 也已到期，却有完整夜盘。
+//
+// ⚠️ **为什么这 31 个到期合约缺夜盘数据，这份数据回答不了。**
+// 能确定的只有：只用未到期合约时，同品种内的时段表**完全一致**（5 个品种各 1 种）；
+// 混入到期合约时，同品种内出现 3 种，冲突检查会拒绝汇总。
+//
+// 所以取舍是：**推时段表只用在市合约**。历史时段若将来要用，
+// 那是另一件事 —— 它需要一个带时间维度的时段表，而本库目前没有。
+func Listed(syms map[string]Symbol) (map[string]Symbol, int) {
+	out := make(map[string]Symbol, len(syms))
+	dropped := 0
+	for k, v := range syms {
+		if v.Expired {
+			dropped++
+			continue
+		}
+		out[k] = v
+	}
+	return out, dropped
+}
+
 // SessionTablesOf 从一批条目里按**品种**汇总时段表，并检查同品种内是否一致。
 //
 // ⚠️ 同一品种的不同月份合约，时段表应当相同。若不同，那要么是上游数据有问题，

@@ -436,3 +436,34 @@ func TestAgNightSessionCrossesMidnight(t *testing.T) {
 		}
 	}
 }
+
+// TestListedDropsExpired 断言只留在市合约，并把丢掉的数量报出来。
+//
+// ⚠️ 这个筛选是实测逼出来的：拉 5 个品种得到 653 个 FUTURE，
+// 其中 **31 个没有夜盘时段**（7 个空数组、1 个键缺失 —— 两种形态本身就说明数据不齐），
+// 它们全部已到期。但反过来不成立：SHFE.rb1601 也已到期，却有完整夜盘。
+// **为什么这 31 个缺数据，那份数据回答不了**；能确定的是只用在市合约时
+// 同品种内时段表完全一致，混入到期合约则出现三种。
+func TestListedDropsExpired(t *testing.T) {
+	syms := map[string]Symbol{
+		"SHFE.rb2701": {InstrumentID: "SHFE.rb2701", Expired: false},
+		"SHFE.rb2705": {InstrumentID: "SHFE.rb2705", Expired: false},
+		"SHFE.rb1601": {InstrumentID: "SHFE.rb1601", Expired: true},
+		"SHFE.rb2002": {InstrumentID: "SHFE.rb2002", Expired: true},
+	}
+	got, dropped := Listed(syms)
+	if len(got) != 2 || dropped != 2 {
+		t.Errorf("应留 2 个丢 2 个，实为留 %d 丢 %d", len(got), dropped)
+	}
+	if _, ok := got["SHFE.rb1601"]; ok {
+		t.Error("⚠️ 到期合约没被丢掉")
+	}
+	// ⚠️ 丢掉的数量必须被返回：一个静默的筛选会让「上游数据不齐」这件事消失。
+	if _, zero := Listed(map[string]Symbol{}); zero != 0 {
+		t.Errorf("空输入的丢弃计数应为 0，实为 %d", zero)
+	}
+	all, d2 := Listed(map[string]Symbol{"x": {InstrumentID: "x", Expired: true}})
+	if len(all) != 0 || d2 != 1 {
+		t.Errorf("全是到期合约时应留 0 丢 1，实为留 %d 丢 %d", len(all), d2)
+	}
+}

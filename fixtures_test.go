@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -154,6 +155,14 @@ func credentialReadsIn(t *testing.T, filename string, src any) []string {
 // 多出来的那棵树不会报错，只会安静地成为第二份「证据」——
 // 将来有人拿它对拍，对的是一份来路不明的数。
 func TestNoStrayFixtureTrees(t *testing.T) {
+	// ⚠️ 已登记的夹具树。每加一棵都要写明**它装什么、为什么不能并进已有的那棵**。
+	//
+	// 这不是放宽，是把「多出来一棵树」从「默认可疑」改成「登记过的例外」——
+	// 而登记这个动作本身要求人说出理由，那正是这条守卫的价值所在。
+	known := map[string]string{
+		"testdata/probes":  "柜台截面夹具：实测产出，脱敏后入库",
+		"testdata/refdata": "上游规则数据：来自天勤合约字典，不是柜台实测，证据等级不同",
+	}
 	const canonical = "testdata/probes"
 	var stray []string
 	seenCanonical := 0
@@ -175,6 +184,9 @@ func TestNoStrayFixtureTrees(t *testing.T) {
 			seenCanonical++
 			return nil
 		}
+		if _, ok := known[dir]; ok {
+			return nil
+		}
 		if !strings.Contains(dir, "testdata") {
 			return nil
 		}
@@ -191,8 +203,10 @@ func TestNoStrayFixtureTrees(t *testing.T) {
 			"两种情形下本条都会「通过」，所以这里必须失败", canonical)
 	}
 	if len(stray) > 0 {
-		t.Errorf("⚠️ %s 之外还有 %d 份夹具：%v", canonical, len(stray), stray)
-		t.Error("   落盘目录很可能配成了相对路径，随 cwd 另开了一棵树")
+		t.Errorf("⚠️ 已登记的夹具树之外还有 %d 份数据：%v", len(stray), stray)
+		t.Errorf("   已登记的是 %v", keysOf(known))
+		t.Error("   要么落盘目录配成了相对路径随 cwd 另开了一棵树，" +
+			"要么这是一棵新树 —— 后者请登记并写明它装什么、为什么不能并进已有的那棵")
 	}
 }
 
@@ -441,4 +455,13 @@ func TestCommittedFixturesStillExist(t *testing.T) {
 		}
 	}
 	t.Logf("已提交夹具 %d 份，缺失 %d 份", len(committed), missing)
+}
+
+func keysOf(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

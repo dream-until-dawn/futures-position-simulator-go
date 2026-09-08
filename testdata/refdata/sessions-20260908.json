@@ -1,0 +1,127 @@
+{
+  "source": "https://openmd.shinnytech.com/t/md/symbols/latest.json",
+  "generated_at": "2026-09-08T12:47:53+08:00",
+  "note": "只含交易时段。⚠️ 交易日列表、PositionDateType、MaxMarginSideAlgorithm、涨跌幅比例与六个费率均**不在**本文件内，字典给不出。",
+  "session_tables": [
+    {
+      "exchange": "DCE",
+      "product": "i",
+      "day": [
+        {
+          "Start": "09:00:00",
+          "End": "10:15:00"
+        },
+        {
+          "Start": "10:30:00",
+          "End": "11:30:00"
+        },
+        {
+          "Start": "13:30:00",
+          "End": "15:00:00"
+        }
+      ],
+      "night": [
+        {
+          "Start": "21:00:00",
+          "End": "23:00:00"
+        }
+      ]
+    },
+    {
+      "exchange": "DCE",
+      "product": "m",
+      "day": [
+        {
+          "Start": "09:00:00",
+          "End": "10:15:00"
+        },
+        {
+          "Start": "10:30:00",
+          "End": "11:30:00"
+        },
+        {
+          "Start": "13:30:00",
+          "End": "15:00:00"
+        }
+      ],
+      "night": [
+        {
+          "Start": "21:00:00",
+          "End": "23:00:00"
+        }
+      ]
+    },
+    {
+      "exchange": "SHFE",
+      "product": "ag",
+      "day": [
+        {
+          "Start": "09:00:00",
+          "End": "10:15:00"
+        },
+        {
+          "Start": "10:30:00",
+          "End": "11:30:00"
+        },
+        {
+          "Start": "13:30:00",
+          "End": "15:00:00"
+        }
+      ],
+      "night": [
+        {
+          "Start": "21:00:00",
+          "End": "02:30:00"
+        }
+      ]
+    },
+    {
+      "exchange": "SHFE",
+      "product": "cu",
+      "day": [
+        {
+          "Start": "09:00:00",
+          "End": "10:15:00"
+        },
+        {
+          "Start": "10:30:00",
+          "End": "11:30:00"
+        },
+        {
+          "Start": "13:30:00",
+          "End": "15:00:00"
+        }
+      ],
+      "night": [
+        {
+          "Start": "21:00:00",
+          "End": "01:00:00"
+        }
+      ]
+    },
+    {
+      "exchange": "SHFE",
+      "product": "rb",
+      "day": [
+        {
+          "Start": "09:00:00",
+          "End": "10:15:00"
+        },
+        {
+          "Start": "10:30:00",
+          "End": "11:30:00"
+        },
+        {
+          "Start": "13:30:00",
+          "End": "15:00:00"
+        }
+      ],
+      "night": [
+        {
+          "Start": "21:00:00",
+          "End": "23:00:00"
+        }
+      ]
+    }
+  ]
+}

@@ -12,25 +12,30 @@ import (
 func testCalendar(t *testing.T) *Calendar {
 	t.Helper()
 	days := []types.TradingDay{20260907, 20260908, 20260909, 20260910, 20260911, 20260914}
+	// ⚠️ 日盘是**三段**，10:15–10:30 中间还有一次休市。
+	//
+	// 第一版我照文档填成了 09:00–11:30 一段 —— 那是猜的，而且是错的。
+	// 这里的取值来自天勤合约字典的实测拉取（testdata/refdata/sessions-20260908.json）。
+	// ⚠️ 少掉中间那次休市的后果：10:20 会被算成「在日盘内」，
+	// 而它其实不属于任何交易时段 —— 引擎在那一刻推进 K 线不会被拦住。
+	dayReal := []Session{
+		{MustClockTime(9, 0, 0), MustClockTime(10, 15, 0)},
+		{MustClockTime(10, 30, 0), MustClockTime(11, 30, 0)},
+		{MustClockTime(13, 30, 0), MustClockTime(15, 0, 0)},
+	}
 	rb := SessionTable{
 		Exchange: types.SHFE, Product: "rb",
-		Day: []Session{
-			{MustClockTime(9, 0, 0), MustClockTime(11, 30, 0)},
-			{MustClockTime(13, 30, 0), MustClockTime(15, 0, 0)},
-		},
+		Day:   dayReal,
 		Night: []Session{{MustClockTime(21, 0, 0), MustClockTime(23, 0, 0)}},
 	}
-	cu := SessionTable{ // 跨零点：21:00 → 01:00
+	cu := SessionTable{ // 实测：铜夜盘 21:00 → 次日 01:00（字典写作 25:00:00）
 		Exchange: types.SHFE, Product: "cu",
-		Day: []Session{
-			{MustClockTime(9, 0, 0), MustClockTime(11, 30, 0)},
-			{MustClockTime(13, 30, 0), MustClockTime(15, 0, 0)},
-		},
+		Day:   dayReal,
 		Night: []Session{{MustClockTime(21, 0, 0), MustClockTime(1, 0, 0)}},
 	}
 	ap := SessionTable{ // 无夜盘
 		Exchange: types.CZCE, Product: "AP",
-		Day: []Session{{MustClockTime(9, 0, 0), MustClockTime(15, 0, 0)}},
+		Day: dayReal,
 	}
 	c, err := NewCalendar(days, []SessionTable{rb, cu, ap}, nil)
 	if err != nil {
@@ -103,14 +108,17 @@ func TestTradingDayAtRefusesToGuess(t *testing.T) {
 		msgHas  string
 	}{
 		{"收盘后、夜盘前", "2026-09-08 19:00:00", types.SHFE, "rb", "不落在"},
+		// ⚠️ 上午休市（10:15–10:30）：实测日盘是三段，这一刻不属于任何时段。
+		// 第一版把日盘写成 09:00–11:30 一段时，它会被算成「在日盘内」。
+		{"上午休市", "2026-09-08 10:20:00", types.SHFE, "rb", "不落在"},
 		{"夜盘收盘那一秒", "2026-09-08 23:00:00", types.SHFE, "rb", "不落在"},
 		{"无夜盘品种的夜里", "2026-09-08 21:30:00", types.CZCE, "AP", "不落在"},
 		{"周六日盘时刻", "2026-09-12 10:00:00", types.SHFE, "rb", "不在交易日列表里"},
 		{"日历右端之外的夜盘", "2026-09-14 21:30:00", types.SHFE, "rb", "没有已知的交易日"},
 		{"没有时段表的品种", "2026-09-08 10:00:00", types.DCE, "m", "没有"},
 	}
-	if len(cases) != 6 {
-		t.Fatalf("用例 %d 条，应为 6", len(cases))
+	if len(cases) != 7 {
+		t.Fatalf("用例 %d 条，应为 7", len(cases))
 	}
 	for _, cs := range cases {
 		got, err := c.TradingDayAt(at(t, cs.when), cs.ex, cs.product)
