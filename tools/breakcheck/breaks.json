@@ -1039,5 +1039,29 @@
   "test": "TestSettleRespectsPositionDateType",
   "want": "它是逐笔对冲的基线，**永不改变**",
   "expect": "red"
+ },
+ {
+  "name": "95 消耗顺序守卫的样本量下界去掉",
+  "dir": "",
+  "file": "conformance/fixture/close_order_test.go",
+  "old": "\tif dceSections < 50 {",
+  "new": "\tif dceSections < 0 {",
+  "pkg": "./conformance/fixture/",
+  "test": "TestCloseOrderIsStructurallyUnmeasurable",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ 下界卡的是「大商所样本够不够多」，而现有样本 190 个远超 50 —— 去掉它当然还是绿。声明的盲区：这条下界只在**样本变少**时起作用（夹具被删、过滤条件写错），而那种情形今天不存在，所以破坏验证在这一条上**什么都证明不了**。它的价值是将来的，不是现在的。"
+ },
+ {
+  "name": "96 消耗顺序守卫把「大商所有昨仓」当成正常",
+  "dir": "",
+  "file": "conformance/fixture/close_order_test.go",
+  "old": "\t\t\t\tif h.IsPositive() {\n\t\t\t\t\tdceWithHistory++",
+  "new": "\t\t\t\tif h.IsNegative() {\n\t\t\t\t\tdceWithHistory++",
+  "pkg": "./conformance/fixture/",
+  "test": "TestCloseOrderIsStructurallyUnmeasurable",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ 手数不可能为负，所以把判据从「>0」改成「<0」之后计数照样是 0，本条照样绿。**声明的盲区**：这条测试断言的是「没有反例」，而一个恒假的判据与一个真的没有反例**长得一模一样**。真正能守住它的只有「大商所哪天出现昨仓」——那时正确的判据会红，而这个改坏的不会。破坏验证在这里只能演示盲区，不能消除它。"
  }
 ]
