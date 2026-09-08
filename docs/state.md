@@ -25,7 +25,7 @@
 |---|---|---|
 | `rules_pending` | **13** | [cn-futures-rules.md](./cn-futures-rules.md) §13。⚠️ 交易日 20260908 的夜盘先从 7 涨到 10（新增三条全部由实测本身暴露），当晚补测掉一条；送审后核实评审的重新框定时又撞出两条，净 +4；⚠️ 自然日 2026-09-08 日盘的破坏验证又撞出两条（第 13/14 条），**两条都是「本口子上分不开」而不是「没建模」** —— 一条声称的盲区被破坏演示过一次，才算确认它存在 |
 | `rules_wired` | `PositionDateType` | v0.3.0 起**接进 position**：`New` 带上它、`Settle` 按它分岔（`UseHistory` 滚今昨、`NoUseHistory` 只推进基线），零值**结算时**报错。⚠️ `New` 刻意不拦零值 —— 那会逼只重放、永不结算的调用方编一个值出来，而**一个逼人编数据的守卫比没有守卫更坏**：编出来的值会被后来的人当成实测值 |
-| `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `refdata/live` `refdata/exchange` `conformance` `conformance/fixture` `view` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` 未开始） |
+| `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `refdata/live` `refdata/exchange` `conformance` `conformance/fixture` `view` `order` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` 未开始） |
 | `rules_measured` | **1** | 同上。⚠️ **夜盘量了一整晚，这个数只从 0 走到 1**，理由见下方 `kq_facts` |
 | `kq_facts` | **40** | 关于**快期模拟这个口子**的已实测事实，见下节 |
 | `account_fields` | **23** = 保留 **21** + 丢弃 **2** | [probes.md](./probes.md) §6.2（DIFF 文档只列 18）。⚠️ **这个数此前只写「23」，没说它数的是哪一种**：柜台给 23 个键，夹具里保留 21 个（另 2 个是标识性字段，白名单显式丢弃）。对拍要对齐的是**保留的 21 个** —— 拿 23 去做完整性断言会永远差 2 个而查不出为什么 |
@@ -150,7 +150,7 @@
 | `docs/cn-futures-rules.md` | 39 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 68 |
-| `docs/roadmap.md` | 22 |
+| `docs/roadmap.md` | 23 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 10 |
 

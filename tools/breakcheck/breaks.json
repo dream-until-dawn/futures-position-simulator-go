@@ -1297,5 +1297,71 @@
   "test": "TestMainModuleHasOneDependency",
   "want": "而硬约束是**只有**",
   "expect": "red"
+ },
+ {
+  "name": "117 校验器缺输入时悄悄通过（不记 Unchecked）",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "\tskip := func(c Check, missing string) {\n\t\tres.Unchecked = append(res.Unchecked, Unchecked{c, missing})\n\t}",
+  "new": "\tskip := func(c Check, missing string) {}",
+  "pkg": "./order/",
+  "test": "TestMissingInputMeansUncheckedNotPassed",
+  "want": "**没有**落进 Unchecked",
+  "expect": "red"
+ },
+ {
+  "name": "118 OK() 不再要求全部查过",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "func (r Result) OK() bool { return r.Rejected == nil && r.FullyChecked() }",
+  "new": "func (r Result) OK() bool { return r.Rejected == nil }",
+  "pkg": "./order/",
+  "test": "TestMissingInputMeansUncheckedNotPassed",
+  "want": "项没查成，OK() 却是 true",
+  "expect": "red"
+ },
+ {
+  "name": "119 可平量合并校验（今昨不分）",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "\tcase types.CloseYesterday:\n\t\tif req.Volume > his {",
+  "new": "\tcase types.CloseYesterday:\n\t\tif req.Volume > his+today {",
+  "pkg": "./order/",
+  "test": "TestRejections",
+  "want": "平昨超过昨仓",
+  "expect": "red"
+ },
+ {
+  "name": "120 裸 CLOSE 改成按平昨处理",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "\t\treturn &Rejection{CheckClosable,\n\t\t\t\"收到裸 CLOSE（未声明平今还是平昨）—— \" +",
+  "new": "\t\tif req.Volume > his {\n\t\t\treturn &Rejection{CheckClosable, \"平昨超量\"}\n\t\t}\n\t\treturn nil\n\t\t//nolint\n\t\treturn &Rejection{CheckClosable,\n\t\t\t\"收到裸 CLOSE（未声明平今还是平昨）—— \" +",
+  "pkg": "./order/",
+  "test": "TestRejections",
+  "want": "裸 CLOSE",
+  "expect": "red"
+ },
+ {
+  "name": "121 拒因不按优先级排序（报哪个看运气）",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "\tsort.SliceStable(rejections, func(i, j int) bool {\n\t\treturn rejections[i].Check < rejections[j].Check\n\t})",
+  "new": "\tsort.SliceStable(rejections, func(i, j int) bool {\n\t\treturn rejections[i].Check > rejections[j].Check\n\t})",
+  "pkg": "./order/",
+  "test": "TestRejectionPriority",
+  "want": "应报优先级最高的",
+  "expect": "red"
+ },
+ {
+  "name": "122 Validate 在第一个拒绝处短路",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "\t// —— 7 可用资金 ——",
+  "new": "\tif len(rejections) > 0 {\n\t\tres.Rejected = &rejections[0]\n\t\treturn res\n\t}\n\t// —— 7 可用资金 ——",
+  "pkg": "./order/",
+  "test": "TestValidateDoesNotShortCircuit",
+  "want": "那说明 Validate 短路了",
+  "expect": "red"
  }
 ]
