@@ -102,6 +102,8 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expYdVsHis(ctx)
 	case "position-date-type":
 		return r.expPositionDateType(ctx)
+	case "position-frozen":
+		return r.expPositionFrozen(ctx)
 	case "fee-predict":
 		return r.expFeePredict(ctx)
 	case "avg-price":

@@ -685,5 +685,94 @@
   "test": "TestLimitRatioFromQuotes",
   "want": "没有任何 (比例, 取整) 组合",
   "expect": "red"
+ },
+ {
+  "name": "63 usage 里删掉一个能跑的实验",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/main.go",
+  "old": "  position-date-type  这个合约区不区分今昨仓（只能靠柜台行为测，字典里没有）\n",
+  "new": "",
+  "pkg": "./",
+  "test": "TestUsageListsEveryExperiment",
+  "want": "没写进 usage",
+  "expect": "red"
+ },
+ {
+  "name": "64 把「尚未实现」的实验偷偷接上分派表",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/runner.go",
+  "old": "\tcase \"position-frozen\":\n\t\treturn r.expPositionFrozen(ctx)\n",
+  "new": "\tcase \"position-frozen\":\n\t\treturn r.expPositionFrozen(ctx)\n\tcase \"fee-rounding\":\n\t\treturn r.expStatus(ctx)\n",
+  "pkg": "./",
+  "test": "TestUsageListsEveryExperiment",
+  "want": "但分派表里**能跑**",
+  "expect": "red"
+ },
+ {
+  "name": "65 挑可平边时改成昨优先",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_position_frozen.go",
+  "old": "\tfor _, c := range cands {\n\t\tif c.offset == kq.CloseToday {\n\t\t\treturn c, nil\n\t\t}\n\t}",
+  "new": "\tfor _, c := range cands {\n\t\tif c.offset == kq.Close {\n\t\t\treturn c, nil\n\t\t}\n\t}",
+  "pkg": "./probe/",
+  "test": "TestClosableSide",
+  "want": "本次实验白跑",
+  "expect": "red"
+ },
+ {
+  "name": "66 平仓委托方向不取反",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_position_frozen.go",
+  "old": "\tif c.dir == kq.Buy {\n\t\treturn kq.Sell\n\t}\n\treturn kq.Buy\n}",
+  "new": "\treturn c.dir\n}",
+  "pkg": "./probe/",
+  "test": "TestClosableSide",
+  "want": "方向搞反会在双向持仓上",
+  "expect": "red"
+ },
+ {
+  "name": "67 持仓字段读不到时当成零",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_position_frozen.go",
+  "old": "\t\tif !okT || !okH {\n\t\t\t// ⚠️ 读不到不当成零：那会让判据在一个未知的前提上跑。\n\t\t\tcontinue\n\t\t}",
+  "new": "\t\t_, _ = okT, okH",
+  "pkg": "./probe/",
+  "test": "TestClosableSide",
+  "want": "本该报错，却选了",
+  "expect": "red"
+ },
+ {
+  "name": "68 冻结渲染把「无值」也当零折叠掉",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_position_frozen.go",
+  "old": "\t\tif v == \"0.0000\" {\n\t\t\tcontinue\n\t\t}",
+  "new": "\t\tif v == \"0.0000\" || v == \"-\" {\n\t\t\tcontinue\n\t\t}",
+  "pkg": "./probe/",
+  "test": "TestFmtFrozenKeepsNonZero",
+  "want": "被吞掉了",
+  "expect": "red"
+ },
+ {
+  "name": "69 下单限价换成写死的数（FarPrice 仍留在日志里）",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_position_frozen.go",
+  "old": "\t\tLimitPrice: q.FarPrice(pick.orderDir()),",
+  "new": "\t\tLimitPrice: 1.0,",
+  "pkg": "./probe/",
+  "test": "TestPositionFrozenLimitPriceIsFar",
+  "want": "不是 FarPrice 算出来的",
+  "expect": "red"
+ },
+ {
+  "name": "70 【期望仍绿】waitFrozen 不再识别拒单",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/probe/exp_position_frozen.go",
+  "old": "\t\tif st, found := cli.OrderOf(orderID); found &&\n\t\t\tstrings.EqualFold(st.Status, \"FINISHED\") {\n\t\t\treturn cur, orderFinished\n\t\t}",
+  "new": "",
+  "pkg": "./probe/",
+  "test": "TestPositionFrozen",
+  "want": "",
+  "expect": "green",
+  "why": "删掉这一段之后，柜台拒单会走到 timedOut，于是被记成「该柜台不在持仓侧记冻结手数」——一条关于柜台的**错误结论**，而它看起来与真结论一模一样。全套单测照样绿。⚠️ 这是本实验声明的盲区：waitFrozen 的三态只有连着真柜台才验得了，单测这一层覆盖不到它。跑 position-frozen 时必须**亲眼看那三行日志分支**，不能只看它没报错。"
  }
 ]
