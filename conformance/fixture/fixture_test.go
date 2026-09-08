@@ -467,6 +467,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	totals := map[conformance.Verdict]int{}
 	failedFields := map[string]int{}
 	samples, withMargin, skippedHistory := 0, 0, 0
+	withFrozen := 0
 	exchanges := map[types.Exchange]bool{}
 	fieldCounts := map[int][]key{}
 
@@ -521,6 +522,22 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 					}
 				}
 			}
+			// ⚠️ 冻结只在**这份夹具记了委托**时给。
+			//
+			// 老夹具（20260909 之前）没记委托，那时「没有挂单」与
+			// 「没记委托」在数上都是 0 —— 不给，让 view 渲染成「未实现」，
+			// 而不是拿一个 0 去比出一次空洞的一致。
+			//
+			// ⚠️ 裸 CLOSE 按快期实测语义解释（kq_facts 32），
+			// 那是一个**显式**选择，换口子要重新量。
+			if fl, fs, has, ferr := FrozenOf(f, sym, NakedCloseIsYesterday); ferr != nil {
+				t.Errorf("⚠️ %s %s 算冻结失败：%v", f.Path, sym, ferr)
+			} else if has {
+				in.HasFrozen = true
+				in.FrozenLongToday, in.FrozenLongHistory = fl.VolumeToday, fl.VolumeHistory
+				in.FrozenShortToday, in.FrozenShortHistory = fs.VolumeToday, fs.VolumeHistory
+				withFrozen++
+			}
 			lib, err := view.PositionOf(p, in)
 			if err != nil {
 				t.Errorf("%s %s 渲染失败：%v", f.Path, sym, err)
@@ -549,8 +566,15 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		}
 	}
 
-	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家；其中 %d 个接上了保证金",
-		samples, len(exchanges), withMargin)
+	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家；其中 %d 个接上了保证金、%d 个接上了冻结",
+		samples, len(exchanges), withMargin, withFrozen)
+	// ⚠️ 冻结这一块 20260909 才有第一份证据。这个数是 0 时，
+	// volume_*_frozen_* 三个字段全部落在「未实现」—— 那是**如实**的，
+	// 不是缺陷；但它同时意味着那三个字段的实现没被验过。
+	if withFrozen == 0 {
+		t.Log("ⓘ 没有一个样本接上冻结 —— volume_*_frozen_* 三个字段" +
+			"目前**没有证据支撑**。要一份记了委托的夹具（20260909 起才有）")
+	}
 	if skippedHistory > 0 {
 		// ⚠️ 这个数从 0 变成非 0，说明**第一份带昨仓的夹具进来了** ——
 		// 那是个里程碑，不是故障：本项目最核心那对区分要等它才可观测。
