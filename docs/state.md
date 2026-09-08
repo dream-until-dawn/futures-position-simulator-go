@@ -23,7 +23,7 @@
 
 | 键 | 值 | 出处 |
 |---|---|---|
-| `rules_pending` | **11** | [cn-futures-rules.md](./cn-futures-rules.md) §13。⚠️ 交易日 20260908 的夜盘先从 7 涨到 10（新增三条全部由实测本身暴露），当晚补测掉一条；送审后核实评审的重新框定时又撞出两条，净 +4 |
+| `rules_pending` | **13** | [cn-futures-rules.md](./cn-futures-rules.md) §13。⚠️ 交易日 20260908 的夜盘先从 7 涨到 10（新增三条全部由实测本身暴露），当晚补测掉一条；送审后核实评审的重新框定时又撞出两条，净 +4；⚠️ 自然日 2026-09-08 日盘的破坏验证又撞出两条（第 13/14 条），**两条都是「本口子上分不开」而不是「没建模」** —— 一条声称的盲区被破坏演示过一次，才算确认它存在 |
 | `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `refdata/live` `refdata/exchange` `conformance` `conformance/fixture` `view` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` 未开始） |
 | `rules_measured` | **1** | 同上。⚠️ **夜盘量了一整晚，这个数只从 0 走到 1**，理由见下方 `kq_facts` |
 | `kq_facts` | **20** | 关于**快期模拟这个口子**的已实测事实，见下节 |
@@ -115,7 +115,7 @@
 | `docs/design.md` | 28 |
 | `docs/cn-futures-rules.md` | 39 |
 | `docs/fidelity.md` | 21 |
-| `docs/probes.md` | 49 |
+| `docs/probes.md` | 54 |
 | `docs/roadmap.md` | 20 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 10 |
