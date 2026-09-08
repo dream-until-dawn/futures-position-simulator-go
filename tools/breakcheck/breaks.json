@@ -1479,8 +1479,8 @@
   "name": "133 已终结的委托也算进冻结",
   "dir": "",
   "file": "conformance/fixture/frozen.go",
-  "old": "\t\tif !alive {\n\t\t\tcontinue\n\t\t}",
-  "new": "\t\t_ = alive",
+  "old": "\t\tif !alive {\n\t\t\tcontinue\n\t\t}\n\t\tif sym, _ := textOf(o, \"exchange_id\", \"instrument_id\"); sym != symbol {",
+  "new": "\t\t_ = alive\n\t\tif sym, _ := textOf(o, \"exchange_id\", \"instrument_id\"); sym != symbol {",
   "pkg": "./conformance/fixture/",
   "test": "TestFrozenOfSidesAndDates",
   "want": "合计冻结",
@@ -1574,6 +1574,28 @@
   "pkg": "./",
   "test": "TestNoStaleForbiddenPhrases",
   "want": "出现禁语「文档阶段，尚无实现」",
+  "expect": "red"
+ },
+ {
+  "name": "142 金额侧冻结把已终结的委托也算进来",
+  "dir": "",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tif !alive {\n\t\t\tcontinue\n\t\t}\n\t\tleft, ok := numberOf(o, \"volume_left\")\n\t\tif !ok || !left.IsPositive() {\n\t\t\tcontinue\n\t\t}\n\t\tsym, ok := textOf(o, \"exchange_id\", \"instrument_id\")\n\t\tif !ok {\n\t\t\treturn decimal.Zero, decimal.Zero, fmt.Errorf(\"委托 %s 读不出合约\", id)\n\t\t}",
+  "new": "\t\t_ = alive\n\t\tleft, ok := numberOf(o, \"volume_left\")\n\t\tif !ok || !left.IsPositive() {\n\t\t\tcontinue\n\t\t}\n\t\tsym, ok := textOf(o, \"exchange_id\", \"instrument_id\")\n\t\tif !ok {\n\t\t\treturn decimal.Zero, decimal.Zero, fmt.Errorf(\"委托 %s 读不出合约\", id)\n\t\t}",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenTotals",
+  "want": "是不是被算进来了",
+  "expect": "red"
+ },
+ {
+  "name": "143 开仓挂单的冻结保证金静默当成 0",
+  "dir": "",
+  "file": "conformance/fixture/frozen.go",
+  "old": "\t\tif off == types.Open {\n\t\t\treturn decimal.Zero, decimal.Zero, fmt.Errorf(\n\t\t\t\t\"⚠️ 委托 %s 是**开仓挂单**，它要冻保证金 —— \"+",
+  "new": "\t\tif off == types.Open {\n\t\t\tcontinue\n\t\t}\n\t\tif false {\n\t\t\treturn decimal.Zero, decimal.Zero, fmt.Errorf(\n\t\t\t\t\"⚠️ 委托 %s 是**开仓挂单**，它要冻保证金 —— \"+",
+  "pkg": "./conformance/fixture/",
+  "test": "TestFrozenTotals",
+  "want": "开仓挂单竟然算出了冻结",
   "expect": "red"
  }
 ]

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
+	"github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -169,3 +171,68 @@ const (
 	// 用它意味着你在对拍**那个口子**。换口子时要重新量。
 	NakedCloseIsYesterday
 )
+
+// frozenTotals 算一份夹具里**全部挂着的委托**冻结的金额合计。
+//
+// ⚠️ 手续费由本库自己算（fee.Compute，基准是昨结算价），
+// **不抄**柜台委托记录里的 frozen_commission —— 抄了就是同义反复：
+// 两侧变成同一个数，而一次同义反复的对拍与一次真的对拍，
+// 在汇总行里长得一模一样。
+//
+// ⚠️ 平仓单不冻保证金（20260909 实测：三份挂着平仓单的样本里
+// 账户 frozen_margin 恒为 0）。开仓单要冻，而本函数**遇到开仓挂单就报错** ——
+// 冻结保证金要保证金率与乘数，那是调用方的 Spec 里的东西，
+// 而本批样本里一笔开仓挂单都没有。**没见过的情形不猜**。
+func frozenTotals(f *Fixture, specs map[string]Spec) (margin, commission decimal.Decimal, err error) {
+	margin, commission = decimal.Zero, decimal.Zero
+	for id, o := range f.Orders {
+		alive, ok := aliveOf(o)
+		if !ok {
+			return decimal.Zero, decimal.Zero,
+				fmt.Errorf("委托 %s 没有 status 字段", id)
+		}
+		if !alive {
+			continue
+		}
+		left, ok := numberOf(o, "volume_left")
+		if !ok || !left.IsPositive() {
+			continue
+		}
+		sym, ok := textOf(o, "exchange_id", "instrument_id")
+		if !ok {
+			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 读不出合约", id)
+		}
+		_, off, err := dirOffsetOf(o)
+		if err != nil {
+			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s：%w", id, err)
+		}
+		if off == types.Open {
+			return decimal.Zero, decimal.Zero, fmt.Errorf(
+				"⚠️ 委托 %s 是**开仓挂单**，它要冻保证金 —— "+
+					"而本函数没有实现那一支：本批样本里一笔都没有，"+
+					"**没见过的情形不猜**。要支持它得把保证金率接进来", id)
+		}
+		spec, ok := specs[sym]
+		if !ok {
+			return decimal.Zero, decimal.Zero,
+				fmt.Errorf("委托 %s 的合约 %s 没有规格", id, sym)
+		}
+		pre, ok := f.PreSettlement(sym)
+		if !ok {
+			return decimal.Zero, decimal.Zero,
+				fmt.Errorf("委托 %s 的合约 %s 没有昨结算价 —— 手续费基准缺失", id, sym)
+		}
+		// 裸 CLOSE 在金额上与平昨等价（手续费一样收、保证金一样不冻），
+		// 所以这里当平昨算是安全的 —— 而**手数**那一侧不是，见 FrozenOf。
+		if off == types.Close {
+			off = types.CloseYesterday
+		}
+		c, err := fee.Compute(spec.Commission, off, pre, spec.Multiplier,
+			int(left.IntPart()), decimalx.NoRounding)
+		if err != nil {
+			return decimal.Zero, decimal.Zero, fmt.Errorf("委托 %s 算手续费：%w", id, err)
+		}
+		commission = commission.Add(c)
+	}
+	return margin, commission, nil
+}

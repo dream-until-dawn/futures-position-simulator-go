@@ -6,6 +6,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -135,4 +136,61 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 			"全零的一致什么都不说明：把整块冻结逻辑删掉，它照样一致", compared)
 	}
 	t.Logf("账户侧冻结对拍：比了 %d 个字段，其中本库算出非零的 %d 个", compared, nonZero)
+}
+
+// TestFrozenTotals 直测金额侧的冻结合计。
+//
+// ⚠️ 它是那段代码**唯一**的验证：Rebuild 里调用它的那一支在现有语料上
+// 跑不到（记了委托的夹具全都带昨仓，而 Rebuild 拒绝昨仓）。
+// 「有实现」与「实现被跑过」是两回事，而它们在代码上长得一模一样。
+func TestFrozenTotals(t *testing.T) {
+	specs := map[string]Spec{"SHFE.rb2701": {
+		Multiplier: dd("10"),
+		Commission: mustRates(t, "rb"),
+	}}
+	f := &Fixture{
+		HasOrders: true,
+		Quotes: map[string]map[string]Value{
+			"SHFE.rb2701": {"pre_settlement": {Number: dd("3163")}},
+		},
+		Orders: map[string]map[string]Value{
+			"a": withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+				"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "1"),
+			// 已终结的不算
+			"b": withLeft(ord("status", "FINISHED", "exchange_id", "SHFE",
+				"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "9"),
+		},
+	}
+	m, c, err := frozenTotals(f, specs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 平仓单不冻保证金（20260909 实测）。
+	if !m.IsZero() {
+		t.Errorf("⚠️ 平仓挂单冻了 %s 保证金 —— 实测柜台不冻（kq_facts 42）", m)
+	}
+	// 手续费 = 3163 × 10 × 0.00001 = 0.3163
+	if !c.Equal(dd("0.3163")) {
+		t.Errorf("⚠️ 冻结手续费 %s，应为 0.3163 —— "+
+			"已终结的那笔（9 手）是不是被算进来了？", c)
+	}
+
+	// ⚠️ **开仓挂单要报错**：它要冻保证金，而本函数没有实现那一支。
+	// 没见过的情形不猜 —— 猜出来的冻结额会让可用资金错一大截。
+	f.Orders["c"] = withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+		"instrument_id", "rb2701", "direction", "BUY", "offset", "OPEN"), "1")
+	if _, _, err := frozenTotals(f, specs); err == nil {
+		t.Error("⚠️ 开仓挂单竟然算出了冻结 —— 它要冻保证金，而那一支没实现；" +
+			"静默当成 0 会让可用资金多出一大截")
+	}
+}
+
+// mustRates 取某品种的实测费率，没登记就报错。
+func mustRates(t *testing.T, product string) refdata.CommissionRates {
+	t.Helper()
+	r, _, ok := ratesOf(product)
+	if !ok {
+		t.Fatalf("品种 %s 没有登记费率", product)
+	}
+	return r
 }

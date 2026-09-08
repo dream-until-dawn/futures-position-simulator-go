@@ -177,6 +177,35 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 		}
 	}
 
+	// —— 挂单冻结 ——
+	//
+	// ⚠️ 只在**这份夹具记了委托**时冻。老夹具（20260909 之前）没记委托，
+	// 那时「没有挂单」与「没记委托」在数上都是 0 —— 不冻，让
+	// frozen_margin / frozen_commission 落进「未触发」而不是比出一次空洞的一致。
+	//
+	// ⚠️ **这一支目前跑不到**，如实记下来。
+	//
+	// 记了委托的夹具（20260909 起）全都带昨仓，而本函数在上面就拒绝了昨仓。
+	// 于是这段代码在现有语料上是**死的** —— 它的正确性靠 frozenTotals 的
+	// 直测保证（TestFrozenTotals），不靠这条路。
+	//
+	// ⚠️ 写下来是因为「有实现」与「实现被跑过」是两回事，
+	// 而它们在代码上长得一模一样。要让它活起来，得有一份
+	// **记了委托且没有昨仓**的夹具 —— 那要么等一个从空仓开始的交易日，
+	// 要么给 Rebuild 接上 Carry。
+	//
+	// ⚠️ 冻结必须在 SetMargin **之前**做完吗？不必，但**必须在 Check 之前**：
+	// 账户的内部不变式里可用资金要减去冻结，顺序错了 Check 会当场报出来 ——
+	// 那正是它存在的理由。
+	if f.HasOrders {
+		fm, fc, err := frozenTotals(f, specs)
+		if err != nil {
+			return zero, fmt.Errorf("算挂单冻结：%w", err)
+		}
+		if err := acc.Freeze(f.TradingDay, fm, fc); err != nil {
+			return zero, fmt.Errorf("冻结：%w", err)
+		}
+	}
 	if err := acc.SetMargin(f.TradingDay, totalMarginCompany, totalMarginExchange); err != nil {
 		return zero, err
 	}
