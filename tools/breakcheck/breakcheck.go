@@ -186,8 +186,8 @@ func main() {
 	// ⚠️ 它建议的 `git checkout -- <文件>` 在并发场景下会**直接删掉
 	// 别人正在写的东西**。现在只对清单内的文件这么建议。
 	if after, err := gitDirty(); err == nil && hasTrackedChanges(after) {
-		mine, foreign := splitByBreakFiles(after, breakFileSet(breaks))
-		if mine != "" {
+		mine, foreign, failed := dirtyVerdict(after, breakFileSet(breaks))
+		if failed {
 			fmt.Fprintf(os.Stderr,
 				"\n⚠️⚠️ 跑完之后**清单里的文件**仍有改动，说明有破坏没还原：\n%s\n"+
 					"   立刻 git checkout -- <那些文件>\n", mine)
@@ -453,4 +453,18 @@ func splitByBreakFiles(porcelain string, set map[string]bool) (mine, foreign str
 		}
 	}
 	return strings.Join(m, "\n"), strings.Join(f, "\n")
+}
+
+// dirtyVerdict 判断「跑完之后树是脏的」算不算**未按预期**。
+//
+// ⚠️ 单独抽成纯函数，是为了让「**清单外的改动不计入那个数**」这件事可测。
+// 那个数（「未按预期 N 条」）是这套体系里被引用最多的一句话，
+// 而它此前**可以被任何一次并发写入污染成失败** ——
+// 打印一句说错原因的话是一回事，把头条数字改掉是另一回事。
+//
+// 20260909 评审方那次「165 条，未按预期 1 条」，逐条筛过之后
+// 没有任何一条破坏落在预期之外：**整个那个 1 就是这一行加出来的**。
+func dirtyVerdict(after string, set map[string]bool) (mine, foreign string, failed bool) {
+	mine, foreign = splitByBreakFiles(after, set)
+	return mine, foreign, mine != ""
 }

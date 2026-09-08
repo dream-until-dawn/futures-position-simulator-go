@@ -1883,5 +1883,16 @@
   "test": "TestSplitByBreakFiles",
   "want": "清单外",
   "expect": "red"
+ },
+ {
+  "name": "170 清单外的并发改动重新计入「未按预期」",
+  "dir": "",
+  "file": "tools/breakcheck/breakcheck.go",
+  "old": "\treturn mine, foreign, mine != \"\"",
+  "new": "\treturn mine, foreign, mine != \"\" || foreign != \"\"",
+  "pkg": "./tools/breakcheck/",
+  "test": "TestDirtyVerdictIgnoresForeignChanges",
+  "want": "不能改变",
+  "expect": "red"
  }
 ]
