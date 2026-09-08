@@ -75,6 +75,52 @@ var forbidden = []struct{ key, phrase string }{
 	// 评审门禁① 明写「含文档里的过期陈述，**低报也算**」。
 	{"packages_done", "文档阶段，尚无实现"},
 	{"packages_done", "尚无实现"},
+	// ⚠️ 2026-09-09 再增两条，来历比上面那两条更该记：
+	// 同一条低报的**第三处**藏在 doc.go 的包注释里
+	// （「本包目前只有包声明与文档守卫，核算逻辑尚未落地」），
+	// 而它躲过了这张表整整两天 —— 因为扫描只看 README.md 与 docs/*.md，
+	// **不看 Go 源码**。而包注释恰恰是这个库最公开的一句话：
+	// go doc 与 pkg.go.dev 显示的就是它。
+	// 扫描范围已加上 doc.go，见 docFiles。
+	{"packages_done", "核算逻辑尚未落地"},
+	{"packages_done", "只有包声明与文档守卫"},
+}
+
+// TestForbiddenScanCoversDocGo 断言禁语扫描**看得见包注释**。
+//
+// ⚠️ 2026-09-09 之前它看不见：同一条低报在 README.md 与 fidelity.md 上
+// 都被抓到过，唯独 doc.go 里那一处躲了两天 —— 而那是 `go doc` 与
+// pkg.go.dev 显示的那句话，**比 README 还先被看到**。
+//
+// ⚠️ 这条守卫盯的是**扫描的覆盖面**，不是扫描的结论。两者是两件事：
+// 结论对不对由 TestNoStaleForbiddenPhrases 管，而一个扫不到某类文件的
+// 扫描，会在那类文件上永远返回「干净」—— 那与真的干净长得一模一样。
+func TestForbiddenScanCoversDocGo(t *testing.T) {
+	files := docFiles(t)
+	var hasDoc, hasReadme, mdCount = false, false, 0
+	for _, f := range files {
+		switch {
+		case f == "doc.go":
+			hasDoc = true
+		case f == "README.md":
+			hasReadme = true
+		case strings.HasSuffix(f, ".md"):
+			mdCount++
+		}
+	}
+	if !hasDoc {
+		t.Error("⚠️ 禁语扫描不看 doc.go —— 包注释是这个库最公开的一句话，" +
+			"而它会在那里永远返回「干净」")
+	}
+	if !hasReadme {
+		t.Error("⚠️ 禁语扫描不看 README.md")
+	}
+	// ⚠️ 下界用确切条数：docs 下少了几份文档，扫描照样「通过」。
+	if mdCount < 7 {
+		t.Errorf("⚠️ 只扫到 %d 份 docs/*.md —— 少于 7 份，多半是目录读错了", mdCount)
+	}
+	t.Logf("禁语扫描覆盖：doc.go %v，README.md %v，docs/*.md %d 份",
+		hasDoc, hasReadme, mdCount)
 }
 
 func docFiles(t *testing.T) []string {
@@ -82,6 +128,14 @@ func docFiles(t *testing.T) []string {
 	var out []string
 	if _, err := os.Stat("README.md"); err == nil {
 		out = append(out, "README.md")
+	}
+	// ⚠️ doc.go 也算「文档」。它躲过这张表整整两天：同一条低报的第三处
+	// 就藏在包注释里，而**包注释是这个库最公开的一句话** ——
+	// go doc 与 pkg.go.dev 显示的就是它，比 README 还先被看到。
+	// ⚠️ 只加 doc.go，不加全部 .go：那会把「禁语」变成「禁词」，
+	// 而代码注释里讨论这些字符串是正当的（这一段自己就是例子）。
+	if _, err := os.Stat("doc.go"); err == nil {
+		out = append(out, "doc.go")
 	}
 	entries, err := os.ReadDir("docs")
 	if err != nil {
@@ -421,7 +475,7 @@ func TestNoStaleForbiddenPhrases(t *testing.T) {
 // 漏一条和只写一条在这个断言下长得一模一样。**这条断言的局限必须写在这里**，
 // 免得后人看它绿了就以为禁语表是全的。
 func TestForbiddenTableIsNotEmpty(t *testing.T) {
-	const want = 11 // 下界用确切条数，不是 > 0
+	const want = 13 // 下界用确切条数，不是 > 0
 	if len(forbidden) != want {
 		t.Fatalf("禁语表应有 %d 条，实际 %d —— 增删了就同步更新这个下界，"+
 			"并确认 docs/state.md 的表也改了", want, len(forbidden))

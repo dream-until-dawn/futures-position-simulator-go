@@ -241,7 +241,14 @@ func TestVersionMatchesDocComment(t *testing.T) {
 	// 反向：文档里不该出现**别的**版本号当作「当前状态」。
 	// ⚠️ 这一条只查一个很具体的形状（「vX.Y.Z 开发中」），不做泛化解析：
 	// 泛化会把「不建模到 v0.4.0」这类正常措辞也当成冲突。
-	for _, other := range []string{"0.2.0", "0.3.0", "0.4.0", "1.0.0"} {
+	for _, other := range []string{"0.1.0", "0.2.0", "0.3.0", "0.4.0", "1.0.0"} {
+		// ⚠️ 跳过**当前**这一个。第一版没跳，于是 Version 一旦往前推，
+		// 这条守卫就把正确的包文档判成冲突 ——
+		// 一条在「该动的东西终于动了」的时候才报警的守卫，
+		// 会让人把 Version 改回去，而那正是它本来要防的事。
+		if other == want {
+			continue
+		}
 		if strings.Contains(text, other+" 开发中") {
 			t.Errorf("⚠️ 包文档说 %s 开发中，而 Version 是 %s", other, Version)
 		}

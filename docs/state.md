@@ -159,7 +159,7 @@
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 83 |
-| `docs/roadmap.md` | 25 |
+| `docs/roadmap.md` | 26 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 10 |
 
@@ -250,7 +250,14 @@
 | `kq_login` `simnow_login` | 尚未实际登录 / 待注册 / 柜台账号还没有 / 需要账号 / 待用户提供 / 外部依赖：已解除 |
 | `rules_pending` | 六条 / 6 条待实测 / 七条 / 7 条待实测 |
 | `position_fields` | 持仓 28 字段 |
-| `packages_done` | 文档阶段，尚无实现 / 尚无实现 / 本文现在写的是**将要成立的条件** |
+| `packages_done` | 文档阶段，尚无实现 / 尚无实现 / 本文现在写的是**将要成立的条件** / 核算逻辑尚未落地 / 只有包声明与文档守卫 |
+
+⚠️ **扫描范围：`README.md`、`docs/*.md`，以及 `doc.go`。**
+最后一个是 2026-09-09 补的：同一条低报的**第三处**藏在包注释里，
+躲过了这张表整整两天 —— 而**包注释是这个库最公开的一句话**，
+`go doc` 与 pkg.go.dev 显示的就是它，比 README 还先被看到。
+⚠️ 只加 `doc.go`，不加全部 `.go`：那会把「禁语」变成「禁词」，
+而代码注释里讨论这些字符串是正当的。
 
 ### ⚠️ 自指豁免必须在写脚本**之前**定死
 

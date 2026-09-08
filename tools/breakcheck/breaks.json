@@ -1785,5 +1785,27 @@
   "test": "TestDevOnlyClaimIsAccurate",
   "want": "说成了已实现",
   "expect": "red"
+ },
+ {
+  "name": "161 禁语扫描不再看 doc.go",
+  "dir": "",
+  "file": "doc_test.go",
+  "old": "\tif _, err := os.Stat(\"doc.go\"); err == nil {\n\t\tout = append(out, \"doc.go\")\n\t}",
+  "new": "\tif _, err := os.Stat(\"doc.go\"); err == nil && false {\n\t\tout = append(out, \"doc.go\")\n\t}",
+  "pkg": "./",
+  "test": "TestForbiddenScanCoversDocGo",
+  "want": "doc.go",
+  "expect": "red"
+ },
+ {
+  "name": "162 Version 退回 v0.1.0（到期机制重新空转）",
+  "dir": "",
+  "file": "version.go",
+  "old": "const Version = \"v0.4.0\"",
+  "new": "const Version = \"v0.1.0\"",
+  "pkg": "./",
+  "test": "TestVersionMatchesDocComment",
+  "want": "找不到当前版本",
+  "expect": "red"
  }
 ]
