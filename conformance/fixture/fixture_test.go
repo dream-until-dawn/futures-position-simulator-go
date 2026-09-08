@@ -373,7 +373,10 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	// 而本库的 Lot 一直同时带着 Settled 与 OpenDay 两样信息 ——
 	// 只是此前没有样本要求把它们分开。
 	//	 2  失败     open_cost_long_today / position_cost_long_today
-	//	             —— 柜台恒填 0 而本库算真值（kq_facts 14），至今无裁决者
+	//	             —— 柜台恒填 0 而本库算真值（kq_facts 28/33），至今无裁决者
+	//	             ⚠️ 这里原先引的是 kq_facts 14，而第 14 条**已被第 28 条推翻**。
+	//	             同一处过期在下面的 failClass 里也出现过一次 ——
+	//	             一条已被推翻的事实还在当依据，是「文档里的过期陈述」搬进了代码注释。
 	//
 	// ⚠️ 保证金那三个字段是**接线**接上的，不是 view 里重算的：
 	// margin 包算、MarginOf 翻译、view 只承载。重算会产生第二个实现，

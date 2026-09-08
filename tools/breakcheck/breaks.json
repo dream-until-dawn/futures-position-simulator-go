@@ -1894,5 +1894,16 @@
   "test": "TestDirtyVerdictIgnoresForeignChanges",
   "want": "不能改变",
   "expect": "red"
+ },
+ {
+  "name": "171 引用一条已被推翻的事实（kq_facts 14）",
+  "dir": "",
+  "file": "cmd/oracle/conformance/rules.go",
+  "old": "// MarginByProduct 是按**品种**的保证金率（kq_facts 2）。",
+  "new": "// MarginByProduct 是按**品种**的保证金率（kq_facts 14）。",
+  "pkg": "./",
+  "test": "TestKQFactRefsResolve",
+  "want": "那一条已被推翻",
+  "expect": "red"
  }
 ]
