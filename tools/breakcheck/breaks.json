@@ -1984,5 +1984,16 @@
   "test": "TestMainModuleHasOneDependency",
   "want": "没读到",
   "expect": "red"
+ },
+ {
+  "name": "179 porcelain 用 TrimSpace（第一个脏文件必然被误判成「清单外」）",
+  "dir": "",
+  "file": "tools/breakcheck/breakcheck.go",
+  "old": "\treturn strings.TrimRight(string(out), \"\\r\\n\"), nil",
+  "new": "\treturn strings.TrimSpace(string(out)), nil",
+  "pkg": "./tools/breakcheck/",
+  "test": "TestGitDirtyToVerdictEndToEnd",
+  "want": "静默吞掉",
+  "expect": "red"
  }
 ]

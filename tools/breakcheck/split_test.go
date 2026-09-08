@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"testing"
+)
 
 // TestSplitByBreakFiles 钉住收尾诊断的**内外之分**。
 //
@@ -77,5 +82,70 @@ func TestDirtyVerdictIgnoresForeignChanges(t *testing.T) {
 	// ⚠️ 判别力：两种判定都要出现，否则恒真或恒假的实现能过一半用例。
 	if saw[true] == 0 || saw[false] == 0 {
 		t.Fatalf("⚠️ 用例只覆盖一种判定（真 %d / 假 %d）", saw[true], saw[false])
+	}
+}
+
+// TestGitDirtyToVerdictEndToEnd 走**从 git 到判定**的整条链。
+//
+// # 它补的是什么
+//
+// `TestSplitByBreakFiles` 的输入是**手写的** porcelain 文本，第一行的前导空格
+// 完整无缺。而真实输入要先经过 `gitDirty()` —— 那里原先用 `TrimSpace`，
+// **把第一行的前导空格吃掉了**，于是 `line[3:]` 取路径时错开一位：
+//
+//	原始      " M gitcache_test.go"  → "gitcache_test.go"  ✅ 命中清单
+//	TrimSpace "M gitcache_test.go"   → "itcache_test.go"   ❌ 落进「清单外」
+//
+// ⚠️ 「清单外」不计入 bad、不影响退出码 —— **一条真的没还原的破坏会被静默吞掉**，
+// 而那是更贵的那个方向（把红弄绿）。
+//
+// > **手写的测试输入，看不见真实输入的生产环节出的错。**
+//
+// # ⚠️ 它在**临时仓库**里做，不碰主仓
+//
+// 「能在副本里做的事不要在主仓做」—— 一条会把工作区弄脏的测试，
+// 撞上并发的 breakcheck 就会制造一个假信号。这里用 t.TempDir() 起一个
+// 独立的 git 仓库，脏它自己的文件。
+func TestGitDirtyToVerdictEndToEnd(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Skipf("⚠️ 起不了临时仓库（%v）：%s —— 本条没有查任何东西", err, out)
+		}
+	}
+	run("init", "-q")
+	run("config", "user.email", "t@example.com")
+	run("config", "user.name", "t")
+	// ⚠️ 第一个文件必须是**清单里的**那个：症状只出现在 porcelain 的第一行。
+	for _, name := range []string{"first.go", "second.go"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("package p\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run("add", ".")
+	run("commit", "-qm", "init")
+	if err := os.WriteFile(filepath.Join(dir, "first.go"), []byte("package p // dirty\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	porcelain, err := gitDirtyIn(dir)
+	if err != nil {
+		t.Skipf("⚠️ 取不到 porcelain：%v", err)
+	}
+	if porcelain == "" {
+		t.Fatal("⚠️ 改脏了文件却取到空的 porcelain —— 这条链的第一环就断了")
+	}
+	set := breakFileSet([]Break{{File: "first.go"}})
+	mine, foreign, failed := dirtyVerdict(porcelain, set)
+	if !failed || mine == "" {
+		t.Errorf("⚠️ 清单里的 first.go 脏着，判定却是 failed=%v / 清单内=%q "+
+			"（porcelain=%q）—— ⚠️ 一条真的没还原的破坏会被**静默吞掉**："+
+			"清单外不计入 bad、不影响退出码", failed, mine, porcelain)
+	}
+	if foreign != "" {
+		t.Errorf("⚠️ 清单外多出了 %q —— 只有一个脏文件，而它在清单里", foreign)
 	}
 }

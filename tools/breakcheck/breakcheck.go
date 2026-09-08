@@ -362,12 +362,36 @@ func run(b Break) (verdict, detail string) {
 	return "红对了", ""
 }
 
-func gitDirty() (string, error) {
-	out, err := exec.Command("git", "status", "--porcelain").Output()
+func gitDirty() (string, error) { return gitDirtyIn(".") }
+
+// gitDirtyIn 在 dir 下取 `git status --porcelain`。
+//
+// ⚠️ **只去尾部换行，不 TrimSpace。** porcelain 的格式是 `XY<空格>路径`，
+// 而未暂存的改动 XY 是 ` M` —— **前导空格是语法，不是噪声**。
+//
+// 这里原先用的是 TrimSpace，后果是**第一行**被吃掉一个字符：
+//
+//	原始      " M gitcache_test.go"  → line[3:] = "gitcache_test.go"  ✅
+//	TrimSpace "M gitcache_test.go"   → line[3:] = "itcache_test.go"   ❌
+//
+// ⚠️ 第二行及以后不受影响（前导空格还在），所以症状是
+// **「第一个脏文件必然被误判成清单外」** —— 而清单外不计入 bad、
+// 不影响退出码，于是**一条真的没还原的破坏会被静默吞掉**。
+//
+// ⚠️ 方向正是更贵的那一边：把红弄绿。而这个洞是在「修好把绿弄红那一边」
+// 的同一次改动里产生的（评审方 20260909 从一次真实运行的输出里抓到）。
+//
+// ⚠️ 单测看不见它：`TestSplitByBreakFiles` 的输入是**手写的**，
+// 第一行前导空格完整 —— **手写的测试输入，看不见真实输入的生产环节出的错**。
+// 端到端那条见 TestGitDirtyToVerdictEndToEnd。
+func gitDirtyIn(dir string) (string, error) {
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = dir
+	out, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimRight(string(out), "\r\n"), nil
 }
 
 func tail(s string, n int) string {
