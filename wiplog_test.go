@@ -45,6 +45,11 @@ var wipRe = regexp.MustCompile(`(?i)^(wip\b|wip\d*$)`)
 //
 // ⚠️ 名单挡不住「把新提交也叫 wip 然后加进名单」—— 那需要人不自欺，
 // 守卫做不到。它能做到的是：**让加进名单这个动作显式发生**。
+// ⚠️ 这条测试依赖 `git log`，而 `go test` 的缓存**看不见** exec 出来的输出：
+// git 状态变了而本包文件没变时，它会把上一次的 PASS 直接端出来。
+// 20260909 当场撞到：新增一个 wip 提交后它报 `ok (cached)`，
+// `go clean -testcache` 之后才红 —— 那一刻我差点据此认为守卫没生效。
+// 单独跑时加 `-count=1`。见 silent-risks 方法论 46。
 func TestNoNewWipCommits(t *testing.T) {
 	out, err := exec.Command("git", "log", "--format=%h %s", "main..HEAD").Output()
 	if err != nil {

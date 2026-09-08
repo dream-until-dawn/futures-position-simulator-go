@@ -1907,14 +1907,49 @@
   "expect": "red"
  },
  {
-  "name": "172 wip 名单放行任何提交（第四个 wip 混进去也不红）",
+  "name": "172 wip 名单里少一条（那个提交就成了「没记为什么」的 wip）",
   "dir": "",
   "file": "wiplog_test.go",
-  "old": "\t\tif why, ok := wipAllowed[sha]; ok {",
-  "new": "\t\tif why, ok := \"放行\", true; ok {\n\t\t\t_ = sha",
+  "old": "\t\"da57b08\": \"breakcheck 的多文件破坏。为什么见 3748242 的提交信息\",",
+  "new": "\t\"zz-da57b08\": \"breakcheck 的多文件破坏。为什么见 3748242 的提交信息\",",
   "pkg": "./",
   "test": "TestNoNewWipCommits",
-  "want": "名单和历史对不上了",
+  "want": "的提交信息是",
   "expect": "red"
+ },
+ {
+  "name": "173 【期望仍然绿】引被推翻的事实、但**说明了它被推翻**（豁免内侧，配 171）",
+  "dir": "",
+  "file": "cmd/oracle/conformance/rules.go",
+  "old": "// MarginByProduct 是按**品种**的保证金率（kq_facts 2）。",
+  "new": "// MarginByProduct 是按**品种**的保证金率（kq_facts 14）。\n// ⚠️ 第 14 条已被第 28 条推翻，这里是在讲它。",
+  "pkg": "./",
+  "test": "TestKQFactRefsResolve",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ **豁免区的内侧**。与它成对的那条钉外侧必红；只做外面那一半，说不出豁免是不是过宽；只做里面那一半，说不出守卫还在不在。破坏本身就是一个样本，而豁免区正是这个样本的盲区 —— 破坏落进豁免区，量的是**豁免规则**，不是被守的那条规则，**而两者都返回绿**。（本条与配对做法由评审方 20260909 提出，此前双方各演示了一半。）"
+ },
+ {
+  "name": "174 包注释里出现禁语，且**没有**指向 state.md（豁免外侧）",
+  "dir": "",
+  "file": "order/order.go",
+  "old": "// Package order 是报单校验：八项检查，按拒绝优先级。",
+  "new": "// Package order 是报单校验：八项检查，按拒绝优先级。尚无实现。",
+  "pkg": "./",
+  "test": "TestNoStaleForbiddenPhrasesInPackageDocs",
+  "want": "包注释**里出现禁语",
+  "expect": "red"
+ },
+ {
+  "name": "175 【期望仍然绿】包注释里出现禁语、但指向了 state.md（豁免内侧，配 174）",
+  "dir": "",
+  "file": "doc.go",
+  "old": "// 进度与全部计数以 docs/state.md 为唯一来源。",
+  "new": "// 进度与全部计数以 docs/state.md 为唯一来源。尚无实现。",
+  "pkg": "./",
+  "test": "TestNoStaleForbiddenPhrasesInPackageDocs",
+  "want": "",
+  "expect": "green",
+  "why": "⚠️ **豁免区的内侧**。与它成对的那条钉外侧必红；只做外面那一半，说不出豁免是不是过宽；只做里面那一半，说不出守卫还在不在。破坏本身就是一个样本，而豁免区正是这个样本的盲区 —— 破坏落进豁免区，量的是**豁免规则**，不是被守的那条规则，**而两者都返回绿**。（本条与配对做法由评审方 20260909 提出，此前双方各演示了一半。）"
  }
 ]
