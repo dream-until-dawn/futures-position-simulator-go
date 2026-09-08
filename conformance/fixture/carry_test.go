@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -42,7 +43,7 @@ func TestCarrySplitsTheTwoBaselines(t *testing.T) {
 	next := types.NewTradingDay(2026, 9, 9)
 	settle := decimal.RequireFromString("3160")
 
-	p, err := Carry(f, sym, types.Speculation, settle, next)
+	p, err := Carry(f, sym, types.Speculation, positionDateOf(t, sym), settle, next)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +92,7 @@ func TestCarryRefusesWhenBaselinesWouldCoincide(t *testing.T) {
 	f := loadOne(t, "avg-price-20260908.json")
 	// 结算价取成开仓均价本身。
 	same := decimal.RequireFromString("3157.6666666666666667")
-	p, err := Carry(f, "SHFE.rb2701", types.Speculation, same, types.NewTradingDay(2026, 9, 9))
+	p, err := Carry(f, "SHFE.rb2701", types.Speculation, refdata.UseHistory, same, types.NewTradingDay(2026, 9, 9))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +113,7 @@ func TestCarryRefusesFlatAndMissing(t *testing.T) {
 	settle := decimal.RequireFromString("3160")
 
 	// ① 夹具里没有这个合约的成交。
-	_, err := Carry(f, "SHFE.zzz2701", types.Speculation, settle, next)
+	_, err := Carry(f, "SHFE.zzz2701", types.Speculation, refdata.UseHistory, settle, next)
 	if err == nil || !strings.Contains(err.Error(), "一笔成交都没有") {
 		t.Errorf("⚠️ 结转一个没有成交记录的合约应当报错，得到 %v —— "+
 			"空仓与「有仓但没记录」在结果上长得一样", err)
@@ -135,7 +136,7 @@ func TestCarryRefusesFlatAndMissing(t *testing.T) {
 		t.Fatal("⚠️ 夹具里找不到「有成交但收盘空仓」的合约 —— " +
 			"这一分支没被考验过，而它是最像正常结果的那种失败")
 	}
-	_, err = Carry(f, flat, types.Speculation, settle, next)
+	_, err = Carry(f, flat, types.Speculation, refdata.UseHistory, settle, next)
 	if err == nil || !strings.Contains(err.Error(), "空仓") {
 		t.Errorf("⚠️ 结转一个空仓合约（%s）应当报错，得到 %v", flat, err)
 	}
@@ -147,7 +148,7 @@ func TestCarryRefusesFlatAndMissing(t *testing.T) {
 // 免费日线源上有 7.7%～98.6% 的结算价字段是 0（design.md §6.5）。
 func TestCarryRefusesZeroSettlement(t *testing.T) {
 	f := loadOne(t, "avg-price-20260908.json")
-	_, err := Carry(f, "SHFE.rb2701", types.Speculation,
+	_, err := Carry(f, "SHFE.rb2701", types.Speculation, refdata.UseHistory,
 		decimal.Zero, types.NewTradingDay(2026, 9, 9))
 	if err == nil {
 		t.Fatal("⚠️ 结算价为 0 应当报错 —— 0 只可能是缺失的伪装")
@@ -190,7 +191,7 @@ func TestTonightSeedDiscriminatingPower(t *testing.T) {
 
 	split := 0
 	for _, c := range cases {
-		p, err := position.New(inst[c.sym], types.Speculation, day)
+		p, err := position.New(inst[c.sym], types.Speculation, day, refdata.UseHistory)
 		if err != nil {
 			t.Fatal(err)
 		}

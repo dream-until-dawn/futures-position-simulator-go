@@ -67,7 +67,7 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 				continue
 			}
 			withQuote++
-			p, err := Replay(trades[0].Instrument, types.Speculation, f.TradingDay, trades)
+			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
 			if err != nil {
 				continue
 			}
@@ -209,7 +209,7 @@ func TestMarginRatesHaveMoreThanOneTier(t *testing.T) {
 // 而后者会让一个空账户看起来和一个满仓账户一样安全。
 func TestMarginNoPositionIsAnError(t *testing.T) {
 	inst := types.InstrumentID{Exchange: types.SHFE, Product: "rb", Year: 2027, Month: 1}
-	p, err := position.New(inst, types.Speculation, types.NewTradingDay(2026, 9, 8))
+	p, err := position.New(inst, types.Speculation, types.NewTradingDay(2026, 9, 8), refdata.UseHistory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestMarginRefusesMissingInputs(t *testing.T) {
 	inst := types.InstrumentID{Exchange: types.SHFE, Product: "rb", Year: 2027, Month: 1}
 	day := types.NewTradingDay(2026, 9, 8)
 	mk := func() *position.Position {
-		p, err := position.New(inst, types.Speculation, day)
+		p, err := position.New(inst, types.Speculation, day, refdata.UseHistory)
 		if err != nil {
 			t.Fatal(err)
 		}

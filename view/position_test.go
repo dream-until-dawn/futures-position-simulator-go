@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -70,7 +71,7 @@ func newPos(t *testing.T, legs ...struct {
 }) *position.Position {
 	t.Helper()
 	day := types.NewTradingDay(2026, 9, 8)
-	p, err := position.New(rb2701(t), types.Speculation, day)
+	p, err := position.New(rb2701(t), types.Speculation, day, refdata.UseHistory)
 	if err != nil {
 		t.Fatal(err)
 	}

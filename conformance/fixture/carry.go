@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -24,6 +25,7 @@ import (
 // 拿柜台自己的结算价去验柜台自己的逐日盯市，是同义反复 ——
 // refdata/exchange 就是为此存在的。本函数不去猜、不去取，只要求给。
 func Carry(f *Fixture, symbol string, hedge types.HedgeFlag,
+	dateType refdata.PositionDateType,
 	settlement decimal.Decimal, nextDay types.TradingDay) (*position.Position, error) {
 
 	// ⚠️ 合约代码从 symbol 直接解析，**不从 trades[0] 拿**。
@@ -42,7 +44,7 @@ func Carry(f *Fixture, symbol string, hedge types.HedgeFlag,
 			"⚠️ 结转一个没有成交记录的合约，得到的是空仓；"+
 			"而空仓与「有仓但没记录」在结果上长得一样", f.Path, symbol)
 	}
-	p, err := Replay(inst, hedge, f.TradingDay, trades)
+	p, err := Replay(inst, hedge, dateType, f.TradingDay, trades)
 	if err != nil {
 		return nil, fmt.Errorf("重放 %s 失败：%w", symbol, err)
 	}

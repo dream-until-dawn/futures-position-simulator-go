@@ -97,7 +97,7 @@ func TestCrossDayConformance(t *testing.T) {
 			continue
 		}
 		spec := specs[sym]
-		p, err := Carry(prev, sym, types.Speculation, settle, next.TradingDay)
+		p, err := Carry(prev, sym, types.Speculation, positionDateOf(t, sym), settle, next.TradingDay)
 		if err != nil {
 			t.Errorf("⚠️ 结转 %s 失败：%v", sym, err)
 			continue
@@ -148,26 +148,51 @@ func TestCrossDayConformance(t *testing.T) {
 	//
 	// ⚠️ 与「跨夹具那条」同一条纪律：新出现的失败一律报「第三类」，
 	// 不许直接加进这张表。
+	// ⚠️ 这张表**贴错过标签**，而错法很值得记住。
+	//
+	// 原来有 6 个字段（open_cost_*_today/_his、position_cost_*_today）标着
+	// 类 B「NoUseHistory 不滚今昨」。但它们**全部出现在 SHFE.rb2701 上**，
+	// 而 rb2701 是 UseHistory —— 与 NoUseHistory 一点关系都没有。
+	//
+	// 真正的 DCE.m2701 因为拿不到大商所的结算价（412 未打通）被 continue 掉了，
+	// 所以**类 B 在这条测试里一次都没有被观测到**。
+	// 而下面那条「每一类都必须出现」的守卫，正是被这 6 个错误标签喂饱的 ——
+	// ⚠️ 一条靠错误分类维持「活着」的守卫，比没有守卫更难发现。
 	known := map[string]string{
-		"position_price_long":       "A", // 本库结算价 vs 柜台收盘价（kq_facts 26）
-		"position_price_short":      "A",
-		"position_cost_long":        "A", // 同上，成本是均价×手数×乘数
-		"position_cost_short":       "A",
-		"position_profit_long":      "A", // 同上，基线不同则持仓盈亏不同
-		"position_profit_short":     "A",
-		"position_profit":           "A",
-		"volume_long_today":         "B", // NoUseHistory：本库按结算滚，柜台不滚（kq_facts 24）
-		"volume_long_his":           "B",
-		"volume_short_today":        "B",
-		"volume_short_his":          "B",
-		"open_cost_long_his":        "B",
-		"open_cost_long_today":      "B",
-		"position_cost_long_his":    "B",
-		"position_cost_long_today":  "B",
-		"open_cost_short_his":       "B",
-		"open_cost_short_today":     "B",
-		"position_cost_short_his":   "B",
-		"position_cost_short_today": "B",
+		// —— A：本库用**结算价** 3163，柜台用**收盘价** 3177（kq_facts 26/37）——
+		"position_price_long":    "A",
+		"position_price_short":   "A",
+		"position_cost_long":     "A", // 成本 = 均价 × 手数 × 乘数，基线不同则成本不同
+		"position_cost_long_his": "A",
+		"position_profit_long":   "A", // 基线不同则持仓盈亏不同
+		"position_profit":        "A",
+
+		// —— D：**今昨拆分柜台不填**（kq_facts 28/33）——
+		//
+		// ⚠️ 与类 B 不是一回事，此前被混在一起了：
+		//	open_cost_* 的拆分**从来**不是真实数字（本库算得出，柜台给 0 或 "-"）
+		//	position_cost_* 的拆分只在**结算时**写，且写哪一侧由 PositionDateType 定
+		"open_cost_long_his":        "D",
+		"open_cost_long_today":      "D",
+		"open_cost_short_his":       "D",
+		"open_cost_short_today":     "D",
+		"position_cost_long_today":  "D",
+		"position_cost_short_his":   "D",
+		"position_cost_short_today": "D",
+
+		// —— E：空仓方向上本库说「明确无值」，柜台给 0 ——
+		//
+		// ⚠️ 这是 kq_facts 15：`"-"` 与 `0` 在**成本与盈亏**字段上是**路径依赖**的。
+		// 本库没有「这个字段今天被设过没有」这个状态，**复现不了**。
+		"position_cost_short":   "E",
+		"position_profit_short": "E",
+
+		// —— B：NoUseHistory 不滚今昨（kq_facts 24）——
+		// ⚠️ 留着这几个键是因为**它们确实属于 B**，只是本条现在观测不到 B。
+		"volume_long_today":  "B",
+		"volume_long_his":    "B",
+		"volume_short_today": "B",
+		"volume_short_his":   "B",
 		// 类 C：⚠️ **行情侧还没滚到新交易日**。
 		//
 		// 柜台的 margin_long = 6631.8，而 6631.8 ÷ (10 × 3 × 0.07) = **3158** ——
@@ -199,15 +224,30 @@ func TestCrossDayConformance(t *testing.T) {
 		}
 		seen[c]++
 	}
-	for _, c := range []string{"A", "B", "C"} {
+	// ⚠️ 只要求**观测得到的**那几类必须出现。
+	// 类 B 不在里面 —— 理由不是它被修好了，是本条**根本观测不到它**：
+	// 它只出现在 NoUseHistory 合约上，而唯一那个（DCE.m2701）
+	// 因为大商所日行情 412 未打通、拿不到结算价，在上面被 continue 掉了。
+	// ⚠️ 把 B 留在这个列表里，就会像此前那样被错误标签喂饱。
+	for _, c := range []string{"A", "C", "D", "E"} {
 		if seen[c] == 0 {
 			t.Errorf("⚠️ 失败类 %s 一次都没出现 —— "+
 				"要么它被修好了（那就把它从表里删掉并把这条一起改），"+
 				"要么本条在空转", c)
 		}
 	}
-	t.Logf("失败归类：类 A（结算价 vs 收盘价）%d、类 B（NoUseHistory 不滚）%d、"+
-		"类 C（行情侧未滚到新交易日）%d", seen["A"], seen["B"], seen["C"])
+	// ⚠️ 反过来卡住 B：它现在**应当**是 0。
+	// 哪天它非零了，说明 DCE 真的被结转进来了 —— 那是好消息，但清单要跟着改，
+	// 而好消息同样需要有人被通知到。
+	if seen["B"] > 0 {
+		t.Errorf("⚠️ 类 B（NoUseHistory 不滚）出现了 %d 次 —— "+
+			"本条此前观测不到它（DCE 拿不到结算价被跳过）。"+
+			"若是大商所日行情打通了，**去核对本库的 NoUseHistory 结算分支**"+
+			"（position.Settle 的 RebaseAll 那一支）并更新本清单", seen["B"])
+	}
+	t.Logf("失败归类：A（结算价 vs 收盘价）%d、B（NoUseHistory 不滚，本条观测不到）%d、"+
+		"C（行情侧未滚到新交易日）%d、D（今昨拆分柜台不填）%d、E（空仓侧 \"-\" vs 0）%d",
+		seen["A"], seen["B"], seen["C"], seen["D"], seen["E"])
 
 	// 类 C 是个可证伪的预测，而它**已经被验过了**：
 	// 20260909 夜盘 21:00 行情滚到新交易日之后，柜台的 margin_long 从 6631.8

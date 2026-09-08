@@ -6,6 +6,7 @@ import (
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/pnl"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -25,7 +26,7 @@ func dd(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 // 绕过它的测试测的是一个本库里不存在的状态。
 func seeded(t *testing.T) *position.Position {
 	t.Helper()
-	p, err := position.New(testInst, types.Speculation, dayD)
+	p, err := position.New(testInst, types.Speculation, dayD, refdata.UseHistory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +65,7 @@ func TestReplayDetectsAmbiguity(t *testing.T) {
 		Direction: types.Sell, Offset: types.Close,
 		Hedge: types.Speculation, Price: dd("3250"), Volume: 2, At: 1,
 	}}
-	_, err := ReplayFrom(seeded(t), testInst, types.Speculation, dayD1, trades)
+	_, err := ReplayFrom(seeded(t), testInst, types.Speculation, refdata.UseHistory, dayD1, trades)
 	if err == nil {
 		t.Fatal("⚠️ 三种消耗顺序会给出不同的持仓，重放却没报歧义 —— " +
 			"此时返回的持仓是三个候选里随手挑的一个，而它看起来完全正常")
@@ -86,7 +87,7 @@ func TestReplayIsFineWhenOrderCannotMatter(t *testing.T) {
 		Direction: types.Sell, Offset: types.CloseToday,
 		Hedge: types.Speculation, Price: dd("3250"), Volume: 1, At: 1,
 	}}
-	p, err := ReplayFrom(seeded(t), testInst, types.Speculation, dayD1, trades)
+	p, err := ReplayFrom(seeded(t), testInst, types.Speculation, refdata.UseHistory, dayD1, trades)
 	if err != nil {
 		t.Fatalf("平今不依赖消耗顺序，不该报歧义：%v", err)
 	}
@@ -109,7 +110,7 @@ func TestReplayIsFineWhenOrderCannotMatter(t *testing.T) {
 // 而变完之后平今平昨的判定、手续费、保证金基线全部错位且**不报错**
 // —— silent-risks.md 的第 1 条。
 func TestReplayFromCarriesHistoryLots(t *testing.T) {
-	p, err := ReplayFrom(seeded(t), testInst, types.Speculation, dayD1, nil)
+	p, err := ReplayFrom(seeded(t), testInst, types.Speculation, refdata.UseHistory, dayD1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +153,7 @@ func TestReplayFromCarriesHistoryLots(t *testing.T) {
 // 而它们平掉 1 手 @120 时逐笔对冲一个 +20 一个 +10，两个结果都不会报错。
 func TestSignatureSeesLotLevelDifference(t *testing.T) {
 	mk := func(lots [][2]string) *position.Position {
-		p, err := position.New(testInst, types.Speculation, dayD)
+		p, err := position.New(testInst, types.Speculation, dayD, refdata.UseHistory)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -207,7 +208,7 @@ func mustSide(t *testing.T, p *position.Position) *position.Side {
 // ⚠️ 合成样本盖得住代码，**盖不住柜台**：柜台在这种情形下怎么算仍未实测。
 // 那要一次 volume > 1 的平仓，而安全阀现在把手数限制成 1。
 func TestReplayRealizedKeepsEveryConsumedLot(t *testing.T) {
-	p, err := position.New(testInst, types.Speculation, dayD)
+	p, err := position.New(testInst, types.Speculation, dayD, refdata.UseHistory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +223,7 @@ func TestReplayRealizedKeepsEveryConsumedLot(t *testing.T) {
 		Direction: types.Sell, Offset: types.CloseToday,
 		Hedge: types.Speculation, Price: dd("120"), Volume: 3, At: 1,
 	}}
-	_, realized, err := ReplayRealized(p, testInst, types.Speculation, dayD, trades)
+	_, realized, err := ReplayRealized(p, testInst, types.Speculation, refdata.UseHistory, dayD, trades)
 	if err != nil {
 		t.Fatal(err)
 	}

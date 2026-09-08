@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -23,9 +24,9 @@ import (
 //
 // ⚠️ 反过来说，三者相同**不等于**消耗顺序不重要，只等于**这次样本分不开它们**。
 // 那正是实验 4 要造的样本：让三者分开。
-func Replay(inst types.InstrumentID, hedge types.HedgeFlag,
+func Replay(inst types.InstrumentID, hedge types.HedgeFlag, dateType refdata.PositionDateType,
 	day types.TradingDay, trades []Trade) (*position.Position, error) {
-	return ReplayFrom(nil, inst, hedge, day, trades)
+	return ReplayFrom(nil, inst, hedge, dateType, day, trades)
 }
 
 // ReplayFrom 在一个**已有持仓**上重放当日成交。
@@ -45,14 +46,14 @@ func Replay(inst types.InstrumentID, hedge types.HedgeFlag,
 // ⚠️ 另记一条：Replay 的「三种消耗顺序一致」检查在 start 为 nil 时
 // **结构上不可能触发** —— 全是今仓，三种顺序消耗的是同一批。
 // 它只有在这里、start 带着昨仓时才真正开始工作。
-func ReplayFrom(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag,
+func ReplayFrom(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag, dateType refdata.PositionDateType,
 	day types.TradingDay, trades []Trade) (*position.Position, error) {
 
 	orders := []position.CloseOrder{position.YesterdayFirst, position.TodayFirst, position.FIFO}
 	var first *position.Position
 	var firstSig string
 	for i, ord := range orders {
-		p, err := replayWith(start, inst, hedge, day, trades, ord, nil)
+		p, err := replayWith(start, inst, hedge, dateType, day, trades, ord, nil)
 		if err != nil {
 			return nil, fmt.Errorf("按「%v」重放失败：%w", ord, err)
 		}
@@ -92,25 +93,25 @@ type Realized struct {
 // ReplayFrom 已经断言过三种消耗顺序给出同一个结果，
 // 顺序有分歧时它会报错而不是返回一个猜的。
 // 这里再挑一次顺序不是第二个判断，是复用那个已经被检查过的结论。
-func ReplayRealized(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag,
+func ReplayRealized(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag, dateType refdata.PositionDateType,
 	day types.TradingDay, trades []Trade) (*position.Position, []Realized, error) {
 	// 先走一遍歧义检查 —— 有歧义就整个不给结果。
-	if _, err := ReplayFrom(start, inst, hedge, day, trades); err != nil {
+	if _, err := ReplayFrom(start, inst, hedge, dateType, day, trades); err != nil {
 		return nil, nil, err
 	}
 	var out []Realized
-	p, err := replayWith(start, inst, hedge, day, trades, position.YesterdayFirst, &out)
+	p, err := replayWith(start, inst, hedge, dateType, day, trades, position.YesterdayFirst, &out)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, out, nil
 }
 
-func replayWith(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag,
+func replayWith(start *position.Position, inst types.InstrumentID, hedge types.HedgeFlag, dateType refdata.PositionDateType,
 	day types.TradingDay, trades []Trade, ord position.CloseOrder,
 	realized *[]Realized) (*position.Position, error) {
 
-	p, err := position.New(inst, hedge, day)
+	p, err := position.New(inst, hedge, day, dateType)
 	if err != nil {
 		return nil, err
 	}

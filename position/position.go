@@ -3,6 +3,7 @@ package position
 import (
 	"fmt"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -58,12 +59,34 @@ type Position struct {
 	// 「忘了结算」是静默风险清单第 1 条，把它变成 error 是这条守卫的全部意义。
 	Day types.TradingDay
 
-	long  Side
-	short Side
+	dateType refdata.PositionDateType
+	long     Side
+	short    Side
 }
 
 // New 建一个空持仓。
-func New(inst types.InstrumentID, hedge types.HedgeFlag, day types.TradingDay) (*Position, error) {
+//
+// dateType 是该合约区不区分今昨仓（CTP 的 `PositionDateType`）。
+//
+// ⚠️ 它**允许是零值** `PositionDateUnknown`，而零值的含义是「没测过 / 用不上」，
+// 不是「随便挑一种」。带着零值的持仓**结算会报错**，见 Settle。
+//
+// # ⚠️ 为什么判据在 Settle 而不在这里
+//
+// 第一版把它做成 New 的硬性要求，零值直接报错。结果是：只重放当日成交、
+// **永不结算**的那批调用方（Replay 及其全部测试）被逼着为一个用不上的参数
+// 编一个值出来 —— 而它们手上根本没有这个数据（天勤字典不给，只能靠柜台行为测，
+// 而实测过的只有两个合约）。
+//
+// **一个逼人编数据的守卫比没有守卫更坏**：编出来的值会被后来的人当成实测值。
+//
+// 所以判据落在真正需要它的那一步：`Settle` 拿它决定今仓变不变昨仓，
+// 拿不到就报错，且错误信息说得出「这个合约没人量过」。
+// 而 `dateType` 仍然放在 New 上（不放在 Settle 的参数里），
+// 因为合约的性质在持仓的一生里不变 —— 声明一次就不会在两次结算之间漂移。
+func New(inst types.InstrumentID, hedge types.HedgeFlag, day types.TradingDay,
+	dateType refdata.PositionDateType) (*Position, error) {
+
 	if err := day.Validate(); err != nil {
 		return nil, fmt.Errorf("建仓失败: %w", err)
 	}
@@ -71,8 +94,11 @@ func New(inst types.InstrumentID, hedge types.HedgeFlag, day types.TradingDay) (
 		// ⚠️ 投机套保标志决定保证金率，不能默认。
 		return nil, fmt.Errorf("投机套保标志未指定 —— 它决定保证金率，不是标签")
 	}
-	return &Position{Instrument: inst, Hedge: hedge, Day: day}, nil
+	return &Position{Instrument: inst, Hedge: hedge, Day: day, dateType: dateType}, nil
 }
+
+// DateType 返回该合约区不区分今昨仓。
+func (p *Position) DateType() refdata.PositionDateType { return p.dateType }
 
 // Side 取某个方向的只读视图。
 func (p *Position) Side(dir types.Direction) (*Side, error) {
@@ -294,8 +320,37 @@ func (p *Position) Settle(day types.TradingDay, settlementPrice decimal.Decimal,
 	if err := nextDay.Validate(); err != nil {
 		return fmt.Errorf("下一交易日不合法: %w", err)
 	}
-	p.long.SettleAll(settlementPrice)
-	p.short.SettleAll(settlementPrice)
+	// ⚠️ 今仓变不变昨仓，**逐合约**由 PositionDateType 决定。
+	//
+	//	UseHistory     今仓 → 昨仓，基线推进到结算价（SHFE / INE / CFFEX）
+	//	NoUseHistory   持仓**留在今仓**，基线照样推进（DCE / CZCE）
+	//
+	// 实测（kq_facts 24，20260909 结算）：同一次结算之后
+	// `SHFE.rb2701` 多今0/多昨3，而 `DCE.m2701` 多今3/多昨0，
+	// 且账户层结算**已完成**（pre_balance 推进、close_profit 归零）——
+	// 所以「大商所还没结算」被否掉了。
+	//
+	// ⚠️ 基线在两条路上**都**推进：逐日盯市是资金层面的事，
+	// 与今昨划分是两回事。混为一谈会让 NoUseHistory 合约的持仓盈亏
+	// 永远以开仓价为基线，而那与结算单对不上。
+	switch p.dateType {
+	case refdata.UseHistory:
+		p.long.SettleAll(settlementPrice)
+		p.short.SettleAll(settlementPrice)
+	case refdata.NoUseHistory:
+		p.long.RebaseAll(settlementPrice)
+		p.short.RebaseAll(settlementPrice)
+	default:
+		// ⚠️ 这里是**唯一**的关口，New 刻意不拦（理由见 New 的注释）。
+		return fmt.Errorf("合约 %s 的 PositionDateType 未指定，**无法结算** —— "+
+			"它决定结算时今仓变不变昨仓，而那一步只发生一次。"+
+			"⚠️ 它是**逐合约**的规则数据，天勤字典不给，只能靠柜台行为测"+
+			"（见 state.md 的 kq_facts 24）；**不许按交易所推**："+
+			"猜对的猜测与查过的事实长得一模一样，直到某个合约不一样为止。"+
+			"⚠️ 猜错的后果是今昨仓不滚动（silent-risks.md 第 1 条）——"+
+			"账永远是平的，只是平今费率一直按平昨收、保证金基线停在开仓日",
+			p.Instrument.Canonical())
+	}
 	p.Day = nextDay
 	return nil
 }

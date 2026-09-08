@@ -7,6 +7,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx"
 	"github.com/dream-until-dawn/futures-position-simulator-go/pnl"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -77,7 +78,7 @@ func TestAccountAggregatesFromTrades(t *testing.T) {
 
 		// —— 平仓盈亏：从重放的已实现片段算 ——
 		_, realized, err := ReplayRealized(nil, trades[0].Instrument,
-			types.Speculation, target.TradingDay, trades)
+			types.Speculation, refdata.PositionDateUnknown, target.TradingDay, trades)
 		if err != nil {
 			t.Fatalf("%s 重放失败：%v", sym, err)
 		}

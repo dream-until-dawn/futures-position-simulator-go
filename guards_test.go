@@ -29,6 +29,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/pnl"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -126,7 +127,7 @@ func TestCloseOrderIsNotAlwaysRequired(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := position.New(inst, types.Speculation, d1)
+	p, err := position.New(inst, types.Speculation, d1, refdata.UseHistory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +142,7 @@ func TestCloseOrderIsNotAlwaysRequired(t *testing.T) {
 	}
 
 	// 而裸 Close 需要：同样的零值必须报错。
-	q, _ := position.New(inst, types.Speculation, d1)
+	q, _ := position.New(inst, types.Speculation, d1, refdata.UseHistory)
 	_ = q.Open(types.Buy, d1, px, 1)
 	_ = q.Settle(d1, decimal.NewFromInt(3160), d2)
 	_ = q.Open(types.Buy, d2, decimal.NewFromInt(3170), 1)

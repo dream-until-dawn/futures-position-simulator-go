@@ -3,6 +3,8 @@ package fixture
 import (
 	"sort"
 	"testing"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 )
 
 // observation 是一个持仓字段在**全部夹具**里被看见过的形态。
@@ -194,4 +196,59 @@ func TestFrozenFieldsAreTheThinnestEvidence(t *testing.T) {
 		t.Error("⚠️ 六个冻结字段都拿到非零观测了 —— " +
 			"position-frozen 实验的目的已达成，去把 zeroObserved 表和本条一起重写")
 	}
+}
+
+// positionDates 是**实测过的** PositionDateType，逐合约。
+//
+// ⚠️ 刻意不按交易所推。CTP 里 PositionDateType 是**逐合约**的字段，
+// 而「同一交易所的合约一定同型」是个看起来对、且在这批样本上也确实对的猜测 ——
+// 猜对的猜测与查过的事实在结果上长得一模一样，直到某个合约不一样为止。
+//
+// ⚠️ 天勤的合约字典**不给**这个字段（cmd/refdata-sync 的说明），
+// 所以这里的每一条都只能来自实测：kq_facts 24（20260909 结算，
+// SHFE.rb2701 多今0/多昨3 而 DCE.m2701 多今3/多昨0，且账户层结算已完成）。
+//
+// 没实测过的合约**一个都不填**。要用到时会报错，而报错正是要的 ——
+// 填一个「按交易所推出来的」值，会让今昨仓在那个合约上悄悄不滚动。
+var positionDates = map[string]refdata.PositionDateType{
+	"SHFE.rb2701": refdata.UseHistory,   // 实测：结算后今仓→昨仓
+	"DCE.m2701":   refdata.NoUseHistory, // 实测：结算后仍是今仓
+}
+
+// positionDateOf 取某合约的 PositionDateType，**没实测过就报错**。
+//
+// ⚠️ 返回零值让调用方自己判是不行的：零值会一路传到 position.New，
+// 那里确实会报错 —— 但错误信息说的是「未指定」，而真正的原因是
+// 「这个合约没人量过」。两者要人做的事不同。
+func positionDateOf(t *testing.T, sym string) refdata.PositionDateType {
+	t.Helper()
+	d, ok := positionDates[sym]
+	if !ok {
+		t.Fatalf("⚠️ 合约 %s 的 PositionDateType **没有实测过** —— "+
+			"它是逐合约的规则数据，天勤字典不给，只能靠柜台行为测（见 kq_facts 24）。"+
+			"⚠️ 不许按交易所推：猜对的猜测与查过的事实长得一模一样，"+
+			"直到某个合约不一样为止", sym)
+	}
+	return d
+}
+
+// TestPositionDatesAreAllMeasured 断言这张表**只装实测过的**，且两型都有。
+//
+// ⚠️ 只有 UseHistory 的话，NoUseHistory 那条分支（结算不滚今昨）
+// 一次都走不到，而它正是 20260909 新加的那条。
+func TestPositionDatesAreAllMeasured(t *testing.T) {
+	seen := map[refdata.PositionDateType]int{}
+	for sym, d := range positionDates {
+		if d == refdata.PositionDateUnknown {
+			t.Errorf("⚠️ %s 填的是零值 —— 那等于没填，而它会一路传到 position.New", sym)
+		}
+		seen[d]++
+	}
+	if seen[refdata.UseHistory] == 0 || seen[refdata.NoUseHistory] == 0 {
+		t.Fatalf("⚠️ 两型必须都有实测样本（UseHistory %d / NoUseHistory %d）—— "+
+			"缺一型的话结算那边对应的分支一次都走不到",
+			seen[refdata.UseHistory], seen[refdata.NoUseHistory])
+	}
+	t.Logf("实测过 PositionDateType 的合约 %d 个：UseHistory %d、NoUseHistory %d",
+		len(positionDates), seen[refdata.UseHistory], seen[refdata.NoUseHistory])
 }

@@ -308,11 +308,11 @@
   "expect": "red"
  },
  {
-  "name": "1 结算也动逐笔对冲基线",
+  "name": "1 结算也动逐笔对冲基线（UseHistory 路）",
   "dir": "",
   "file": "position/lot.go",
-  "old": "\t\ts.lots[i].Basis = settlementPrice",
-  "new": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice",
+  "old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
+  "new": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice\n\t\ts.lots[i].Settled = true",
   "pkg": "./conformance/fixture/",
   "test": "TestCarrySplitsTheTwoBaselines",
   "want": "不受结算影响",
@@ -972,6 +972,72 @@
   "pkg": "./conformance/fixture/",
   "test": "TestCloseReducesCostAtAverage",
   "want": "均价变了",
+  "expect": "red"
+ },
+ {
+  "name": "89 结算对 NoUseHistory 也滚今昨（回到分岔之前）",
+  "dir": "",
+  "file": "position/position.go",
+  "old": "\tcase refdata.NoUseHistory:\n\t\tp.long.RebaseAll(settlementPrice)\n\t\tp.short.RebaseAll(settlementPrice)",
+  "new": "\tcase refdata.NoUseHistory:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)",
+  "pkg": "./position/",
+  "test": "TestSettleRespectsPositionDateType",
+  "want": "那类合约的持仓**留在今仓**",
+  "expect": "red"
+ },
+ {
+  "name": "90 NoUseHistory 结算时不推进基线",
+  "dir": "",
+  "file": "position/lot.go",
+  "old": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {\n\tfor i := range s.lots {\n\t\ts.lots[i].Basis = settlementPrice\n\t}\n}",
+  "new": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {}",
+  "pkg": "./position/",
+  "test": "TestSettleRespectsPositionDateType",
+  "want": "逐日盯市对**所有**合约成立",
+  "expect": "red"
+ },
+ {
+  "name": "91 结算不再拦零值 PositionDateType",
+  "dir": "",
+  "file": "position/position.go",
+  "old": "\tdefault:\n\t\t// ⚠️ 这里是**唯一**的关口，New 刻意不拦（理由见 New 的注释）。",
+  "new": "\tdefault:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)\n\tcase refdata.PositionDateType(200):",
+  "pkg": "./position/",
+  "test": "TestSettleRefusesUnknownDateType",
+  "want": "却结算成功了",
+  "expect": "red"
+ },
+ {
+  "name": "92 跨日分类表把「拆分不填」重新贴回类 B",
+  "dir": "",
+  "file": "conformance/fixture/crossday_test.go",
+  "old": "\t\t\"open_cost_long_his\":        \"D\",",
+  "new": "\t\t\"open_cost_long_his\":        \"B\",",
+  "pkg": "./conformance/fixture/",
+  "test": "TestCrossDayConformance",
+  "want": "类 B（NoUseHistory 不滚）出现了",
+  "expect": "red"
+ },
+ {
+  "name": "93 实测过的 PositionDateType 表只留一型",
+  "dir": "",
+  "file": "conformance/fixture/coverage_test.go",
+  "old": "\t\"DCE.m2701\":   refdata.NoUseHistory, // 实测：结算后仍是今仓",
+  "new": "",
+  "pkg": "./conformance/fixture/",
+  "test": "TestPositionDatesAreAllMeasured",
+  "want": "两型必须都有实测样本",
+  "expect": "red"
+ },
+ {
+  "name": "94 结算也动逐笔对冲基线（NoUseHistory 路）",
+  "dir": "",
+  "file": "position/lot.go",
+  "old": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {\n\tfor i := range s.lots {\n\t\ts.lots[i].Basis = settlementPrice\n\t}",
+  "new": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {\n\tfor i := range s.lots {\n\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice\n\t}",
+  "pkg": "./position/",
+  "test": "TestSettleRespectsPositionDateType",
+  "want": "它是逐笔对冲的基线，**永不改变**",
   "expect": "red"
  }
 ]

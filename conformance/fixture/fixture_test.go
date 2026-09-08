@@ -9,6 +9,7 @@ import (
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
 	"github.com/shopspring/decimal"
@@ -127,7 +128,7 @@ func TestReplayIsUnambiguous(t *testing.T) {
 				withCloses++
 			}
 			inst := trades[0].Instrument
-			_, err := Replay(inst, types.Speculation, f.TradingDay, trades)
+			_, err := Replay(inst, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
 			if err != nil {
 				if strings.Contains(err.Error(), "重放有歧义") {
 					ambiguous++
@@ -170,7 +171,7 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 			if len(trades) == 0 {
 				continue
 			}
-			p, err := Replay(trades[0].Instrument, types.Speculation, f.TradingDay, trades)
+			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
 			if err != nil {
 				continue // 歧义与失败在上一条测试里已经报过
 			}
@@ -321,7 +322,7 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	if len(trades) == 0 {
 		t.Fatalf("%s 在 %s 里没有成交", sym, target.Path)
 	}
-	p, err := Replay(trades[0].Instrument, types.Speculation, target.TradingDay, trades)
+	p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, target.TradingDay, trades)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +493,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 				t.Errorf("⚠️ %s 没有登记乘数 —— 漏乘会得到一个量级正确到肉眼看不出的错值", sym)
 				continue
 			}
-			p, err := Replay(trades[0].Instrument, types.Speculation, f.TradingDay, trades)
+			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateUnknown, f.TradingDay, trades)
 			if err != nil {
 				continue
 			}

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -16,7 +17,7 @@ func newPos(t *testing.T, day types.TradingDay) *Position {
 	if err != nil {
 		t.Fatalf("解析合约失败: %v", err)
 	}
-	p, err := New(inst, types.Speculation, day)
+	p, err := New(inst, types.Speculation, day, refdata.UseHistory)
 	if err != nil {
 		t.Fatalf("建仓失败: %v", err)
 	}
@@ -334,7 +335,7 @@ func TestBothStandardsComputableFromConsumed(t *testing.T) {
 // TestHedgeFlagRequired 断言投机套保标志不能默认。
 func TestHedgeFlagRequired(t *testing.T) {
 	inst, _ := types.ParseNative(types.SHFE, "rb2701", 20260907)
-	if _, err := New(inst, types.HedgeUnknown, 20260907); err == nil {
+	if _, err := New(inst, types.HedgeUnknown, 20260907, refdata.UseHistory); err == nil {
 		t.Error("⚠️ 投机套保标志决定保证金率，未指定时本该报错")
 	}
 }
