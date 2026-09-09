@@ -508,6 +508,78 @@ v0.8.0 的双口子交叉验。这条要写进 v0.1.0 的实验清单。
 
 ---
 
+## 6.5 ⚠️ SimNow 的 `BrokerTradingParams` 取到了（2026-09-09 13:3x）
+
+`simnow_pending#9` 说它「一次查询同时决定三件事」。取到了，而它决定的不止三件。
+
+#### 怎么取的
+
+⚠️ `goctp` 只导出高层 `win.Trade`，而 `ReqQryBrokerTradingParams` 挂在**未导出**的
+底层 `trade` 上 —— 从包外够不着。于是自己 `LoadDLL` 走 syscall：
+认证 → 登录 → 确认结算单 → 查询。用的 DLL 就是 `goctp` 模块目录里那几个
+（⚠️ **不往仓库里放二进制**）。只读，不下单。
+
+两个踩到的坑，都写下来：
+
+    CreateApi 会在**当前工作目录**下写 CTP 流文件，目录不存在直接崩
+    （RuntimeError: can not open CFlow file，接 0xc0000005）
+
+    ⚠️ 第一次跑 40 秒没有任何应答，第二次同一个二进制就成功了 ——
+    **差别不在代码里**。真实原因未知（频率限制？上个会话没断干净？），
+    写不知道，别编（方法论 46/61）。三次运行取到的值一致
+
+#### 取到的值
+
+```
+MarginPriceType          "4"   THOST_FTDC_MPT_OpenPrice        保证金基准价 = 开仓价
+Algorithm                "2"   THOST_FTDC_AG_OnlyLost          盈亏算法 = 只计浮动亏损
+AvailIncludeCloseProfit  "0"   THOST_FTDC_ICP_Include          可用**包含**平仓盈利
+CurrencyID               CNY
+OptionRoyaltyPriceType   "5"                                   期权，本库不建模
+```
+
+#### ⚠️ 它当场推翻了本库候选集的形状
+
+`margin.PriceBasis` 的四个候选是**推出来的**，而 CTP 的 `MarginPriceType`
+也正好是四个取值 —— 两组**对不上**：
+
+    CTP 的四个                     本库的四个
+    1 PreSettlementPrice   ←→      PreSettleAll                ✅ 对上
+    2 SettlementPrice      ←→      SettlementAll               ✅ 对上
+    3 AveragePrice         ←→      （本库没有）
+    4 OpenPrice            ←→      （本库没有）
+    （CTP 没有）           ←→      LastAll（连续重估，加密货币形态）
+    （CTP 没有）           ←→      OpenTodayPreSettleHistory（今开仓价/昨昨结算价）
+
+> ⚠️ **本库四个候选里有两个不在 CTP 的取值空间里；CTP 四个里有两个本库表达不了。**
+> 而 SimNow 实际配的那一个（`OpenPrice`）**正是本库表达不了的**。
+
+⚠️ 根子在于：候选集是**按「哪些价说得通」想出来的**，不是**按柜台的枚举列出来的**。
+一个想出来的候选集会**恰好覆盖你想到的那些情形** —— 而它漏掉的那些，
+不会以「候选不足」的形式报错，只会以「怎么调都对不上」的形式出现。
+
+#### ⚠️ 三条界限，别把这次观测读大了
+
+    ① 它是**声明**不是**行为**。查到的是 SimNow 这个柜台**配置成什么**，
+       而「它是否真按这个算」要有持仓才验得了 —— 账户现在是空的
+    ② 它是**broker 9999（SimNow）**的配置。字段名就叫 BrokerTradingParams，
+       **按柜台配**是这个参数的定义本身；换一个期货公司可以是别的值
+    ③ 因此它**不推翻** kq_facts 1（快期实测昨结算价）——
+       两个口子配的不一样，是一件早该预料到的事，而不是谁错了
+
+#### 它同时答了另外两件
+
+    AvailIncludeCloseProfit = Include
+      → cn-futures-rules.md §13 第 11 条「平仓**盈利**算不算进可用」：**算**
+        ⚠️ 仍是 SimNow 这一个柜台的配置，同样按上面三条界限读
+
+    Algorithm = OnlyLost（只计浮动亏损）
+      → 而快期实测是 "1" 浮盈浮亏都计算（kq_facts 11）
+        ⚠️ 这是 simnow_pending#4「快期与真实 CTP 的口径差」的**第一份硬数据**：
+        差别是**存在**的，而且就在最核心的两个参数上
+
+---
+
 ## 7. 判别实验：交易日 20260908 的夜盘（自然日 2026-09-07 周一 21:03–21:40）
 
 ⚠️ 本节记的是**怎么跑出来的**与**原始数字**。结论与它们的边界写在

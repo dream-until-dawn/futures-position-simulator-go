@@ -30,6 +30,29 @@ import (
 )
 
 // PriceBasis 是保证金按哪个价算 —— 判别实验 1，尚未收敛。
+//
+// # ⚠️ 这个候选集**不覆盖 CTP 的取值空间**（2026-09-09 发现）
+//
+// 从 SimNow 查到的 `CThostFtdcBrokerTradingParamsField.MarginPriceType`
+// 也正好是四个取值，而两组对不上：
+//
+//	CTP                      本库
+//	1 PreSettlementPrice  ↔  PreSettleAll                 ✅
+//	2 SettlementPrice     ↔  SettlementAll                ✅
+//	3 AveragePrice        ↔  （没有）
+//	4 OpenPrice           ↔  （没有）
+//	（CTP 没有）          ↔  LastAll
+//	（CTP 没有）          ↔  OpenTodayPreSettleHistory
+//
+// ⚠️ **SimNow 实际配的是 `OpenPrice`，而本库表达不了它。**
+//
+// 根子在于这四个候选是**按「哪些价说得通」想出来的**，不是**照柜台的枚举列的**。
+// 一个想出来的候选集会恰好覆盖你想到的那些情形，而它漏掉的那些
+// **不会以「候选不足」报错，只会以「怎么调都对不上」出现**。
+//
+// ⚠️ 暂不动这个枚举：加取值要同时决定 `Compute` 怎么算 `AveragePrice`
+// （哪个均价？持仓均价还是成交均价），而那件事没有观测。
+// 见 probes.md §6.5 与 state.md 的 `simnow_pending#9`。
 type PriceBasis uint8
 
 const (
