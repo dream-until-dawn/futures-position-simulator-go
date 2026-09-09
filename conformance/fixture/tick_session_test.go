@@ -57,6 +57,13 @@ func TestCounterHalfTickBoundaryHoldsInSession(t *testing.T) {
 	cn := refdata.CNZone()
 
 	checked, nearBelow, nearAbove := 0, 0, 0
+	// outOfSession 是**被时段过滤挡掉**的笔数。
+	//
+	// ⚠️ 它不是统计，是这条断言里「盘中」两个字的**唯一**守卫：
+	// 柜台的行为盘中盘后一样（kq_facts 48：它根本不查时段），
+	// 所以过滤失效时盘后那批照样与 offTick 一致，断言**照样全绿** ——
+	// 而这条测试声称量的是**盘中**。破坏 192 演示过这一点。
+	outOfSession := 0
 	for _, f := range loadAll(t) {
 		if !strings.Contains(f.Path, "reject-tick-vs-limit") {
 			continue
@@ -107,6 +114,7 @@ func TestCounterHalfTickBoundaryHoldsInSession(t *testing.T) {
 				}
 			}
 			if !live {
+				outOfSession++
 				continue
 			}
 
@@ -141,6 +149,12 @@ func TestCounterHalfTickBoundaryHoldsInSession(t *testing.T) {
 	if checked < 10 {
 		t.Fatalf("⚠️ 只逐笔核了 %d 笔盘中委托 —— 本条在空转", checked)
 	}
+	if outOfSession == 0 {
+		t.Fatalf("⚠️ 一笔都没有被时段过滤挡掉（核了 %d 笔）—— "+
+			"语料里明明有大量**盘后**的委托，说明时段判定失效了。"+
+			"⚠️ 而它失效时这条断言仍然全绿：柜台不查时段（kq_facts 48），"+
+			"盘后那批与 offTick 同样一致 —— 于是「盘中」两个字会**悄悄变成一句空话**", checked)
+	}
 	// ⚠️ 两侧**贴着边界**的样本缺一不可：只有 0.1 与 0.9 的话，
 	// 「边界在 0.5」与「边界在 (0.1, 0.9) 里任何一处」给出同一个答案。
 	if nearBelow == 0 || nearAbove == 0 {
@@ -148,8 +162,9 @@ func TestCounterHalfTickBoundaryHoldsInSession(t *testing.T) {
 			"缺一侧就定不住**边界的位置**，只能说明「零头这一维起作用」",
 			nearBelow, nearAbove)
 	}
-	t.Logf("盘中逐笔核了 %d 笔，与 offTick 双向一致；贴着 0.5 的样本下侧 %d 笔、上侧 %d 笔",
-		checked, nearBelow, nearAbove)
+	t.Logf("盘中逐笔核了 %d 笔（另有 %d 笔盘后的被挡掉），与 offTick 双向一致；"+
+		"贴着 0.5 的样本下侧 %d 笔、上侧 %d 笔",
+		checked, outOfSession, nearBelow, nearAbove)
 }
 
 // offTickAgrees 是 cmd/oracle 那边 offTick 的**同一份判据**。
