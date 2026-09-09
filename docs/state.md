@@ -32,6 +32,27 @@
     明日复盘   oracle ctp-hold -symbol SHFE.rb2701 -rounds 1     看昨仓的占用保证金
     量完再平   oracle ctp-flatten                                 它自己挑平今/平昨
 
+### ⚠️ 事前登记的两个候选（**结算前它们同值，所以今天分不开**）
+
+盘中夹具 `testdata/ctp/ctp-status-20260910-3.json` 里，这条腿是：
+
+    OpenCost 31460   PositionCost 31460   MarginRateByMoney 0.16   UseMargin 5033.6
+    PositionDate 1（今仓）  TodayPosition 1  YdPosition 0  PreSettlementPrice 3164
+
+于是 `UseMargin = PositionCost × 0.16` **恰好成立** —— 而今仓的 `PositionCost`
+本来就是开仓价基线，所以下面两条今天给出**同一个数**：
+
+    候选 A   UseMargin = PositionCost × 费率，而 PositionCost 结算时按逐日盯市重置
+             ⇒ 明天 = 3164 × 10 × 0.16 = **5062.40**
+    候选 B   UseMargin 在建仓时按开仓价定死，之后不再重算
+             ⇒ 明天 = **5033.60**（不变）
+
+⚠️ **明天先记数，再比。** 两个数只差 28.8，而 5033.60 与 5062.40 都长得很像
+「合理的保证金」—— 不事先写下来的话，看到哪个都会觉得本来就该是这样。
+⚠️ 若拿到第三个数（两者都不是），那说明基线还有第三个候选，**别硬往这两条上靠**。
+⚠️ 注意 `PreSettlementPrice` 明天会变成今天的结算价，届时 3164 这个数**不再在场** ——
+所以上面的 5062.40 是**现在**算好写死的，不是明天现算的。
+
 ⚠️ **「有意留仓」与「平仓失败」在账户上长得一模一样**，差别只在有没有人打算这么做 ——
 而那件事不写下来就没人知道。这一节就是把它写下来；量完并平掉之后**删掉本节**。
 
@@ -260,7 +281,7 @@
 | `docs/roadmap.md` | 32 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
-| `docs/state.md` | 13 |
+| `docs/state.md` | 14 |
 
 ⚠️ **增删小节时要同步改这里**，这是刻意的摩擦：一次有意的增删是一行改动，
 一次意外的删除则会红。守卫是 `TestDocSectionCountsMatch`。
