@@ -268,8 +268,8 @@ const (
 	//
 	// ⚠️ 它必须是零值。一个默认落进「按额」或「按手」的零值，
 	// 会让判不了的品种被静默归类，而归类结果看起来和真判出来的一模一样。
-	feeByLot       feeMode = iota
-	feeUndecidable         // 占位
+	feeUndecidable feeMode = iota
+	feeByLot               // 按手固定额
 	feeByMoney             // 按成交额（基准是昨结算价）
 	feeAnomalous           // 两类都不成立
 )
