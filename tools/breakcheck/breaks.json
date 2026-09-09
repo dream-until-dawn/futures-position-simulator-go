@@ -2837,14 +2837,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "255 导出面清单里抹掉一项 —— 门禁第 ④ 条本身就靠这条守卫。",
+		"name": "255 包里多出一个没记进 roadmap 的导出标识符 —— 门禁第 ④ 条本身就靠这条守卫。⚠️ 锚**故意放在代码上**：上一版锚在导出面清单那一行，而那条守卫存在的唯一目的就是逼那一行改 —— 于是它每成功一次，这条破坏就死一次。",
 		"dir": "cmd/oracle",
-		"file": "docs/roadmap.md",
-		"old": "           MarketData / Capture / Check / Insert / Cancel / Order / Close；",
-		"new": "           Capture / Check / Insert / Cancel / Order / Close；",
+		"file": "cmd/oracle/ctp/orderbook.go",
+		"old": "import \"sync\"",
+		"new": "import \"sync\"\n\n// Unlisted 是破坏 255 注入的导出面：它不在 roadmap 的清单里。\nfunc Unlisted() {}",
 		"pkg": ".",
 		"test": "TestRoadmapListsEveryExport",
-		"want": "roadmap 的清单里找不到",
+		"want": "而 roadmap 的清单里找不到",
 		"expect": "red"
 	},
 	{
