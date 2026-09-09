@@ -132,3 +132,33 @@ func toFloat(v any) (float64, bool) {
 	}
 	return 0, false
 }
+
+// TestZeroByteEnumBecomesEmptyString 钉住 0 值单字节枚举的落法。
+//
+// ⚠️ CTP 用零字节表示「没有设」。落成 \u0000 是合法 JSON，但那是一个
+// **字符串里的 NUL 控制字符** —— 不少工具会噎住，而噎住的表现是
+// 「夹具读不了」，与「夹具错了」长得一样。
+//
+// ⚠️ 映射到空串不会有歧义：CTP 的枚举取值是可见字符（'0' 是 0x30）。
+// 这一条同时钉住那个区别：0x30 必须落成 "0"，不能跟着变空。
+func TestZeroByteEnumBecomesEmptyString(t *testing.T) {
+	var acc def.CThostFtdcTradingAccountField
+	acc.BizType = 0 // 没有设
+	out, _, err := sanitizeStruct(acc, accountFields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := out["BizType"]; got != "" {
+		t.Errorf("⚠️ 0 值枚举落成了 %q —— 应当是空串。"+
+			"NUL 控制字符落进 JSON 字符串之后，工具噎住时表现成「夹具读不了」", got)
+	}
+	acc.BizType = '0' // 0x30，是一个**真实取值**
+	out, _, err = sanitizeStruct(acc, accountFields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := out["BizType"]; got != "0" {
+		t.Errorf("⚠️ 取值 '0'（0x30）落成了 %q —— 它与「没有设」（零字节）不是一回事，"+
+			"跟着变空会把一个真实取值抹掉", got)
+	}
+}

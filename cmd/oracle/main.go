@@ -354,6 +354,8 @@ func runCTPParams(args []string) error {
 	fs := flag.NewFlagSet("ctp-params", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	timeout := fs.Duration("timeout", 40*time.Second, "整条链路的超时")
+	dump := fs.String("dump", "", "落盘目录（⚠️ **无默认值**；CTP 夹具要落 testdata/ctp/，"+
+		"别落进 testdata/probes —— 那是天勤 DIFF 的语料，混进去**不会报错**）")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
 	}
@@ -374,6 +376,27 @@ func runCTPParams(args []string) error {
 	if err := c.Connect(*timeout); err != nil {
 		return err
 	}
+	if *dump != "" {
+		// ⚠️ 落盘这一支**先脱敏再写**，且凭据复查在 Write 里面做 ——
+		// 一个「记得先查一下」的约定，与没有这道检查在出事那天是一样的。
+		fx, err := c.Capture(*timeout, "ctp-params + 账户 + 持仓")
+		if err != nil {
+			return err
+		}
+		secrets := map[string]string{
+			"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,
+			"CTP_BROKER_ID": env.CTPBrokerID, "CTP_APP_ID": env.CTPAppID,
+			"CTP_AUTH_CODE": env.CTPAuthCode,
+		}
+		if _, err := fx.Write(*dump, "ctp-status", secrets,
+			func(f string, a ...any) { fmt.Printf(f+"\n", a...) }); err != nil {
+			return err
+		}
+		fmt.Printf("  账户字段 %d 个、持仓 %d 条、去掉的键 %d 个\n",
+			len(fx.Account), len(fx.Positions), len(fx.Dropped))
+		return nil
+	}
+
 	p, err := c.BrokerParams(*timeout)
 	if err != nil {
 		return err

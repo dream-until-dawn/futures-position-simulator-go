@@ -46,6 +46,11 @@ type Client struct {
 
 	tradingDay string
 	loggedIn   chan error
+	q        queryer
+	account  chan *def.CThostFtdcTradingAccountField
+	posMu    sync.Mutex
+	pos      map[string]*def.CThostFtdcInvestorPositionField
+	posDone  chan struct{}
 	params     chan *def.CThostFtdcBrokerTradingParamsField
 }
 
@@ -56,7 +61,10 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 	}
 	return &Client{cred: cred, logf: logf,
 		loggedIn: make(chan error, 1),
-		params:   make(chan *def.CThostFtdcBrokerTradingParamsField, 1)}
+		params:   make(chan *def.CThostFtdcBrokerTradingParamsField, 1),
+		account:  make(chan *def.CThostFtdcTradingAccountField, 1),
+		posDone:  make(chan struct{}, 1),
+		pos:      map[string]*def.CThostFtdcInvestorPositionField{}}
 }
 
 // TradingDay 返回柜台报的交易日；登录之前是空串。
@@ -80,15 +88,6 @@ func (c *Client) req(name string, p unsafe.Pointer) {
 func (c *Client) on(name string, fn any) {
 	c.keep = append(c.keep, fn)
 	c.h.MustFindProc(name).Call(c.spi, syscall.NewCallback(fn))
-}
-
-func text(b []byte) string {
-	for i, ch := range b {
-		if ch == 0 {
-			return string(b[:i])
-		}
-	}
-	return string(b)
 }
 
 func errOf(info *def.CThostFtdcRspInfoField) error {
@@ -208,6 +207,8 @@ func (c *Client) Connect(timeout time.Duration) error {
 		c.params <- &cp
 		return 0
 	})
+
+	c.registerQueryCallbacks()
 
 	bs, err := syscall.BytePtrFromString(c.cred.Front)
 	if err != nil {

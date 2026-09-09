@@ -78,6 +78,19 @@ func sanitizeStruct(v any, decisions map[string]decision) (map[string]any, []str
 	return out, dropped, nil
 }
 
+// text 把 CTP 的定长字节数组（尾部填 0）截成字符串。
+//
+// ⚠️ 它放在**平台无关**的文件里：脱敏要用它，而脱敏本身与平台无关。
+// 放在 client_windows.go 里会让 GOOS=linux 的构建报 undefined —— 踩过一次。
+func text(b []byte) string {
+	for i, ch := range b {
+		if ch == 0 {
+			return string(b[:i])
+		}
+	}
+	return string(b)
+}
+
 // normalize 把 CTP 的定长字节数组变成字符串，其余原样。
 //
 // ⚠️ CTP 的字符串字段是 `[N]byte`，尾部填 0。直接落盘会得到一个
@@ -90,6 +103,15 @@ func normalize(v reflect.Value) any {
 	}
 	if v.Kind() == reflect.Uint8 {
 		// 单字节枚举（如 PosiDirection）：落成字符，别落成数字。
+		//
+		// ⚠️ 0 值单独处理：CTP 用**零字节**表示「没有设」，而它落进 JSON 会变成
+		// 一个**字符串里的 NUL 控制字符**。那是合法 JSON，
+		// 但不少工具会噎住，而噎住的表现是「夹具读不了」，与「夹具错了」长得一样。
+		// ⚠️ 映射到 "" 不会有歧义：CTP 的枚举取值是可见字符（'0' 是 0x30），
+		// 与 0x00 不是一回事。
+		if v.Uint() == 0 {
+			return ""
+		}
 		return string(rune(v.Uint()))
 	}
 	return v.Interface()

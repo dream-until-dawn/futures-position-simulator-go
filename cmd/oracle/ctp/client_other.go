@@ -37,3 +37,8 @@ func (c *Client) TradingDay() string                    { return "" }
 func (c *Client) Connect(time.Duration) error           { return errPlatform }
 func (c *Client) BrokerParams(time.Duration) (any, error) { return nil, errPlatform }
 func (c *Client) Close()                                {}
+
+// ⚠️ 这几个同样返回错误而不是空值：一个返回 (nil, nil) 的桩
+// 会让「这个平台没实现」在调用方表现成「账户是空的」。
+func (c *Client) Account(time.Duration) (any, error)   { return nil, errPlatform }
+func (c *Client) Positions(time.Duration) (map[string]any, error) { return nil, errPlatform }

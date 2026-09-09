@@ -2618,5 +2618,27 @@
 		"test": "TestCTPFixturesStayOutOfTheDIFFCorpus",
 		"want": "而 testdata/probes 是**天勤 DIFF** 的语料",
 		"expect": "red"
+	},
+	{
+		"name": "236 零值单字节枚举不特殊处理：NUL 控制字符落进 JSON 字符串",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/sanitize.go",
+		"old": "\t\tif v.Uint() == 0 {\n\t\t\treturn \"\"\n\t\t}",
+		"new": "\t\tif v.Uint() == 999 {\n\t\t\treturn \"\"\n\t\t}",
+		"pkg": "./ctp/",
+		"test": "TestZeroByteEnumBecomesEmptyString",
+		"want": "应当是空串",
+		"expect": "red"
+	},
+	{
+		"name": "237 把真实取值 '0'（0x30）也当成「没有设」抹掉",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/sanitize.go",
+		"old": "\t\tif v.Uint() == 0 {",
+		"new": "\t\tif v.Uint() == 0 || v.Uint() == '0' {",
+		"pkg": "./ctp/",
+		"test": "TestZeroByteEnumBecomesEmptyString",
+		"want": "跟着变空会把一个真实取值抹掉",
+		"expect": "red"
 	}
 ]
