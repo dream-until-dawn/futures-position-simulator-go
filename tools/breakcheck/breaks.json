@@ -2475,26 +2475,27 @@
 		"expect": "red"
 	},
 	{
-		"name": "223 结转源挑「最早」那份：起始持仓少几手，下游比出一堆像真差异的差异",
+		"name": "223 结转源挑「最早」那份：被**代理变量的当场核对**拦下（14 笔 < 当天最多 15 笔）",
 		"dir": "",
 		"file": "conformance/fixture/carrywire_test.go",
 		"old": "\tpick := sameDay[len(sameDay)-1]",
 		"new": "\tpick := sameDay[0]",
 		"pkg": "./conformance/fixture/",
 		"test": "TestPositionViewAcrossAllFixtures",
-		"want": "没登记",
+		"want": "越晚看到越多",
 		"expect": "red"
 	},
 	{
-		"name": "224 结转源不要求有成交：零成交的夹具会安静地结转出一个空仓",
+		"name": "224 结转源不要求有成交：当前语料上**拦不住**，因为最后一份恰好有成交",
 		"dir": "",
 		"file": "conformance/fixture/carrywire_test.go",
 		"old": "\t\tif n := len(o.TradesOf(sym)); n > 0 {\n\t\t\tsameDay = append(sameDay, cand{o, n})\n\t\t}",
 		"new": "\t\tsameDay = append(sameDay, cand{o, len(o.TradesOf(sym))})",
 		"pkg": "./conformance/fixture/",
 		"test": "TestPositionViewAcrossAllFixtures",
-		"want": "越晚看到越多",
-		"expect": "red"
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ 演示的盲区：「必须有该合约成交」这条过滤在**当前语料上不承重**。20260908 采集最晚的那份（15:54）恰好有成交，于是去掉过滤之后挑中的还是它，成交笔数仍是当天最大值，max 核对不触发，测试照样绿。⚠️ 它防的是**语料变化之后**的那一天：当天最后一份没有成交时，去掉过滤会挑中一份零成交的夹具，而 Carry 靠重放成交重建持仓 —— 结转出来的是一个**空仓**，下游会比出一堆看起来像真差异的差异。也就是说这条过滤是**防将来**的，不是**验现在**的：写出来，别当它已经被验过。"
 	},
 	{
 		"name": "225 结转路径整个不接：26 份带昨仓的截面重新被跳过",
