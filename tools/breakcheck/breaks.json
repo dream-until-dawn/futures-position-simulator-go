@@ -2473,5 +2473,38 @@
 		"test": "TestCommittedFixturesCarryNoNotifyContent",
 		"want": "范围没有覆盖全仓",
 		"expect": "red"
+	},
+	{
+		"name": "223 结转源挑「最早」那份：起始持仓少几手，下游比出一堆像真差异的差异",
+		"dir": "",
+		"file": "conformance/fixture/carrywire_test.go",
+		"old": "\tpick := sameDay[len(sameDay)-1]",
+		"new": "\tpick := sameDay[0]",
+		"pkg": "./conformance/fixture/",
+		"test": "TestPositionViewAcrossAllFixtures",
+		"want": "没登记",
+		"expect": "red"
+	},
+	{
+		"name": "224 结转源不要求有成交：零成交的夹具会安静地结转出一个空仓",
+		"dir": "",
+		"file": "conformance/fixture/carrywire_test.go",
+		"old": "\t\tif n := len(o.TradesOf(sym)); n > 0 {\n\t\t\tsameDay = append(sameDay, cand{o, n})\n\t\t}",
+		"new": "\t\tsameDay = append(sameDay, cand{o, len(o.TradesOf(sym))})",
+		"pkg": "./conformance/fixture/",
+		"test": "TestPositionViewAcrossAllFixtures",
+		"want": "越晚看到越多",
+		"expect": "red"
+	},
+	{
+		"name": "225 结转路径整个不接：26 份带昨仓的截面重新被跳过",
+		"dir": "",
+		"file": "conformance/fixture/fixture_test.go",
+		"old": "\t\t\t\tcarriedStart = start\n\t\t\t\tcarried++",
+		"new": "\t\t\t\t_ = start\n\t\t\t\tskippedHistory++\n\t\t\t\tcontinue",
+		"pkg": "./conformance/fixture/",
+		"test": "TestPositionViewAcrossAllFixtures",
+		"want": "一个样本都没走结转路径",
+		"expect": "red"
 	}
 ]

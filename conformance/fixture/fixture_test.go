@@ -9,6 +9,7 @@ import (
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
+	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
@@ -474,6 +475,12 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	// ⚠️ 它单独数，因为它回答的是「冻结那三个字段为什么还没被验过」——
 	// 见下面 withFrozen == 0 那一支。
 	skippedWithOrders := 0
+	// carried 是**走了结转路径**的样本数；skipWhy 记下没走成的理由，逐条计数。
+	// ⚠️ 理由要分开数：「没有上一日夹具」与「拿不到交易所结算价」
+	// 要人做的事完全不同，而合在一个数里两者长得一样。
+	carried := 0
+	skipWhy := map[string]int{}
+	carriedFailed := map[string]int{}
 	withFrozen := 0
 	exchanges := map[types.Exchange]bool{}
 	fieldCounts := map[int][]key{}
@@ -492,19 +499,40 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			// 它会与柜台比出一堆看起来像真差异的差异。
 			//
 			// 跳过并**计数**，不静默：那个数是「这批夹具里有多少份需要 Carry」。
+			// ⚠️ 有昨仓的截面**先试着结转**（Carry + ReplayFrom）；
+			// 结转不了才跳过，并把**为什么**记下来。
+			// 20260909 之前这里是无条件 continue —— 而那 26 份里有 19 份记了委托，
+			// 持仓侧冻结那三个字段因此一个样本都没接上。
+			var carriedStart *position.Position
 			if f.HasHistoryPosition(sym) {
-				skippedHistory++
-				if len(f.Orders) > 0 {
-					skippedWithOrders++
+				start, ok, why := carryStartFor(t, all, f, sym)
+				if !ok {
+					skippedHistory++
+					if len(f.Orders) > 0 {
+						skippedWithOrders++
+					}
+					skipWhy[why]++
+					continue
 				}
-				continue
+				carriedStart = start
+				carried++
 			}
 			multStr, ok := multipliers[sym]
 			if !ok {
 				t.Errorf("⚠️ %s 没有登记乘数 —— 漏乘会得到一个量级正确到肉眼看不出的错值", sym)
 				continue
 			}
-			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
+			var p *position.Position
+			var err error
+			if carriedStart != nil {
+				// ⚠️ 结转过来的起始持仓要带上该合约**实测的** PositionDateType：
+				// 今昨仓滚不滚由它定，而 PositionDateNotNeeded 在这条路径上是错的。
+				p, err = ReplayFrom(carriedStart, trades[0].Instrument, types.Speculation,
+					positionDateOf(t, sym), f.TradingDay, trades)
+			} else {
+				p, err = Replay(trades[0].Instrument, types.Speculation,
+					refdata.PositionDateNotNeeded, f.TradingDay, trades)
+			}
 			if err != nil {
 				continue
 			}
@@ -563,7 +591,21 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 				totals[v] += n
 			}
 			for name, v := range r.Verdicts {
-				if v == conformance.Failed {
+				if v != conformance.Failed {
+					continue
+				}
+				// ⚠️ 按**样本population**分开记，不是记进同一个桶。
+				//
+				// 结转过来的样本带昨仓，它们的失败属于**跨日**那几类
+				// （conformance.Live()：逐日盯市基线用收盘价、open_cost 按均价
+				// 冲减、_yd 与 _his 两套口径）—— 那些类在只有今仓的样本上
+				// **根本不可能出现**。
+				// 合在一个桶里的话，只能二选一：要么给当日样本的表加进几条
+				// 它永远用不到的豁免，要么让跨日样本撑爆「不许有第三类」——
+				// **两条都是把两群不同的东西按一把尺子量**。
+				if carriedStart != nil {
+					carriedFailed[name]++
+				} else {
 					failedFields[name]++
 				}
 			}
@@ -594,7 +636,8 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			t.Logf("ⓘ 没有一个样本接上冻结 —— volume_*_frozen_* 三个字段"+
 				"目前**没有证据支撑**。⚠️ 原因**不是**「没有记了委托的夹具」："+
 				"有 %d 个样本记了委托，而它们**全部因为带昨仓被跳过**。"+
-				"两件事耦在一起 —— 冻结要等 Carry + ReplayFrom 那条路打通", skippedWithOrders)
+				"两件事耦在一起。⚠️ 20260909 那条路**已经打通**（carryStartFor），"+
+				"所以现在还走到这一支，说明结转被 skipWhy 里的理由挡住了：%v", skippedWithOrders, skipWhy)
 		case anyFixtureHasOrders(all):
 			// ⚠️ 这一支是**真的异常**，所以它红而不是 log：
 			// 有夹具记了委托、又没有一份是因为昨仓被跳过的，
@@ -687,6 +730,43 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		"position_profit_long": "字段-B", "position_profit_short": "字段-B",
 		"float_profit": "字段-B", "position_profit": "字段-B",
 	}
+	// —— 结转样本单独过一遍**跨日**注册表 ——
+	//
+	// ⚠️ 这一段与下面那段判据不同、理由也不同，所以没有合并：
+	// 跨日那几类（逐日盯市基线用收盘价、open_cost 按均价冲减、_yd 与 _his
+	// 两套口径）在**只有今仓**的样本上不可能出现，
+	// 而当日那两类在跨日样本上仍然会出现。
+	// 两群样本共用一张表的话，表会被撑成「谁都能过」。
+	live := conformance.Live()
+	carriedNames := make([]string, 0, len(carriedFailed))
+	for n := range carriedFailed {
+		carriedNames = append(carriedNames, n)
+	}
+	sort.Strings(carriedNames)
+	for _, n := range carriedNames {
+		if k, ok := live[n]; ok {
+			t.Logf("  ⓘ 结转 %-26s %d 个失败 —— %s（出处 %s）", n, carriedFailed[n], k.Class, k.Evidence)
+			continue
+		}
+		if c, ok := failClass[n]; ok {
+			t.Logf("  ⓘ 结转 %-26s %d 个失败 —— 当日那两类里的 %s", n, carriedFailed[n], c)
+			continue
+		}
+		t.Errorf("⚠️ 结转样本上多出一个**没登记**的失败字段 %s（%d 个样本）—— "+
+			"跨日注册表 conformance.Live() 与当日那两类里都没有它。"+
+			"⚠️ 先查清它属于哪一类**并把理由写进注册表**，不许直接加名字："+
+			"一个可以随手加名字的豁免表，比没有这张表更坏", n, carriedFailed[n])
+	}
+	// ⚠️ 结转路径跑了却一个失败都没有，值得出声：多半是它其实没跑。
+	if carried > 0 && len(carriedFailed) == 0 {
+		t.Logf("ⓘ %d 个结转样本上一个失败都没有 —— 看一眼它是不是真的比过了", carried)
+	}
+	if carried == 0 {
+		t.Errorf("⚠️ 一个样本都没走结转路径 —— 而语料里有 %d 份带昨仓的截面被跳过。"+
+			"结转那条路要么没接上，要么被 skipWhy 里的理由全挡住了：%v",
+			skippedHistory, skipWhy)
+	}
+
 	seenClass := map[string]int{}
 	for _, n := range names {
 		c, ok := failClass[n]
