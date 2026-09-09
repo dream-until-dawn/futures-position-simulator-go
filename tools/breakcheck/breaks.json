@@ -2684,5 +2684,28 @@
 		"test": "TestCheckBlocksProtectedLegAndOversizeOpen",
 		"want": "Check 却放行了",
 		"expect": "red"
+	},
+	{
+		"name": "242 交易日写成带横杠：与自然日差一天，而差的那天持仓性质翻转",
+		"dir": "",
+		"file": "docs/cn-futures-rules.md",
+		"old": "    交易日   `20260910`      无分隔符",
+		"new": "    交易日   `2026-09-10`    无分隔符",
+		"pkg": "./",
+		"test": "TestDateRoleMatchesFormat",
+		"want": "交易日要用**无分隔符**格式",
+		"expect": "red"
+	},
+	{
+		"name": "243 角色词—格式守卫的反空转下界被抬掉（一处都没配也能绿）",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\tif okPairs < 20 {",
+		"new": "\tif okPairs < 0 {",
+		"pkg": "./",
+		"test": "TestDateRoleMatchesFormat",
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ 演示的盲区：下界只防「一处都没有」，防不了「少了一大半」。现状 54 处，掉到 21 处它照样绿——而掉一半通常意味着约定的写法被改过，那时这条守卫查的已经不是原来那件事了。堵它要钉住确切条数，而那个数会随文档增删天天变（方法论 65：数与判据一体，这里判据就是那个正则）。写在这里，别当它已经被覆盖。"
 	}
 ]

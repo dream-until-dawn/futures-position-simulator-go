@@ -1257,3 +1257,77 @@ func TestDocSectionsTableCoversEveryDoc(t *testing.T) {
 	}
 	t.Logf("doc_sections 登记 %d 份，docs/ 下实有 %d 份", len(listed), len(found))
 }
+
+// TestDateRoleMatchesFormat 断言**说了角色词的**日期，格式与角色一致。
+//
+//	交易日 → `20260910`（无分隔符）
+//	自然日 → `2026-09-09`（带横杠）
+//
+// 约定本身写在 cn-futures-rules.md 的「⚠️ 交易日 ≠ 自然日」一节。
+//
+// # ⚠️ 它**抓不到**引发它的那个错，这一点必须写在最前面
+//
+// 这条守卫的起因是一句写错的署名：「双方在 **20260910** 的排查中确立」——
+// 那天的自然日是 2026-09-09，交易日才是 20260910，结算后两者差一天。
+//
+// 而那句话里**根本没有角色词**，于是：
+//
+//	现有守卫（TestSessionLabelsAreQualified）  不匹配
+//	本守卫                                     ⚠️ **也不匹配**
+//
+// > **判据是按「能机械化的形状」设计的，不是按「实际发生的那个错」设计的。**
+//
+// 这与 `margin.PriceBasis` 那次是同一个毛病：候选集是想出来的 ——
+// 上次是排查原因，这次是设计守卫。
+//
+// ⚠️ 所以**别把它读成「日期格式这块已经保住了」**：
+// 它守的是**已经写对角色词**的那些，而没写角色词的那一大类一个都不碰，
+// 而错恰恰出在那一类里。**一个只守住简单一半的守卫，比没有守卫更容易让人放松。**
+//
+// # 它仍然值得有
+//
+// 现状是错配 0 处 —— 它是个**棘轮**：今天加进去零成本、零返工，
+// 只锁住已经对的状态，防的是以后有人写反。
+func TestDateRoleMatchesFormat(t *testing.T) {
+	// ⚠️ 判据（正则）与数出来的数是**一体的**，见方法论 65：
+	// 同一份文档，宽一点的正则会数出完全不同的量。所以这里把正则写在断言旁边，
+	// 而不是把某个数字写进注释。
+	compact := regexp.MustCompile(`交易日[^0-9\n]{0,4}(20[0-9]{2}-[0-9]{2}-[0-9]{2})`)
+	dashed := regexp.MustCompile(`自然日[^0-9\n]{0,4}(20[0-9]{6})`)
+
+	files, err := filepath.Glob(filepath.Join("docs", "*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files = append(files, "README.md")
+	if len(files) < 5 {
+		t.Fatalf("⚠️ 只扫到 %d 份文档 —— 太少，本条在空转", len(files))
+	}
+	okPairs, bad := 0, 0
+	okCompact := regexp.MustCompile(`交易日[^0-9\n]{0,4}20[0-9]{6}`)
+	okDashed := regexp.MustCompile(`自然日[^0-9\n]{0,4}20[0-9]{2}-[0-9]{2}-[0-9]{2}`)
+	for _, f := range files {
+		for i, line := range readLines(t, f) {
+			for _, m := range compact.FindAllStringSubmatch(line, -1) {
+				bad++
+				t.Errorf("⚠️ %s:%d 写的是「交易日 %s」—— 交易日要用**无分隔符**格式（如 20260910）。"+
+					"⚠️ 两者在夜盘之后会差一天，而差的那一天恰好是持仓性质翻转的那一天",
+					f, i+1, m[1])
+			}
+			for _, m := range dashed.FindAllStringSubmatch(line, -1) {
+				bad++
+				t.Errorf("⚠️ %s:%d 写的是「自然日 %s」—— 自然日要用**带横杠**格式（如 2026-09-09）",
+					f, i+1, m[1])
+			}
+			okPairs += len(okCompact.FindAllString(line, -1)) + len(okDashed.FindAllString(line, -1))
+		}
+	}
+	// ⚠️ 反空转：一处都没配过角色词的话，上面两个正则永远不可能命中，
+	// 而那时本条是恒绿的。
+	if okPairs < 20 {
+		t.Fatalf("⚠️ 全部文档里只找到 %d 处「角色词 + 日期」的搭配 —— "+
+			"太少，本条很可能在空转（是不是约定的写法变了？）", okPairs)
+	}
+	t.Logf("角色词与格式一致 %d 处，错配 %d 处；⚠️ 光秃秃的日期（无角色词）本条**不查**",
+		okPairs, bad)
+}
