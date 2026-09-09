@@ -113,7 +113,10 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 	// 20260909 再抬一次：32 → 34。开盘前跑连通性自检（probe -exp status）时
 	// 又落了一份带委托的截面，多凑出两个可比字段。
 	// ⚠️ 一个**每次红了就往上抬**的棘轮等于没有棘轮，所以抬一次写一次理由。
-	const comparedRatchet = 34
+	// 20260909 第三次：34 → 36。日盘那次近半 tick 扫描的截面进了夹具树。
+	// ⚠️ 一天抬三次，本身值得看一眼 —— 三次都是**新证据进来**（实时对拍、
+	// 开盘前自检、日盘实验），不是判据放松。抬的理由不同，处理方式才相同。
+	const comparedRatchet = 36
 	switch {
 	case compared < comparedRatchet:
 		t.Errorf("⚠️ 只比了 %d 个字段，此前是 %d —— 覆盖变小了。"+

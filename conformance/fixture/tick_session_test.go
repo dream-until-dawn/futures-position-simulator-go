@@ -1,7 +1,7 @@
 package fixture
 
 import (
-	"sort"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -10,57 +10,65 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 )
 
-// halfTickGapLo / halfTickGapHi 圈出**盘中样本至今没有碰过**的那段零头。
+// tickMsg / limitMsg 是柜台那两句原话。
 //
-// ⚠️ 这两个数不是「可以接受的空档」，是「现在就这么空着」。
+// ⚠️ 归因**不认关键字**，认整句相等 —— 与 kq_facts 44 同一条规矩：
+// 「包含『整倍数』三个字」这种判据，会把一句新出现的、含同样字眼的
+// 别的拒因悄悄归到这一档里。
 const (
-	halfTickGapLo = 0.34
-	halfTickGapHi = 0.69
+	tickMsg  = "下单价格不是价格单位的整倍数"
+	limitMsg = "已撤单报单被拒绝价格超出涨停板"
 )
 
-// TestTickScanInSessionCoverage 核 roadmap 那句「盘中只有一个点」。
+// TestCounterHalfTickBoundaryHoldsInSession 把半个 tick 那条边界
+// **在交易时段内**逐笔钉住，并且**双向**钉。
 //
-// # 它当场推翻了那句话
+// # 它取代了什么
 //
-// 原文写的是「盘中只有一个点与该模型相符」。按时段表逐笔判下来**不是**：
-// `SHFE.ag2702` 在它自己的夜盘时段内（21:00–02:30，实测落在 02:09）
-// 有两个**不同零头**的点，而且它们分别落在半个 tick 的两侧 ——
+// 上一版是 `TestTickScanInSessionCoverage`：钉住「(0.34, 0.69) 这段零头
+// 盘中一个观测都没有」，是一条会在采样成功那天变红的绊线。
+// ⚠️ 2026-09-09 09:02 它红了 —— **那次采样成功了**，于是这里换成
+// 一条强得多的断言：不再是「那段空着」，是「边界就在 0.5，而且盘中如此」。
 //
-//	零头 1/3  →  柜台报「不是价格单位的整倍数」
-//	零头 0.7  →  柜台报「价格超出涨停」
+//	盘中实扫（SHFE.ag2702，tick=1，越涨停 +10 tick，只改零头）：
 //
-// ⚠️ 差别是实质性的：一个点只能说「盘中没有反例」，
-// **两个跨过边界的点**说的是「盘中这条路径的走向与盘后一致」。
+//	    0.400  不是整数倍        0.500  涨停板
+//	    0.450  不是整数倍        0.550  涨停板
+//	                             0.600  涨停板
 //
-// # 但边界的**位置**仍然只有盘后样本
+//	⇒ 边界**恰好**在 0.5，且 0.5 本身落在**接受**侧（报涨停，说明
+//	  整数倍这一项没被触发）—— 与盘后扫出来的完全一致。
 //
-// 1/3 与 0.7 之间是空的。半个 tick 这个具体位置，
-// 在 (0.34, 0.69) 这一整段上盘中一个观测都没有 ——
-// 任何落在这段里的边界都同样解释得了现有的盘中样本。
+// # 断言的形状：与 offTick **双向**一致
 //
-// > 所以 09:00 那次重跑要问的不是「盘中是不是也这样」，
-// > 是**把零头扫到 0.5 附近**：0.4 / 0.45 / 0.5 / 0.55 / 0.6。
+// 柜台先查整数倍、后查涨跌停（kq_facts 44）。于是对任何一笔拿到这两句
+// 原话之一的委托：
 //
-// ⚠️ 这条会在那次重跑成功的当天变红，那是它该做的：
-// 红了说明空档被填上了，去更新 kq_facts 45 并把这两个常量收窄或删掉。
-func TestTickScanInSessionCoverage(t *testing.T) {
+//	回「不是整数倍」  ⟺  offTick(价, tick) 为真
+//	回「涨停板」      ⟺  offTick(价, tick) 为假（整数倍那一项没拦住它）
+//
+// ⚠️ **双向**是关键。只钉一个方向的话，一个「永远说不是整数倍」的
+// offTick 也能通过其中一半 —— 而 20260909 那次把 order 的两项优先级
+// 对调的翻案，根子就是拿本库的判据去猜柜台会怎么判。
+// 这条断言让那两份判据**在盘中样本上逐笔对齐**。
+func TestCounterHalfTickBoundaryHoldsInSession(t *testing.T) {
 	tables := loadSessionsForTest(t)
 	specs := loadSpecsForTest(t)
 	cn := refdata.CNZone()
 
-	type point struct {
-		frac float64
-		msg  string
-		sym  string
-		at   string
-	}
-	var in []point
-	seen := map[string]bool{}
+	checked, nearBelow, nearAbove := 0, 0, 0
 	for _, f := range loadAll(t) {
 		if !strings.Contains(f.Path, "reject-tick-vs-limit") {
 			continue
 		}
 		for _, o := range f.Orders {
+			msg := ""
+			if v, ok := o["last_msg"]; ok && v.IsText {
+				msg = v.Text
+			}
+			if msg != tickMsg && msg != limitMsg {
+				continue // 被接受的、或别的拒因 —— 这条断言不管
+			}
 			sym, ok := textOf(o, "exchange_id", "instrument_id")
 			if !ok {
 				continue
@@ -101,46 +109,59 @@ func TestTickScanInSessionCoverage(t *testing.T) {
 			if !live {
 				continue
 			}
+
+			pxF, _ := px.Float64()
+			tickF, _ := spec.PriceTick.Float64()
 			q := px.Div(spec.PriceTick)
 			frac, _ := q.Sub(q.Floor()).Float64()
-			if frac == 0 {
-				continue // 整数倍，与这条边界无关
+
+			off := offTickAgrees(pxF, tickF)
+			checked++
+			switch {
+			case msg == tickMsg && !off:
+				t.Errorf("⚠️ %s %s @%s（零头 %.4f，%s）柜台回「不是整数倍」，"+
+					"而本库的 offTick 说它**是**整数倍 —— 两份判据分岔了。"+
+					"⚠️ 别急着改 offTick：先确认这一笔的 tick 取对了",
+					f.Path, sym, px, frac, at.Format("15:04"))
+			case msg == limitMsg && off:
+				t.Errorf("⚠️ %s %s @%s（零头 %.4f，%s）柜台回「涨停板」——"+
+					"说明整数倍那一项**没拦住它**（kq_facts 44：先查整数倍），"+
+					"而本库的 offTick 说它偏离整数倍。两份判据分岔了",
+					f.Path, sym, px, frac, at.Format("15:04"))
 			}
-			msg := ""
-			if v, ok := o["last_msg"]; ok && v.IsText {
-				msg = v.Text
+			if frac >= 0.44 && frac < 0.5 {
+				nearBelow++
 			}
-			key := sym + px.String()
-			if seen[key] {
-				continue
+			if frac >= 0.5 && frac <= 0.56 {
+				nearAbove++
 			}
-			seen[key] = true
-			in = append(in, point{frac, msg, sym, at.Format("15:04")})
 		}
 	}
 
-	if len(in) == 0 {
-		t.Fatal("⚠️ 一个**盘中的、带零头的**样本都没有 —— " +
-			"那么「盘中这条路径与盘后一致」目前是零观测，不是「只有一个点」")
+	if checked < 10 {
+		t.Fatalf("⚠️ 只逐笔核了 %d 笔盘中委托 —— 本条在空转", checked)
 	}
-	sort.Slice(in, func(i, j int) bool { return in[i].frac < in[j].frac })
-	for _, p := range in {
-		t.Logf("  盘中 %s %s 零头 %.3f  柜台：%s", p.sym, p.at, p.frac, p.msg)
+	// ⚠️ 两侧**贴着边界**的样本缺一不可：只有 0.1 与 0.9 的话，
+	// 「边界在 0.5」与「边界在 (0.1, 0.9) 里任何一处」给出同一个答案。
+	if nearBelow == 0 || nearAbove == 0 {
+		t.Fatalf("⚠️ 贴着 0.5 的盘中样本：下侧 %d 笔、上侧 %d 笔 —— "+
+			"缺一侧就定不住**边界的位置**，只能说明「零头这一维起作用」",
+			nearBelow, nearAbove)
 	}
+	t.Logf("盘中逐笔核了 %d 笔，与 offTick 双向一致；贴着 0.5 的样本下侧 %d 笔、上侧 %d 笔",
+		checked, nearBelow, nearAbove)
+}
 
-	var gap []string
-	for _, p := range in {
-		if p.frac > halfTickGapLo && p.frac < halfTickGapHi {
-			gap = append(gap, p.sym+" "+p.at)
-		}
+// offTickAgrees 是 cmd/oracle 那边 offTick 的**同一份判据**。
+//
+// ⚠️ 它必须与 cmd/oracle/probe 的 offTick 保持同一条规则，而两处**是两份代码**
+// —— 主模块与嵌套模块之间不能互相 import（嵌套模块依赖主模块，反过来不行）。
+// 这是一处**已知的重复**，写出来而不是假装没有：
+// 破坏 213 演示两边分岔时这里不会有任何动静。
+func offTickAgrees(price, tick float64) bool {
+	if tick <= 0 {
+		return false
 	}
-	if len(gap) > 0 {
-		t.Fatalf("⚠️ (%.2f, %.2f) 这段零头**现在有盘中样本了**：%v —— "+
-			"这条红了不是坏消息，是 09:00 那次重跑问到了东西。"+
-			"该做的是把观测写进 kq_facts 45，然后收窄或删掉 halfTickGapLo/Hi",
-			halfTickGapLo, halfTickGapHi, gap)
-	}
-	t.Logf("盘中带零头的样本 %d 个，(%.2f, %.2f) 这段仍然是空的 —— "+
-		"半个 tick 这个**位置**至今只有盘后样本支持",
-		len(in), halfTickGapLo, halfTickGapHi)
+	frac := price/tick - math.Floor(price/tick)
+	return frac > 1e-3 && frac < 0.5
 }

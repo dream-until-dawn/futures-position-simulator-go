@@ -2339,5 +2339,50 @@
 		"want": "",
 		"expect": "green",
 		"why": "⚠️ 演示的盲区：这两条破坏**只有一起打**才暴露问题。单独把 anyFixtureHasOrders 弄成恒假时，skippedWithOrders 仍然 > 0，于是走的是第一支（耦合解释），根本到不了真异常那一支 —— 测试照样绿。也就是说这条守卫对「判据里的兜底条件失效」是**单点不敏感**的。堵它要么给 anyFixtureHasOrders 单独配断言（它是三行，值不值另说），要么承认这是分支覆盖的固有形状：一个 switch 的后面几支，在前面的支恒成立时永远测不到。"
+	},
+	{
+		"name": "211 半 tick 边界挪到 0.4：0.45 那笔盘中样本当场对不上柜台",
+		"dir": "",
+		"file": "conformance/fixture/tick_session_test.go",
+		"old": "\treturn frac > 1e-3 && frac < 0.5\n}",
+		"new": "\treturn frac > 1e-3 && frac < 0.4\n}",
+		"pkg": "./conformance/fixture/",
+		"test": "TestCounterHalfTickBoundaryHoldsInSession",
+		"want": "两份判据分岔了",
+		"expect": "red"
+	},
+	{
+		"name": "212 贴边样本只数上侧：边界**位置**就定不住了",
+		"dir": "",
+		"file": "conformance/fixture/tick_session_test.go",
+		"old": "\t\t\tif frac >= 0.44 && frac < 0.5 {\n\t\t\t\tnearBelow++\n\t\t\t}",
+		"new": "\t\t\tif frac >= 0.44 && frac < 0.44 {\n\t\t\t\tnearBelow++\n\t\t\t}",
+		"pkg": "./conformance/fixture/",
+		"test": "TestCounterHalfTickBoundaryHoldsInSession",
+		"want": "缺一侧就定不住",
+		"expect": "red"
+	},
+	{
+		"name": "213 cmd/oracle 那份 offTick 单独改：fixture 这份**不会**跟着红",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/exp_reject_priority.go",
+		"old": "\treturn frac > 1e-3 && frac < 0.5\n}",
+		"new": "\treturn frac > 1e-3 && frac < 0.45\n}",
+		"pkg": "./probe/",
+		"test": "TestTickFracAndOffTickAgreeOnTheHalfBoundary",
+		"want": "offTick 却说不是",
+		"expect": "red"
+	},
+	{
+		"name": "214 已登记的 412 挪进「见过没认出来」：欠账表被当成白名单用",
+		"dir": "",
+		"file": "conformance/fixture/notify_test.go",
+		"old": "\t404: \"20260909 09:02 首见（日盘 reject-tick-vs-limit，WARNING）。\" +",
+		"new": "\t412: \"冒充欠账\",\n\t404: \"20260909 09:02 首见（日盘 reject-tick-vs-limit，WARNING）。\" +",
+		"pkg": "./conformance/fixture/",
+		"test": "TestNotifyCodesAreKnown",
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ 演示的盲区：notifyCodesPendingID 与 notifyCodes **重了也没人管** —— 已认出的码被同时塞进欠账表时，守卫先查 notifyCodes 命中就 continue 了，欠账那一条永远不会被读到，计数也不涨。也就是说这张欠账表**只防漏、不防冗**。堵它要加一条「两张表不许相交」的断言（三行），值不值得看它会不会真的发生 —— 写在这里，比装作没有强。"
 	}
 ]

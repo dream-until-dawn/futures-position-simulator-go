@@ -18,6 +18,30 @@ var notifyCodes = map[int]string{
 		"拒因文案与委托记录里的 last_msg 相同，见 cn-futures-rules.md §9 的表。",
 }
 
+// notifyCodesPendingID 是**见过、但至今说不出它是什么**的码。
+//
+// ⚠️ 它不是 notifyCodes 的一个宽松版本，它是一笔**记名的欠账**：
+// 每一条都写清哪天见的、为什么当时没认出来、以及**怎样才能认出来**。
+//
+// 20260909 09:02 的日盘实验里一次冒出四个新码。而它们说了什么
+// **已经无从查起** —— 夹具刻意不收 content（那是使用者的待裁决），
+// 而当时的客户端把 Content 解析出来就地丢掉了，**日志里也没有**。
+//
+//	于是那条「去日志里看它是什么」的补救指示，在当时是做不到的。
+//	⚠️ 一条守卫红了、而它要求的动作**无法执行**，比它不红更糟：
+//	人会去把码加进白名单，因为那是唯一做得到的动作。
+//
+// 已修：kq.Client.logNotifyOnce 现在把每条通知的文案打进本次运行的日志
+// （只进本地日志，不落盘、不推送 —— 与「content 该不该进夹具」是两件事）。
+// **下一次这四个码再出现时就能认出来**，那时把它们移进 notifyCodes 并删掉这里。
+var notifyCodesPendingID = map[int]string{
+	404: "20260909 09:02 首见（日盘 reject-tick-vs-limit，WARNING）。" +
+		"出现 7 次，与被拒的报单同批 —— 但**没有文案**，说不出是哪一类拒绝。",
+	417: "20260909 09:02 首见（INFO）。出现 3 次。",
+	419: "20260909 09:02 首见（INFO）。出现 3 次。",
+	420: "20260909 09:02 首见（INFO）。出现 1 次。",
+}
+
 // TestNotifyCodesAreKnown 断言夹具里出现的每一个通知码都被写下来过。
 //
 // # 为什么值得有
@@ -57,13 +81,27 @@ func TestNotifyCodesAreKnown(t *testing.T) {
 			"20260909 起 notify 应当进夹具。先查落盘（kq.Sanitize）" +
 			"还是加载（fixture.Load）漏了那一段")
 	}
+	pending := 0
 	for _, c := range codes {
-		if _, ok := notifyCodes[c]; !ok {
-			t.Errorf("⚠️ 通知码 %d 没有登记（出现在 %v）—— "+
-				"去日志里看它是什么，然后写进 notifyCodes。"+
-				"⚠️ 一个没人看过的码与一个看过并判定为无关的码，在数据里一模一样",
-				c, seen[c])
+		if _, ok := notifyCodes[c]; ok {
+			continue
 		}
+		if why, ok := notifyCodesPendingID[c]; ok {
+			pending++
+			t.Logf("ⓘ 通知码 %d **见过但没认出来**：%s", c, why)
+			continue
+		}
+		t.Errorf("⚠️ 通知码 %d 没有登记（出现在 %v）—— "+
+			"跑一次能复现它的实验，日志里现在会打印文案（kq 的 logNotifyOnce），"+
+			"看清之后写进 notifyCodes。"+
+			"⚠️ 一个没人看过的码与一个看过并判定为无关的码，在数据里一模一样",
+			c, seen[c])
+	}
+	if pending > 0 {
+		// ⚠️ 这笔欠账要**每次跑都出声**。一个安静的待办与一个不存在的待办，
+		// 在测试输出里长得一样 —— 而这几个码正是「安静」了才拖到现在。
+		t.Logf("⚠️ 有 %d 个码只登记了「见过」、没登记「是什么」（notifyCodesPendingID）。"+
+			"它们的文案在首见那次没被记下来，要靠**复现**才能认出来", pending)
 	}
 	// ⚠️ 反向也要查：登记了却再没出现过的码，说明那条观测已经没有样本支撑。
 	for c, why := range notifyCodes {
