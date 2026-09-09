@@ -398,6 +398,22 @@ D+1 日 baseline-full / close-order / yd-vs-his
 
 > **于是目的改成：把零头扫到 0.5 附近，把那段空档填上。**
 
+案例表已经补好（`exp_reject_tick_limit` 的 2/5、45/100、1/2、55/100、3/5）。
+跑法：
+
+    cd cmd/oracle
+    go run . probe -env ../../.env \
+      -specs ../../testdata/refdata/specs-20260908.json \
+      -exp reject-tick-vs-limit -symbols SHFE.ag2702 \
+      -dump ../../testdata/probes
+
+⚠️ 合约选 `SHFE.ag2702` 不是随手挑的：现有那两个盘中点（1/3 与 0.7）
+就在这个合约上，同一个 tick（=1）、同一条时段线，新点才**直接可比**。
+它的日盘 09:00–10:15 / 10:30–11:30 / 13:30–15:00。
+
+⚠️ 这条实验全程 BUY/OPEN，与 `rb2701` 上那条受保护的空今仓无关，
+不会碰到过夜种子。
+
 ⚠️ 守卫会在填上的当天变红并说清该做什么，不靠人记得回来看。
 
 ⚠️ 顺带记一句方法：这个更正是**机械判出来的**，不是重读文档读出来的 ——
