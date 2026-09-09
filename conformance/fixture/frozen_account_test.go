@@ -110,7 +110,10 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 	// ⚠️ 棘轮，不是 `> 0`。少比几份夹具**不会报错**，只会让覆盖悄悄变小 ——
 	// 而那正是筛法漂移（哪些委托要算冻结、哪些夹具凑得齐规格）的表现形式。
 	// 20260909：30 → 32（实时对拍那次的截面进了夹具树）。这个数**只许涨**。
-	const comparedRatchet = 32
+	// 20260909 再抬一次：32 → 34。开盘前跑连通性自检（probe -exp status）时
+	// 又落了一份带委托的截面，多凑出两个可比字段。
+	// ⚠️ 一个**每次红了就往上抬**的棘轮等于没有棘轮，所以抬一次写一次理由。
+	const comparedRatchet = 34
 	switch {
 	case compared < comparedRatchet:
 		t.Errorf("⚠️ 只比了 %d 个字段，此前是 %d —— 覆盖变小了。"+
