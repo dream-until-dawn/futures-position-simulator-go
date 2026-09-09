@@ -93,7 +93,19 @@ func TestScrubbedIsIndependentOfTheWhitelist(t *testing.T) {
 			"白名单这时一个字都不会说，第二道防线因此必须独立于它")
 	}
 	// 反面：没有凭据时不许误报。
-	if err := Scrubbed(`{"Balance":1}`, secrets); err != nil {
+	//
+	// ⚠️ 这里**故意**把一个**短**凭据（BrokerID "9999"）放进 secrets，
+	// 而干净内容里恰好有 9999 这个数（价格、手数里到处都是）。
+	// 它钉住的是 Scrubbed 里那条 `len(v) < 8` 的下界：
+	//
+	//	去掉下界 → 每一份夹具都会因为撞上价格而报警
+	//	→ 而**一条老是误报的检查最后一定会被关掉**，
+	//	  于是那道本来管用的第二道防线就没了
+	//
+	// ⚠️ 第一版这里只放了长凭据，于是把下界去掉**测试照样绿**——
+	// 破坏 234 当场抓到：那条下界在测试里根本没被考验过。
+	clean := map[string]string{"CTP_APP_ID": "APPID-1234567890", "CTP_BROKER_ID": "9999"}
+	if err := Scrubbed(`{"Balance":9999,"Volume":9999}`, clean); err != nil {
 		t.Errorf("⚠️ 干净内容被误报：%v —— 一条老是误报的检查最后一定会被关掉", err)
 	}
 }
