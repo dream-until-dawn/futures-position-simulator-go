@@ -1014,3 +1014,87 @@ func docFilesToScan(t *testing.T) []string {
 	sort.Strings(out)
 	return out
 }
+
+// TestDocPathRefsResolve 断言文档里指的**路径**都指得到东西。
+//
+// # 两类引用，同一个病
+//
+//	[适用边界](docs/fidelity.md)     markdown 相对链接
+//	`cmd/oracle/kq/order.go`         反引号里的路径
+//
+// ⚠️ 两类都是「文档指着仓库里的某个东西」，而**移动或改名一个文件
+// 不会让任何文档变红** —— 与 TestDocTestRefsResolve 补的是同一个洞，
+// 只是那边指的是测试名，这边指的是路径。
+//
+// 20260909 第一次跑就抓到一个：state.md 第 30 条写 `kq/order.go`，
+// 而那个文件在 `cmd/oracle/kq/order.go`。⚠️ 它**不是坏链接，是省略的链接** ——
+// 写的人知道上下文，读的人得自己猜。两者在文档里长得一样。
+//
+// ⚠️ 反引号那一类刻意只查**带斜杠**的：裸文件名（`order.go`）在多个包里都有，
+// 查它会得到一堆假阳性，而**一条不断误报的守卫最后一定会被关掉**。
+// 这个取舍写出来：`README.md` 这种裸名字因此不在保护范围内。
+func TestDocPathRefsResolve(t *testing.T) {
+	links, paths := 0, 0
+	var bad []string
+	for _, p := range docFilesToScan(t) {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dir := filepath.Dir(p)
+		for _, m := range mdLinkRe.FindAllSubmatch(b, -1) {
+			target := string(m[1])
+			if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") ||
+				strings.HasPrefix(target, "#") || strings.HasPrefix(target, "mailto:") {
+				continue
+			}
+			if i := strings.IndexByte(target, '#'); i >= 0 {
+				target = target[:i]
+			}
+			if target == "" {
+				continue
+			}
+			links++
+			if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(target))); err != nil {
+				bad = append(bad, p+" 的链接 "+target)
+			}
+		}
+		for _, m := range tickPathRe.FindAllSubmatch(b, -1) {
+			target := string(m[1])
+			if !strings.Contains(target, "/") {
+				continue // 裸文件名不查，理由见上
+			}
+			paths++
+			if _, err := os.Stat(filepath.FromSlash(target)); err != nil {
+				bad = append(bad, p+" 的路径 `"+target+"`（⚠️ 也可能只是**省略了前缀**，"+
+					"那同样要补全：写的人知道上下文，读的人得猜）")
+			}
+		}
+	}
+	sort.Strings(bad)
+	for _, x := range bad {
+		t.Errorf("⚠️ %s —— 指不到东西", x)
+	}
+	// ⚠️ 两个下界分开卡：两类引用各自的正则都可能单独失效，
+	// 而合在一起数的话，一类归零会被另一类盖住。
+	if links < 50 {
+		t.Fatalf("⚠️ 只认出 %d 条 markdown 相对链接 —— 本条在空转", links)
+	}
+	// ⚠️ 下界不是「应该有这么多」，是「归零了就说明正则不再匹配」。
+	// 现值 17 条（20260909），卡在 10 —— 留出正常增删的余地，
+	// 而正则一旦失效得到的是 0，离 10 很远。
+	// ⚠️ 把下界贴着现值写会让每一次正常删除都变红，而**一条老是误报的守卫
+	// 最后一定会被关掉** —— 那比没有它更坏。
+	if paths < 10 {
+		t.Fatalf("⚠️ 只认出 %d 条反引号路径 —— 本条在空转", paths)
+	}
+	t.Logf("markdown 相对链接 %d 条、反引号路径 %d 条，全部指得到", links, paths)
+}
+
+var (
+	mdLinkRe   = regexp.MustCompile(`\[[^\]]*\]\(([^)\s]+)\)`)
+	// ⚠️ 这个模式里有反引号，写不成 Go 的原始字符串，只能用带转义的那种 ——
+	// 于是点号要写成两个反斜杠加点。写错一次的表现是**编译不过**，
+	// 那反而是好消息：换成少一个反斜杠而仍然合法的写法，它会安静地匹配错。
+	tickPathRe = regexp.MustCompile("`([A-Za-z0-9_./-]+\\.(?:go|json|md|sh|yml))`")
+)

@@ -2283,5 +2283,38 @@
 		"test": "TestDocTestRefsResolve",
 		"want": "本条在空转",
 		"expect": "red"
+	},
+	{
+		"name": "206 文档里一条相对链接指到不存在的文件",
+		"dir": "",
+		"file": "README.md",
+		"old": "[适用边界与保真度](docs/fidelity.md) 的状态横幅",
+		"new": "[适用边界与保真度](docs/fidelity-moved.md) 的状态横幅",
+		"pkg": "./",
+		"test": "TestDocPathRefsResolve",
+		"want": "指不到东西",
+		"expect": "red"
+	},
+	{
+		"name": "207 反引号路径那一类退化：去掉「带斜杠才查」之后仍不查任何东西",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\t\t\tif !strings.Contains(target, \"/\") {\n\t\t\t\tcontinue // 裸文件名不查，理由见上\n\t\t\t}",
+		"new": "\t\t\tif strings.Contains(target, \"/\") {\n\t\t\t\tcontinue // 裸文件名不查，理由见上\n\t\t\t}",
+		"pkg": "./",
+		"test": "TestDocPathRefsResolve",
+		"want": "本条在空转",
+		"expect": "red"
+	},
+	{
+		"name": "208 markdown 链接把 http 也当成相对路径查",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\t\t\tif strings.HasPrefix(target, \"http://\") || strings.HasPrefix(target, \"https://\") ||",
+		"new": "\t\t\tif strings.HasPrefix(target, \"http-never://\") || strings.HasPrefix(target, \"https-never://\") ||",
+		"pkg": "./",
+		"test": "TestDocPathRefsResolve",
+		"want": "指不到东西",
+		"expect": "red"
 	}
 ]
