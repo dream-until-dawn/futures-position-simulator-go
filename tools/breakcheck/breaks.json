@@ -2120,14 +2120,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "191 归因认关键字而不是整句：tickMsg 改成子串",
+		"name": "191 归因从整句改成子串：那批拒绝当场认不出来，贴边样本随之没了",
 		"dir": "",
 		"file": "conformance/fixture/tick_session_test.go",
 		"old": "\ttickMsg  = \"下单价格不是价格单位的整倍数\"",
 		"new": "\ttickMsg  = \"整倍数\"",
 		"pkg": "./conformance/fixture/",
 		"test": "TestCounterHalfTickBoundaryHoldsInSession",
-		"want": "本条在空转",
+		"want": "缺一侧就定不住",
 		"expect": "red"
 	},
 	{
