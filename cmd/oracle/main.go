@@ -773,18 +773,16 @@ func runCTPFlatten(args []string) error {
 		if err != nil {
 			return fmt.Errorf("⚠️ 拿不到 %s 的行情，**仓还在**：%w", symbol, err)
 		}
-		// 平仓挂**穿过市场**的价，保证成交。
+		// 平仓挂对自己不利的那一端（涨跌停价），保证成交。
 		//
-		// ⚠️ 不用涨跌停价。观测（20260910 夜盘）：挂跌停价 3005 的平今单被回
-		// ErrorID=22「不允许重复报单」，换成 3134 的同方向同量单**当即成交**，
-		// 而两次用的 OrderRef 一个是 p000000002、一个是 p000000001 ——
-		// **后者是当天早已用过的那个**。所以「ref 撞车」解释不了这两次。
-		// ⚠️ 机制未定（见 probes.md §6.8），这里只按观测取舍：涨跌停价在同一
-		// 时段是**常数**，于是每次平仓长得一模一样；「最新价 ± 一大截」同样穿越
-		// 市场保证成交，却**随行情天然变化**。躲开一个没查清的坑，不等于查清了它。
-		px := float64(md.LastPrice) - 20
+		// ⚠️ 中间短暂改成过「最新价 ± 20」，那是在 `ErrorID=22` 的真因没查清时
+		// 用来绕开它的 —— 而绕开一个没查清的坑，不等于查清了它。
+		// 真因是报单引用的格式（probes.md §6.8），与挂价无关，所以退回涨跌停价：
+		// **它保证落在合法区间内**，而「最新价 ± 20」在行情急动时会冲出涨跌停，
+		// 于是平仓被拒 —— 而平仓被拒的后果是**敞口留在账上**。
+		px := float64(md.LowerLimitPrice)
 		if dir == def.THOST_FTDC_D_Buy {
-			px = float64(md.LastPrice) + 20
+			px = float64(md.UpperLimitPrice)
 		}
 		ex, inst := ctp.SplitSymbol(symbol)
 		logf("[flat] %s 今仓 %d 手（%s）→ 平今 @%.2f", key, today, string(p.PosiDirection), px)
