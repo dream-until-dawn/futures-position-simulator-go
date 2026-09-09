@@ -119,9 +119,35 @@ func stripComments(src string) string {
 // ⚠️ 一个「紧急情况下跳过检查」的参数，会在紧急情况下**正好**被用到 ——
 // 而紧急情况正是判断力最差的时候。所以这里禁的是那种开关的**存在**，
 // 不是它的使用。
+// valveWhy / refWhy 是两类禁用旋钮各自的理由。
+const (
+	valveWhy = "**不许有绕过安全阀的开关**。" +
+		"它会在紧急情况下正好被用到，而那是判断力最差的时候"
+
+	// ⚠️ refWhy 是 20260910 评审加上的第二类。
+	// 报单引用的唯一性与安全阀是**同一个形状**：都是一条不变量，
+	// 都有人想为「就这一次」开个口子。
+	// 当时那个口子叫 `SeedOrderSeq`，只给判别实验用 ——
+	// 而它绕过的正是同一夜刚花了四次「平仓被拒、仓还在」才查清的那条不变量。
+	refWhy = "**不许有拨动报单引用序号的开关**。" +
+		"引用必须由登录应答的 MaxOrderRef 续号，而簿与撤单都按引用索引：" +
+		"重用引用时撤单指向哪一笔，就只能靠「不会重用」这条纪律 —— " +
+		"而这个模块已经证明过纪律挡不住（silent-risks.md 66）"
+)
+
 func TestNoBypassKnob(t *testing.T) {
 	files, _ := filepath.Glob("*.go")
-	banned := []string{"sendUnchecked", "SendUnchecked", "skipCheck", "SkipCheck", "ForceSend"}
+	// ⚠️ 两类旋钮，理由不同，所以报错要说对是哪一类 ——
+	// 「不许有」的东西如果给不出**为什么不许**，下一个人会以为是洁癖，然后加回来。
+	banned := []string{
+		"sendUnchecked", "SendUnchecked", "skipCheck", "SkipCheck", "ForceSend",
+		"SeedOrderSeq", "seedOrderSeq", "SetOrderSeq",
+	}
+	why := map[string]string{
+		"sendUnchecked": valveWhy, "SendUnchecked": valveWhy,
+		"skipCheck": valveWhy, "SkipCheck": valveWhy, "ForceSend": valveWhy,
+		"SeedOrderSeq": refWhy, "seedOrderSeq": refWhy, "SetOrderSeq": refWhy,
+	}
 	n := 0
 	for _, f := range files {
 		if strings.HasSuffix(f, "_test.go") {
@@ -134,8 +160,7 @@ func TestNoBypassKnob(t *testing.T) {
 		n++
 		for _, w := range banned {
 			if strings.Contains(stripComments(string(b)), w) {
-				t.Errorf("⚠️ %s 里出现 %q —— **不许有绕过安全阀的开关**。"+
-					"它会在紧急情况下正好被用到，而那是判断力最差的时候", f, w)
+				t.Errorf("⚠️ %s 里出现 %q —— %s", f, w, why[w])
 			}
 		}
 	}

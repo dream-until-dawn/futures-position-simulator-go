@@ -87,22 +87,16 @@ func (c *Client) send(r OrderReq) (string, error) {
 	// 「上一笔的结局」被当成了「这一笔的结局」。
 	//
 	// ⚠️ 清了之后仍有一层残余歧义：旧单的迟到回报会落到新单的格子上。
-	// 这**没法在按 ref 索引的簿里根治** —— 所以正常路径一律不重用 ref，
-	// 只有判别实验会（见 SeedOrderSeq 的说明）。
+	// 这**没法在按 ref 索引的簿里根治**。⚠️ 于是本包**不提供**任何拨动序号的口子：
+	// 20260910 曾为判别实验加过一个 `SeedOrderSeq`，评审指出它与
+	// `TestNoBypassKnob` 禁掉的那种开关**是同一个形状** —— 一个绕过安全阀、
+	// 一个绕过 ref 唯一性，而后者只靠「正常路径不重用」这条纪律守着。
+	// ⚠️ 已删除。守卫 `TestNoOrderRefSeedKnob`。
 	c.book.reset(ref, r.Volume)
 	c.logf("[ctp] 报单 %s  ref=%s", r, ref)
 	c.req("ReqOrderInsert", unsafe.Pointer(&f))
 	return ref, nil
 }
-
-// SeedOrderSeq 把委托序号拨到 n，使下一笔的 ref 是 p<n>。
-//
-// ⚠️ **这是给判别实验用的**，不是给正常流程用的：`ctp-dup` 要构造
-// 「同 ref 不同要素」与「同要素不同 ref」两组，而这两组只有能指定 ref 才做得出。
-// ⚠️ 它**不碰安全阀** —— ref 决定不了发不发得出去，只决定这笔单叫什么名字。
-// ⚠️ 正常路径不许调用它：默认从 1 开始递增已被实测支持（20260910 夜盘同一
-// 交易日里 p000000001 在新会话上被重复接受），见 probes.md §6.8。
-func (c *Client) SeedOrderSeq(n int64) { atomic.StoreInt64(&c.orderSeq, n-1) }
 
 // Insert 发一笔限价委托并等它到达一个**可判断**的状态。
 //

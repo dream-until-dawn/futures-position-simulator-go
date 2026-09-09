@@ -68,10 +68,12 @@ func (c *Client) Insert(OrderReq, time.Duration) (OrderState, error) {
 
 func (c *Client) Cancel(string, OrderReq) error { return errPlatform }
 
-// SeedOrderSeq 在非 Windows 上无事可做：这里根本发不出委托。
-// ⚠️ 它不返回 error 是因为 Windows 侧也不返回 —— 签名要一致，
-// 而「无操作」在这里是安全的：任何真的想发单的调用都会在 Connect 就断。
-func (c *Client) SeedOrderSeq(int64) {}
+// MarketData 在非 Windows 上没有实现 —— ⚠️ 返回**明确错误**而不是零值：
+// 后者会让「这个平台没实现」在运行时表现成「柜台没反应」，
+// 而那两件事要人做的事完全不同。
+func (c *Client) MarketData(string, time.Duration) (*def.CThostFtdcDepthMarketDataField, error) {
+	return nil, errPlatform
+}
 
 // Order 在非 Windows 上永远查不到：这里一笔单都发不出去。
 func (c *Client) Order(string) (OrderState, bool) { return OrderState{}, false }

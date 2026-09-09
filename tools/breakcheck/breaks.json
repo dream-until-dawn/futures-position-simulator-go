@@ -2802,5 +2802,38 @@
 		"test": "TestOrderBookResetClearsTerminalState",
 		"want": "上一笔的结局",
 		"expect": "red"
+	},
+	{
+		"name": "252 把与平台无关的函数打回 windows 专属 —— 跨平台编译当场断。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/symbol.go",
+		"old": "package ctp",
+		"new": "//go:build windows\n\npackage ctp",
+		"pkg": ".",
+		"test": "TestCrossCompiles",
+		"want": "编不过",
+		"expect": "red"
+	},
+	{
+		"name": "253 报单引用的续号旋钮被加回来 —— 它绕过的是引用唯一性这条不变量。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "// Insert 发一笔限价委托并等它到达一个**可判断**的状态。",
+		"new": "func (c *Client) SeedOrderSeq(n int64) { atomic.StoreInt64(&c.orderSeq, n-1) }\n\n// Insert 发一笔限价委托并等它到达一个**可判断**的状态。",
+		"pkg": "./ctp/",
+		"test": "TestNoBypassKnob",
+		"want": "拨动报单引用序号",
+		"expect": "red"
+	},
+	{
+		"name": "254 非 Windows 的桩少一个方法 —— 而 cmd/oracle 没调它，编译照样过。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/client_other.go",
+		"old": "func (c *Client) Order(string) (OrderState, bool) { return OrderState{}, false }",
+		"new": "",
+		"pkg": "./ctp/",
+		"test": "TestNonWindowsStubsCoverEveryMethod",
+		"want": "非 Windows 没有桩",
+		"expect": "red"
 	}
 ]

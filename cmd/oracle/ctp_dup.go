@@ -16,8 +16,7 @@ import (
 // dupCell 是实验的一格：一笔单，加上它想回答什么。
 type dupCell struct {
 	Name  string
-	Seed  int64 // 拨到这个序号，于是 ref = p<Seed>
-	PxOff int   // 价格 = 跌停 + PxOff × step
+	PxOff int // 价格 = 跌停 + PxOff × step
 	Want  string
 }
 
@@ -61,9 +60,11 @@ func runCTPDup(args []string) error {
 	symbol := fs.String("symbol", "", "合约，形如 SHFE.rb2701（⚠️ 无默认值）")
 	step := fs.Float64("step", 1, "相邻两格的价差，⚠️ **必须是该合约最小变动价位的整数倍**，"+
 		"否则会撞上「不是整数倍」那条拒因，而那与本实验无关")
-	base := fs.Int64("base", 0, "起始序号；0 表示按当前时刻取一个当日没用过的号")
-	plan := fs.String("plan", "natural", "natural=**完全不碰 ref**，由客户端自己续号（最贴近真实用法）；"+
-		"serial=手工指定全新递增 ref；elem=重用 ref 的原五格")
+	// ⚠️ 曾有 -plan serial / elem 两个计划，靠 `SeedOrderSeq` 手工指定报单引用。
+	// **两者连同那个旋钮一起删了**（20260910 评审）：它们唯一的用处是复跑
+	// §6.8 里那两轮历史记录，而那两轮跑的是一个**已经修好的缺陷** ——
+	// 修好之后本来就复跑不出当时的结果。
+	// ⚠️ 为了复跑一件复跑不出来的事，留一个能重新引入 ref 冲突的旋钮，不划算。
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
@@ -71,48 +72,12 @@ func runCTPDup(args []string) error {
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：一笔真实委托的合约必须显式指定")
 	}
-	// ⚠️ 起始序号要**避开当日已经用过的号**，否则第 1 格（基线）本身就被污染，
-	// 而基线一旦不成立，后面四格全部读不出东西。今天用过的是 p000000001/2 这种小号，
-	// 所以从当日秒数起跳：它远大于那些手写小号，且每次跑都不同。
-	seed := *base
-	if seed == 0 {
-		n := time.Now()
-		seed = int64(n.Hour()*3600+n.Minute()*60+n.Second()) * 10
-	}
-
-	// ⚠️ elem 计划跑过一轮（20260910 21:4x），**它的对照组自己红了**：
-	// 第 3 格新 ref、新价、递增，本该接受，却同样回 ErrorID=22。
-	// 于是 H_dup / H_mono / H_elem **一个都解释不了**，问题必须先收窄成
-	// 「是不是从第二笔起就一律被拒」—— 那是 serial 计划要回答的，
-	// 所以它是默认值。⚠️ 保留 elem 是因为它的原始记录已经进了文档，
-	// 删掉计划等于让那条记录无法复跑。
 	cells := []dupCell{
-		{"1 基线", seed, 1, "接受（否则整轮作废）"},
-		{"2 新 ref·新价·递增", seed + 1, 2, "接受；若拒 ⇒ **第二笔就被拒**，与 ref/要素都无关"},
-		{"3 新 ref·新价·递增", seed + 2, 3, "接受"},
-		{"4 新 ref·新价·递增", seed + 3, 4, "接受"},
-		{"5 新 ref·新价·递增", seed + 4, 5, "接受"},
-	}
-	if *plan == "elem" {
-		cells = []dupCell{
-			{"1 基线", seed, 1, "接受（否则后四格没有对照，整轮作废）"},
-			{"2 同要素·新 ref·递增", seed + 1, 1, "若拒 ⇒ H_elem 成立"},
-			{"3 新要素·新 ref·递增", seed + 2, 2, "接受（排除「第 N 笔就是会被拒」）"},
-			{"4 重复 ref·非递增·新要素", seed, 3, "若拒 ⇒ 与要素无关（H_dup 或 H_mono）"},
-			{"5 更小但没用过的 ref·新要素", seed - 1, 4, "拒 ⇒ H_mono；受 ⇒ H_mono 被否"},
-		}
-	} else if *plan == "natural" {
-		// ⚠️ natural 不碰 ref。它测的是**真实用法**：连上、连发五笔。
-		// 20260910 的两轮实验都是「手工指定 ref」，而手工指定这个动作本身
-		// 会盖掉登录时从 MaxOrderRef 续的号 —— **一个为了控制变量而引入的变量**。
-		for i := range cells {
-			cells[i].Name = fmt.Sprintf("%d 自然续号·新价", i+1)
-			cells[i].Want = "接受"
-		}
-		cells[0].Want = "接受（否则整轮作废）"
-	} else if *plan != "serial" {
-		return fmt.Errorf("⚠️ -plan 只认 natural / serial / elem，拿到 %q —— "+
-			"不给默认回退：跑错计划的结果长得和跑对了一模一样", *plan)
+		{"第 1 笔", 1, "接受（否则整轮作废）"},
+		{"第 2 笔", 2, "接受"},
+		{"第 3 笔", 3, "接受"},
+		{"第 4 笔", 4, "接受"},
+		{"第 5 笔", 5, "接受"},
 	}
 
 	env, err := probe.LoadEnv(*envPath)
@@ -141,7 +106,8 @@ func runCTPDup(args []string) error {
 	floor := float64(md.LowerLimitPrice)
 	logf("[dup] 行情 最新=%.2f 跌停=%.2f ⇒ 五格挂在 %.2f–%.2f，全部买开、全部挂得住",
 		float64(md.LastPrice), floor, floor+*step, floor+4**step)
-	logf("[dup] 起始序号 %d（当日已用过的是个位数小号，刻意避开）", seed)
+	logf("[dup] ⚠️ 报单引用**不由本实验指定** —— 由客户端从登录应答的 MaxOrderRef 续号，")
+	logf("       这正是被测的那条路径：手工指定引用等于绕开它，那样测的是别的东西。")
 
 	ex, inst := ctp.SplitSymbol(*symbol)
 	type row struct {
@@ -154,9 +120,6 @@ func runCTPDup(args []string) error {
 	var alive []ctp.OrderReq
 	var aliveRef []string
 	for _, cl := range cells {
-		if *plan != "natural" {
-			c.SeedOrderSeq(cl.Seed)
-		}
 		req := ctp.OrderReq{
 			Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
@@ -171,19 +134,12 @@ func runCTPDup(args []string) error {
 		rows = append(rows, row{cl, req.LimitPrice, st.OrderRef, st.StatusMsg, st.Alive()})
 		logf("[dup] %-28s ref=%s @%.2f → status=%q alive=%v %s",
 			cl.Name, st.OrderRef, req.LimitPrice, string(st.Status), st.Alive(), st.StatusMsg)
-		// ⚠️ serial 计划**刻意不在中途撤**：它要回答的是「后一笔会不会被拒」，
+		// ⚠️ **刻意不在中途撤**：本实验要回答的是「后一笔会不会被拒」，
 		// 而中途撤单会引入「撤单本身是不是原因」这一条无关的可能。
-		// elem 计划必须撤 —— 它要重用 ref，不撤的话第 4 格会撞上一笔活单。
-		if st.Alive() && *plan == "elem" {
-			if err := c.Cancel(st.OrderRef, req); err != nil {
-				return err
-			}
-			time.Sleep(2 * time.Second)
-		}
 		alive = append(alive, req)
 		aliveRef = append(aliveRef, st.OrderRef)
 	}
-	if *plan != "elem" {
+	{
 		for i, r := range alive {
 			if s, ok := c.Order(aliveRef[i]); ok && s.Alive() {
 				if err := c.Cancel(aliveRef[i], r); err != nil {
