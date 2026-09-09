@@ -78,6 +78,22 @@ func TestCommittedFixturesCarryNoNotifyContent(t *testing.T) {
 	if len(files) < 100 {
 		t.Fatalf("⚠️ 只列出 %d 个已入库文件 —— 太少，本条在空转", len(files))
 	}
+	// ⚠️ 判据不是「文件够多」，是「**范围真的覆盖了 testdata 之外**」。
+	//
+	// 只卡总数是不行的：缩回 `ls-files testdata` 仍有 101 个文件，
+	// 任何一个宽松的下界都拦不住 —— 而缩回去正是这条守卫失效的方式。
+	// 这一条直接问那件事本身。
+	outside := 0
+	for _, f := range files {
+		if !strings.HasPrefix(f, "testdata/") {
+			outside++
+		}
+	}
+	if outside < 20 {
+		t.Fatalf("⚠️ 扫到的 %d 个文件里只有 %d 个在 testdata 之外 —— "+
+			"范围没有覆盖全仓。旁档的落点由 -dump / PROBE_DUMP_DIR 决定，"+
+			"**指到哪里都可能**，所以这条守卫必须扫全仓", len(files), outside)
+	}
 	// ⚠️ 路径这一层单独查：文案文件**根本不该有一个进过库**。
 	// 它与下面逐字段查 content 是两道不同的闸 —— 有人换个字段名装文案时，
 	// 这一道仍然拦得住；反过来有人换个文件名时，下面那道仍然拦得住。
