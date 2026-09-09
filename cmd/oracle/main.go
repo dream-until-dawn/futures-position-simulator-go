@@ -831,6 +831,8 @@ func runCTPHold(args []string) error {
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约（⚠️ 无默认值）")
 	rounds := fs.Int("rounds", 6, "轮询次数")
+	keep := fs.Bool("keep", false, "⚠️ **不平仓，把这手仓留过夜**。"+
+		"只有一件事需要它：昨仓的保证金基准要等结算，而结算要有隔夜持仓")
 	every := fs.Duration("every", 20*time.Second, "轮询间隔")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步超时")
 	if err := fs.Parse(args[2:]); err != nil {
@@ -908,6 +910,20 @@ func runCTPHold(args []string) error {
 		logf("⇒ ⚠️ 占用保证金**变了**：%.2f → %.2f ⇒ 基准是某个**动态价**，开仓价被否", first, last)
 	}
 	logf("")
+	if *keep {
+		// ⚠️ **刻意留仓**，与「平仓失败」是两件事，所以说法必须不同：
+		// 后者是事故要人去收拾，前者是实验的一部分。
+		// 两者在账户上长得一模一样 —— 差别只在**有没有人打算这么做**，
+		// 而那件事不写下来就没人知道。
+		logf("")
+		logf("[hold] ⚠️ **-keep：这手仓刻意留过夜，不是平仓失败。**")
+		logf("       它要回答的是 kq_facts 1 标着「昨仓未测」的那一半：")
+		logf("       今仓的保证金基准已量到是**开仓价**，而结算之后这手仓变成昨仓，")
+		logf("       开仓价这个概念还在不在、基准换不换，**只有跨过一次结算才看得见**。")
+		logf("       明日复盘：跑 `ctp-hold -rounds 1` 看昨仓的占用保证金，")
+		logf("       与 昨结算价×乘数×16%% 比；平仓用 `ctp-flatten`（它会自己挑平今/平昨）。")
+		return nil
+	}
 	logf("[hold] 平仓 ——")
 	cs, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
