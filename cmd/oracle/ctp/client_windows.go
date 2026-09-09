@@ -56,6 +56,10 @@ type Client struct {
 	pos      map[string]*def.CThostFtdcInvestorPositionField
 	posDone  chan struct{}
 	book     orderBook
+	md       chan *def.CThostFtdcDepthMarketDataField
+	// wantInst 是**当前这次**行情查询要的合约。⚠️ 行情查询是前缀匹配，
+	// 不记下要的是哪个就会把别的合约当成答案。
+	wantInst string
 	// frontID / sessionID 来自登录应答，**撤单必须带**：
 	// CTP 用 (FrontID, SessionID, OrderRef) 三元组定位一笔委托。
 	// ⚠️ 少带一个不会报「参数缺失」，会报「找不到委托」——
@@ -75,6 +79,7 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 		params:   make(chan *def.CThostFtdcBrokerTradingParamsField, 1),
 		account:  make(chan *def.CThostFtdcTradingAccountField, 1),
 		posDone:  make(chan struct{}, 1),
+		md:       make(chan *def.CThostFtdcDepthMarketDataField, 1),
 		pos:      map[string]*def.CThostFtdcInvestorPositionField{}}
 }
 
@@ -222,6 +227,7 @@ func (c *Client) Connect(timeout time.Duration) error {
 
 	c.registerQueryCallbacks()
 	c.registerOrderCallbacks()
+	c.registerMarketDataCallback()
 
 	bs, err := syscall.BytePtrFromString(c.cred.Front)
 	if err != nil {

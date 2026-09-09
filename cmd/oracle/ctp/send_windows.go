@@ -169,4 +169,41 @@ func (c *Client) registerOrderCallbacks() {
 		c.logf("[ctp] ⚠️ 报单被柜台拒绝 ref=%s  %s", ref, msg)
 		return 0
 	})
+
+	// ⚠️ 下面三条**全是失败通道**，而漏掉它们的表现是**沉默** ——
+	// 20260910 夜盘第一次真发单时就撞上了：单发出去、回调一个都不来、进程等到超时，
+	// 而账户上**没有冻结**（说明单根本没挂上）。
+	// 「被拒了」与「回报丢了」在那一刻完全分不开，**因为两者都没有声音**。
+	//
+	// ⚠️ 交易所级的拒单走 ErrRtn，不走 Rsp —— 我只注册了后者。
+	c.on("SetOnErrRtnOrderInsert", func(o *def.CThostFtdcInputOrderField,
+		info *def.CThostFtdcRspInfoField) uintptr {
+		ref := ""
+		if o != nil {
+			ref = text(o.OrderRef[:])
+		}
+		msg := ""
+		if err := errOf(info); err != nil {
+			msg = err.Error()
+		}
+		c.book.put(ref, func(s *OrderState) {
+			s.Status, s.StatusMsg = def.THOST_FTDC_OST_Canceled, "交易所拒单："+msg
+		})
+		c.logf("[ctp] ⚠️ **交易所**拒单 ref=%s  %s", ref, msg)
+		return 0
+	})
+	c.on("SetOnRspOrderAction", func(_ *def.CThostFtdcInputOrderActionField,
+		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
+		if err := errOf(info); err != nil {
+			c.logf("[ctp] ⚠️ 撤单被柜台拒绝：%v", err)
+		}
+		return 0
+	})
+	c.on("SetOnErrRtnOrderAction", func(_ *def.CThostFtdcOrderActionField,
+		info *def.CThostFtdcRspInfoField) uintptr {
+		if err := errOf(info); err != nil {
+			c.logf("[ctp] ⚠️ **交易所**拒绝撤单：%v", err)
+		}
+		return 0
+	})
 }

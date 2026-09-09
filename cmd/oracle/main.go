@@ -27,6 +27,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
 	def "gitee.com/haifengat/goctp/ctpdefine"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe"
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture"
 	"github.com/shopspring/decimal"
@@ -101,6 +102,11 @@ func main() {
 		fmt.Print(kq.WhitelistReport())
 	case "probe", "status":
 		if err := runProbe(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-order":
+		if err := runCTPOrder(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -452,4 +458,119 @@ func includeCloseProfitName(v def.TThostFtdcIncludeCloseProfitType) string {
 		return "可用**不含**平仓盈利"
 	}
 	return "⚠️ 没见过的取值"
+}
+
+// ctpValve 从 .env 造 CTP 侧的下单安全阀。
+//
+// ⚠️ **它是 CTP 侧唯一构造 Valve 的地方**，理由与 kq 那侧的 guard() 相同：
+// 这个模块栽过「抽了纯函数、配了测试、忘了接线」的跟头，而**接线那一步
+// 在被省略时是不可见的**。守卫 TestCTPValveCarriesEnv 从这里出发验到拒绝。
+//
+// ⚠️ Protected 目前为空：过夜种子在快期那侧，SimNow 账户是空的。
+// 空着不等于不接 —— 接线本身要被验着，见那条守卫。
+func ctpValve(env probe.Env, legs []safety.ProtectedLeg) safety.Valve {
+	return safety.Valve{
+		AllowOrder: env.AllowOrder,
+		MaxVolume:  env.MaxVolume,
+		Protected:  legs,
+	}
+}
+
+// runCTPOrder 是 docs/ctp-oracle.md 的 P3：**一次完整的报单往返**。
+//
+//	查行情拿涨跌停 → 发一笔挂得上但成不了的限价单 → 确认它挂着 → 撤单 → 确认释放
+//
+// ⚠️ 验收是「账户回到起点，差额只应是手续费」。而挂单不成交**不产生手续费**，
+// 所以这一轮的差额应当是 **0**；⚠️ 若不是 0，那本身是一个观测，不是失败。
+func runCTPOrder(args []string) error {
+	fs := flag.NewFlagSet("ctp-order", flag.ExitOnError)
+	envPath := fs.String("env", ".env", "凭据文件路径")
+	symbol := fs.String("symbol", "", "合约，形如 SHFE.rb2701（⚠️ 无默认值）")
+	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
+	if err := fs.Parse(args[2:]); err != nil {
+		return err
+	}
+	if *symbol == "" {
+		return fmt.Errorf("⚠️ -symbol 没有默认值：一笔真实委托的合约必须显式指定")
+	}
+	env, err := probe.LoadEnv(*envPath)
+	if err != nil {
+		return err
+	}
+	logf := func(f string, a ...any) { fmt.Printf(f+"\n", a...) }
+	c := ctp.New(ctp.Credentials{
+		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
+		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
+	}, logf)
+	c.Valve = ctpValve(env, nil)
+	defer c.Close()
+
+	if err := c.Connect(*timeout); err != nil {
+		return err
+	}
+	logf("[P3] 安全阀：AllowOrder=%v MaxVolume=%d", env.AllowOrder, env.MaxVolume)
+
+	before, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+	logf("[P3] 起点  balance=%.4f available=%.4f 冻结保证金=%.4f 手续费=%.4f",
+		float64(before.Balance), float64(before.Available),
+		float64(before.FrozenMargin), float64(before.Commission))
+
+	md, err := c.MarketData(*symbol, *timeout)
+	if err != nil {
+		return err
+	}
+	ex, inst := ctp.SplitSymbol(*symbol)
+	req := ctp.OrderReq{
+		Exchange: ex, Instrument: inst,
+		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
+		Volume: 1, LimitPrice: ctp.FarPrice(md, def.THOST_FTDC_D_Buy),
+	}
+	logf("[P3] 行情  最新=%.2f 涨停=%.2f 跌停=%.2f  ⇒ 买开挂在跌停 %.2f（挂得上、成不了）",
+		float64(md.LastPrice), float64(md.UpperLimitPrice), float64(md.LowerLimitPrice),
+		req.LimitPrice)
+
+	st, err := c.Insert(req, *timeout)
+	if err != nil {
+		return fmt.Errorf("报单：%w", err)
+	}
+	logf("[P3] 报单回报  status=%q 挂着=%v  %s", string(st.Status), st.Alive(), st.StatusMsg)
+	if !st.Alive() {
+		// ⚠️ 没挂上就没有可撤的东西 —— 这一轮**没有验到往返**，要说清楚而不是当成功。
+		return fmt.Errorf("⚠️ 这笔单没有挂上（status=%q %s）—— "+
+			"**本轮没有验到完整往返**，撤单那一步根本走不到", string(st.Status), st.StatusMsg)
+	}
+
+	held, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+	logf("[P3] 挂着时  available=%.4f 冻结保证金=%.4f 冻结手续费=%.4f",
+		float64(held.Available), float64(held.FrozenMargin), float64(held.FrozenCommission))
+
+	if err := c.Cancel(st.OrderRef, req); err != nil {
+		return err
+	}
+	time.Sleep(2 * time.Second)
+
+	after, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+	dBal := float64(after.Balance) - float64(before.Balance)
+	dFroz := float64(after.FrozenMargin) - float64(before.FrozenMargin)
+	logf("[P3] 撤单后  balance=%.4f（差 %+.4f）冻结保证金=%.4f（差 %+.4f）",
+		float64(after.Balance), dBal, float64(after.FrozenMargin), dFroz)
+	fmt.Println()
+	switch {
+	case dBal == 0 && dFroz == 0:
+		fmt.Println("⇒ ✅ 完整往返：报单 → 挂上 → 撤单 → **账户回到起点**（挂单不成交，差额应为 0）")
+	default:
+		// ⚠️ 不判失败：差额本身是观测。判失败会让一个真实现象被读成 bug。
+		fmt.Printf("⇒ ⚠️ 往返走完了，但账户**没有回到起点**：结存差 %+.4f、冻结差 %+.4f\n", dBal, dFroz)
+		fmt.Println("   这是一个**观测**，不是失败 —— 去查它为什么不为零，别直接改判据")
+	}
+	return nil
 }
