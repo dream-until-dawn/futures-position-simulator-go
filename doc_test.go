@@ -50,6 +50,13 @@ const (
 // 一个这样的用例比没有这条用例更糟：它让人以为这块被覆盖了。
 //
 // 界线：**共享数据可以，共享判定不行。**
+//
+// ⚠️ 这条只对**互相校验的双实现**成立 —— 两份必须独立，分歧才有信息。
+// 它**不适用于同一个概念的多个消费者**：本仓库有三处各自实现了
+// 「讲与用要分开」（fixtures_test.go 句法层、kqref_test.go 邻近关键词、
+// pkgdoc_test.go 作用域），对它们套这条规则，得到的是三份会各自漂移的
+// 定义，而没有任何机制会发现漂移（评审方 20260909 指出）。
+// 三处各写了一句交叉引用，让漂移至少**可见**。
 
 // forbidden 是 docs/state.md「派生禁语」表的机械副本。
 //
@@ -65,6 +72,62 @@ var forbidden = []struct{ key, phrase string }{
 	{"rules_pending", "六条"},
 	{"rules_pending", "6 条待实测"},
 	{"position_fields", "持仓 28 字段"},
+	// ⚠️ 2026-09-09 新增。fidelity.md 开头挂着「当前状态：文档阶段，尚无实现」
+	// 从 09-07 一直挂到 09-09，而这期间 16 个包落地、跨日对拍跑通、
+	// oracle conformance 已能连着柜台跑。
+	//
+	// ⚠️ 它是一条**低报**，而低报同样是过期陈述：
+	// 把「已实现」说成「尚无实现」，读的人会以为整份文档写的都是计划，
+	// 于是不会去核对那些**已经有结论**的条目。
+	// 评审门禁① 明写「含文档里的过期陈述，**低报也算**」。
+	{"packages_done", "文档阶段，尚无实现"},
+	{"packages_done", "尚无实现"},
+	// ⚠️ 2026-09-09 再增两条，来历比上面那两条更该记：
+	// 同一条低报的**第三处**藏在 doc.go 的包注释里
+	// （「本包目前只有包声明与文档守卫，核算逻辑尚未落地」），
+	// 而它躲过了这张表整整两天 —— 因为扫描只看 README.md 与 docs/*.md，
+	// **不看 Go 源码**。而包注释恰恰是这个库最公开的一句话：
+	// go doc 与 pkg.go.dev 显示的就是它。
+	// 扫描范围已加上 doc.go，见 docFiles。
+	{"packages_done", "核算逻辑尚未落地"},
+	{"packages_done", "只有包声明与文档守卫"},
+}
+
+// TestForbiddenScanCoversDocGo 断言禁语扫描**看得见包注释**。
+//
+// ⚠️ 2026-09-09 之前它看不见：同一条低报在 README.md 与 fidelity.md 上
+// 都被抓到过，唯独 doc.go 里那一处躲了两天 —— 而那是 `go doc` 与
+// pkg.go.dev 显示的那句话，**比 README 还先被看到**。
+//
+// ⚠️ 这条守卫盯的是**扫描的覆盖面**，不是扫描的结论。两者是两件事：
+// 结论对不对由 TestNoStaleForbiddenPhrases 管，而一个扫不到某类文件的
+// 扫描，会在那类文件上永远返回「干净」—— 那与真的干净长得一模一样。
+func TestForbiddenScanCoversDocGo(t *testing.T) {
+	files := docFiles(t)
+	var hasDoc, hasReadme, mdCount = false, false, 0
+	for _, f := range files {
+		switch {
+		case f == "doc.go":
+			hasDoc = true
+		case f == "README.md":
+			hasReadme = true
+		case strings.HasSuffix(f, ".md"):
+			mdCount++
+		}
+	}
+	if !hasDoc {
+		t.Error("⚠️ 禁语扫描不看 doc.go —— 包注释是这个库最公开的一句话，" +
+			"而它会在那里永远返回「干净」")
+	}
+	if !hasReadme {
+		t.Error("⚠️ 禁语扫描不看 README.md")
+	}
+	// ⚠️ 下界用确切条数：docs 下少了几份文档，扫描照样「通过」。
+	if mdCount < 7 {
+		t.Errorf("⚠️ 只扫到 %d 份 docs/*.md —— 少于 7 份，多半是目录读错了", mdCount)
+	}
+	t.Logf("禁语扫描覆盖：doc.go %v，README.md %v，docs/*.md %d 份",
+		hasDoc, hasReadme, mdCount)
 }
 
 func docFiles(t *testing.T) []string {
@@ -72,6 +135,14 @@ func docFiles(t *testing.T) []string {
 	var out []string
 	if _, err := os.Stat("README.md"); err == nil {
 		out = append(out, "README.md")
+	}
+	// ⚠️ doc.go 也算「文档」。它躲过这张表整整两天：同一条低报的第三处
+	// 就藏在包注释里，而**包注释是这个库最公开的一句话** ——
+	// go doc 与 pkg.go.dev 显示的就是它，比 README 还先被看到。
+	// ⚠️ 只加 doc.go，不加全部 .go：那会把「禁语」变成「禁词」，
+	// 而代码注释里讨论这些字符串是正当的（这一段自己就是例子）。
+	if _, err := os.Stat("doc.go"); err == nil {
+		out = append(out, "doc.go")
 	}
 	entries, err := os.ReadDir("docs")
 	if err != nil {
@@ -411,7 +482,7 @@ func TestNoStaleForbiddenPhrases(t *testing.T) {
 // 漏一条和只写一条在这个断言下长得一模一样。**这条断言的局限必须写在这里**，
 // 免得后人看它绿了就以为禁语表是全的。
 func TestForbiddenTableIsNotEmpty(t *testing.T) {
-	const want = 9 // 下界用确切条数，不是 > 0
+	const want = 13 // 下界用确切条数，不是 > 0
 	if len(forbidden) != want {
 		t.Fatalf("禁语表应有 %d 条，实际 %d —— 增删了就同步更新这个下界，"+
 			"并确认 docs/state.md 的表也改了", want, len(forbidden))
@@ -576,6 +647,39 @@ func numberedTableRows(t *testing.T, path, sectionPrefix string) []string {
 	return rows
 }
 
+// allNumberedTableRows 与 numberedTableRows 同源，但**连已收敛的一起数**。
+//
+// ⚠️ 两者的差正是「测掉了几条」。分开数是刻意的：
+// `rules_pending` 要的是**还欠着几条**，`rules_listed` 要的是**一共问过几条** ——
+// 而只记前者的话，一条被测掉的项会让分母缩小，
+// **分子涨、分母缩，比值会朝两个方向同时变好看**。
+func allNumberedTableRows(t *testing.T, path, sectionPrefix string) (all, struck []string) {
+	t.Helper()
+	in := false
+	for _, l := range readLines(t, path) {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.HasPrefix(trimmed, sectionPrefix)
+			continue
+		}
+		if !in || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := strings.Split(trimmed, "|")
+		if len(cells) < 4 {
+			continue
+		}
+		if _, err := strconv.Atoi(strings.TrimSpace(cells[1])); err != nil {
+			continue
+		}
+		all = append(all, trimmed)
+		if strings.HasPrefix(strings.TrimSpace(cells[2]), "~~") {
+			struck = append(struck, trimmed)
+		}
+	}
+	return all, struck
+}
+
 // declaredCount 取 state.md 计数表里某个键的**加粗值**。
 //
 // ⚠️ 两条定义都是踩出来的，缺一条就取错数：
@@ -646,6 +750,19 @@ func assertCountMatchesTable(t *testing.T, key, path, sectionPrefix string) {
 func TestRulesPendingMatchesTable(t *testing.T) {
 	assertCountMatchesTable(t, "rules_pending",
 		filepath.Join("docs", "cn-futures-rules.md"), "## 13.")
+}
+
+// TestRejectPriorityPairsMatchTable 断言「实测判出几对」与那张表一致。
+//
+// ⚠️ 这条守卫是被一次真实的不一致逼出来的：20260909 当天这个数从 3 涨到 4，
+// 而**五处复述里只有一处跟上了**（另有一处就在同一份 state.md 里，
+// 与新值自相矛盾）。而这个数说的正是「生产代码里有多少顺序是猜的」——
+// 它是那一批里最不该含糊的数字。
+//
+// 现在其余各处一律链接、不抄数，这里做机械核对。
+func TestRejectPriorityPairsMatchTable(t *testing.T) {
+	assertCountMatchesTable(t, "reject_priority_measured",
+		filepath.Join("docs", "state.md"), "## `reject_priority_measured`")
 }
 
 // TestKQFactsMatchesTable 断言 state.md 的 kq_facts 与它自己那张表的条数一致。
@@ -809,4 +926,259 @@ func isCommandDir(t *testing.T, dir string) bool {
 		return f.Name.Name == "main"
 	}
 	return false
+}
+
+// goneTests 是**文档里提到、代码里已经没有**的测试名，逐个说明理由。
+//
+// ⚠️ 它必须逐条写理由，且**只能收「讲历史的那种引用」**。
+// 一个可以随手加名字的豁免表，比没有这张表更坏 —— 那时
+// TestDocTestRefsResolve 会退化成「把红的那个加进白名单」。
+var goneTests = map[string]string{
+	"TestIsProseDiscriminates": "方法论 18 讲的是**当时发生的那件事**" +
+		"（「我验了新加的测试」不等于「我验了套件」），那个测试后来删了。" +
+		"⚠️ 把这句话改写成现在的测试名会把教训的现场感抹掉 —— " +
+		"它记的不是一条现存的守卫，是一次真实的误判",
+}
+
+// TestDocTestRefsResolve 断言文档里点名的每一个测试**都还在**。
+//
+// # 它补的洞
+//
+// 文档大量用「守卫 `TestXxx`」来把一条结论钉到一条测试上 ——
+// 那是本仓库把「事实」与「机制」连起来的主要方式。
+// ⚠️ 而**重命名一条测试不会让任何文档变红**。
+//
+// 20260909 当场抓到一个：probes.md §9.2 写着
+// 「这条已经落成测试（`view.TestOracleLeavesTodayHisCostAtZero`），
+// 它断言的是夹具而不是本库：哪天柜台开始填了，会有动静」。
+//
+//	柜台确实开始填了，那条测试也确实红了、也确实被修正并**改了名**
+//	（现在叫 TestOracleTodayHisSplit）——
+//	而 §9.2 的正文**至今还是旧结论**，指着一个不存在的测试。
+//
+// ⚠️ 最讽刺的地方在于：那条测试写下来的**全部理由**就是「会有动静」。
+// 机制尽到了责任，而**指向机制的那句话**没有任何东西看着。
+func TestDocTestRefsResolve(t *testing.T) {
+	have := map[string]bool{}
+	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(p, "_test.go") {
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		for _, m := range testFuncRe.FindAllSubmatch(b, -1) {
+			have[string(m[1])] = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(have) < 100 {
+		t.Fatalf("⚠️ 只扫到 %d 个测试函数 —— 太少，这条在空转", len(have))
+	}
+
+	refs := map[string][]string{}
+	for _, p := range docFilesToScan(t) {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range testRefRe.FindAllSubmatch(b, -1) {
+			name := string(m[0])
+			refs[name] = append(refs[name], p)
+		}
+	}
+	if len(refs) < 20 {
+		t.Fatalf("⚠️ 文档里只认出 %d 个测试引用 —— 太少，正则八成不对，本条在空转", len(refs))
+	}
+
+	var missing []string
+	for name, where := range refs {
+		if have[name] {
+			continue
+		}
+		if why, ok := goneTests[name]; ok {
+			t.Logf("ⓘ %s 已不在代码里，按 goneTests 放行：%s", name, why)
+			continue
+		}
+		sort.Strings(where)
+		missing = append(missing, fmt.Sprintf("%s（%s）", name, strings.Join(where, "、")))
+	}
+	sort.Strings(missing)
+	for _, m := range missing {
+		t.Errorf("⚠️ 文档点名的测试 %s **在代码里不存在** —— "+
+			"多半是改了名或删了，而**重命名一条测试不会让任何文档变红**。"+
+			"⚠️ 修法是把文档指到现在那条上；只有当那句话讲的是**历史**"+
+			"（记一次误判、一次翻案）时，才把它加进 goneTests 并写清理由", m)
+	}
+	t.Logf("文档点名的测试 %d 个，代码里有 %d 个测试函数，已不在的 %d 个（都在 goneTests 里）",
+		len(refs), len(have), len(goneTests))
+}
+
+var (
+	testFuncRe = regexp.MustCompile(`func (Test[A-Za-z0-9_]+)\s*\(`)
+	testRefRe  = regexp.MustCompile(`\bTest[A-Z][A-Za-z0-9_]+`)
+)
+
+// docFilesToScan 是要扫的文档集合：docs 下的 .md、README、以及包文档。
+//
+// ⚠️ doc.go 也算：它是 `go doc` 会显示的那一份，读它的人**看不到 docs/**。
+func docFilesToScan(t *testing.T) []string {
+	t.Helper()
+	var out []string
+	ms, err := filepath.Glob(filepath.Join("docs", "*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, ms...)
+	out = append(out, "README.md", "doc.go")
+	sort.Strings(out)
+	return out
+}
+
+// TestDocPathRefsResolve 断言文档里指的**路径**都指得到东西。
+//
+// # 两类引用，同一个病
+//
+//	[适用边界](docs/fidelity.md)     markdown 相对链接
+//	`cmd/oracle/kq/order.go`         反引号里的路径
+//
+// ⚠️ 两类都是「文档指着仓库里的某个东西」，而**移动或改名一个文件
+// 不会让任何文档变红** —— 与 TestDocTestRefsResolve 补的是同一个洞，
+// 只是那边指的是测试名，这边指的是路径。
+//
+// 20260909 第一次跑就抓到一个：state.md 第 30 条写 `kq/order.go`，
+// 而那个文件在 `cmd/oracle/kq/order.go`。⚠️ 它**不是坏链接，是省略的链接** ——
+// 写的人知道上下文，读的人得自己猜。两者在文档里长得一样。
+//
+// ⚠️ 反引号那一类刻意只查**带斜杠**的：裸文件名（`order.go`）在多个包里都有，
+// 查它会得到一堆假阳性，而**一条不断误报的守卫最后一定会被关掉**。
+// 这个取舍写出来：`README.md` 这种裸名字因此不在保护范围内。
+func TestDocPathRefsResolve(t *testing.T) {
+	links, paths := 0, 0
+	var bad []string
+	for _, p := range docFilesToScan(t) {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dir := filepath.Dir(p)
+		for _, m := range mdLinkRe.FindAllSubmatch(b, -1) {
+			target := string(m[1])
+			if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") ||
+				strings.HasPrefix(target, "#") || strings.HasPrefix(target, "mailto:") {
+				continue
+			}
+			if i := strings.IndexByte(target, '#'); i >= 0 {
+				target = target[:i]
+			}
+			if target == "" {
+				continue
+			}
+			links++
+			if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(target))); err != nil {
+				bad = append(bad, p+" 的链接 "+target)
+			}
+		}
+		for _, m := range tickPathRe.FindAllSubmatch(b, -1) {
+			target := string(m[1])
+			if !strings.Contains(target, "/") {
+				continue // 裸文件名不查，理由见上
+			}
+			paths++
+			if _, err := os.Stat(filepath.FromSlash(target)); err != nil {
+				bad = append(bad, p+" 的路径 `"+target+"`（⚠️ 也可能只是**省略了前缀**，"+
+					"那同样要补全：写的人知道上下文，读的人得猜）")
+			}
+		}
+	}
+	sort.Strings(bad)
+	for _, x := range bad {
+		t.Errorf("⚠️ %s —— 指不到东西", x)
+	}
+	// ⚠️ 两个下界分开卡：两类引用各自的正则都可能单独失效，
+	// 而合在一起数的话，一类归零会被另一类盖住。
+	if links < 50 {
+		t.Fatalf("⚠️ 只认出 %d 条 markdown 相对链接 —— 本条在空转", links)
+	}
+	// ⚠️ 下界不是「应该有这么多」，是「归零了就说明正则不再匹配」。
+	// 现值 17 条（20260909），卡在 10 —— 留出正常增删的余地，
+	// 而正则一旦失效得到的是 0，离 10 很远。
+	// ⚠️ 把下界贴着现值写会让每一次正常删除都变红，而**一条老是误报的守卫
+	// 最后一定会被关掉** —— 那比没有它更坏。
+	if paths < 10 {
+		t.Fatalf("⚠️ 只认出 %d 条反引号路径 —— 本条在空转", paths)
+	}
+	t.Logf("markdown 相对链接 %d 条、反引号路径 %d 条，全部指得到", links, paths)
+}
+
+var (
+	mdLinkRe   = regexp.MustCompile(`\[[^\]]*\]\(([^)\s]+)\)`)
+	// ⚠️ 这个模式里有反引号，写不成 Go 的原始字符串，只能用带转义的那种 ——
+	// 于是点号要写成两个反斜杠加点。写错一次的表现是**编译不过**，
+	// 那反而是好消息：换成少一个反斜杠而仍然合法的写法，它会安静地匹配错。
+	tickPathRe = regexp.MustCompile("`([A-Za-z0-9_./-]+\\.(?:go|json|md|sh|yml))`")
+)
+
+// TestRulesListedMatchesTable 断言 `rules_listed` 与 §13 表里**所有**编号行一致。
+//
+// # 为什么要有第二个分母
+//
+// 2026-09-09 使用者裁决升格 `kq_facts` 37 时，暴露了一件记账的事：
+// 那条规则**从没被写进 §13**——它不是解决了一条挂着的未知，
+// 是回答了一个**没人问过**的未知。
+//
+// 而 `rules_pending` 只数**还欠着的**（已收敛的行划掉、不在册）。于是：
+//
+//	只记「解决」不记「发现」  →  分子涨、分母不动
+//	而已收敛的行会离开分母    →  分子涨、分母**缩**
+//
+// ⚠️ 两个方向叠在一起，比值会凭空变好看，而每一步单看都合理。
+// `rules_listed` 就是那个**只增不减**的分母：一共问过几条。
+//
+//	rules_listed = rules_pending + 已收敛
+//
+// 这条恒等式在下面被断言 —— 它是三个数**互相咬住**的地方，
+// 单独钉住任何一个都挡不住「三个数各自漂开」。
+func TestRulesListedMatchesTable(t *testing.T) {
+	path := filepath.Join("docs", "cn-futures-rules.md")
+	all, struck := allNumberedTableRows(t, path, "## 13.")
+	if len(all) == 0 {
+		t.Fatal("⚠️ §13 一条编号行都没解析到 —— 章节改名了？本条在空转")
+	}
+	pending := numberedTableRows(t, path, "## 13.")
+
+	if got := declaredCount(t, "rules_listed"); got != len(all) {
+		t.Errorf("⚠️ state.md 的 rules_listed = %d，而 §13 一共 %d 条编号行（含已收敛 %d 条）",
+			got, len(all), len(struck))
+	}
+	// ⚠️ 恒等式：一共问过的 = 还欠着的 + 已收敛的。
+	if len(all) != len(pending)+len(struck) {
+		t.Errorf("⚠️ 对不上：一共 %d 条、在册 %d 条、已收敛 %d 条 —— "+
+			"两个解析规则分岔了（多半是划掉的写法变了）",
+			len(all), len(pending), len(struck))
+	}
+	// ⚠️ rules_measured 不从表里派生：一条**已收敛**只说明它被测掉了，
+	// 不说明它有第二个独立来源 —— 后者才是升格的门槛（见 state.md 的升格判据）。
+	// 但**上界**是硬的：有第二来源的必然已收敛，所以它不能比已收敛还多。
+	// 这条挡的是「分子被单独抬高」。
+	if m := declaredCount(t, "rules_measured"); m > len(struck) {
+		t.Errorf("⚠️ rules_measured = %d，而 §13 里已收敛的只有 %d 条 —— "+
+			"一条有第二个独立来源的规则必然已经收敛，所以分子不可能比它大。"+
+			"⚠️ 要么是升格记错了，要么是某条收敛了却没在表里划掉", m, len(struck))
+	}
+	t.Logf("§13：一共问过 %d 条，还欠 %d 条，已收敛 %d 条；rules_measured %d",
+		len(all), len(pending), len(struck), declaredCount(t, "rules_measured"))
 }

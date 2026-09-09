@@ -122,6 +122,10 @@ func parseTree(t *testing.T, design string) map[string]string {
 
 func realPackages(t *testing.T) map[string]bool {
 	t.Helper()
+	// ⚠️ 包列表来自子进程，缓存看不见它。先走一遍目录，让缓存看得见
+	// 「多了一个包」这件事 —— 否则**在刚好发生了它要抓的那件事之后**，
+	// `go test ./...` 会返回 ok（评审方 20260909 实测）。见 touchSourceTree。
+	touchSourceTree(t)
 	out, err := exec.Command("go", "list", "./...").Output()
 	if err != nil {
 		t.Fatalf("go list 失败：%v", err)

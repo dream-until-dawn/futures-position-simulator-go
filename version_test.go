@@ -241,7 +241,14 @@ func TestVersionMatchesDocComment(t *testing.T) {
 	// 反向：文档里不该出现**别的**版本号当作「当前状态」。
 	// ⚠️ 这一条只查一个很具体的形状（「vX.Y.Z 开发中」），不做泛化解析：
 	// 泛化会把「不建模到 v0.4.0」这类正常措辞也当成冲突。
-	for _, other := range []string{"0.2.0", "0.3.0", "0.4.0", "1.0.0"} {
+	for _, other := range []string{"0.1.0", "0.2.0", "0.3.0", "0.4.0", "1.0.0"} {
+		// ⚠️ 跳过**当前**这一个。第一版没跳，于是 Version 一旦往前推，
+		// 这条守卫就把正确的包文档判成冲突 ——
+		// 一条在「该动的东西终于动了」的时候才报警的守卫，
+		// 会让人把 Version 改回去，而那正是它本来要防的事。
+		if other == want {
+			continue
+		}
 		if strings.Contains(text, other+" 开发中") {
 			t.Errorf("⚠️ 包文档说 %s 开发中，而 Version 是 %s", other, Version)
 		}
@@ -306,4 +313,151 @@ func TestParseVersionRejectsMalformed(t *testing.T) {
 			t.Errorf("%q 应当合法：%v", s, err)
 		}
 	}
+}
+
+// TestExpiryMechanismActuallyFires 证明到期机制**会响**。
+//
+// # 为什么单独要这一条
+//
+// 这套机制被修过两次，而它**一次都没有响过**：现存声明是 v0.8.0 与 v1.0.0，
+// 而 Version 是 v0.4.0，于是没有任何一处到期。
+//
+// > ⚠️ **一条从未响过的守卫，和一条不会响的守卫，在证据上是同一个位置。**
+//
+// 别的守卫都做过破坏验证，唯独这一条没有（本条由评审方 20260909 指出）。
+// 这里不动 Version 常量，直接对**假想的**版本算一遍：
+//
+//	当前版本            一处都不该到期
+//	推到最早的到期版本   恰好那一档到期，**不是全部** —— 证明它不是个总开关
+//	推到最晚的到期版本   全部到期
+//
+// # ⚠️ 期望值是**派生**的，不是抄的
+//
+// 三个数都从同一次扫描的分布算出来。抄成字面量的话，新增一处声明就要
+// 有人记得同步 —— 而「需要有人记得同步的参数」正是这套机制自己栽过的坑
+// （Version 在 v0.1.0 上停了两天）。
+func TestExpiryMechanismActuallyFires(t *testing.T) {
+	decls := collectNotModeled(t)
+	byVersion := map[string]int{}
+	for _, d := range decls {
+		byVersion[d.Until]++
+	}
+	versions := make([]string, 0, len(byVersion))
+	for v := range byVersion {
+		versions = append(versions, v)
+	}
+	sort.Slice(versions, func(i, j int) bool {
+		a, _ := parseVersion(versions[i])
+		b, _ := parseVersion(versions[j])
+		return versionLess(a, b)
+	})
+	// ⚠️ 判别力：至少要有两个**不同**的到期版本，否则「恰好那一档」
+	// 与「全部」是同一个数，中间那条用例什么都不说明。
+	if len(versions) < 2 {
+		t.Fatalf("⚠️ 全仓只有 %d 种到期版本 %v —— "+
+			"「只到期一档」与「全部到期」分不开，本条没有判别力", len(versions), versions)
+	}
+	expiredAt := func(at string) int {
+		cur, err := parseVersion(at)
+		if err != nil {
+			t.Fatalf("假想版本 %q 不合法：%v", at, err)
+		}
+		n := 0
+		for _, d := range decls {
+			got, err := parseVersion(d.Until)
+			if err != nil {
+				continue // 解析不了的由上面那条测试报
+			}
+			if !versionLess(cur, got) {
+				n++
+			}
+		}
+		return n
+	}
+	earliest, latest := versions[0], versions[len(versions)-1]
+	cases := []struct {
+		at   string
+		want int
+		why  string
+	}{
+		{Version, 0, "当前版本下不该有任何欠账到期 —— 有的话上一条测试就该红了"},
+		{earliest, byVersion[earliest], "推到最早的到期版本：**恰好那一档**到期"},
+		{latest, len(decls), "推到最晚的到期版本：全部到期"},
+	}
+	for _, c := range cases {
+		got := expiredAt(c.at)
+		if got != c.want {
+			t.Errorf("⚠️ 假想 Version = %s 时应有 %d 处到期，实际 %d —— %s。"+
+				"⚠️ 这条测试的全部意义是证明这套机制**会响**："+
+				"它此前一次都没响过，而没响过的守卫与不会响的守卫在证据上同位",
+				c.at, c.want, got, c.why)
+		}
+	}
+	// ⚠️ 中间那一档必须**真的少于全部**，否则「恰好那一档」是空话。
+	if byVersion[earliest] >= len(decls) {
+		t.Errorf("⚠️ 最早那一档就占了全部 %d 处声明 —— "+
+			"「只到期一档」与「全部到期」分不开", len(decls))
+	}
+	t.Logf("到期机制自检：当前 %s 到期 0 处；假想 %s 到期 %d 处；假想 %s 到期 %d 处",
+		Version, earliest, byVersion[earliest], latest, len(decls))
+}
+
+// notModeledDebt 是「不建模」欠账的**到期分布**，入库的那一份。
+//
+// ⚠️ 它是**金文件**（golden），不是一个需要有人记得同步的参数：
+// 下面那条测试拿它与实算的分布逐档比，任何一处对不上都会红。
+var notModeledDebt = map[string]int{
+	"v0.8.0": 2,
+	"v1.0.0": 8,
+}
+
+// TestNotModeledDebtDistributionIsRecorded 钉住**欠账的到期分布**。
+//
+// # 它补的是现有到期机制看不见的那一半
+//
+// `TestNotModeledDeclarationsHaveNotExpired` 的错误信息里写着
+// 「不许默默改数字」—— 而它**发现不了**这件事：把一处声明的到期版本
+// 从 v0.8.0 悄悄改成 v1.0.0，那一条照样绿（v1.0.0 仍然晚于当前版本），
+// 欠账就这么被推后了一整个版本，**而没有任何东西会响**。
+//
+// 这里比的是**分布**，所以那种改动会当场红在「v0.8.0 少了一处、v1.0.0 多了一处」。
+//
+// # 它同时是一道减速带
+//
+// 把 Version 推向 v0.8.0 的那一刻，上面那条会为两处欠账报错；
+// 而这一条要求推它的人**把这份记录一起改** —— 改记录时人恰好
+// 处在「正在处理这两条欠账」的心智状态里。
+// ⚠️ 这与 silent-risks 方法论第 26 条是正面用法：写条目时人不在做那个
+// 动作的状态里，而**推版本号时他恰好在**。
+//
+// ⚠️ 它**不重新定义「版本算不算做完」**，因此不属于闸口宽度那一类
+// （本条由评审方 20260909 提出，采纳前已核过这一点）。
+func TestNotModeledDebtDistributionIsRecorded(t *testing.T) {
+	decls := collectNotModeled(t)
+	got := map[string]int{}
+	total := 0
+	for _, d := range decls {
+		got[d.Until]++
+		total++
+	}
+	// ⚠️ 判别力：至少两档、且总数有下界，否则「分布一致」是空话。
+	if len(notModeledDebt) < 2 || total < 5 {
+		t.Fatalf("⚠️ 记录里只有 %d 档、实算只有 %d 处 —— 太少，本条没有判别力",
+			len(notModeledDebt), total)
+	}
+	for v, want := range notModeledDebt {
+		if got[v] != want {
+			t.Errorf("⚠️ 到期版本 %s 记录 %d 处，实算 %d 处 —— "+
+				"欠账的分布变了。⚠️ 若是把某处的到期版本**往后推**，"+
+				"那条「有没有到期」的测试是**看不见的**（推后之后仍然晚于当前版本），"+
+				"这一条就是为此存在：不许默默改数字", v, want, got[v])
+		}
+	}
+	for v, n := range got {
+		if _, ok := notModeledDebt[v]; !ok {
+			t.Errorf("⚠️ 冒出一个没记录过的到期版本 %s（%d 处）—— "+
+				"新增「不建模」声明要连同这份记录一起改", v, n)
+		}
+	}
+	t.Logf("欠账分布：实算 %d 处，%v", total, got)
 }

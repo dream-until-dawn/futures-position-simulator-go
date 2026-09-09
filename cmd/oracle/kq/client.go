@@ -64,6 +64,10 @@ type Client struct {
 	tdSnap   map[string]any // 交易业务截面
 	mdSnap   map[string]any // 行情业务截面
 	notified []Notify
+	// seenNotify 给通知**去重后打日志**用，键是 码+文案。
+	//
+	// ⚠️ DIFF 每次把整张 notify 表重发，不去重会把日志淹掉。
+	seenNotify map[string]bool
 
 	tdUpdated chan struct{} // 每次合并完补丁后广播
 	mdUpdated chan struct{}
@@ -385,6 +389,7 @@ func (c *Client) collectNotifyLocked(snap map[string]any) {
 		var one Notify
 		if json.Unmarshal(b, &one) == nil {
 			c.notified = append(c.notified, one)
+			c.logNotifyOnce(one)
 		}
 	}
 }
@@ -564,4 +569,30 @@ func (c *Client) DeadErr() error {
 		return fmt.Errorf("行情流断了：%v —— 行情字段从此不再更新", md)
 	}
 	return nil
+}
+
+// logNotifyOnce 把一条通知的**文案**打进本次运行的日志，同一条只打一次。
+//
+// ⚠️ 这是补一个具体的洞。夹具刻意只收 type/level/code，**不收 content**
+// （仓库公开、泄漏不可逆，见 Fixture.Notifies；收不收由使用者裁决）。
+// 而守卫 TestNotifyCodesAreKnown 在见到没登记的码时会红，
+// 并告诉人「去日志里看它是什么」——
+//
+//	⚠️ 而在这行日志之前，**根本没有那样一份日志**：Content 被解析出来
+//	就地丢掉了。于是那条守卫的补救动作是做不到的，只能等下一次复现。
+//	20260909 09:02 就这么发生了一次：新出现 404/417/419/420 四个码，
+//	而它们说了什么**已经无从查起**。
+//
+// ⚠️ 它**不预判**「content 该不该进夹具」那个待裁决：
+// 打进本地日志与写进公开仓库是两件事，前者不留档、不推送。
+func (c *Client) logNotifyOnce(n Notify) {
+	key := fmt.Sprintf("%d|%s", n.Code, n.Content)
+	if c.seenNotify == nil {
+		c.seenNotify = map[string]bool{}
+	}
+	if c.seenNotify[key] {
+		return
+	}
+	c.seenNotify[key] = true
+	c.logf("[notify] code=%d level=%s type=%s  %s", n.Code, n.Level, n.Type, n.Content)
 }

@@ -1,6 +1,7 @@
 package kq
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -36,7 +37,47 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 			"account_id":     "12345678", // 丢弃表
 			"bid_price1":     3150.0,     // 行情侧的「不留但也不报漂移」
 		}},
+		map[string]any{"o1": map[string]any{
+			"order_id":    "o1",
+			"offset":      "CLOSETODAY",
+			"volume_left": 2.0,
+			// ⚠️ 这个字段 20260909 才第一次在真实截面里出现（只在进了簿
+			// 且尚未成交的开仓委托上）。补进用例是因为破坏验证当场演示过：
+			// 把它从白名单里拿掉，本文件**照样绿** —— 白名单的单测里没有
+			// 带这个字段的样本，而主模块那条守卫读的是已经落好盘的夹具，
+			// 改白名单影响不到它。一个只在**下次采集**时才生效的改动，
+			// 在现有语料上没有任何守卫看得见。
+			"frozen_margin": 2214.1,
+			"user_id":     "e3b0c442-98fc-1c14-9afb-4c8996fb9242", // 丢弃表
+			"odd_key":     "x",                                    // 两张表都没有
+		}},
+		[]Notify{{Type: "TEXT", Level: "WARNING", Code: 412,
+			Content: "下单,已被服务器拒绝, 原因:下单价格不是价格单位的整倍数"}},
 		"20260908", "2026-09-08T13:00:00+08:00", "单测")
+
+	// ⓪ 通知只留结构化的三项，**content 一个字都不留**。
+	//
+	// ⚠️ 这条断言是本文件里唯一一条「某个东西**必须不在**」的断言。
+	// 理由见 Fixture.Notifies 的注释：白名单靠逐个字段点名来保护，
+	// 而自由文本从原理上不在它的保护范围内。仓库是公开的，泄漏不可逆。
+	if len(f.Notifies) != 1 {
+		t.Fatalf("⚠️ 通知没进夹具：%v", f.Notifies)
+	}
+	if f.Notifies[0].Code != 412 || f.Notifies[0].Level != "WARNING" {
+		t.Errorf("⚠️ 通知的结构化部分没留住：%+v", f.Notifies[0])
+	}
+	if b, err := json.Marshal(f); err != nil {
+		t.Fatal(err)
+	} else if strings.Contains(string(b), "整倍数") {
+		t.Errorf("⚠️ 通知的 content 进了夹具 —— 自由文本不在白名单能保护的范围内")
+	}
+
+	// ⓪′ 委托上的 frozen_margin 要留住。见上面那段注释。
+	if got := f.Orders["o1"]["frozen_margin"]; got != 2214.1 {
+		t.Errorf("⚠️ 委托的 frozen_margin 没保留：%v —— "+
+			"它只在「进了簿且尚未成交的开仓委托」上出现（kq_facts 49），"+
+			"丢了就再也补不回来：那是采集时刻的东西", got)
+	}
 
 	// ① 白名单里的键原样保留。
 	if f.Account["balance"] != 1000.5 {
@@ -94,7 +135,8 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 	// 静默丢弃与静默保留是两种不同的坏：前者丢证据，后者可能泄漏。
 	// 白名单选的是「漏一个 → 夹具缺字段 → 报错」这一侧，
 	// 而报错的载体就是这个列表。
-	want := []string{"accounts/brand_new", "positions/weird_field", "trades/mystery"}
+	want := []string{"accounts/brand_new", "positions/weird_field", "trades/mystery",
+		"orders/odd_key"}
 	got := strings.Join(f.Unclassified, " ")
 	for _, w := range want {
 		if !strings.Contains(got, w) {
@@ -102,8 +144,24 @@ func TestSanitizeKeepsOnlyWhitelisted(t *testing.T) {
 				"字段集漂移就此静默：得到 %v", w, f.Unclassified)
 		}
 	}
-	if len(f.Unclassified) != 3 {
-		t.Errorf("Unclassified 应恰好 3 个，得到 %d 个：%v", len(f.Unclassified), f.Unclassified)
+	if len(f.Unclassified) != 4 {
+		t.Errorf("Unclassified 应恰好 4 个，得到 %d 个：%v", len(f.Unclassified), f.Unclassified)
+	}
+
+	// —— 委托侧（20260909 新增）——
+	//
+	// ⚠️ 委托进夹具的理由：柜台的 volume_*_frozen_* 与 frozen_margin
+	// 都是「挂着的委托」的函数，而夹具里没有委托 ——
+	// 于是本库算出来的冻结拿什么去比都比不了。
+	o := f.Orders["o1"]
+	if o["volume_left"] != 2.0 {
+		t.Errorf("⚠️ 委托的 volume_left 没保留：%v —— 冻结量按它算，不是按委托量", o)
+	}
+	if o["offset"] != "CLOSETODAY" {
+		t.Errorf("⚠️ 委托的 offset 没保留 —— 冻的是今仓还是昨仓全靠它：%v", o)
+	}
+	if _, leaked := o["user_id"]; leaked {
+		t.Error("⚠️⚠️ 委托里的 user_id **进了夹具** —— 那是账户 UUID")
 	}
 }
 
@@ -115,7 +173,7 @@ func TestSanitizeCarriesTrades(t *testing.T) {
 	f := Sanitize(nil, nil, map[string]any{
 		"t1": map[string]any{"price": 3150.0, "volume": 1.0, "offset": "OPEN"},
 		"t2": map[string]any{"price": 3152.0, "volume": 1.0, "offset": "OPEN"},
-	}, nil, "20260908", "2026-09-08T13:00:00+08:00", "")
+	}, nil, nil, nil, "20260908", "2026-09-08T13:00:00+08:00", "")
 	if len(f.Trades) != 2 {
 		t.Fatalf("⚠️ 成交没进夹具：%v", f.Trades)
 	}

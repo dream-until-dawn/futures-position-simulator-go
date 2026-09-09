@@ -150,6 +150,54 @@ var tradeDrop = map[string]string{
 	"broker_id":   "丢弃：经纪商标识",
 }
 
+// orderKeep 是**委托**截面的白名单。
+//
+// ⚠️ 委托此前不进夹具，而那让**冻结**这一整块永远不可对拍：
+// 柜台的 `volume_*_frozen_*` 与 `frozen_margin` 都是「挂着的委托」的函数，
+// 而夹具里没有委托 —— 于是本库算出来的冻结拿什么去比都比不了。
+// 20260909 加冻结实现时，破坏验证当场演示了这一点：
+// 把冻结合计改成漏掉昨仓那部分，**全套测试照样绿**，
+// 因为没有任何一份夹具能走到那一支。
+//
+// ⚠️ 保留的每一项都是**数量、价格或状态**，无标识性；
+// 账户 / 投资者 / 经纪商那几个标识一律进 orderDrop。
+var orderKeep = map[string]string{
+	"order_id":            "保留：委托编号，同一笔的幂等键；也是成交记录里 order_id 的对端",
+	"exchange_order_id":   "保留：交易所委托号",
+	"exchange_id":         "保留：交易所",
+	"instrument_id":       "保留：合约",
+	"direction":           "保留：买卖方向",
+	"offset":              "保留：开平标志 —— ⚠️ 冻的是今仓还是昨仓全靠它",
+	"volume_orign":        "保留：委托手数（DIFF 的拼写就是 orign，不是 origin）",
+	"volume_left":         "保留：**未成交手数** —— 冻结量按它算，不是按委托量",
+	"limit_price":         "保留：委托价",
+	"price_type":          "保留：价格类型（限价/市价）",
+	"volume_condition":    "保留：成交量类型",
+	"time_condition":      "保留：有效期类型",
+	"hedge_flag":          "保留：投机套保标志 —— 它决定保证金率",
+	"status":              "保留：ALIVE / FINISHED",
+	"last_msg":            "保留：**拒因原话** —— 实验 6 的全部产出都在这个字段上",
+	"insert_date_time":    "保留：报入时刻（纳秒）",
+	"is_dead":             "保留：是否已终结",
+	"is_online":           "保留：是否已报入交易所",
+	"is_error":            "保留：是否出错",
+	"seqno":               "保留：序号",
+	"frozen_margin":       "保留：这一笔冻结的保证金。⚠️ 这条注释原写「实测**柜台不发这个字段**（20260909 三份样本里都缺席）」—— **那三份全是平仓单**，从「平仓单上没有」推出了「柜台不发」。同日凌晨挂上开仓单之后：进簿未成交的开仓委托 60/60 都带着它，被拒的 339/339 没有，已成交的 32/32 没有，平仓的 404/404 没有。⚠️ 已终结（撤掉）的单上它**留着最后那个值** ——是戳记不是当前占用，直接求和会把撤掉的单算进冻结。守卫 TestOrderFrozenMarginShape",
+	"frozen_commission":   "保留：这一笔冻结的手续费",
+	"frozen_premium":      "保留：期权权利金冻结（本库不建模期权，但照实记）",
+	"exchange_trade_id":   "保留：若有",
+	"order_sys_id":        "保留：交易所系统号",
+	"insert_date_time_ns": "保留：报入时刻的另一种表示（若有）",
+}
+
+var orderDrop = map[string]string{
+	"user_id":     "丢弃：账户 UUID",
+	"investor_id": "丢弃：投资者代码",
+	"account_id":  "丢弃：账号标识",
+	"broker_id":   "丢弃：经纪商标识",
+	"user_key":    "丢弃：会话标识",
+}
+
 // quoteKeep 是行情截面的白名单。
 //
 // ⚠️ 行情进夹具的理由与成交同一条：**让夹具自足**。
@@ -210,6 +258,51 @@ type Fixture struct {
 	// 见 tradeKeep 的注释。
 	Trades map[string]map[string]any `json:"trades"`
 
+	// Orders 是**挂着与已终结的委托**。
+	//
+	// ⚠️ 它此前不进夹具，而那让**冻结**这一整块永远不可对拍：
+	// 柜台的 volume_*_frozen_* 与 frozen_margin 都是「挂着的委托」的函数。
+	// 见 orderKeep 的注释。
+	//
+	// ⚠️ omitempty：20260909 之前的夹具没有这个键，
+	// 而它们**仍然是有效的证据**，不该因为格式加了一项就作废。
+	Orders map[string]map[string]any `json:"orders,omitempty"`
+
+	// Notifies 是柜台推来的通知的**结构化部分**。
+	//
+	// ⚠️ 它此前不进夹具，而那让一整类拒绝**在存档证据上不存在**：
+	// 20260909 实测，报单到一个**不存在的合约**上时，柜台
+	// 一个字都不写进委托记录（status 与 last_msg 全空），
+	// 只从 notify 通道回一条 code=311。
+	// 只读委托记录的实验会把这种拒绝读成「柜台没反应」——
+	// 而那与「单子还挂着」长得一模一样。
+	//
+	// ⚠️⚠️ **刻意不存 content。** 仓库是公开的，而泄漏不可逆。
+	//
+	// ⚠️ 这里原先写的理由是「白名单靠逐个字段点名保护，而自由文本
+	// 从原理上不在保护范围内」。**那条理由按字面同样会否掉 last_msg** ——
+	// 而 last_msg 也是柜台写的自由文本，且是拒因整批实验的全部产出
+	// （评审方 20260909 指出）。
+	//
+	//	原则与实际做法对不上，说明真正起作用的判据不是写下来的那一条。
+	//
+	// 真正起作用的有两层：
+	//
+	//	一 last_msg 的词表被**我们下的单**界定（实测只有 4 种，全是拒因）；
+	//	  notify 是另一条通道，**设计上**能承载与我们的动作无关的东西
+	//	  （风控通知、公告）。⚠️ 要说准：至今**没有观测到**一条非我们招致的
+	//	  notify —— 见过的 311/401/412 全是登录与报单引出的。
+	//	  所以这一层说的是「通道能承载什么」，不是「我们见过什么」。
+	//	二 更硬的一层：last_msg 的**取值**有守卫
+	//	  （主模块 TestLastMsgValuesAreKnown：出现没登记过的原话就红），
+	//	  而 content 没有 —— 因为它还不进夹具。
+	//
+	// ⚠️ 于是选项不是两个而是三个：不收 / 全收 / **把白名单从字段下推到取值**
+	// （只在匹配已收录词表时保留，未收录的记成占位符加计数）。
+	// 第三种已经在 last_msg 上跑着，可以照着看。
+	// ⚠️ 这是**给使用者的一个决定**（往公开仓库里写什么），不在评审门禁里。
+	Notifies []NotifyRecord `json:"notifies,omitempty"`
+
 	// Unclassified 记录白名单与丢弃表都没见过的键。
 	//
 	// ⚠️ 它非空即判失败，不是警告。字段集漂移必须自己报出来，
@@ -222,8 +315,15 @@ type Fixture struct {
 //
 // ⚠️ quotes 应当**只含被观察的合约**，由调用方筛好再传进来。
 // 整份行情有几万个合约，而夹具是证据不是数据库。
-func Sanitize(account, positions, trades, quotes map[string]any,
-	tradingDay, capturedAt, note string) *Fixture {
+// NotifyRecord 是一条通知里**结构化的那几项**。见 Fixture.Notifies 的注释。
+type NotifyRecord struct {
+	Type  string `json:"type"`
+	Level string `json:"level"`
+	Code  int    `json:"code"`
+}
+
+func Sanitize(account, positions, trades, quotes, orders map[string]any,
+	notifies []Notify, tradingDay, capturedAt, note string) *Fixture {
 	f := &Fixture{
 		TradingDay: tradingDay,
 		CapturedAt: capturedAt,
@@ -231,9 +331,15 @@ func Sanitize(account, positions, trades, quotes map[string]any,
 		Account:    map[string]any{},
 		Positions:  map[string]map[string]any{},
 		Trades:     map[string]map[string]any{},
+		Orders:     map[string]map[string]any{},
 		Quotes:     map[string]map[string]any{},
 	}
 	unknown := map[string]struct{}{}
+
+	for _, n := range notifies {
+		f.Notifies = append(f.Notifies, NotifyRecord{
+			Type: n.Type, Level: n.Level, Code: n.Code})
+	}
 
 	for k, v := range account {
 		if _, ok := accountKeep[k]; ok {
@@ -282,6 +388,25 @@ func Sanitize(account, positions, trades, quotes map[string]any,
 			unknown["trades/"+k] = struct{}{}
 		}
 		f.Trades[id] = out
+	}
+
+	for id, raw := range orders {
+		o, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		out := map[string]any{}
+		for k, v := range o {
+			if _, ok := orderKeep[k]; ok {
+				out[k] = v
+				continue
+			}
+			if _, ok := orderDrop[k]; ok {
+				continue
+			}
+			unknown["orders/"+k] = struct{}{}
+		}
+		f.Orders[id] = out
 	}
 
 	for sym, raw := range quotes {

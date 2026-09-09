@@ -294,7 +294,11 @@ func TestFeeOffsetsAreAllExercised(t *testing.T) {
 		t.Logf("ⓘ **一笔平昨都没有**（kq_facts 19）—— " +
 			"平昨费率至今零观测，不是「量到了等于平今」。今晚第 8 条实验为此而设")
 	} else {
-		t.Logf("ⓘ 出现了平昨成交 —— 平昨费率第一次可测，去更新 kq_facts 19")
+		// ⚠️ 这里原写「去更新 kq_facts 19」。那件事 20260909 已经做了（第 34 条），
+		// 而一句**已经做完的待办**留在日志里，会把下一个读到的人再支使一遍。
+		t.Logf("ⓘ 出现了平昨成交 —— 平昨费率可测，见 kq_facts 34；" +
+			"⚠️ 但它量出来**等于开仓**，所以那一档的判别力同样是零，" +
+			"机械核对见 TestFeeRateTiersAreIndistinguishable")
 	}
 	t.Logf("⚠️ 而平今与开仓在本口子上同费率（kq_facts 18），"+
 		"所以「平今算对了」这句话在本批 %d 笔平今上判别力为零", seen[types.CloseToday])

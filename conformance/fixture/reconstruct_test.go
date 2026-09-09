@@ -50,6 +50,7 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 
 	var fields []conformance.Field
 	reconstructed, withToday := 0, 0
+	frozenSamples, frozenNonZero := 0, 0
 	skippedStalePre, skippedInconsistent := 0, 0
 	for _, f := range all {
 		if f.TradingDay.String() != "20260909" {
@@ -72,6 +73,37 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		reconstructed++
 		if numOr(oracle, "volume_long_today").IsPositive() {
 			withToday++
+		}
+
+		// —— 冻结：从这份夹具里**挂着的委托**算，与柜台报的比 ——
+		//
+		// ⚠️ 这是 view 那一侧冻结渲染的**唯一**证据来源。
+		// 不接的话，volume_*_frozen_* 三个字段永远落在「未实现」，
+		// 而它们的实现写成什么样都不会红。
+		if fl, fs, has, ferr := FrozenOf(f, sym, NakedCloseIsYesterday); ferr != nil {
+			t.Errorf("⚠️ %s 算冻结失败：%v", f.Path, ferr)
+		} else if has {
+			frozenSamples++
+			for _, fc := range []struct {
+				key  string
+				want int
+			}{
+				{"volume_long_frozen_today", fl.VolumeToday},
+				{"volume_long_frozen_his", fl.VolumeHistory},
+				{"volume_short_frozen_today", fs.VolumeToday},
+				{"volume_short_frozen_his", fs.VolumeHistory},
+			} {
+				o := oracle[fc.key]
+				fields = append(fields, conformance.Field{
+					Name:      f.Path + " " + sym + "." + fc.key,
+					Library:   decimal.NewFromInt(int64(fc.want)),
+					Oracle:    o.Number,
+					Triggered: fc.want > 0 || o.Number.IsPositive(),
+				})
+				if fc.want > 0 {
+					frozenNonZero++
+				}
+			}
 		}
 
 		s, err := p.Side(types.Buy)
@@ -221,6 +253,32 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 			"纯昨仓时今仓两边都是 0，「结转 + 重放叠加」这件事一点没被验到")
 	}
 
+	// ⚠️ 冻结那几个字段必须有**非零**的比对，否则「本库算出 0、柜台报 0」
+	// 什么都不说明 —— 把整块冻结逻辑删掉，它照样一致。
+	t.Logf("ⓘ 接上冻结的截面 %d 个，其中本库算出非零的 %d 处", frozenSamples, frozenNonZero)
+	if frozenSamples > 0 && frozenNonZero == 0 {
+		t.Error("⚠️ 接上了冻结，但本库一处非零都没算出来 —— " +
+			"全零的一致什么都不说明。要一份**挂着单**时拍的夹具")
+	}
+	// ⚠️ 「压根没接」也要拦，而这一条是破坏验证逼出来的：
+	// 第 137 条把接冻结那段整个关掉，测试**仍然绿** —— 不比就没有失败。
+	// 上面那条只管「接了但全零」，管不到「一个都没接」。
+	//
+	// 判据：只要**语料里有记了委托的夹具**，就必须至少接上一个。
+	// 一个都接不上，要么是接线断了，要么是那些夹具全被前面的条件筛掉了 ——
+	// 两种都要人去看，而不是让这条测试继续绿着。
+	withOrders := 0
+	for _, ff := range all {
+		if ff.HasOrders {
+			withOrders++
+		}
+	}
+	if withOrders > 0 && frozenSamples == 0 {
+		t.Errorf("⚠️ 语料里有 %d 份夹具记了委托，而本条**一个都没接上冻结** —— "+
+			"要么接线断了，要么那些夹具全被前面的条件筛掉了。"+
+			"⚠️ 不接就没有失败，于是 volume_*_frozen_* 的实现"+
+			"写成什么样都不会红", withOrders)
+	}
 	r := conformance.Classify("结转+重放·带昨仓的方向", fields,
 		decimal.RequireFromString("0.0000001"))
 	t.Logf("重建 %d 个截面（其中今昨并存 %d 个），比了 %d 个字段",

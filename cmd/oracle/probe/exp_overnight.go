@@ -34,6 +34,28 @@ var seedPlan = []struct {
 	{"DCE.m2701", kq.Buy, 2, "NoUseHistory 合约：实验 4 用，同样要能平「少于昨仓量」"},
 }
 
+// protectedLegs 是**今天不许平**的持仓腿，交给 kq.Guard 在下单口上执行。
+//
+// ⚠️ 它与 seedPlan 是两份清单，刻意分开：
+//
+//	seedPlan       「今晚要**建**什么」—— 一次性的建仓脚本
+//	protectedLegs  「今天不许**平**什么」—— 每一笔委托都要过的闸
+//
+// 20260909 发现这两份清单**对不上**：账上那一手空今仓是 reject / frozen
+// 那几条实验顺带开出来的，seedPlan 里没有它，于是它不在任何机器可读的
+// 保护之下 —— 而 roadmap.md 已经写着「别在结算前把这些仓平掉」。
+// ⚠️ 一句只有人读得到的保护，与没有保护在出事那天是一样的。
+//
+// ⚠️ 每一条都必须带 TradingDay。过了那天保护自动失效，
+// 因为那时它拦的已经是正当的收尾平仓了。
+var protectedLegs = []kq.ProtectedLeg{
+	{Symbol: "SHFE.rb2701", Direction: kq.Sell, TradingDay: "20260909",
+		Why: "这一手**空今仓**要活过今天日终结算才变成空昨仓。" +
+			"空头昨仓在全语料 466 条持仓记录里从未存在过（kq_facts 51），" +
+			"它是分开「今昨拆分规则方向中性」与「柜台只写多头侧」的唯一样本；" +
+			"平掉就要再等一个交易日"},
+}
+
 // expOvernightSetup 建立过夜种子。
 func (r *Runner) expOvernightSetup(ctx context.Context) error {
 	cli := r.cli

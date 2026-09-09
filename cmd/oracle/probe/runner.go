@@ -23,6 +23,14 @@ type Runner struct {
 	// Every 是 settle-watch 的采样间隔。其余实验不用它。
 	Every time.Duration
 
+	// Specs 是合约规格文件的路径（refdata-sync -specs 的产物）。
+	//
+	// ⚠️ **没有默认值**，用到它的实验读不到就报错。理由是免费行情**不下发**
+	// price_tick：q.PriceTick 恒为 0，而 0 是个看起来完全合理的数。
+	// 拿它去构造「不是最小变动价位的整数倍」，构造出来的价格是整数倍，
+	// 于是那一项**根本没被违反** —— 而实验照样会跑完、照样打印结果。
+	Specs string
+
 	cli *kq.Client
 }
 
@@ -43,25 +51,10 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		r.DumpDir = abs
 	}
 
-	cli := kq.New(kq.Credentials{User: r.Env.KQUser, Password: r.Env.KQPassword, ClientSecret: r.Env.KQClientSecret}, r.Logf)
-	r.cli = cli
-	defer cli.Close()
-
-	if err := cli.Auth(ctx); err != nil {
+	if err := r.connect(ctx); err != nil {
 		return err
 	}
-	if err := cli.ConnectTrade(ctx); err != nil {
-		return err
-	}
-
-	// ⚠️ 登录成功与否看**状态**，不看回调。等 trade 截面出现即为登录成功。
-	if !cli.WaitUntil(30*time.Second, func() bool { return cli.TradingDay() != "" }) {
-		for _, n := range cli.Notifies() {
-			r.Logf("  notify code=%d level=%s %s", n.Code, n.Level, n.Content)
-		}
-		return fmt.Errorf("30 秒内未拿到交易截面 —— 这只说明没等到，不说明登录失败；先看上面的 notify")
-	}
-	r.Logf("[td] 登录成功  trading_day=%s", cli.TradingDay())
+	defer r.cli.Close()
 
 	switch exp {
 	case "status":
@@ -90,6 +83,12 @@ func (r *Runner) Run(ctx context.Context, exp string) error {
 		return r.expSettleWatch(ctx)
 	case "close-profit-sign":
 		return r.expCloseProfitSign(ctx)
+	case "reject-tradable":
+		return r.expRejectTradable(ctx)
+	case "reject-tick-vs-limit":
+		return r.expRejectTickVsLimit(ctx)
+	case "reject-priority":
+		return r.expRejectPriority(ctx)
 	case "reject-code":
 		return r.expRejectCode(ctx)
 	case "overnight-setup":
@@ -244,10 +243,17 @@ func (r *Runner) expStatus(ctx context.Context) error {
 // 可能已经进过 git index —— 一次 git add -A 就够了。
 func (r *Runner) dump(name, note string) error {
 	cli := r.cli
+	// ⚠️ 落盘前把**出现过的合约**全订上，等行情到齐。
+	//
+	// 不这么做的话，夹具里会出现「委托/持仓提到了某合约，而它的行情不在」——
+	// 后果不是报错，是下游对拍**静默跳过**那一份，
+	// 而「跳过了一份」与「比过了一份且一致」在汇总行里长得一模一样。
+	// 守卫见根包的 TestFixtureQuotesCoverOrderedSymbols。
+	r.fillQuotes()
 	// ⚠️ 行情只留**被观察到的合约**：持仓里出现过的、或成交里出现过的。
 	// 整份行情有几万个合约，而夹具是证据不是数据库。
 	f := kq.Sanitize(cli.Account(), cli.Positions(), cli.Trades(),
-		observedQuotes(cli), cli.TradingDay(),
+		observedQuotes(cli), cli.Orders(), cli.Notifies(), cli.TradingDay(),
 		time.Now().Format(time.RFC3339), note)
 
 	// 独立复查：与白名单是两套不同原理的机制，因此不会一起失效。
@@ -287,6 +293,82 @@ func (r *Runner) dump(name, note string) error {
 		shown = abs
 	}
 	r.Logf("夹具落盘 %s（%d 字节，未分类字段 %d 个）", shown, len(b), len(f.Unclassified))
+	if err := r.dumpNotifyLocal(name, cli.Notifies(), cli.TradingDay()); err != nil {
+		// ⚠️ 本地旁档写不出来**不该**让整次实验失败：主夹具已经落好了，
+		// 而这一份是给人事后查文案用的补充件。但必须出声。
+		r.Logf("⚠️ 通知文案旁档没写成：%v —— "+
+			"这次的 notify 文案因此查不到了（码仍在主夹具里）", err)
+	}
+	return nil
+}
+
+// localNotifyDir 是**只落本地、不进 git** 的那一档证据的目录名。
+//
+// ⚠️ 它由 .gitignore 挡着，而「挡住了」是一句要被机械核对的话，
+// 不是一句约定 —— 守卫见根包的 TestLocalOnlyEvidenceIsGitIgnored。
+const localNotifyDir = "local"
+
+// dumpNotifyLocal 把通知的**文案**写进本地旁档。
+//
+// # 为什么是旁档而不是主夹具的一个字段
+//
+// 使用者 20260909 的裁决：文案要留下来，但**不上 git**。
+// 主夹具那 95 份是**公开的**证据语料，整套离线对拍都靠它们跑；
+// 把它们改成本地件会让任何一个新克隆的仓库**测不了任何东西**。
+// 于是分成两份：
+//
+//	testdata/probes/<名>.json          码 + 等级 + 类型，**进 git**
+//	testdata/probes/local/<名>.notify.json  再加上文案，**不进 git**
+//
+// ⚠️ 两份的**主键是同一个文件名**，所以事后能对上。
+// 旁档丢了（换台机器、清过工作区）不影响任何测试 —— 那是刻意的：
+// 一份**测试依赖它**的本地件，等于把测试变成只有我这台机器能跑。
+func (r *Runner) dumpNotifyLocal(name string, ns []kq.Notify, tradingDay string) error {
+	if len(ns) == 0 || r.DumpDir == "" {
+		return nil
+	}
+	dir := filepath.Join(r.DumpDir, localNotifyDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	type record struct {
+		Code    int    `json:"code"`
+		Level   string `json:"level"`
+		Type    string `json:"type"`
+		Content string `json:"content"`
+	}
+	// 去重：DIFF 每次重发整张表，同一条会出现很多次。
+	seen := map[string]bool{}
+	out := make([]record, 0, len(ns))
+	for _, n := range ns {
+		k := fmt.Sprintf("%d|%s", n.Code, n.Content)
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, record{n.Code, n.Level, n.Type, n.Content})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Code != out[j].Code {
+			return out[i].Code < out[j].Code
+		}
+		return out[i].Content < out[j].Content
+	})
+	b, err := json.MarshalIndent(map[string]any{
+		"trading_day": tradingDay,
+		"captured_at": time.Now().Format(time.RFC3339),
+		"note": "⚠️ 只落本地，不进 git（使用者 20260909 裁决）。" +
+			"文案是柜台发的自由文本，仓库是 public、推上去不可撤。",
+		"notifies": out,
+	}, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(dir, fmt.Sprintf("%s-%s.notify.json", name, tradingDay))
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		return err
+	}
+	r.Logf("通知文案旁档 %s（%d 条去重后，**不进 git**）", path, len(out))
 	return nil
 }
 
@@ -354,10 +436,29 @@ func observedQuotes(cli *kq.Client) map[string]any {
 }
 
 // observedSymbols 列出本次截面里出现过的合约，升序。
+//
+// ⚠️ **委托里的合约也算**。这一条是补的：原先只数持仓与成交，
+// 于是一份「只下过单、全被拒、没有持仓也没有成交」的截面
+// （reject 系列的实验正是这个形状）落盘时**整个行情段是空的**。
+// 后果不是报错，是下游对拍**静默跳过**那份夹具 ——
+// 而「跳过了一份」与「比过了一份且一致」在汇总行里长得一模一样。
+// 20260909 的 exp-reject-tick-vs-limit-20260909-3.json 就是这么丢掉
+// DCE.i2701 的昨结算价的，那份夹具因此永远比不了金额侧冻结。
 func observedSymbols(cli *kq.Client) []string {
 	want := map[string]bool{}
 	for sym := range cli.Positions() {
 		want[sym] = true
+	}
+	for _, raw := range cli.Orders() {
+		o, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		ex, _ := o["exchange_id"].(string)
+		inst, _ := o["instrument_id"].(string)
+		if ex != "" && inst != "" {
+			want[ex+"."+inst] = true
+		}
 	}
 	for _, raw := range cli.Trades() {
 		t, ok := raw.(map[string]any)
@@ -376,4 +477,161 @@ func observedSymbols(cli *kq.Client) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// LiveFixtureJSON 连上柜台，取一份**此刻的**截面，脱敏后 marshal 成夹具 JSON。
+//
+// ⚠️ 它走的是与 dump **完全同一条**制备路径（Sanitize → BlindSpots → Scrubbed），
+// 只是不落盘。分成两条路会让实时对拍与存档证据看到不同的字节，
+// 而那种分歧的表现是「同一个柜台在两条路上给出不同的判定」。
+//
+// ⚠️ **脱敏照做，即使不落盘**：这份字节会进日志、进报告、可能被贴出去。
+// 「反正不写文件」不是跳过脱敏的理由 —— 泄漏的是内容，不是文件。
+func (r *Runner) LiveFixtureJSON(ctx context.Context, symbols []string) ([]byte, error) {
+	if err := r.connect(ctx); err != nil {
+		return nil, err
+	}
+	defer r.cli.Close()
+	// ⚠️ **无条件连行情**。原先是 `if len(symbols) > 0` 才连 ——
+	// 于是不带 -symbols 跑实时对拍时，整份截面**一个行情都没有**，
+	// 而且没有任何东西说这件事：昨结算价缺席只表现为「那几个字段比不了」。
+	// 20260909 把这份截面当产物落盘之后，缺行情那条棘轮当场把它顶了出来。
+	if err := r.cli.ConnectQuote(ctx); err != nil {
+		return nil, err
+	}
+	if len(symbols) > 0 {
+		if err := r.cli.SubscribeQuotes(symbols...); err != nil {
+			return nil, err
+		}
+		for _, s := range symbols {
+			// ⚠️ 行情没到齐就往下走，昨结算价会缺 —— 而它是手续费基准、
+			// 保证金基准与逐日盯市基线。等不到就说出来，不静默继续。
+			if _, ok := r.cli.WaitQuoteReady(s, 20*time.Second); !ok {
+				r.Logf("⚠️ %s 行情未就绪 —— 该合约的昨结算价会缺，"+
+					"保证金那一层比不了（不是「比对通过」）", s)
+			}
+		}
+	}
+	// ⚠️ 先等截面静默再读。DIFF 是增量 merge patch，早读一拍会读到半截截面，
+	// 而半截截面里的 0 看起来像一个合法数值。
+	r.cli.WaitTrade(1500 * time.Millisecond)
+
+	// ⚠️ 与 dump 同一条理由：把**出现过的合约**全订上、等行情到齐，
+	// 否则这份截面拿去做对拍时，缺行情的合约会被**静默跳过**。
+	// ⚠️ 这一处是补 dump 那次修复时漏掉的另一半 —— 同一个采样缺口，
+	// 两条路各有一份代码，我只修了落盘那条。
+	// 「补上判据之后立刻暴露出另一半」正是 silent-risks 方法论 38 说的形状，
+	// 而这次暴露它的是缺行情那条棘轮：实时截面落盘之后它当场从 72 涨到 73。
+	r.fillQuotes()
+
+	f := kq.Sanitize(r.cli.Account(), r.cli.Positions(), r.cli.Trades(),
+		observedQuotes(r.cli), r.cli.Orders(), r.cli.Notifies(), r.cli.TradingDay(),
+		time.Now().Format(time.RFC3339),
+		"实时对拍取的截面（oracle conformance），**未落盘**")
+
+	secrets := append(r.Env.Secrets(), kq.Secret{Name: "authID", Value: r.cli.AuthID()})
+	if bs := kq.BlindSpots(secrets); len(bs) > 0 {
+		r.Logf("  ⓘ 独立复查的盲区：%v —— 这几个值太短，没有判别力；靠白名单挡", bs)
+	}
+	if err := kq.Scrubbed(f, secrets); err != nil {
+		return nil, fmt.Errorf("脱敏自检失败，**不输出**：%w", err)
+	}
+	return json.Marshal(f)
+}
+
+// connect 建连接并登录。
+//
+// ⚠️ 抽成方法是因为**有两条路要用它**：Run（跑实验）与 LiveFixtureJSON
+// （实时对拍取截面）。写两份连接逻辑，两份就会漂移 ——
+// 而漂移的表现是「实验能连上、对拍连不上」，或者反过来，
+// 且两边的错误信息各说各话。
+//
+// ⚠️ 它**不**负责 Close：谁开的谁关，调用方 defer。
+func (r *Runner) connect(ctx context.Context) error {
+	cli := kq.New(kq.Credentials{
+		User: r.Env.KQUser, Password: r.Env.KQPassword,
+		ClientSecret: r.Env.KQClientSecret,
+	}, r.Logf)
+	r.cli = cli
+	if err := cli.Auth(ctx); err != nil {
+		return err
+	}
+	if err := cli.ConnectTrade(ctx); err != nil {
+		return err
+	}
+	// ⚠️ 登录成功与否看**状态**，不看回调。等 trade 截面出现即为登录成功。
+	if !cli.WaitUntil(30*time.Second, func() bool { return cli.TradingDay() != "" }) {
+		for _, n := range cli.Notifies() {
+			r.Logf("  notify code=%d level=%s %s", n.Code, n.Level, n.Content)
+		}
+		return fmt.Errorf("30 秒内未拿到交易截面 —— " +
+			"这只说明没等到，不说明登录失败；先看上面的 notify")
+	}
+	r.Logf("[td] 登录成功  trading_day=%s", cli.TradingDay())
+	return nil
+}
+
+// fillQuotes 订阅本次截面里出现过的全部合约，并等行情到齐。
+//
+// ⚠️ 等不到的**说出来**而不是默默落盘：一份缺行情的夹具在下游只会被跳过。
+func (r *Runner) fillQuotes() {
+	cli := r.cli
+	syms := observedSymbols(cli)
+	if len(syms) == 0 {
+		return
+	}
+	if err := cli.SubscribeQuotes(syms...); err != nil {
+		r.Logf("  ⚠️ 补订行情失败：%v —— 夹具可能缺行情", err)
+		return
+	}
+	missing := func() []string {
+		var out []string
+		for _, s := range syms {
+			if _, ok := cli.QuoteOf(s); !ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	cli.WaitUntil(10*time.Second, func() bool { return len(missing()) == 0 })
+	if m := missing(); len(m) > 0 {
+		// ⚠️ 不存在的合约永远等不到 —— 那不是故障，但也要说出来。
+		r.Logf("  ⚠️ 这些合约 10 秒内没等到行情，夹具里会缺它们：%v", m)
+	}
+}
+
+// WriteFixtureJSON 把一份**已经脱敏过的**夹具 JSON 落盘，返回落到哪。
+//
+// ⚠️ 它只做落盘，不做脱敏 —— 脱敏发生在 LiveFixtureJSON 里，
+// 在这段字节存在之前。顺序反过来（先落盘再擦）是 dump 的注释里
+// 明确不许做的事：原始文件已经上过磁盘、可能已经进过 git index。
+//
+// ⚠️ 与 dump 共用 freeFixturePath，所以**同名不同内容时不会静默覆盖**：
+// 两份都是证据，而覆盖掉的那份没有任何东西会提起。
+func WriteFixtureJSON(dir, name string, raw []byte, logf func(string, ...any)) (string, error) {
+	var head struct {
+		TradingDay string `json:"trading_day"`
+	}
+	if err := json.Unmarshal(raw, &head); err != nil {
+		return "", fmt.Errorf("读不出 trading_day：%w", err)
+	}
+	if head.TradingDay == "" {
+		// ⚠️ 交易日进文件名，缺了就拒绝落盘：一份不知道属于哪一天的截面，
+		// 与一份没落盘的截面在证据上是同一个位置。
+		return "", fmt.Errorf("这份截面没有 trading_day —— 不落盘")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	path, err := freeFixturePath(dir, name, head.TradingDay, raw, logf)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, raw, 0o644); err != nil {
+		return "", err
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		return abs, nil
+	}
+	return path, nil
 }

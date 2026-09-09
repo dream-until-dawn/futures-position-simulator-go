@@ -35,3 +35,21 @@ go.work.sum
 .tokcache
 .tdurl
 *.token
+
+# ⚠️ 只落本地、不进 git 的那一档证据（使用者 20260909 裁决）
+#
+# 柜台通知的**文案**是自由文本，本仓库是 public、推上去不可撤。
+# 码/等级/类型仍进主夹具（那是对拍要用的），文案只落这里。
+# ⚠️ 「被挡住了」是一句要被机械核对的话：守卫 TestLocalOnlyEvidenceIsGitIgnored。
+testdata/probes/local/
+
+# ⚠️ **按名**再挡一道 —— 上面那条是**路径型**的，而路径由使用者的参数决定。
+#
+# 旁档落点是 filepath.Join(DumpDir, "local")，DumpDir 来自 -dump；
+# 而 .env 的 PROBE_DUMP_DIR 是**绝对路径**、.env 本身又是 gitignored 的本地文件 ——
+# 改一个字，**所有后续运行**都落到仓库里的新位置，连命令行都不用改。
+# 触发面不是「有人手滑一次」，是「改过之后的一整段时间」。
+#
+# 于是让**名字**带着保护，而不是让目录带着保护：DumpDir 指哪都一样。
+# ⚠️ 加这条之前核过 git ls-files "*.notify.json" == 0，不会把已入库文件变成 ignored。
+*.notify.json
