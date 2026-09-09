@@ -133,11 +133,28 @@ position_cost_long_today / _his              持仓成本按今昨分开
 volume_long_yd                               昨仓量的另一口径，与 volume_long_his 并存
 ```
 
-⚠️ **柜台把 margin / open_cost / position_cost 三样都按今昨拆开存**，
+⚠️ **柜台把 margin / open_cost / position_cost 三样都按今昨拆开**，
 这正是逐日盯市要求的两条基线（昨仓以昨结算价、今仓以开仓价）在柜台侧的形态。
 本库的 `position` 包必须同构，不能只存合计。
 
+> ⚠️ **上面说的是「协议里有这些字段」，不是「柜台把它们填上」** ——
+> 原文写的是「拆开**存**」，而 20260909 实测下来三样的行为并不一样
+> （state.md 的 `kq_facts` 28/33/50）：
+>
+>     open_cost_* / margin_* 的今昨拆分   **从未**是真实数字
+>     position_cost_* 的今昨拆分          **经历过结算之后**才被填上，
+>                                         由 PositionDateType 决定写哪一侧，
+>                                         另一侧给 "-"（**与有没有仓无关**）
+>
+> ⚠️ 「本库必须同构」这个结论**不受影响** —— 它的理由是逐日盯市本身要求
+> 两条基线，不是「柜台填了所以我们也要填」。两个理由长得像，而**只有前一个
+> 在柜台不填的时候仍然成立**。
+> 守卫：`view.TestOracleTodayHisSplit`、
+> `fixture.TestCostSplitAbsentSideFollowsPositionDateType`。
+
 ⚠️ `volume_long_yd` 与 `volume_long_his` **并存且含义未定**——列为新的待实测项。
+（⚠️ 快期这一侧已经测出来了，见 `kq_facts` 27 与本页 §13 第 7 条；
+仍留在待实测，因为只有一个来源。）
 
 这 20 个字段是**被字段集断言自动抓出来的**，不是靠人去数：
 夹具生成时断言「收到的字段集 ⊆ 已知字段集」，多出来即判未分类并**拒绝落盘**。
