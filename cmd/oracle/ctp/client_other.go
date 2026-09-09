@@ -67,3 +67,11 @@ func (c *Client) Insert(OrderReq, time.Duration) (OrderState, error) {
 }
 
 func (c *Client) Cancel(string, OrderReq) error { return errPlatform }
+
+// SeedOrderSeq 在非 Windows 上无事可做：这里根本发不出委托。
+// ⚠️ 它不返回 error 是因为 Windows 侧也不返回 —— 签名要一致，
+// 而「无操作」在这里是安全的：任何真的想发单的调用都会在 Connect 就断。
+func (c *Client) SeedOrderSeq(int64) {}
+
+// Order 在非 Windows 上永远查不到：这里一笔单都发不出去。
+func (c *Client) Order(string) (OrderState, bool) { return OrderState{}, false }

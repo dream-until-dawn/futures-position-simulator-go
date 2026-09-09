@@ -105,6 +105,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
+	case "ctp-hold":
+		if err := runCTPHold(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
 	case "ctp-flatten":
 		if err := runCTPFlatten(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
@@ -117,6 +122,11 @@ func main() {
 		}
 	case "ctp-order":
 		if err := runCTPOrder(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-dup":
+		if err := runCTPDup(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -763,10 +773,18 @@ func runCTPFlatten(args []string) error {
 		if err != nil {
 			return fmt.Errorf("⚠️ 拿不到 %s 的行情，**仓还在**：%w", symbol, err)
 		}
-		// 平仓挂对自己不利的那一端，保证成交。
-		px := float64(md.LowerLimitPrice)
+		// 平仓挂**穿过市场**的价，保证成交。
+		//
+		// ⚠️ 不用涨跌停价。观测（20260910 夜盘）：挂跌停价 3005 的平今单被回
+		// ErrorID=22「不允许重复报单」，换成 3134 的同方向同量单**当即成交**，
+		// 而两次用的 OrderRef 一个是 p000000002、一个是 p000000001 ——
+		// **后者是当天早已用过的那个**。所以「ref 撞车」解释不了这两次。
+		// ⚠️ 机制未定（见 probes.md §6.8），这里只按观测取舍：涨跌停价在同一
+		// 时段是**常数**，于是每次平仓长得一模一样；「最新价 ± 一大截」同样穿越
+		// 市场保证成交，却**随行情天然变化**。躲开一个没查清的坑，不等于查清了它。
+		px := float64(md.LastPrice) - 20
 		if dir == def.THOST_FTDC_D_Buy {
-			px = float64(md.UpperLimitPrice)
+			px = float64(md.LastPrice) + 20
 		}
 		ex, inst := ctp.SplitSymbol(symbol)
 		logf("[flat] %s 今仓 %d 手（%s）→ 平今 @%.2f", key, today, string(p.PosiDirection), px)
@@ -791,5 +809,115 @@ func runCTPFlatten(args []string) error {
 	if float64(after.CurrMargin) != 0 {
 		return fmt.Errorf("⚠️⚠️ 占用保证金仍为 %.4f —— **账上还有仓**", float64(after.CurrMargin))
 	}
+	return nil
+}
+
+// runCTPHold 建一手仓，**盯着保证金看它随什么动**，然后平掉。
+//
+// # ⚠️ 它要分开的那两个候选
+//
+// 20260910 第一次成交后算出：占用保证金 ÷ (成交价 × 乘数) = **16.0000%**，
+// 而昨结算价给出 15.9646%（非整数）⇒ 昨结算价被否。
+//
+// ⚠️ **但那份样本分不开「开仓价」与「今结算价」** —— 当时两者恰好都是 3157。
+//
+//	开仓价    建仓那一刻定死，**之后不动**
+//	今结算价  盘中随行情走
+//
+// ⇒ 判别方法：**持仓不动，看行情走**。若占用保证金一直不变 ⇒ 基准是开仓价；
+// 若它跟着行情变 ⇒ 基准是某个动态价。
+//
+// ⚠️ 这一条不需要新的建模，只需要**时间**：所以它做成「建仓 → 轮询 → 平仓」。
+func runCTPHold(args []string) error {
+	fs := flag.NewFlagSet("ctp-hold", flag.ExitOnError)
+	envPath := fs.String("env", ".env", "凭据文件路径")
+	symbol := fs.String("symbol", "", "合约（⚠️ 无默认值）")
+	rounds := fs.Int("rounds", 6, "轮询次数")
+	every := fs.Duration("every", 20*time.Second, "轮询间隔")
+	timeout := fs.Duration("timeout", 40*time.Second, "每一步超时")
+	if err := fs.Parse(args[2:]); err != nil {
+		return err
+	}
+	if *symbol == "" {
+		return fmt.Errorf("⚠️ -symbol 没有默认值：会真的建仓")
+	}
+	env, err := probe.LoadEnv(*envPath)
+	if err != nil {
+		return err
+	}
+	logf := func(f string, a ...any) { fmt.Printf(f+"\n", a...) }
+	c := ctp.New(ctp.Credentials{
+		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
+		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
+	}, logf)
+	c.Valve = ctpValve(env, nil)
+	defer c.Close()
+	if err := c.Connect(*timeout); err != nil {
+		return err
+	}
+	md, err := c.MarketData(*symbol, *timeout)
+	if err != nil {
+		return err
+	}
+	ex, inst := ctp.SplitSymbol(*symbol)
+	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
+		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, *timeout)
+	if err != nil || st.VolumeTraded == 0 {
+		return fmt.Errorf("建仓没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
+	}
+	logf("[hold] 建仓成交 %d 手", st.VolumeTraded)
+
+	logf("")
+	logf("%-8s %10s %10s %10s %12s %12s", "时刻", "最新价", "今结算", "昨结", "占用保证金", "持仓盈亏")
+	var first, last float64
+	for i := 0; i < *rounds; i++ {
+		if i > 0 {
+			time.Sleep(*every)
+		}
+		m, err := c.MarketData(*symbol, *timeout)
+		if err != nil {
+			logf("  行情读不到：%v", err)
+			continue
+		}
+		pos, err := c.Positions(*timeout)
+		if err != nil {
+			logf("  持仓读不到：%v", err)
+			continue
+		}
+		for _, p := range pos {
+			if int(p.TodayPosition) == 0 {
+				continue
+			}
+			um := float64(p.UseMargin)
+			if first == 0 {
+				first = um
+			}
+			last = um
+			logf("%-8s %10.2f %10.2f %10.2f %12.2f %12.2f",
+				time.Now().Format("15:04:05"), float64(m.LastPrice),
+				float64(p.SettlementPrice), float64(p.PreSettlementPrice),
+				um, float64(p.PositionProfit))
+		}
+	}
+	logf("")
+	switch {
+	case first != 0 && first == last:
+		logf("⇒ ⚠️ 占用保证金**全程不变**（%.2f）", first)
+		logf("   若期间行情有过变动 ⇒ 基准是**建仓时定死的价**（开仓价），今结算价被否")
+		logf("   ⚠️ 若行情也没动 ⇒ **这一轮什么都没分开**，别当结论")
+	default:
+		logf("⇒ ⚠️ 占用保证金**变了**：%.2f → %.2f ⇒ 基准是某个**动态价**，开仓价被否", first, last)
+	}
+	logf("")
+	logf("[hold] 平仓 ——")
+	cs, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
+	if err != nil || cs.VolumeTraded == 0 {
+		return fmt.Errorf("⚠️⚠️ **平仓没成交，账上还留着 1 手 %s 多头今仓** —— "+
+			"status=%q %s err=%v。跑 `ctp-flatten` 收拾", *symbol, string(cs.Status), cs.StatusMsg, err)
+	}
+	logf("[hold] 已平 %d 手", cs.VolumeTraded)
 	return nil
 }

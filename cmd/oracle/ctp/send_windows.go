@@ -4,7 +4,6 @@ package ctp
 
 import (
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -30,36 +29,6 @@ import (
 // 读本包源码核这两件事 —— ⚠️ 它查的是**结构**，不是行为，所以它在
 // 「有人新写了第二条路径」的那一刻就红，而不必等那条路径被用到。
 
-// orderBook 记本次运行发出去的委托。
-type orderBook struct {
-	mu sync.Mutex
-	m  map[string]*OrderState
-}
-
-func (b *orderBook) put(ref string, f func(*OrderState)) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if b.m == nil {
-		b.m = map[string]*OrderState{}
-	}
-	s, ok := b.m[ref]
-	if !ok {
-		s = &OrderState{OrderRef: ref}
-		b.m[ref] = s
-	}
-	f(s)
-}
-
-func (b *orderBook) get(ref string) (OrderState, bool) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	s, ok := b.m[ref]
-	if !ok {
-		return OrderState{}, false
-	}
-	return *s, true
-}
-
 // send 是**全包唯一**到达柜台报单接口的路径。
 //
 // ⚠️ 阀检查是它的第一件事，且**没有参数可以关掉它** ——
@@ -70,15 +39,23 @@ func (c *Client) send(r OrderReq) (string, error) {
 	if err := c.Check(r); err != nil {
 		return "", err
 	}
-	// ⚠️ OrderRef **必须单调递增** —— CTP 对不递增的 ref 回 ErrorID=22
-	// 「不允许重复报单」。20260910 夜盘第一次成交往返就栽在这里：
+	// ⚠️ **OrderRef 必须是纯数字，并且从登录应答的 `MaxOrderRef` 往后续。**
 	//
-	//	买开 ref=p311276100  →  卖平 ref=p232108500   ← **数值更小**
-	//	于是平仓被拒，而**仓已经建上了** —— 一个只在第二笔单上才暴露的错。
+	// 这一行改过两次，前两版都是**照着一个错的理由**改的：
 	//
-	// ⚠️ 原写法是 `UnixNano()%1e9`：它在秒级看起来递增，**跨过 1e9 的边界就回绕**。
-	// 「大多数时候递增」在这里等于「不递增」——CTP 只需要一次不递增就拒。
-	ref := fmt.Sprintf("p%09d", atomic.AddInt64(&c.orderSeq, 1))
+	//	v1  UnixNano()%1e9        跨 1e9 回绕 ⇒ 变小
+	//	v2  p%09d 会话内计数器     ⇒ 单调了，**可第二笔照样被拒**
+	//	v3  %d 且从 MaxOrderRef 续 ⇒ 见下
+	//
+	// ⚠️ v2 的理由是「ref 必须单调递增」。它**看起来**被证实了（那次 ref 确实变小、
+	// 确实被拒），于是我停在这里 —— 而真相是 `p` 前缀让柜台根本读不出数字，
+	// 于是同一会话里**每一笔都被当成同一个引用**，第二笔起一律
+	// `ErrorID=22 不允许重复报单`。20260910 夜盘 `ctp-dup` 五格全新递增 ref、
+	// 五个不同价、中途不撤，第 2–5 格照样全拒 —— 那才把 v2 的理由否掉。
+	//
+	// ⚠️ 教训不是「要单调」，是：**一个只在第二笔单上暴露的错，
+	// 用只发一笔单的实验永远看不见。**
+	ref := formatOrderRef(atomic.AddInt64(&c.orderSeq, 1))
 	f := def.CThostFtdcInputOrderField{
 		OrderPriceType:      def.THOST_FTDC_OPT_LimitPrice,
 		Direction:           r.Direction,
@@ -100,11 +77,32 @@ func (c *Client) send(r OrderReq) (string, error) {
 	// 留参数意味着有人可以传别的，而别的取值本库一行都没建模。
 	f.CombHedgeFlag[0] = byte(def.THOST_FTDC_HF_Speculation)
 
-	c.book.put(ref, func(s *OrderState) { s.VolumeTotal = r.Volume })
+	// ⚠️ **发单前必须把这个 ref 的旧状态清掉。**
+	// 20260910 `ctp-dup` 第 4 格撞出来的：那一格故意重用了第 1 格的 ref，
+	// 而第 1 格已经撤单落在终态 "5" 上 —— 于是 `Insert` **秒回「已撤单」**，
+	// 报告了一个**根本没发生过**的结果，那一格白测了。
+	//
+	// ⚠️ 它比看上去严重：`Insert` 的等待条件是「簿上出现终态」，
+	// 而一个残留的终态让这个条件**在发单的那一刻就已经成立**。
+	// 「上一笔的结局」被当成了「这一笔的结局」。
+	//
+	// ⚠️ 清了之后仍有一层残余歧义：旧单的迟到回报会落到新单的格子上。
+	// 这**没法在按 ref 索引的簿里根治** —— 所以正常路径一律不重用 ref，
+	// 只有判别实验会（见 SeedOrderSeq 的说明）。
+	c.book.reset(ref, r.Volume)
 	c.logf("[ctp] 报单 %s  ref=%s", r, ref)
 	c.req("ReqOrderInsert", unsafe.Pointer(&f))
 	return ref, nil
 }
+
+// SeedOrderSeq 把委托序号拨到 n，使下一笔的 ref 是 p<n>。
+//
+// ⚠️ **这是给判别实验用的**，不是给正常流程用的：`ctp-dup` 要构造
+// 「同 ref 不同要素」与「同要素不同 ref」两组，而这两组只有能指定 ref 才做得出。
+// ⚠️ 它**不碰安全阀** —— ref 决定不了发不发得出去，只决定这笔单叫什么名字。
+// ⚠️ 正常路径不许调用它：默认从 1 开始递增已被实测支持（20260910 夜盘同一
+// 交易日里 p000000001 在新会话上被重复接受），见 probes.md §6.8。
+func (c *Client) SeedOrderSeq(n int64) { atomic.StoreInt64(&c.orderSeq, n-1) }
 
 // Insert 发一笔限价委托并等它到达一个**可判断**的状态。
 //
@@ -134,6 +132,12 @@ func (c *Client) Insert(r OrderReq, timeout time.Duration) (OrderState, error) {
 	return s, fmt.Errorf("%v 内没有等到 %s 的任何状态回报 —— "+
 		"⚠️ **没有结论**，不是「被拒」：这笔单可能还挂在柜台上，去查再撤", timeout, ref)
 }
+
+// Order 取本次运行发出的某笔委托的当前状态。
+//
+// ⚠️ 存在的理由：撤单前要先知道它还挂不挂着 —— 对一笔已经终态的单发撤单，
+// 柜台会回一条与「撤不掉」长得一样的错，而那会淹掉真正的撤单失败。
+func (c *Client) Order(ref string) (OrderState, bool) { return c.book.get(ref) }
 
 // Cancel 撤一笔还挂着的委托。
 func (c *Client) Cancel(ref string, r OrderReq) error {
