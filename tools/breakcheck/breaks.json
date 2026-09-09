@@ -1775,11 +1775,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "160 横幅删掉「只在 dev 上」那句：而 cmd/oracle/safety 确实只在 dev 上（高报）",
+		"name": "160 包差集算成「全都只在 dev 上」：横幅没那句区分，高报那一支该红",
 		"dir": "",
-		"file": "docs/fidelity.md",
-		"old": ">\t**只在 `dev` 上**  `cmd/oracle/safety` —— 与协议无关的下单安全阀",
-		"new": ">\t**已合入**      `cmd/oracle/safety` —— 与协议无关的下单安全阀",
+		"file": "branch_claim_test.go",
+		"old": "\t\tif !b[k] {",
+		"new": "\t\tif true {",
 		"pkg": "./",
 		"test": "TestDevOnlyClaimIsAccurate",
 		"want": "横幅把只在 dev 上的东西说成了已实现",
