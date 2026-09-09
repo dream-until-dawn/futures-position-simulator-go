@@ -293,6 +293,82 @@ func (r *Runner) dump(name, note string) error {
 		shown = abs
 	}
 	r.Logf("夹具落盘 %s（%d 字节，未分类字段 %d 个）", shown, len(b), len(f.Unclassified))
+	if err := r.dumpNotifyLocal(name, cli.Notifies(), cli.TradingDay()); err != nil {
+		// ⚠️ 本地旁档写不出来**不该**让整次实验失败：主夹具已经落好了，
+		// 而这一份是给人事后查文案用的补充件。但必须出声。
+		r.Logf("⚠️ 通知文案旁档没写成：%v —— "+
+			"这次的 notify 文案因此查不到了（码仍在主夹具里）", err)
+	}
+	return nil
+}
+
+// localNotifyDir 是**只落本地、不进 git** 的那一档证据的目录名。
+//
+// ⚠️ 它由 .gitignore 挡着，而「挡住了」是一句要被机械核对的话，
+// 不是一句约定 —— 守卫见根包的 TestLocalOnlyEvidenceIsGitIgnored。
+const localNotifyDir = "local"
+
+// dumpNotifyLocal 把通知的**文案**写进本地旁档。
+//
+// # 为什么是旁档而不是主夹具的一个字段
+//
+// 使用者 20260909 的裁决：文案要留下来，但**不上 git**。
+// 主夹具那 95 份是**公开的**证据语料，整套离线对拍都靠它们跑；
+// 把它们改成本地件会让任何一个新克隆的仓库**测不了任何东西**。
+// 于是分成两份：
+//
+//	testdata/probes/<名>.json          码 + 等级 + 类型，**进 git**
+//	testdata/probes/local/<名>.notify.json  再加上文案，**不进 git**
+//
+// ⚠️ 两份的**主键是同一个文件名**，所以事后能对上。
+// 旁档丢了（换台机器、清过工作区）不影响任何测试 —— 那是刻意的：
+// 一份**测试依赖它**的本地件，等于把测试变成只有我这台机器能跑。
+func (r *Runner) dumpNotifyLocal(name string, ns []kq.Notify, tradingDay string) error {
+	if len(ns) == 0 || r.DumpDir == "" {
+		return nil
+	}
+	dir := filepath.Join(r.DumpDir, localNotifyDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	type record struct {
+		Code    int    `json:"code"`
+		Level   string `json:"level"`
+		Type    string `json:"type"`
+		Content string `json:"content"`
+	}
+	// 去重：DIFF 每次重发整张表，同一条会出现很多次。
+	seen := map[string]bool{}
+	out := make([]record, 0, len(ns))
+	for _, n := range ns {
+		k := fmt.Sprintf("%d|%s", n.Code, n.Content)
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, record{n.Code, n.Level, n.Type, n.Content})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Code != out[j].Code {
+			return out[i].Code < out[j].Code
+		}
+		return out[i].Content < out[j].Content
+	})
+	b, err := json.MarshalIndent(map[string]any{
+		"trading_day": tradingDay,
+		"captured_at": time.Now().Format(time.RFC3339),
+		"note": "⚠️ 只落本地，不进 git（使用者 20260909 裁决）。" +
+			"文案是柜台发的自由文本，仓库是 public、推上去不可撤。",
+		"notifies": out,
+	}, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(dir, fmt.Sprintf("%s-%s.notify.json", name, tradingDay))
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		return err
+	}
+	r.Logf("通知文案旁档 %s（%d 条去重后，**不进 git**）", path, len(out))
 	return nil
 }
 

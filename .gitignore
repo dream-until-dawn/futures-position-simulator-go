@@ -35,3 +35,10 @@ go.work.sum
 .tokcache
 .tdurl
 *.token
+
+# ⚠️ 只落本地、不进 git 的那一档证据（使用者 20260909 裁决）
+#
+# 柜台通知的**文案**是自由文本，本仓库是 public、推上去不可撤。
+# 码/等级/类型仍进主夹具（那是对拍要用的），文案只落这里。
+# ⚠️ 「被挡住了」是一句要被机械核对的话：守卫 TestLocalOnlyEvidenceIsGitIgnored。
+testdata/probes/local/

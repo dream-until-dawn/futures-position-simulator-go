@@ -2385,5 +2385,27 @@
 		"want": "",
 		"expect": "green",
 		"why": "⚠️ 演示的盲区：notifyCodesPendingID 与 notifyCodes **重了也没人管** —— 已认出的码被同时塞进欠账表时，守卫先查 notifyCodes 命中就 continue 了，欠账那一条永远不会被读到，计数也不涨。也就是说这张欠账表**只防漏、不防冗**。堵它要加一条「两张表不许相交」的断言（三行），值不值得看它会不会真的发生 —— 写在这里，比装作没有强。"
+	},
+	{
+		"name": "215 .gitignore 里那条挡本地证据的规则被删掉",
+		"dir": "",
+		"file": ".gitignore",
+		"old": "testdata/probes/local/",
+		"new": "testdata/probes/local-renamed/",
+		"pkg": "./",
+		"test": "TestLocalOnlyEvidenceIsGitIgnored",
+		"want": "没有被 git 忽略",
+		"expect": "red"
+	},
+	{
+		"name": "216 已入库夹具里混进一条带文案的通知（泄漏的形状）",
+		"dir": "",
+		"file": "testdata/probes/exp-reject-tick-vs-limit-20260909-5.json",
+		"old": "{\n      \"type\": \"MESSAGE\",\n      \"level\": \"INFO\",\n      \"code\": 401\n    }",
+		"new": "{\n      \"type\": \"MESSAGE\",\n      \"level\": \"INFO\",\n      \"code\": 401,\n      \"content\": \"泄漏演示\"\n    }",
+		"pkg": "./",
+		"test": "TestCommittedFixturesCarryNoNotifyContent",
+		"want": "通知带着 content",
+		"expect": "red"
 	}
 ]
