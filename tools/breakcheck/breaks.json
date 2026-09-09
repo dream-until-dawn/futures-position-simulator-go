@@ -2874,7 +2874,7 @@
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/main.go",
 		"old": "\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
-		"new": "\t\tif _, err := fx.Write(*dump, \"ctp-status\", secrets,\n\t\t\tfunc(f string, a ...any) { fmt.Printf(f+\"\n\", a...) }); err != nil {\n\t\t\treturn err\n\t\t}\n\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
+		"new": "\t\t_, _ = fx.Write(*dump, \"early\", nil, nil)\n\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
 		"pkg": ".",
 		"test": "TestQuoteFailureBlocksTheWrite",
 		"want": "之后",
