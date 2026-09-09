@@ -647,6 +647,39 @@ func numberedTableRows(t *testing.T, path, sectionPrefix string) []string {
 	return rows
 }
 
+// allNumberedTableRows 与 numberedTableRows 同源，但**连已收敛的一起数**。
+//
+// ⚠️ 两者的差正是「测掉了几条」。分开数是刻意的：
+// `rules_pending` 要的是**还欠着几条**，`rules_listed` 要的是**一共问过几条** ——
+// 而只记前者的话，一条被测掉的项会让分母缩小，
+// **分子涨、分母缩，比值会朝两个方向同时变好看**。
+func allNumberedTableRows(t *testing.T, path, sectionPrefix string) (all, struck []string) {
+	t.Helper()
+	in := false
+	for _, l := range readLines(t, path) {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.HasPrefix(trimmed, sectionPrefix)
+			continue
+		}
+		if !in || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := strings.Split(trimmed, "|")
+		if len(cells) < 4 {
+			continue
+		}
+		if _, err := strconv.Atoi(strings.TrimSpace(cells[1])); err != nil {
+			continue
+		}
+		all = append(all, trimmed)
+		if strings.HasPrefix(strings.TrimSpace(cells[2]), "~~") {
+			struck = append(struck, trimmed)
+		}
+	}
+	return all, struck
+}
+
 // declaredCount 取 state.md 计数表里某个键的**加粗值**。
 //
 // ⚠️ 两条定义都是踩出来的，缺一条就取错数：
@@ -1098,3 +1131,54 @@ var (
 	// 那反而是好消息：换成少一个反斜杠而仍然合法的写法，它会安静地匹配错。
 	tickPathRe = regexp.MustCompile("`([A-Za-z0-9_./-]+\\.(?:go|json|md|sh|yml))`")
 )
+
+// TestRulesListedMatchesTable 断言 `rules_listed` 与 §13 表里**所有**编号行一致。
+//
+// # 为什么要有第二个分母
+//
+// 2026-09-09 使用者裁决升格 `kq_facts` 37 时，暴露了一件记账的事：
+// 那条规则**从没被写进 §13**——它不是解决了一条挂着的未知，
+// 是回答了一个**没人问过**的未知。
+//
+// 而 `rules_pending` 只数**还欠着的**（已收敛的行划掉、不在册）。于是：
+//
+//	只记「解决」不记「发现」  →  分子涨、分母不动
+//	而已收敛的行会离开分母    →  分子涨、分母**缩**
+//
+// ⚠️ 两个方向叠在一起，比值会凭空变好看，而每一步单看都合理。
+// `rules_listed` 就是那个**只增不减**的分母：一共问过几条。
+//
+//	rules_listed = rules_pending + 已收敛
+//
+// 这条恒等式在下面被断言 —— 它是三个数**互相咬住**的地方，
+// 单独钉住任何一个都挡不住「三个数各自漂开」。
+func TestRulesListedMatchesTable(t *testing.T) {
+	path := filepath.Join("docs", "cn-futures-rules.md")
+	all, struck := allNumberedTableRows(t, path, "## 13.")
+	if len(all) == 0 {
+		t.Fatal("⚠️ §13 一条编号行都没解析到 —— 章节改名了？本条在空转")
+	}
+	pending := numberedTableRows(t, path, "## 13.")
+
+	if got := declaredCount(t, "rules_listed"); got != len(all) {
+		t.Errorf("⚠️ state.md 的 rules_listed = %d，而 §13 一共 %d 条编号行（含已收敛 %d 条）",
+			got, len(all), len(struck))
+	}
+	// ⚠️ 恒等式：一共问过的 = 还欠着的 + 已收敛的。
+	if len(all) != len(pending)+len(struck) {
+		t.Errorf("⚠️ 对不上：一共 %d 条、在册 %d 条、已收敛 %d 条 —— "+
+			"两个解析规则分岔了（多半是划掉的写法变了）",
+			len(all), len(pending), len(struck))
+	}
+	// ⚠️ rules_measured 不从表里派生：一条**已收敛**只说明它被测掉了，
+	// 不说明它有第二个独立来源 —— 后者才是升格的门槛（见 state.md 的升格判据）。
+	// 但**上界**是硬的：有第二来源的必然已收敛，所以它不能比已收敛还多。
+	// 这条挡的是「分子被单独抬高」。
+	if m := declaredCount(t, "rules_measured"); m > len(struck) {
+		t.Errorf("⚠️ rules_measured = %d，而 §13 里已收敛的只有 %d 条 —— "+
+			"一条有第二个独立来源的规则必然已经收敛，所以分子不可能比它大。"+
+			"⚠️ 要么是升格记错了，要么是某条收敛了却没在表里划掉", m, len(struck))
+	}
+	t.Logf("§13：一共问过 %d 条，还欠 %d 条，已收敛 %d 条；rules_measured %d",
+		len(all), len(pending), len(struck), declaredCount(t, "rules_measured"))
+}
