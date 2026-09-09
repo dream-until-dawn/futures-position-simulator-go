@@ -2530,5 +2530,49 @@
 		"test": "TestDocSectionsTableCoversEveryDoc",
 		"want": "本条在空转",
 		"expect": "red"
+	},
+	{
+		"name": "228 白名单漏掉一个字段：反射穷举当场抓到（DIFF 那侧的运行时检查抓不到）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/whitelist.go",
+		"old": "\t\"PositionProfit\":     keep(\"持仓盈亏\"),\n",
+		"new": "",
+		"pkg": "./ctp/",
+		"test": "TestFieldDecisionsAreComplete",
+		"want": "没有决定",
+		"expect": "red"
+	},
+	{
+		"name": "229 白名单留着一个已不存在的字段名：那条决定保护不了任何东西",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/whitelist.go",
+		"old": "\t\"PositionProfit\":     keep(\"持仓盈亏\"),",
+		"new": "\t\"PositionProfitRenamed\":     keep(\"持仓盈亏\"),",
+		"pkg": "./ctp/",
+		"test": "TestFieldDecisionsAreComplete",
+		"want": "结构体里**没有这个字段**",
+		"expect": "red"
+	},
+	{
+		"name": "230 把标识性字段 InvestorID 改成 keep：public 仓库，推上去撤不回来",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/whitelist.go",
+		"old": "\t\"InvestorID\":   drop(whyIdent),",
+		"new": "\t\"InvestorID\":   keep(whyIdent),",
+		"pkg": "./ctp/",
+		"test": "TestIdentifyingFieldsAreDropped",
+		"want": "被标成了 **keep**",
+		"expect": "red"
+	},
+	{
+		"name": "231 一条决定不写理由：白名单是要交给评审逐键核对的",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/whitelist.go",
+		"old": "\t\"PositionProfit\":     keep(\"持仓盈亏\"),",
+		"new": "\t\"PositionProfit\":     keep(\"\"),",
+		"pkg": "./ctp/",
+		"test": "TestEveryDecisionHasAReason",
+		"want": "没有理由",
+		"expect": "red"
 	}
 ]
