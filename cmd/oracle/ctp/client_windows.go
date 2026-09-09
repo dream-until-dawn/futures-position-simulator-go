@@ -10,6 +10,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 	def "gitee.com/haifengat/goctp/ctpdefine"
 )
 
@@ -30,6 +31,9 @@ type Credentials struct {
 // 顺序是设计的一部分：**先有报单、后补安全阀，中间那段时间它就是没有闸的。**
 type Client struct {
 	cred Credentials
+	// Valve 是下单安全阀。⚠️ 它是 Client 的字段而不是 Insert 的参数：
+	// 参数可以在某一次调用里忘了传，字段不会。
+	Valve safety.Valve
 	logf func(string, ...any)
 
 	h        *syscall.DLL

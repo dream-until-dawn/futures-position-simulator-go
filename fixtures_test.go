@@ -162,6 +162,12 @@ func TestNoStrayFixtureTrees(t *testing.T) {
 	known := map[string]string{
 		"testdata/probes":  "柜台截面夹具：实测产出，脱敏后入库",
 		"testdata/refdata": "上游规则数据：来自天勤合约字典，不是柜台实测，证据等级不同",
+		// ⚠️ 为什么它不能并进 testdata/probes：
+		// probes 是**天勤 DIFF** 的语料，而 conformance/fixture 的 loadAll 扫那个目录、
+		// 把持仓当泛型 map 读。一份 CTP 夹具丢进去**不会报错** —— 它会若无其事地
+		// 解析成功，然后带着一堆 CTP 字段名流进棘轮与覆盖率，而那些数字
+		// **看起来完全正常**：语料变大了，覆盖变好了。坏消息伪装成好消息。
+		"testdata/ctp": "CTP/SimNow 截面夹具：另一个口子的实测产出，字段名与 DIFF 无一相同",
 	}
 	const canonical = "testdata/probes"
 	var stray []string

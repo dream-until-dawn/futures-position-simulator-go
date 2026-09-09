@@ -2640,5 +2640,49 @@
 		"test": "TestZeroByteEnumBecomesEmptyString",
 		"want": "跟着变空会把一个真实取值抹掉",
 		"expect": "red"
+	},
+	{
+		"name": "238 CTP 侧漏掉 CloseYesterday：kq 那条注释里的预言，在另一个协议上应验",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/order.go",
+		"old": "\tdef.THOST_FTDC_OF_CloseYesterday: true,\n",
+		"new": "",
+		"pkg": "./ctp/",
+		"test": "TestIntentMapsDirectionAndOffset",
+		"want": "是不是已识别的平仓",
+		"expect": "red"
+	},
+	{
+		"name": "239 CTP 侧方向不取反：买平被当成平多头",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/order.go",
+		"old": "\t\tcase def.THOST_FTDC_D_Buy:\n\t\t\tin.ClosesSide = safety.Short // 买平 → 平的是**空**头\n\t\tcase def.THOST_FTDC_D_Sell:\n\t\t\tin.ClosesSide = safety.Long // 卖平 → 平的是**多**头",
+		"new": "\t\tcase def.THOST_FTDC_D_Buy:\n\t\t\tin.ClosesSide = safety.Long // 买平 → 平的是**空**头\n\t\tcase def.THOST_FTDC_D_Sell:\n\t\t\tin.ClosesSide = safety.Short // 卖平 → 平的是**多**头",
+		"pkg": "./ctp/",
+		"test": "TestIntentMapsDirectionAndOffset",
+		"want": "ClosesSide =",
+		"expect": "red"
+	},
+	{
+		"name": "240 判据反过来写成「不是开仓就算平仓」：拼错的标志绕过手数上限",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/order.go",
+		"old": "\t\tClosing:    closingOffsets[r.Offset],",
+		"new": "\t\tClosing:    r.Offset != def.THOST_FTDC_OF_Open,",
+		"pkg": "./ctp/",
+		"test": "TestUnknownOffsetIsTreatedAsOpening",
+		"want": "绕过手数上限",
+		"expect": "red"
+	},
+	{
+		"name": "241 Check 不把 TradingDay 接进阀：未登录时受保护腿形同虚设",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/order.go",
+		"old": "\tv.TradingDay = c.TradingDay()",
+		"new": "\tv.TradingDay = \"20991231\"",
+		"pkg": "./ctp/",
+		"test": "TestCheckBlocksProtectedLegAndOversizeOpen",
+		"want": "Check 却放行了",
+		"expect": "red"
 	}
 ]

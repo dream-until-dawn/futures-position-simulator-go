@@ -5,6 +5,8 @@ package ctp
 import (
 	"fmt"
 	"time"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 )
 
 // ⚠️ 非 Windows 上本包**没有实现**，而不是「静默不可用」。
@@ -26,7 +28,10 @@ type Credentials struct {
 	AuthCode string
 }
 
-type Client struct{ cred Credentials }
+type Client struct {
+	cred  Credentials
+	Valve safety.Valve
+}
 
 func New(cred Credentials, _ func(string, ...any)) *Client { return &Client{cred: cred} }
 
