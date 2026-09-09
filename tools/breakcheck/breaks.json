@@ -2407,5 +2407,38 @@
 		"test": "TestCommittedFixturesCarryNoNotifyContent",
 		"want": "通知带着 content",
 		"expect": "red"
+	},
+	{
+		"name": "217 rules_listed 也把已收敛的划掉：分母跟着 pending 一起缩",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\t\tall = append(all, trimmed)\n\t\tif strings.HasPrefix(strings.TrimSpace(cells[2]), \"~~\") {\n\t\t\tstruck = append(struck, trimmed)\n\t\t}",
+		"new": "\t\tif strings.HasPrefix(strings.TrimSpace(cells[2]), \"~~\") {\n\t\t\tstruck = append(struck, trimmed)\n\t\t\tcontinue\n\t\t}\n\t\tall = append(all, trimmed)",
+		"pkg": "./",
+		"test": "TestRulesListedMatchesTable",
+		"want": "而 §13 一共",
+		"expect": "red"
+	},
+	{
+		"name": "218 分子被单独抬高：rules_measured 报 3 而已收敛只有 2",
+		"dir": "",
+		"file": "docs/state.md",
+		"old": "| `rules_measured` | **2** |",
+		"new": "| `rules_measured` | **3** |",
+		"pkg": "./",
+		"test": "TestRulesListedMatchesTable",
+		"want": "分子不可能比它大",
+		"expect": "red"
+	},
+	{
+		"name": "219 §13 第 15 行没有划掉：新增即收敛写成了新增未收敛",
+		"dir": "",
+		"file": "docs/cn-futures-rules.md",
+		"old": "| 15 | ~~`position_price` 的**昨仓**那一端用哪个价~~",
+		"new": "| 15 | `position_price` 的**昨仓**那一端用哪个价",
+		"pkg": "./",
+		"test": "TestRulesListedMatchesTable",
+		"want": "分子不可能比它大",
+		"expect": "red"
 	}
 ]
