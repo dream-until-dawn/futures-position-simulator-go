@@ -473,6 +473,59 @@ D+1 日 baseline-full / close-order / yd-vs-his
 
 ## 排期变更记录
 
+### 2026-09-09/10：CTP 侧落地（导出面，门禁④，**含枚举取值**）
+
+两个**新包**，都在嵌套模块 `cmd/oracle` 里，**不是主库 API 面**。
+⚠️ 主模块的依赖硬约束（只有 `shopspring/decimal`）未被触碰。
+
+#### `cmd/oracle/safety`（新包，与协议无关的下单安全阀）
+
+    类型   Side（枚举）/ Intent / ProtectedLeg / Valve
+    方法   Valve.Check(Intent) error
+
+**枚举 `safety.Side`（`uint8`）—— 取值与零值都是导出面的一部分**：
+
+    SideUnknown = iota   Long   Short
+
+⚠️ **零值刻意不选 Long 也不选 Short**：一个「默认拦多头」的零值，会让忘了填
+方向的声明**看起来在保护什么**，而它保护的是随机的一边。守卫
+`TestUnknownSideMatchesNothing`。
+
+⚠️ `Side` 是**持仓**方向，不是委托方向 —— 平掉一个 `Short` 要发买单。
+取反在各协议的映射点做（`kq.intentOf` / `ctp.intentOf`），不在 `safety` 里。
+
+#### `cmd/oracle/ctp`（新包，SimNow 取证客户端）
+
+    常量   Source / GoctpModule / DLLDirEnv / QueryGap
+    变量   RequiredDLLs
+    类型   Client / Credentials / Fixture / OrderReq
+    函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots
+    方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
+           Capture / Check / Close；Fixture.Write；OrderReq.Symbol / String
+
+⚠️ **平台**：实现只在 Windows；非 Windows 有同 API 的桩，**返回明确错误**
+而不是零值 —— 后者会让「这个平台没实现」在运行时表现成「柜台没反应」。
+`GOOS=linux go build` 已验证能过。
+
+⚠️ `OrderReq` 的 `Direction` / `Offset` 直接用 CTP 的枚举类型，**不新造一套**：
+新造会多一层映射，而这一侧的常量本来就容易混（`Buy` 与 `Open` 同为 `0`）。
+
+#### `cmd/oracle/probe` 的导出面变化
+
+    Runner 新增字段 Protected []safety.ProtectedLeg
+
+⚠️ 它**只为让接线测试不依赖清单当下是不是空的**而存在（`nil` = 用声明的那份，
+空切片 = 注入一份空的，两者含义不同）。理由见 `protectedLegs()` 的注释。
+
+#### 依赖
+
+    gitee.com/haifengat/goctp v1.10.17   （裁决 A）
+    golang.org/x/text v0.3.4             （goctp 的传递依赖）
+
+⚠️ 按**传递闭包**报：`cmd/oracle` 的依赖 3 → 5。按直接依赖报会系统性低估，
+而低估的方向恰好是让决定更容易被通过的那个方向。
+
+
 ### 过夜种子的保护挪到了下单口上（2026-09-09 实现）
 
 本页上面那句「⚠️ 别在结算前把这些仓平掉：种子没了就要再等一天」，
