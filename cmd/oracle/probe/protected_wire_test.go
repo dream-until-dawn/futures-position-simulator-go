@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 )
 
 // TestGuardCarriesProtectedLegs 是一条**接线测试**。
@@ -34,7 +35,7 @@ func TestGuardCarriesProtectedLegs(t *testing.T) {
 
 	// 平一条 Sell 腿要发 Buy 委托，反之亦然。
 	closeDir := kq.Sell
-	if leg.Direction == kq.Sell {
+	if leg.Side == safety.Short {
 		closeDir = kq.Buy
 	}
 	ex, inst := splitSymbol(leg.Symbol)
@@ -44,13 +45,13 @@ func TestGuardCarriesProtectedLegs(t *testing.T) {
 		t.Fatalf("⚠️ r.guard() 造出来的安全阀**没有拦下** %s %s 的平仓委托 —— "+
 			"protectedLegs 声明了它，但那份声明没有接到下单口上。"+
 			"⚠️ 这与「守卫写错了」不是一回事：这里守卫是对的，只是没人调用它",
-			leg.Symbol, leg.Direction)
+			leg.Symbol, leg.Side)
 	}
 	if !strings.Contains(err.Error(), "受保护的持仓腿") {
 		t.Fatalf("⚠️ 拦是拦下了，但不是被这条守卫拦的：%v", err)
 	}
 	t.Logf("受保护的腿 %d 条，第一条 %s %s（交易日 %s）",
-		len(protectedLegs), leg.Symbol, leg.Direction, leg.TradingDay)
+		len(protectedLegs), leg.Symbol, leg.Side, leg.TradingDay)
 }
 
 // TestProtectedLegsAreWellFormed 不让一条半成品声明混进来。
@@ -63,9 +64,9 @@ func TestProtectedLegsAreWellFormed(t *testing.T) {
 		switch {
 		case l.Symbol == "":
 			t.Errorf("第 %d 条没有 Symbol", i)
-		case l.Direction != kq.Buy && l.Direction != kq.Sell:
+		case l.Side != safety.Long && l.Side != safety.Short:
 			t.Errorf("第 %d 条的 Direction 是 %q，只能是 BUY 或 SELL —— "+
-				"⚠️ 零值 \"\" 会让它谁也拦不住，而声明看起来是写了的", i, l.Direction)
+				"⚠️ 零值 \"\" 会让它谁也拦不住，而声明看起来是写了的", i, l.Side)
 		case l.TradingDay == "":
 			t.Errorf("第 %d 条（%s）没有 TradingDay —— **没有到期日的保护是永久保护**，"+
 				"它迟早会拦住正当的收尾平仓", i, l.Symbol)

@@ -1,106 +1,71 @@
 package kq
 
-import "testing"
+import (
+	"strings"
+	"testing"
 
-// seedLeg 是这一组用例共用的受保护腿：SHFE.rb2701 的**空**头。
-var seedLeg = ProtectedLeg{
-	Symbol: "SHFE.rb2701", Direction: Sell, TradingDay: "20260909",
-	Why: "过夜种子",
-}
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
+)
 
-func req(dir Direction, off Offset, inst string) OrderReq {
-	return OrderReq{Exchange: "SHFE", Instrument: inst, Direction: dir,
-		Offset: off, Volume: 1, LimitPrice: 3000}
-}
-
-// TestProtectedLegBlocksTheClosingOrder 是这条守卫的正面用例。
+// TestGuardMapsDirectionToPositionSide 钉住 DIFF 这一侧的**映射**。
 //
-// ⚠️ 平掉一个**空**头持仓，发出去的委托方向是 **BUY**。
-// 这一条与下一条必须成对读：只有正面用例时，一个「方向不取反」的实现
-// 会在这里绿（因为它去拦 SELL/CLOSE），而那正是危险的实现。
-func TestProtectedLegBlocksTheClosingOrder(t *testing.T) {
-	g := Guard{AllowOrder: true, MaxVolume: 1,
-		Protected: []ProtectedLeg{seedLeg}, TradingDay: "20260909"}
-	for _, off := range []Offset{Close, CloseToday} {
-		err := g.Check(req(Buy, off, "rb2701"))
-		if err == nil {
-			t.Fatalf("⚠️ BUY/%s 会平掉受保护的空头腿，安全阀却放行了 —— "+
-				"过夜种子平掉就要再等一个交易日", off)
-		}
-		if !contains(err.Error(), "受保护的持仓腿") || !contains(err.Error(), "过夜种子") {
-			t.Errorf("⚠️ 拦是拦下了，但错误里没说清拦的是什么、为什么：%v", err)
-		}
-	}
-}
-
-// TestProtectedLegDoesNotBlockTheOppositeSide 钉住方向取反那一步。
+// # 为什么这条留在 kq，而判断逻辑搬去了 safety
 //
-// SELL/CLOSE* 平的是**多**头。账上那两手多头种子归 seedPlan 管，
-// 不在这条保护里 —— 拦住它就是「拦错了人」，而拦错人与不拦
-// 在日志里长得都很正常。
-func TestProtectedLegDoesNotBlockTheOppositeSide(t *testing.T) {
-	g := Guard{AllowOrder: true, MaxVolume: 1,
-		Protected: []ProtectedLeg{seedLeg}, TradingDay: "20260909"}
-	if err := g.Check(req(Sell, CloseToday, "rb2701")); err != nil {
-		t.Fatalf("⚠️ SELL/CLOSETODAY 平的是多头，与受保护的空头腿无关，"+
-			"却被拦下了 —— 方向大概写反了：%v", err)
-	}
-}
-
-// TestProtectedLegIgnoresOpeningAndOtherSymbols 划出这条守卫**不该**碰的范围。
-func TestProtectedLegIgnoresOpeningAndOtherSymbols(t *testing.T) {
-	g := Guard{AllowOrder: true, MaxVolume: 1,
-		Protected: []ProtectedLeg{seedLeg}, TradingDay: "20260909"}
+// 「平掉空头持仓要发 BUY」是 **DIFF 的语义**，不是通用真理 ——
+// CTP 那一侧会有它自己的一份映射，而**两份长得不一样正是要被看见的事**。
+// 所以映射写在协议包里、测在协议包里。
+//
+// ⚠️ 这一步写反的话安全阀会**掉个个**：放过真正危险的那一笔，
+// 转去拦一笔无关的，而两种表现都不像 bug。
+func TestGuardMapsDirectionToPositionSide(t *testing.T) {
 	cases := []struct {
 		name string
-		r    OrderReq
+		req  OrderReq
+		want safety.Side
 	}{
-		{"开仓不该被拦", req(Buy, Open, "rb2701")},
-		{"另一个合约不该被拦", req(Buy, CloseToday, "rb2705")},
+		{"BUY/CLOSE 平的是**空**头", OrderReq{Direction: Buy, Offset: Close}, safety.Short},
+		{"BUY/CLOSETODAY 平的是**空**头", OrderReq{Direction: Buy, Offset: CloseToday}, safety.Short},
+		{"SELL/CLOSE 平的是**多**头", OrderReq{Direction: Sell, Offset: Close}, safety.Long},
+		{"SELL/CLOSETODAY 平的是**多**头", OrderReq{Direction: Sell, Offset: CloseToday}, safety.Long},
+		// ⚠️ 开仓不平任何东西：ClosesSide 必须是零值，否则受保护腿会误命中。
+		{"BUY/OPEN 不平任何东西", OrderReq{Direction: Buy, Offset: Open}, safety.SideUnknown},
+		{"SELL/OPEN 不平任何东西", OrderReq{Direction: Sell, Offset: Open}, safety.SideUnknown},
 	}
 	for _, c := range cases {
-		if err := g.Check(c.r); err != nil {
-			t.Errorf("⚠️ %s：%v", c.name, err)
+		got := intentOf(c.req)
+		if got.ClosesSide != c.want {
+			t.Errorf("⚠️ %s：映射成了 %v，应当是 %v", c.name, got.ClosesSide, c.want)
+		}
+		if wantClosing := c.want != safety.SideUnknown; got.Closing != wantClosing {
+			t.Errorf("⚠️ %s：Closing = %v，应当是 %v —— "+
+				"⚠️ 判据必须是「**是不是已识别的平仓**」而不是「是不是开仓」："+
+				"Offset 的零值是空串，按后者写会让任何拼错的开平标志绕过手数上限",
+				c.name, got.Closing, wantClosing)
 		}
 	}
 }
 
-// TestProtectedLegExpiresWithTradingDay 钉住到期。
+// TestGuardEndToEndBlocksTheSeed 是**接头**的端到端断言。
 //
-// ⚠️ 保护过了那个交易日必须失效。一条永久保护会在种子早已用掉之后
-// 继续拦着收尾平仓 —— 与 MaxVolume 当初拦住收尾平仓是同一个故障：
-// **一个用来防止扩大风险的守卫，反过来阻止了缩小风险。**
-func TestProtectedLegExpiresWithTradingDay(t *testing.T) {
-	g := Guard{AllowOrder: true, MaxVolume: 1,
-		Protected: []ProtectedLeg{seedLeg}, TradingDay: "20260910"}
-	if err := g.Check(req(Buy, CloseToday, "rb2701")); err != nil {
-		t.Fatalf("⚠️ 交易日已经是 20260910，这条只在 20260909 生效的保护"+
-			"仍然在拦 —— 它现在拦的是正当的收尾平仓：%v", err)
+// ⚠️ 上面那条只验映射、safety 那几条只验判断 —— 两边都全绿仍然说明不了
+// 「这个接头接上了」。这一条从 Guard.Check 出发，一路走到拒绝。
+func TestGuardEndToEndBlocksTheSeed(t *testing.T) {
+	g := Guard{AllowOrder: true, MaxVolume: 1, TradingDay: "20260909",
+		Protected: []safety.ProtectedLeg{{
+			Symbol: "SHFE.rb2701", Side: safety.Short,
+			TradingDay: "20260909", Why: "过夜种子"}}}
+	err := g.Check(OrderReq{Exchange: "SHFE", Instrument: "rb2701",
+		Direction: Buy, Offset: CloseToday, Volume: 1, LimitPrice: 3000})
+	if err == nil {
+		t.Fatal("⚠️ BUY/CLOSETODAY 会平掉受保护的空头腿，Guard 却放行了")
 	}
-}
-
-// TestProtectedLegBlocksWhenTradingDayUnknown 钉住**失败方向**。
-//
-// ⚠️ 交易截面还没回来时 TradingDay 是空串。那一刻的正确行为是**照拦**。
-//
-// 反过来写（不知道就放行）读起来同样自然，而它在真账户上是这样发生的：
-// 连上柜台、截面还没到、收尾平仓先跑了 —— 种子当场没。
-// 这个包里已经有过一次一模一样的教训：MaxVolume 那个洞的
-// **失败方向朝着「不拦」**，而人在修「阀门太紧」时会本能地往松了调。
-func TestProtectedLegBlocksWhenTradingDayUnknown(t *testing.T) {
-	g := Guard{AllowOrder: true, MaxVolume: 1,
-		Protected: []ProtectedLeg{seedLeg}, TradingDay: ""}
-	if err := g.Check(req(Buy, CloseToday, "rb2701")); err == nil {
-		t.Fatal("⚠️ 交易日未知时安全阀放行了 —— 这条判断的失败方向必须朝着" +
-			"「多拦一次」：多拦会立刻被看见，少拦一次种子就没了")
+	if !strings.Contains(err.Error(), "受保护的持仓腿") {
+		t.Fatalf("⚠️ 拦是拦下了，但不是被那条守卫拦的：%v", err)
 	}
-}
-
-func contains(s, sub string) bool {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
+	// 反向：SELL 平多头，与那条腿无关，必须放行。
+	if err := g.Check(OrderReq{Exchange: "SHFE", Instrument: "rb2701",
+		Direction: Sell, Offset: CloseToday, Volume: 1, LimitPrice: 3000}); err != nil {
+		t.Fatalf("⚠️ SELL 平的是多头，与受保护的空头腿无关，却被拦下了 —— "+
+			"方向大概映射反了：%v", err)
 	}
-	return false
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 )
 
 // 需要昨仓的那批实验，共用同一份「过夜种子」。
@@ -48,8 +49,8 @@ var seedPlan = []struct {
 //
 // ⚠️ 每一条都必须带 TradingDay。过了那天保护自动失效，
 // 因为那时它拦的已经是正当的收尾平仓了。
-var protectedLegs = []kq.ProtectedLeg{
-	{Symbol: "SHFE.rb2701", Direction: kq.Sell, TradingDay: "20260909",
+var protectedLegs = []safety.ProtectedLeg{
+	{Symbol: "SHFE.rb2701", Side: safety.Short, TradingDay: "20260909",
 		Why: "这一手**空今仓**要活过今天日终结算才变成空昨仓。" +
 			"空头昨仓在全语料 466 条持仓记录里从未存在过（kq_facts 51），" +
 			"它是分开「今昨拆分规则方向中性」与「柜台只写多头侧」的唯一样本；" +
