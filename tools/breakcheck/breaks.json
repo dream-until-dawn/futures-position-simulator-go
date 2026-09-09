@@ -2316,5 +2316,28 @@
 		"test": "TestDocPathRefsResolve",
 		"want": "指不到东西",
 		"expect": "red"
+	},
+	{
+		"name": "209 「因昨仓被跳过」不再计数：耦合解释失去依据，该红",
+		"dir": "",
+		"file": "conformance/fixture/fixture_test.go",
+		"old": "\t\t\t\tif len(f.Orders) > 0 {\n\t\t\t\t\tskippedWithOrders++\n\t\t\t\t}",
+		"new": "\t\t\t\tif len(f.Orders) < 0 {\n\t\t\t\t\tskippedWithOrders++\n\t\t\t\t}",
+		"pkg": "./conformance/fixture/",
+		"test": "TestPositionViewAcrossAllFixtures",
+		"want": "因此不再成立",
+		"expect": "red"
+	},
+	{
+		"name": "210 anyFixtureHasOrders 恒假：真异常那一支被绕过去（该红没红）",
+		"dir": "",
+		"file": "conformance/fixture/fixture_test.go",
+		"old": "\t\tif len(f.Orders) > 0 {\n\t\t\treturn true\n\t\t}",
+		"new": "\t\tif len(f.Orders) < 0 {\n\t\t\treturn true\n\t\t}",
+		"pkg": "./conformance/fixture/",
+		"test": "TestPositionViewAcrossAllFixtures",
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ 演示的盲区：这两条破坏**只有一起打**才暴露问题。单独把 anyFixtureHasOrders 弄成恒假时，skippedWithOrders 仍然 > 0，于是走的是第一支（耦合解释），根本到不了真异常那一支 —— 测试照样绿。也就是说这条守卫对「判据里的兜底条件失效」是**单点不敏感**的。堵它要么给 anyFixtureHasOrders 单独配断言（它是三行，值不值另说），要么承认这是分支覆盖的固有形状：一个 switch 的后面几支，在前面的支恒成立时永远测不到。"
 	}
 ]

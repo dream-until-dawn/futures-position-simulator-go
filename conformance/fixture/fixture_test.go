@@ -470,6 +470,10 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	totals := map[conformance.Verdict]int{}
 	failedFields := map[string]int{}
 	samples, withMargin, skippedHistory := 0, 0, 0
+	// skippedWithOrders 是**被昨仓跳过、而且这份夹具记了委托**的样本数。
+	// ⚠️ 它单独数，因为它回答的是「冻结那三个字段为什么还没被验过」——
+	// 见下面 withFrozen == 0 那一支。
+	skippedWithOrders := 0
 	withFrozen := 0
 	exchanges := map[types.Exchange]bool{}
 	fieldCounts := map[int][]key{}
@@ -490,6 +494,9 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			// 跳过并**计数**，不静默：那个数是「这批夹具里有多少份需要 Carry」。
 			if f.HasHistoryPosition(sym) {
 				skippedHistory++
+				if len(f.Orders) > 0 {
+					skippedWithOrders++
+				}
 				continue
 			}
 			multStr, ok := multipliers[sym]
@@ -575,8 +582,36 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	// volume_*_frozen_* 三个字段全部落在「未实现」—— 那是**如实**的，
 	// 不是缺陷；但它同时意味着那三个字段的实现没被验过。
 	if withFrozen == 0 {
-		t.Log("ⓘ 没有一个样本接上冻结 —— volume_*_frozen_* 三个字段" +
-			"目前**没有证据支撑**。要一份记了委托的夹具（20260909 起才有）")
+		// ⚠️ 这条诊断上一版指错了前提。原文写「要一份记了委托的夹具
+		// （20260909 起才有）」—— 而 20260909 之后那种夹具**已经有了**，
+		// 读到这句的人会以为还在等一个不存在的东西。
+		//
+		// 真正的原因是**两件事耦在一起**：记了委托的夹具**全部带昨仓**，
+		// 而带昨仓的截面在上面就被跳过了（要走 Carry + ReplayFrom）。
+		// 于是冻结这一块要等昨仓那条路打通才验得上。
+		switch {
+		case skippedWithOrders > 0:
+			t.Logf("ⓘ 没有一个样本接上冻结 —— volume_*_frozen_* 三个字段"+
+				"目前**没有证据支撑**。⚠️ 原因**不是**「没有记了委托的夹具」："+
+				"有 %d 个样本记了委托，而它们**全部因为带昨仓被跳过**。"+
+				"两件事耦在一起 —— 冻结要等 Carry + ReplayFrom 那条路打通", skippedWithOrders)
+		case anyFixtureHasOrders(all):
+			// ⚠️ 这一支是**真的异常**，所以它红而不是 log：
+			// 有夹具记了委托、又没有一份是因为昨仓被跳过的，
+			// 那么冻结没接上就另有原因 —— 而那个原因没人知道。
+			t.Errorf("⚠️ 有夹具记了委托、也没有任何一个样本是因为**带昨仓**被跳过的，"+
+				"而冻结**仍然一个样本都没接上** —— 上面那条「两件事耦在一起」的解释"+
+				"因此不再成立，真正的原因是别的，去查 FrozenOf 为什么返回 has=false")
+		default:
+			t.Log("ⓘ 没有一个样本接上冻结 —— volume_*_frozen_* 三个字段" +
+				"目前**没有证据支撑**，且这批夹具里没有任何一份记了委托")
+		}
+	}
+	// ⚠️ 反过来也要说话：哪天 withFrozen 第一次非零，那是个里程碑，
+	// 而**一个里程碑安静地发生**与它没发生，在日志里长得一样。
+	if withFrozen > 0 {
+		t.Logf("⚠️ **冻结第一次接上了**（%d 个样本）—— volume_*_frozen_* "+
+			"从此有证据支撑。去把上面那条 withFrozen == 0 的诊断删掉", withFrozen)
 	}
 	if skippedHistory > 0 {
 		// ⚠️ 这个数从 0 变成非 0，说明**第一份带昨仓的夹具进来了** ——
@@ -800,4 +835,18 @@ func TestHardcodedMultipliersMatchTheDictionary(t *testing.T) {
 	if checked < 5 {
 		t.Errorf("⚠️ 只核对了 %d 个 —— 太少，这条基本没起作用", checked)
 	}
+}
+
+// anyFixtureHasOrders 判这批夹具里有没有任何一份记了委托。
+//
+// ⚠️ 它与「有多少个**样本**记了委托」不是一回事：样本是「夹具 × 合约」，
+// 而一份夹具可能一个样本都没进（合约被跳过、没有成交、缺规格）。
+// 判「原因是不是别的」要用夹具这一侧，否则一次正常的样本减少会被读成异常。
+func anyFixtureHasOrders(all []*Fixture) bool {
+	for _, f := range all {
+		if len(f.Orders) > 0 {
+			return true
+		}
+	}
+	return false
 }
