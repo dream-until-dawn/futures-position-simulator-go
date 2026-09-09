@@ -1775,14 +1775,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "160 横幅把「只在 dev 上」塞回去：而此刻没有任何包只在 dev 上（低报）",
+		"name": "160 横幅删掉「只在 dev 上」那句：而 cmd/oracle/safety 确实只在 dev 上（高报）",
 		"dir": "",
 		"file": "docs/fidelity.md",
-		"old": ">\tdev 与 main    **当前一致**",
-		"new": ">\tdev 与 main    **只在 `dev` 上** 没有任何东西",
+		"old": ">\t**只在 `dev` 上**  `cmd/oracle/safety` —— 与协议无关的下单安全阀",
+		"new": ">\t**已合入**      `cmd/oracle/safety` —— 与协议无关的下单安全阀",
 		"pkg": "./",
 		"test": "TestDevOnlyClaimIsAccurate",
-		"want": "那是一条**低报**",
+		"want": "横幅把只在 dev 上的东西说成了已实现",
 		"expect": "red"
 	},
 	{
