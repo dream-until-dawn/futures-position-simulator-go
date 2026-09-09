@@ -2319,15 +2319,16 @@
 		"expect": "red"
 	},
 	{
-		"name": "209 「因昨仓被跳过」不再计数：耦合解释失去依据，该红",
+		"name": "209 「因昨仓被跳过」不再计数：那一支**现在够不到了**（冻结已接上 19 个）",
 		"dir": "",
 		"file": "conformance/fixture/fixture_test.go",
 		"old": "\t\t\t\t\tif len(f.Orders) > 0 {\n\t\t\t\t\t\tskippedWithOrders++\n\t\t\t\t\t}",
 		"new": "\t\t\t\t\tif len(f.Orders) < 0 {\n\t\t\t\t\t\tskippedWithOrders++\n\t\t\t\t\t}",
 		"pkg": "./conformance/fixture/",
 		"test": "TestPositionViewAcrossAllFixtures",
-		"want": "因此不再成立",
-		"expect": "red"
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ 演示的盲区：这条破坏钉的断言在 `withFrozen == 0` 那一支里，而 20260909 全量对拍接上结转路径之后 withFrozen = 19 —— **那一整支不再执行**，里面的断言（含它的「真异常」分支）因此**一条都没被跑过**。⚠️ 分支留着是对的：语料再变时它还要说话。但要认清它现在的状态是**未被验证的备用路径**，不是**已验证的守卫** —— 两者在测试报告里长得一样，都是绿的。这一条把那个区别写出来。"
 	},
 	{
 		"name": "210 anyFixtureHasOrders 恒假：真异常那一支被绕过去（该红没红）",
