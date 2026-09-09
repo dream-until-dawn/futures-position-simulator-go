@@ -29,6 +29,26 @@ func (r OrderReq) String() string {
 		r.Symbol(), string(r.Direction), string(r.Offset), r.Volume, r.LimitPrice)
 }
 
+// OrderState 是一笔委托的当前状态。
+type OrderState struct {
+	// OrderRef 是本地委托引用，撤单要用。
+	OrderRef string
+	// Status 是柜台报的状态字（`def.THOST_FTDC_OST_*`）。
+	Status byte
+	// StatusMsg 是柜台的原话。⚠️ 它是**自由文本**，与 kq 那侧同一条纪律：
+	// 可以进本地日志，**不进入库的夹具**。
+	StatusMsg string
+	// VolumeTraded / VolumeTotal 是已成交与剩余。
+	VolumeTraded int
+	VolumeTotal  int
+}
+
+// Alive 报告这笔委托是不是还挂着。
+func (s OrderState) Alive() bool {
+	return s.Status == def.THOST_FTDC_OST_NoTradeQueueing ||
+		s.Status == def.THOST_FTDC_OST_PartTradedQueueing
+}
+
 // closingOffsets 是**已识别的平仓**开平标志。
 //
 // ⚠️ CTP 比 DIFF 多一个 `CloseYesterday`（'4'）—— DIFF 只有 Close/CloseToday。

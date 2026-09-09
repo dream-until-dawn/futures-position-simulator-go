@@ -29,26 +29,6 @@ import (
 // 读本包源码核这两件事 —— ⚠️ 它查的是**结构**，不是行为，所以它在
 // 「有人新写了第二条路径」的那一刻就红，而不必等那条路径被用到。
 
-// OrderState 是一笔委托的当前状态。
-type OrderState struct {
-	// OrderRef 是本地委托引用，撤单要用。
-	OrderRef string
-	// Status 是柜台报的状态字（`def.THOST_FTDC_OST_*`）。
-	Status byte
-	// StatusMsg 是柜台的原话。⚠️ 它是**自由文本**，与 kq 那侧同一条纪律：
-	// 可以进本地日志，**不进入库的夹具**。
-	StatusMsg string
-	// VolumeTraded / VolumeTotal 是已成交与剩余。
-	VolumeTraded int
-	VolumeTotal  int
-}
-
-// Alive 报告这笔委托是不是还挂着。
-func (s OrderState) Alive() bool {
-	return s.Status == def.THOST_FTDC_OST_NoTradeQueueing ||
-		s.Status == def.THOST_FTDC_OST_PartTradedQueueing
-}
-
 // orderBook 记本次运行发出去的委托。
 type orderBook struct {
 	mu sync.Mutex

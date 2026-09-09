@@ -1,6 +1,9 @@
 package ctp
 
 import (
+	"path/filepath"
+	"os"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -155,4 +158,49 @@ func BlindSpots(secrets map[string]string) []string {
 	}
 	sort.Strings(short)
 	return short
+}
+
+// ⚠️ 落盘与脱敏都**与平台无关**，所以放在这里而不是 dump_windows.go：
+// 放在那边会让非 Windows 的构建缺一个方法，而缺的是「写夹具」这种
+// 与 CTP 协议毫无关系的能力。
+// Write 把一份夹具落到 dir 下，并在落盘**之前**做独立的凭据复查。
+//
+// ⚠️ 复查放在这里而不是调用方：一个「记得先查一下」的约定，
+// 与没有这道检查在出事那天是一样的。
+func (fx *Fixture) Write(dir, name string, secrets map[string]string,
+	logf func(string, ...any)) (string, error) {
+	if logf == nil {
+		logf = func(string, ...any) {}
+	}
+	b, err := json.MarshalIndent(fx, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	if bs := BlindSpots(secrets); len(bs) > 0 {
+		// ⚠️ 明说查不了什么，免得「没报错」被读成「都查过了」。
+		logf("  ⓘ 独立复查的盲区：%v —— 这几个值太短，在夹具里搜它们只会撞上数字", bs)
+	}
+	if err := Scrubbed(string(b), secrets); err != nil {
+		return "", fmt.Errorf("脱敏自检失败，**不落盘**：%w", err)
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, fmt.Sprintf("%s-%s.json", name, fx.TradingDay))
+	if _, err := os.Stat(path); err == nil {
+		// ⚠️ 同名不覆盖：两份都是证据，谁也不该把谁擦掉。
+		for i := 2; ; i++ {
+			alt := filepath.Join(dir, fmt.Sprintf("%s-%s-%d.json", name, fx.TradingDay, i))
+			if _, err := os.Stat(alt); err != nil {
+				path = alt
+				break
+			}
+		}
+	}
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		return "", err
+	}
+	abs, _ := filepath.Abs(path)
+	logf("CTP 夹具落盘 %s（%d 字节，去掉 %d 个键）", abs, len(b), len(fx.Dropped))
+	return path, nil
 }
