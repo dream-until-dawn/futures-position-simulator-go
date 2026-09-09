@@ -549,7 +549,7 @@
 		"new": "\t\t\t_ = c",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
-		"want": "❌",
+		"want": "❌ commission",
 		"expect": "red"
 	},
 	{
@@ -560,7 +560,7 @@
 		"new": "\tif err := acc.SetPositionProfit(f.TradingDay, decimal.Zero); err != nil {",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
-		"want": "❌",
+		"want": "❌ position_profit",
 		"expect": "red"
 	},
 	{
@@ -571,7 +571,7 @@
 		"new": "\tif err := acc.SetMargin(f.TradingDay, decimal.Zero, decimal.Zero); err != nil {",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
-		"want": "❌",
+		"want": "❌ margin",
 		"expect": "red"
 	},
 	{
