@@ -76,6 +76,7 @@
 | [静默风险清单](docs/silent-risks.md) | **出错时不报错**的那些，及各自的守卫 |
 | [版本排期](docs/roadmap.md) | 版本计划、分支约定、覆盖缺口 |
 | [前期探针报告](docs/probes.md) | 数据源与对拍通路的**可复现**验证记录 |
+| [CTP / SimNow 侧对拍的设计](docs/ctp-oracle.md) | ⚠️ **实现之前**写的：依赖决定、分期、以及「声明 ≠ 行为」这条组织原则 |
 
 **建议的阅读顺序**：本页 → [probes.md](docs/probes.md)（事实基础）→
 [cn-futures-rules.md](docs/cn-futures-rules.md)（规则）→ [design.md](docs/design.md)（取舍）。

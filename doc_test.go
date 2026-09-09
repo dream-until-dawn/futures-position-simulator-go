@@ -1182,3 +1182,64 @@ func TestRulesListedMatchesTable(t *testing.T) {
 	t.Logf("§13：一共问过 %d 条，还欠 %d 条，已收敛 %d 条；rules_measured %d",
 		len(all), len(pending), len(struck), declaredCount(t, "rules_measured"))
 }
+
+// TestDocSectionsTableCoversEveryDoc 断言 `doc_sections` 那张表**没漏掉任何一份文档**。
+//
+// # ⚠️ 它补的洞
+//
+// `TestDocSectionCountsMatch` 是**按表驱动**的：它遍历 state.md 里登记的行，
+// 逐个去核对小节数。于是 —— **一份没被登记的文档，它一个字都不会说。**
+//
+//	新加一份 docs/xxx.md 而忘了登记
+//	  → 小节数守卫不查它
+//	  → 它可以被静默删掉一整节，而没有任何东西变红
+//
+// ⚠️ 而「忘了登记」正是新加文档时最容易发生的一步：写完文档的人
+// 想的是文档的内容，不是某张计数表。
+//
+// 2026-09-09 加 `docs/ctp-oracle.md` 时当场发现的：那份文档**已经登记了**，
+// 但如果不登记，上面那条守卫照样全绿。
+func TestDocSectionsTableCoversEveryDoc(t *testing.T) {
+	listed := map[string]bool{}
+	in := false
+	for _, l := range readLines(t, filepath.Join("docs", "state.md")) {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.HasPrefix(trimmed, "## `doc_sections`")
+			continue
+		}
+		if !in || !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		cells := strings.Split(trimmed, "|")
+		if len(cells) < 3 {
+			continue
+		}
+		name := strings.Trim(strings.TrimSpace(cells[1]), "`")
+		if strings.HasSuffix(name, ".md") {
+			listed[filepath.ToSlash(name)] = true
+		}
+	}
+	if len(listed) < 5 {
+		t.Fatalf("⚠️ 只从 doc_sections 表里解析到 %d 份文档 —— 太少，本条在空转", len(listed))
+	}
+
+	found, err := filepath.Glob(filepath.Join("docs", "*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) < 5 {
+		t.Fatalf("⚠️ docs/ 下只找到 %d 份 .md —— 太少，本条在空转", len(found))
+	}
+	for _, f := range found {
+		key := filepath.ToSlash(f)
+		if !listed[key] {
+			t.Errorf("⚠️ %s **没有登记进 doc_sections** —— "+
+				"于是 TestDocSectionCountsMatch 一个字都不会说它："+
+				"那条守卫是按表驱动的，没登记就不查。"+
+				"⚠️ 它可以被静默删掉一整节而没有任何东西变红。"+
+				"把它加进 state.md 的 doc_sections 表", key)
+		}
+	}
+	t.Logf("doc_sections 登记 %d 份，docs/ 下实有 %d 份", len(listed), len(found))
+}

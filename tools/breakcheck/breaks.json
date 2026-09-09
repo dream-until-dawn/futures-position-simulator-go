@@ -2508,5 +2508,27 @@
 		"test": "TestPositionViewAcrossAllFixtures",
 		"want": "一个样本都没走结转路径",
 		"expect": "red"
+	},
+	{
+		"name": "226 doc_sections 表里删掉一份文档：按表驱动的那条守卫从此不查它",
+		"dir": "",
+		"file": "docs/state.md",
+		"old": "| `docs/ctp-oracle.md` | 12 |",
+		"new": "",
+		"pkg": "./",
+		"test": "TestDocSectionsTableCoversEveryDoc",
+		"want": "没有登记进 doc_sections",
+		"expect": "red"
+	},
+	{
+		"name": "227 覆盖守卫只认 docs/ 下的固定名字：glob 换成一个不存在的模式",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\tfound, err := filepath.Glob(filepath.Join(\"docs\", \"*.md\"))",
+		"new": "\tfound, err := filepath.Glob(filepath.Join(\"docs\", \"*.nomatch\"))",
+		"pkg": "./",
+		"test": "TestDocSectionsTableCoversEveryDoc",
+		"want": "本条在空转",
+		"expect": "red"
 	}
 ]

@@ -240,6 +240,7 @@
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 84 |
 | `docs/roadmap.md` | 30 |
+| `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 12 |
 
