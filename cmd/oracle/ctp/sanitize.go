@@ -85,6 +85,9 @@ func sanitizeStruct(v any, decisions map[string]decision) (map[string]any, []str
 //
 // ⚠️ 它放在**平台无关**的文件里：脱敏要用它，而脱敏本身与平台无关。
 // 放在 client_windows.go 里会让 GOOS=linux 的构建报 undefined —— 踩过一次。
+// Text 是 text 的导出版本，供 cmd/oracle 主包用。
+func Text(b []byte) string { return text(b) }
+
 func text(b []byte) string {
 	for i, ch := range b {
 		if ch == 0 {

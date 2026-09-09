@@ -5,6 +5,7 @@ package ctp
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -69,7 +70,15 @@ func (c *Client) send(r OrderReq) (string, error) {
 	if err := c.Check(r); err != nil {
 		return "", err
 	}
-	ref := fmt.Sprintf("p%d", time.Now().UnixNano()%1e9)
+	// ⚠️ OrderRef **必须单调递增** —— CTP 对不递增的 ref 回 ErrorID=22
+	// 「不允许重复报单」。20260910 夜盘第一次成交往返就栽在这里：
+	//
+	//	买开 ref=p311276100  →  卖平 ref=p232108500   ← **数值更小**
+	//	于是平仓被拒，而**仓已经建上了** —— 一个只在第二笔单上才暴露的错。
+	//
+	// ⚠️ 原写法是 `UnixNano()%1e9`：它在秒级看起来递增，**跨过 1e9 的边界就回绕**。
+	// 「大多数时候递增」在这里等于「不递增」——CTP 只需要一次不递增就拒。
+	ref := fmt.Sprintf("p%09d", atomic.AddInt64(&c.orderSeq, 1))
 	f := def.CThostFtdcInputOrderField{
 		OrderPriceType:      def.THOST_FTDC_OPT_LimitPrice,
 		Direction:           r.Direction,
@@ -108,7 +117,13 @@ func (c *Client) Insert(r OrderReq, timeout time.Duration) (OrderState, error) {
 	}
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if s, ok := c.book.get(ref); ok && s.Status != 0 {
+		// ⚠️ **不要在过渡态上返回。** status "a"（已提交）只说明单送到了柜台，
+		// 它既没挂上也没成交 —— 20260910 夜盘平仓时我在 "a" 上就返回了，
+		// 于是报「没平掉，仓还在」，**而那笔单几秒后成交了**。
+		//
+		// **「还没有结果」被当成了「结果是失败」**，而两者要人做的事完全相反：
+		// 前者该等，后者该去收拾。
+		if s, ok := c.book.get(ref); ok && settled(s.Status) {
 			return s, nil
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -206,4 +221,22 @@ func (c *Client) registerOrderCallbacks() {
 		}
 		return 0
 	})
+}
+
+// settled 判一个状态是不是**可以据以行动**的。
+//
+// ⚠️ 判据写成白名单而不是「非零即可」：CTP 的状态字将来可能多出取值，
+// 而黑名单式的「不是 a 就算数」会把一个新的过渡态当成终态。
+func settled(st byte) bool {
+	switch st {
+	case def.THOST_FTDC_OST_AllTraded, // 全部成交
+		def.THOST_FTDC_OST_PartTradedQueueing,  // 部分成交还在队列
+		def.THOST_FTDC_OST_PartTradedNotQueueing, // 部分成交不在队列（已撤余量）
+		def.THOST_FTDC_OST_NoTradeQueueing,     // 未成交还在队列 —— 挂上了
+		def.THOST_FTDC_OST_NoTradeNotQueueing,  // 未成交不在队列
+		def.THOST_FTDC_OST_Canceled:            // 已撤单（含被拒）
+		return true
+	}
+	// ⚠️ 其余（"a" 未知/已提交 等）一律当成**还没有结果**。
+	return false
 }

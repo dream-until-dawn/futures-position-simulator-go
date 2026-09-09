@@ -105,6 +105,16 @@ func main() {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
+	case "ctp-flatten":
+		if err := runCTPFlatten(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-roundtrip":
+		if err := runCTPRoundTrip(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
 	case "ctp-order":
 		if err := runCTPOrder(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
@@ -571,6 +581,215 @@ func runCTPOrder(args []string) error {
 		// ⚠️ 不判失败：差额本身是观测。判失败会让一个真实现象被读成 bug。
 		fmt.Printf("⇒ ⚠️ 往返走完了，但账户**没有回到起点**：结存差 %+.4f、冻结差 %+.4f\n", dBal, dFroz)
 		fmt.Println("   这是一个**观测**，不是失败 —— 去查它为什么不为零，别直接改判据")
+	}
+	return nil
+}
+
+// runCTPRoundTrip 是 P4 的第一步：**一笔真正成交的往返**。
+//
+//	买开（涨停价，保证成交）→ 拍持仓 → 卖平今（跌停价，保证成交）→ 拍账户
+//
+// ⚠️ 它与 P3 的区别是**会真的建仓**。因此三条安全设计写在这里：
+//
+//	① 手数固定 1，且仍然过安全阀（MaxVolume=1）
+//	② 平仓用 CloseToday —— SHFE 当日仓**必须**平今，用 Close 会被拒
+//	③ ⚠️ 平仓失败时**大声报出来并给出手工处理指令**，绝不静默返回
+//
+// ⚠️ 为什么用涨跌停价而不是市价：市价单各交易所支持程度不一、成交价不可控，
+// 而这一轮要量的正是**成交价**与它推出来的保证金基准 —— 输入必须可复现。
+func runCTPRoundTrip(args []string) error {
+	fs := flag.NewFlagSet("ctp-roundtrip", flag.ExitOnError)
+	envPath := fs.String("env", ".env", "凭据文件路径")
+	symbol := fs.String("symbol", "", "合约，形如 SHFE.rb2701（⚠️ 无默认值）")
+	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
+	dump := fs.String("dump", "", "落盘目录（⚠️ 无默认值；CTP 夹具要落 testdata/ctp）")
+	if err := fs.Parse(args[2:]); err != nil {
+		return err
+	}
+	if *symbol == "" {
+		return fmt.Errorf("⚠️ -symbol 没有默认值：一笔会**真的成交**的委托，合约必须显式指定")
+	}
+	env, err := probe.LoadEnv(*envPath)
+	if err != nil {
+		return err
+	}
+	logf := func(f string, a ...any) { fmt.Printf(f+"\n", a...) }
+	c := ctp.New(ctp.Credentials{
+		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
+		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
+	}, logf)
+	c.Valve = ctpValve(env, nil)
+	defer c.Close()
+	if err := c.Connect(*timeout); err != nil {
+		return err
+	}
+
+	before, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+	logf("[RT] 起点  balance=%.4f 手续费累计=%.4f 占用保证金=%.4f",
+		float64(before.Balance), float64(before.Commission), float64(before.CurrMargin))
+
+	md, err := c.MarketData(*symbol, *timeout)
+	if err != nil {
+		return err
+	}
+	ex, inst := ctp.SplitSymbol(*symbol)
+
+	// —— 买开：挂涨停，保证成交 ——
+	open := ctp.OrderReq{Exchange: ex, Instrument: inst,
+		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
+		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}
+	logf("[RT] 买开 1 手 @%.2f（涨停，保证成交；⚠️ 实际成交价由对手价决定）", open.LimitPrice)
+	st, err := c.Insert(open, *timeout)
+	if err != nil {
+		return fmt.Errorf("买开：%w", err)
+	}
+	if st.VolumeTraded == 0 {
+		return fmt.Errorf("⚠️ 买开没有成交（status=%q %s）—— 本轮没有建成仓，"+
+			"**不要**当成失败去改判据，先查为什么没成", string(st.Status), st.StatusMsg)
+	}
+	logf("[RT] 已成交 %d 手  status=%q", st.VolumeTraded, string(st.Status))
+
+	held, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+	pos, err := c.Positions(*timeout)
+	if err != nil {
+		return err
+	}
+	logf("[RT] 建仓后  占用保证金=%.4f 手续费累计=%.4f 持仓盈亏=%.4f",
+		float64(held.CurrMargin), float64(held.Commission), float64(held.PositionProfit))
+	for k, p := range pos {
+		logf("       %s  今仓=%d 昨仓=%d 开仓成本=%.2f 持仓成本=%.2f 占用=%.2f 昨结=%.2f",
+			k, int(p.TodayPosition), int(p.YdPosition), float64(p.OpenCost),
+			float64(p.PositionCost), float64(p.UseMargin), float64(p.PreSettlementPrice))
+	}
+	if *dump != "" {
+		if fx, err := c.Capture(*timeout, "P4 第一步：建仓后的截面"); err == nil {
+			secrets := map[string]string{"CTP_USER_ID": env.CTPUserID,
+				"CTP_PASSWORD": env.CTPPassword, "CTP_APP_ID": env.CTPAppID,
+				"CTP_AUTH_CODE": env.CTPAuthCode}
+			if _, err := fx.Write(*dump, "ctp-held", secrets, logf); err != nil {
+				logf("⚠️ 建仓截面落盘失败：%v", err)
+			}
+		}
+	}
+
+	// —— 卖平今：挂跌停，保证成交 ——
+	//
+	// ⚠️ SHFE 当日仓必须 CloseToday。用 Close 会被拒（「平昨手数超过昨仓持仓量」），
+	// 而被拒之后仓还在 —— 那正是下面这段大声报错要处理的情形。
+	close := ctp.OrderReq{Exchange: ex, Instrument: inst,
+		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}
+	logf("[RT] 卖平今 1 手 @%.2f（跌停，保证成交）", close.LimitPrice)
+	cs, err := c.Insert(close, *timeout)
+	if err != nil || cs.VolumeTraded == 0 {
+		// ⚠️ 到这里说明**账上还留着一手多仓**。不静默返回。
+		return fmt.Errorf("⚠️⚠️ **平仓没有成交，账上还留着 1 手 %s 多头今仓** —— "+
+			"status=%q %s err=%v。"+
+			"请手工平掉，或重跑本命令的平仓段。**不要就这么走开**", *symbol,
+			string(cs.Status), cs.StatusMsg, err)
+	}
+	logf("[RT] 平仓已成交 %d 手", cs.VolumeTraded)
+
+	after, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+	dBal := float64(after.Balance) - float64(before.Balance)
+	dFee := float64(after.Commission) - float64(before.Commission)
+	logf("")
+	logf("[RT] 终点  balance=%.4f（差 %+.4f）  手续费累计=%.4f（差 %+.4f）占用保证金=%.4f",
+		float64(after.Balance), dBal, float64(after.Commission), dFee, float64(after.CurrMargin))
+	logf("")
+	logf("⇒ ⚠️ 验收：差额应当**只是手续费与平仓盈亏**。")
+	logf("   结存差 %+.4f，其中手续费 %+.4f ⇒ 平仓盈亏 %+.4f", dBal, -dFee, dBal+dFee)
+	if float64(after.CurrMargin) != 0 {
+		logf("⚠️⚠️ **占用保证金不为零（%.4f）—— 账上可能还有仓，去查**", float64(after.CurrMargin))
+	}
+	return nil
+}
+
+// runCTPFlatten 只做一件事：**把账上的今仓平掉**。
+//
+// ⚠️ 它单独成一个命令，而不是别的流程里的一段 —— 理由是 20260910 夜盘那次事故：
+// 成交往返的平仓段被拒（OrderRef 不递增），**仓留在了账上**，
+// 而当时能用来收拾的只有「重跑整个往返」，那会再建一手。
+//
+// **一个只会缩小敞口的动作，应当随时能单独执行。**
+func runCTPFlatten(args []string) error {
+	fs := flag.NewFlagSet("ctp-flatten", flag.ExitOnError)
+	envPath := fs.String("env", ".env", "凭据文件路径")
+	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
+	if err := fs.Parse(args[2:]); err != nil {
+		return err
+	}
+	env, err := probe.LoadEnv(*envPath)
+	if err != nil {
+		return err
+	}
+	logf := func(f string, a ...any) { fmt.Printf(f+"\n", a...) }
+	c := ctp.New(ctp.Credentials{
+		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
+		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
+	}, logf)
+	c.Valve = ctpValve(env, nil)
+	defer c.Close()
+	if err := c.Connect(*timeout); err != nil {
+		return err
+	}
+	pos, err := c.Positions(*timeout)
+	if err != nil {
+		return err
+	}
+	n := 0
+	for key, p := range pos {
+		today := int(p.TodayPosition)
+		if today == 0 {
+			continue
+		}
+		n++
+		symbol := ctp.Text(p.ExchangeID[:]) + "." + ctp.Text(p.InstrumentID[:])
+		// 平多发卖、平空发买。⚠️ 方向取反在这里做一次，不散在调用处。
+		var dir def.TThostFtdcDirectionType = def.THOST_FTDC_D_Sell
+		if p.PosiDirection == def.THOST_FTDC_PD_Short {
+			dir = def.THOST_FTDC_D_Buy
+		}
+		md, err := c.MarketData(symbol, *timeout)
+		if err != nil {
+			return fmt.Errorf("⚠️ 拿不到 %s 的行情，**仓还在**：%w", symbol, err)
+		}
+		// 平仓挂对自己不利的那一端，保证成交。
+		px := float64(md.LowerLimitPrice)
+		if dir == def.THOST_FTDC_D_Buy {
+			px = float64(md.UpperLimitPrice)
+		}
+		ex, inst := ctp.SplitSymbol(symbol)
+		logf("[flat] %s 今仓 %d 手（%s）→ 平今 @%.2f", key, today, string(p.PosiDirection), px)
+		st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+			Direction: dir, Offset: def.THOST_FTDC_OF_CloseToday,
+			Volume: today, LimitPrice: px}, *timeout)
+		if err != nil || st.VolumeTraded == 0 {
+			return fmt.Errorf("⚠️⚠️ **%s 没平掉，仓还在** —— status=%q %s err=%v",
+				symbol, string(st.Status), st.StatusMsg, err)
+		}
+		logf("[flat] 已平 %d 手", st.VolumeTraded)
+	}
+	if n == 0 {
+		logf("[flat] 没有今仓可平")
+	}
+	after, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+	logf("[flat] 之后  balance=%.4f 占用保证金=%.4f 手续费累计=%.4f",
+		float64(after.Balance), float64(after.CurrMargin), float64(after.Commission))
+	if float64(after.CurrMargin) != 0 {
+		return fmt.Errorf("⚠️⚠️ 占用保证金仍为 %.4f —— **账上还有仓**", float64(after.CurrMargin))
 	}
 	return nil
 }

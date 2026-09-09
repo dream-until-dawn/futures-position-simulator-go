@@ -56,6 +56,9 @@ type Client struct {
 	pos      map[string]*def.CThostFtdcInvestorPositionField
 	posDone  chan struct{}
 	book     orderBook
+	// orderSeq 是本次会话的委托序号，**单调递增**。⚠️ 见 send 里的理由：
+	// 不递增的 OrderRef 会被 CTP 拒（ErrorID=22），而它只在第二笔单上暴露。
+	orderSeq int64
 	md       chan *def.CThostFtdcDepthMarketDataField
 	// wantInst 是**当前这次**行情查询要的合约。⚠️ 行情查询是前缀匹配，
 	// 不记下要的是哪个就会把别的合约当成答案。
