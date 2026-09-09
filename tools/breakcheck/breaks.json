@@ -2725,5 +2725,49 @@
 		"test": "TestDevOnlyClaimIsAccurate",
 		"want": "那是一条**低报**",
 		"expect": "red"
+	},
+	{
+		"name": "245 ⚠️ 报单路径绕过安全阀（本仓库风险最高的一条）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "\tif err := c.Check(r); err != nil {\n\t\treturn \"\", err\n\t}",
+		"new": "\t_ = c.Check",
+		"pkg": "./ctp/",
+		"test": "TestSendIsTheOnlyPathToInsert",
+		"want": "没有先过安全阀",
+		"expect": "red"
+	},
+	{
+		"name": "246 多出第二条到达报单接口的路径",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))",
+		"new": "\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))\n\tif false {\n\t\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))\n\t}",
+		"pkg": "./ctp/",
+		"test": "TestSendIsTheOnlyPathToInsert",
+		"want": "只许有一条到达柜台报单接口的路径",
+		"expect": "red"
+	},
+	{
+		"name": "247 报单能力整个消失：结构守卫的循环一次都不执行，会恒绿",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))",
+		"new": "\t_ = f",
+		"pkg": "./ctp/",
+		"test": "TestSendIsTheOnlyPathToInsert",
+		"want": "报单路径不见了",
+		"expect": "red"
+	},
+	{
+		"name": "248 绕过开关的禁令改成扫原文（连注释一起扫）——第 6 处「讲/用」",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_structure_test.go",
+		"old": "\t\t\tif strings.Contains(stripComments(string(b)), w) {",
+		"new": "\t\t\tif strings.Contains(string(b), w) {",
+		"pkg": "./ctp/",
+		"test": "TestNoBypassKnob",
+		"want": "不许有绕过安全阀的开关",
+		"expect": "red"
 	}
 ]

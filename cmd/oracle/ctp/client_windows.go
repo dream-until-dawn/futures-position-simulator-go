@@ -55,6 +55,13 @@ type Client struct {
 	posMu    sync.Mutex
 	pos      map[string]*def.CThostFtdcInvestorPositionField
 	posDone  chan struct{}
+	book     orderBook
+	// frontID / sessionID 来自登录应答，**撤单必须带**：
+	// CTP 用 (FrontID, SessionID, OrderRef) 三元组定位一笔委托。
+	// ⚠️ 少带一个不会报「参数缺失」，会报「找不到委托」——
+	// 而那与「这笔单已经不在了」长得一模一样。
+	frontID   int
+	sessionID int
 	params     chan *def.CThostFtdcBrokerTradingParamsField
 }
 
@@ -176,6 +183,7 @@ func (c *Client) Connect(timeout time.Duration) error {
 			return 0
 		}
 		c.tradingDay = text(lf.TradingDay[:])
+		c.frontID, c.sessionID = int(lf.FrontID), int(lf.SessionID)
 		c.logf("[ctp] 登录成功  交易日 %s", c.tradingDay)
 		f := def.CThostFtdcSettlementInfoConfirmField{}
 		copy(f.BrokerID[:], c.cred.BrokerID)
@@ -213,6 +221,7 @@ func (c *Client) Connect(timeout time.Duration) error {
 	})
 
 	c.registerQueryCallbacks()
+	c.registerOrderCallbacks()
 
 	bs, err := syscall.BytePtrFromString(c.cred.Front)
 	if err != nil {
