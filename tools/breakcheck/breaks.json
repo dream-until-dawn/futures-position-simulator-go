@@ -2250,5 +2250,38 @@
 		"test": "TestDCEFillsCloseTodayRoutinely",
 		"want": "就没有语料撑着了",
 		"expect": "red"
+	},
+	{
+		"name": "203 文档指向的测试改了名：TestOracleTodayHisSplit 换个名字",
+		"dir": "",
+		"file": "view/position_test.go",
+		"old": "func TestOracleTodayHisSplit(t *testing.T) {",
+		"new": "func TestOracleTodayHisSplitRenamed(t *testing.T) {",
+		"pkg": "./",
+		"test": "TestDocTestRefsResolve",
+		"want": "在代码里不存在",
+		"expect": "red"
+	},
+	{
+		"name": "204 goneTests 白名单被清空：历史引用当场变成失败",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\t\"TestIsProseDiscriminates\": \"方法论 18 讲的是**当时发生的那件事**\" +",
+		"new": "\t\"TestIsProseDiscriminatesXX\": \"方法论 18 讲的是**当时发生的那件事**\" +",
+		"pkg": "./",
+		"test": "TestDocTestRefsResolve",
+		"want": "在代码里不存在",
+		"expect": "red"
+	},
+	{
+		"name": "205 文档引用的正则认不出东西：本条退化成空转",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\ttestRefRe  = regexp.MustCompile(`\bTest[A-Z][A-Za-z0-9_]+`)",
+		"new": "\ttestRefRe  = regexp.MustCompile(`\bZZTest[A-Z][A-Za-z0-9_]+`)",
+		"pkg": "./",
+		"test": "TestDocTestRefsResolve",
+		"want": "本条在空转",
+		"expect": "red"
 	}
 ]

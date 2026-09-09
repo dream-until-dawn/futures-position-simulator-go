@@ -894,3 +894,123 @@ func isCommandDir(t *testing.T, dir string) bool {
 	}
 	return false
 }
+
+// goneTests 是**文档里提到、代码里已经没有**的测试名，逐个说明理由。
+//
+// ⚠️ 它必须逐条写理由，且**只能收「讲历史的那种引用」**。
+// 一个可以随手加名字的豁免表，比没有这张表更坏 —— 那时
+// TestDocTestRefsResolve 会退化成「把红的那个加进白名单」。
+var goneTests = map[string]string{
+	"TestIsProseDiscriminates": "方法论 18 讲的是**当时发生的那件事**" +
+		"（「我验了新加的测试」不等于「我验了套件」），那个测试后来删了。" +
+		"⚠️ 把这句话改写成现在的测试名会把教训的现场感抹掉 —— " +
+		"它记的不是一条现存的守卫，是一次真实的误判",
+}
+
+// TestDocTestRefsResolve 断言文档里点名的每一个测试**都还在**。
+//
+// # 它补的洞
+//
+// 文档大量用「守卫 `TestXxx`」来把一条结论钉到一条测试上 ——
+// 那是本仓库把「事实」与「机制」连起来的主要方式。
+// ⚠️ 而**重命名一条测试不会让任何文档变红**。
+//
+// 20260909 当场抓到一个：probes.md §9.2 写着
+// 「这条已经落成测试（`view.TestOracleLeavesTodayHisCostAtZero`），
+// 它断言的是夹具而不是本库：哪天柜台开始填了，会有动静」。
+//
+//	柜台确实开始填了，那条测试也确实红了、也确实被修正并**改了名**
+//	（现在叫 TestOracleTodayHisSplit）——
+//	而 §9.2 的正文**至今还是旧结论**，指着一个不存在的测试。
+//
+// ⚠️ 最讽刺的地方在于：那条测试写下来的**全部理由**就是「会有动静」。
+// 机制尽到了责任，而**指向机制的那句话**没有任何东西看着。
+func TestDocTestRefsResolve(t *testing.T) {
+	have := map[string]bool{}
+	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(p, "_test.go") {
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		for _, m := range testFuncRe.FindAllSubmatch(b, -1) {
+			have[string(m[1])] = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(have) < 100 {
+		t.Fatalf("⚠️ 只扫到 %d 个测试函数 —— 太少，这条在空转", len(have))
+	}
+
+	refs := map[string][]string{}
+	for _, p := range docFilesToScan(t) {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range testRefRe.FindAllSubmatch(b, -1) {
+			name := string(m[0])
+			refs[name] = append(refs[name], p)
+		}
+	}
+	if len(refs) < 20 {
+		t.Fatalf("⚠️ 文档里只认出 %d 个测试引用 —— 太少，正则八成不对，本条在空转", len(refs))
+	}
+
+	var missing []string
+	for name, where := range refs {
+		if have[name] {
+			continue
+		}
+		if why, ok := goneTests[name]; ok {
+			t.Logf("ⓘ %s 已不在代码里，按 goneTests 放行：%s", name, why)
+			continue
+		}
+		sort.Strings(where)
+		missing = append(missing, fmt.Sprintf("%s（%s）", name, strings.Join(where, "、")))
+	}
+	sort.Strings(missing)
+	for _, m := range missing {
+		t.Errorf("⚠️ 文档点名的测试 %s **在代码里不存在** —— "+
+			"多半是改了名或删了，而**重命名一条测试不会让任何文档变红**。"+
+			"⚠️ 修法是把文档指到现在那条上；只有当那句话讲的是**历史**"+
+			"（记一次误判、一次翻案）时，才把它加进 goneTests 并写清理由", m)
+	}
+	t.Logf("文档点名的测试 %d 个，代码里有 %d 个测试函数，已不在的 %d 个（都在 goneTests 里）",
+		len(refs), len(have), len(goneTests))
+}
+
+var (
+	testFuncRe = regexp.MustCompile(`func (Test[A-Za-z0-9_]+)\s*\(`)
+	testRefRe  = regexp.MustCompile(`\bTest[A-Z][A-Za-z0-9_]+`)
+)
+
+// docFilesToScan 是要扫的文档集合：docs 下的 .md、README、以及包文档。
+//
+// ⚠️ doc.go 也算：它是 `go doc` 会显示的那一份，读它的人**看不到 docs/**。
+func docFilesToScan(t *testing.T) []string {
+	t.Helper()
+	var out []string
+	ms, err := filepath.Glob(filepath.Join("docs", "*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, ms...)
+	out = append(out, "README.md", "doc.go")
+	sort.Strings(out)
+	return out
+}
