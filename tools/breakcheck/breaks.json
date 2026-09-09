@@ -2795,9 +2795,9 @@
   {
     "name": "251 发单前不再清簿 —— 重用 ref 时 Insert 秒回上一笔的终态。",
     "dir": "cmd/oracle",
-    "file": "cmd/oracle/ctp/send_windows.go",
+    "file": "cmd/oracle/ctp/orderbook.go",
     "old": "\tb.m[ref] = &OrderState{OrderRef: ref, VolumeTotal: volume}",
-    "new": "\tif _, ok := b.m[ref]; !ok {\n\t\tb.m[ref] = &OrderState{OrderRef: ref, VolumeTotal: volume}\n\t}",
+    "new": "\tif _, ok := b.m[ref]; !ok { b.m[ref] = &OrderState{OrderRef: ref, VolumeTotal: volume} }",
     "pkg": "./ctp/",
     "test": "TestOrderBookResetClearsTerminalState",
     "want": "上一笔的结局",
