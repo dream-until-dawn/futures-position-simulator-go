@@ -26,6 +26,25 @@ var localOnlyPaths = []string{"testdata/probes/local/"}
 // 不是去读 .gitignore 的文本 —— 那等于**把 git 的匹配规则再实现一遍**，
 // 而两份实现分岔的那一天，分岔的方向恰好是「我以为挡住了」。
 func TestLocalOnlyEvidenceIsGitIgnored(t *testing.T) {
+	// ⚠️ **按名**的那一道要先验，因为它是唯一与 DumpDir 无关的一道。
+	//
+	// 评审方 20260909 指出：上一版这条测试问的是**枚举的那几个规范路径**，
+	// 于是它证明的是「规范路径被忽略」，**不是「文案不会进库」** ——
+	// 我把「保护」和「保护的一个实例」写成了同一件事。
+	// 下面这几个落点都是真能发生的：旁档写在 filepath.Join(DumpDir, "local")，
+	// 而 DumpDir 来自 -dump，或来自 .env 里那个**绝对路径**的 PROBE_DUMP_DIR。
+	for _, p := range []string{
+		"out/local/a.notify.json",
+		"scratch/a.notify.json",
+		"whatever/deep/b.notify.json",
+		"testdata/probes/local/a.notify.json",
+	} {
+		if err := exec.Command("git", "check-ignore", "-q", filepath.FromSlash(p)).Run(); err != nil {
+			t.Errorf("⚠️ %s **没有被忽略** —— 按名那条规则（`*.notify.json`）没生效。"+
+				"⚠️ 只靠 `testdata/probes/local/` 那条路径规则是不够的："+
+				"落点由使用者的 -dump / PROBE_DUMP_DIR 决定，**指到哪里都可能**", p)
+		}
+	}
 	for _, p := range localOnlyPaths {
 		probe := filepath.Join(filepath.FromSlash(p), "probe-check.json")
 		cmd := exec.Command("git", "check-ignore", "-q", probe)
@@ -46,13 +65,28 @@ func TestLocalOnlyEvidenceIsGitIgnored(t *testing.T) {
 //
 // 两条各自堵一个方向，而**泄漏只需要一个方向没堵**。
 func TestCommittedFixturesCarryNoNotifyContent(t *testing.T) {
-	out, err := exec.Command("git", "ls-files", "testdata").Output()
+	// ⚠️ 扫**全仓**，不是只扫 testdata。
+	//
+	// 上一版只扫 testdata，而旁档的落点由 DumpDir 决定 —— `-dump out` 之后
+	// 文案落在 out/local/，这条守卫**够不着**。范围要跟着「可能落在哪」走，
+	// 而那个「哪」是使用者的参数。
+	out, err := exec.Command("git", "ls-files").Output()
 	if err != nil {
 		t.Fatalf("列不出已入库的夹具：%v", err)
 	}
 	files := strings.Fields(string(out))
-	if len(files) < 50 {
-		t.Fatalf("⚠️ 只列出 %d 个已入库的 testdata 文件 —— 太少，本条在空转", len(files))
+	if len(files) < 100 {
+		t.Fatalf("⚠️ 只列出 %d 个已入库文件 —— 太少，本条在空转", len(files))
+	}
+	// ⚠️ 路径这一层单独查：文案文件**根本不该有一个进过库**。
+	// 它与下面逐字段查 content 是两道不同的闸 —— 有人换个字段名装文案时，
+	// 这一道仍然拦得住；反过来有人换个文件名时，下面那道仍然拦得住。
+	for _, f := range files {
+		if strings.HasSuffix(f, ".notify.json") {
+			t.Errorf("⚠️ **已入库**的 %s 是通知文案旁档 —— 它只该落本地。"+
+				"⚠️ 如果这次提交推出去就撤不回来：先把它从索引里拿掉"+
+				"（git rm --cached），再查 .gitignore 的按名规则为什么没挡住", f)
+		}
 	}
 	checked := 0
 	for _, f := range files {

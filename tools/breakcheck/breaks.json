@@ -2440,5 +2440,38 @@
 		"test": "TestRulesListedMatchesTable",
 		"want": "分子不可能比它大",
 		"expect": "red"
+	},
+	{
+		"name": "220 按名那条规则删掉：DumpDir 指到 testdata 之外就没人挡了",
+		"dir": "",
+		"file": ".gitignore",
+		"old": "*.notify.json",
+		"new": "*.notify-disabled.json",
+		"pkg": "./",
+		"test": "TestLocalOnlyEvidenceIsGitIgnored",
+		"want": "没有被忽略",
+		"expect": "red"
+	},
+	{
+		"name": "221 路径断言的后缀改成 .json：全仓 102 份当场匹配（证明它在扫）",
+		"dir": "",
+		"file": "localonly_test.go",
+		"old": "\t\tif strings.HasSuffix(f, \".notify.json\") {",
+		"new": "\t\tif strings.HasSuffix(f, \".json\") {",
+		"pkg": "./",
+		"test": "TestCommittedFixturesCarryNoNotifyContent",
+		"want": "是通知文案旁档",
+		"expect": "red"
+	},
+	{
+		"name": "222 兜底守卫缩回只扫 testdata：仓库其余部分重新失守",
+		"dir": "",
+		"file": "localonly_test.go",
+		"old": "\tout, err := exec.Command(\"git\", \"ls-files\").Output()",
+		"new": "\tout, err := exec.Command(\"git\", \"ls-files\", \"testdata\").Output()",
+		"pkg": "./",
+		"test": "TestCommittedFixturesCarryNoNotifyContent",
+		"want": "太少，本条在空转",
+		"expect": "red"
 	}
 ]
