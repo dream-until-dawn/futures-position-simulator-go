@@ -2024,7 +2024,7 @@
 		"dir": "",
 		"file": "conformance/fixture/cost_split_test.go",
 		"old": "\t\t\t\tfor i := range absentNames(todayAbsent) {",
-		"new": "\t\t\t\tfor i := range absentNames(todayAbsent)[:1] {",
+		"new": "\t\t\t\tfor i := 0; i < 1; i++ {",
 		"pkg": "./conformance/fixture/",
 		"test": "TestCostSplitAbsentSideFollowsPositionDateType",
 		"want": "",
