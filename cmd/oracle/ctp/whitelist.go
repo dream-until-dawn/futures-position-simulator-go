@@ -170,3 +170,78 @@ var positionFields = map[string]decision{
 	"ExchangeID":   keep("交易所代码 —— 定位**合约**，不是定位人"),
 	"InstrumentID": keep("合约代码 —— 同上"),
 }
+
+// quoteFields 是**行情快照**的全部字段决定（20260910 新增）。
+//
+// ⚠️ 这里刻意不写「共 N 个」：我第一版数出 44，而真实是 46 ——
+// 我的正则只匹配大写开头的字段名，漏掉了两个小写的 `reserve`。
+// **是 TestFieldDecisionsAreComplete 当场抓住的**，而它抓的正是
+// 「你以为你穷举了」这件事。⇒ 数由反射给，不由人给。
+//
+// # ⚠️ 它为什么必须存在
+//
+// probes.md §6.9 声明过一个盲区：「`PositionProfit` 与今结算价严格对上，
+// 但夹具里**根本没有最新价字段**，所以『基准是今结算价』与『基准是最新价
+// 而此刻两者相等』分不开。」⚠️ **而声明一个盲区不等于关掉它。**
+// 20260910 评审指出：次日那份实验清单里**没有一件抓行情**，
+// 于是那个盲区会原样留到后天 —— 而**能力早就接好了**（`MarketData` 一直在读
+// `LastPrice`），缺的只是落盘时把它一起写进去。
+//
+// # ⚠️ 盘口刻意全丢
+//
+// 五档买卖价量共 20 个字段一律 drop。理由不是「用不到」，是
+// **本库明确不做盘口**（fidelity.md：默认下单按 100% 全量成交建模）——
+// 收下一份自己不建模的数据，会让后来的人以为它是有支撑的。
+var quoteFields = map[string]decision{
+	// —— 身份：⚠️ 这一组是**最要紧的**，见 §6 那次「查到了 ≠ 查到的是我问的那个」
+	"InstrumentID":   keep("合约代码 —— 行情查询是**前缀匹配**，不核这个会拿到期权当期货"),
+	"ExchangeID":     keep("交易所 —— 与 InstrumentID 合起来才唯一"),
+	"ExchangeInstID": keep("交易所合约代码 —— 与 InstrumentID 可能不同，留着好对账"),
+	"TradingDay":     keep("交易日 —— 一份不知道属于哪天的截面等于没落盘"),
+	"ActionDay":      keep("自然日 —— 夜盘时它与 TradingDay 不同，正是本库反复栽的那个区分"),
+	"UpdateTime":     keep("行情时刻 —— 与账户截面的采集时刻对齐要用"),
+	"UpdateMillisec": keep("行情毫秒 —— 同上；换挡那一瞬要靠它定位（kq_facts 41 同形）"),
+
+	// —— 本次要的那个判别
+	"LastPrice":          keep("⚠️ **最新价** —— 这就是本表存在的理由：分开「今结算价基准」与「最新价基准」"),
+	"SettlementPrice":    keep("今结算价 —— 与 LastPrice 成对，两者不等的那一刻才有判别力"),
+	"PreSettlementPrice": keep("昨结算价 —— 保证金与手续费的候选基准之一"),
+	"ClosePrice":         keep("收盘价 —— kq_facts 37 的逐日盯市基线就压在收盘价与结算价的差上"),
+	"PreClosePrice":      keep("昨收盘价 —— 同上，且它与昨结算价不同"),
+	"UpperLimitPrice":    keep("涨停价 —— 拒因实验与 FarPrice 都用它"),
+	"LowerLimitPrice":    keep("跌停价 —— 同上"),
+
+	// —— 当日行情
+	"OpenPrice":       keep("开盘价 —— 与收盘/结算并列，凑齐一天的价格族"),
+	"HighestPrice":    keep("最高价"),
+	"LowestPrice":     keep("最低价"),
+	"AveragePrice":    keep("⚠️ 均价 —— 结算价在多数品种上由它派生，是结算价来源的旁证"),
+	"Volume":          keep("成交量"),
+	"Turnover":        keep("成交额 —— 与 Volume、AveragePrice 三者互为校验"),
+	"OpenInterest":    keep("持仓量"),
+	"PreOpenInterest": keep("昨持仓量"),
+
+	// —— ⚠️ 保留字段：**小写、不导出，但反射看得见**
+	"reserve1": drop("CTP 保留字段 —— 不导出、无语义、柜台不填；留着只会让夹具多两个空键"),
+	"reserve2": drop("CTP 保留字段 —— 同上"),
+
+	// —— 期权，本库不建模
+	"PreDelta":  drop("期权 delta —— 本库只做期货（fidelity.md 覆盖范围）"),
+	"CurrDelta": drop("期权 delta —— 同上"),
+
+	// —— ⚠️ 盘口五档：全丢，理由见本表开头
+	"BidPrice1": drop("盘口 —— **本库不做盘口**，收下不建模的数据会让人以为它有支撑"),
+	"AskPrice1": drop("盘口 —— 同上"),
+}
+
+func init() {
+	// ⚠️ 五档剩下的 18 个字段用循环补齐，**理由逐条相同**，
+	// 手写 18 遍只会让人跳过读它们。而漏一个就会被
+	// TestFieldDecisionsAreComplete 抓住 —— 所以这里不是在偷懒躲过检查。
+	for i := 1; i <= 5; i++ {
+		for _, pre := range []string{"BidPrice", "BidVolume", "AskPrice", "AskVolume"} {
+			quoteFields[pre+string(rune('0'+i))] =
+				drop("盘口 —— **本库不做盘口**，收下不建模的数据会让人以为它有支撑")
+		}
+	}
+}

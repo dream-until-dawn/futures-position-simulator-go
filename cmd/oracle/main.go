@@ -380,6 +380,9 @@ func runCTPParams(args []string) error {
 	fs := flag.NewFlagSet("ctp-params", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	timeout := fs.Duration("timeout", 40*time.Second, "整条链路的超时")
+	quote := fs.String("quote", "", "同时拍一条**行情快照**，形如 SHFE.rb2701（留空则不拍）。"+
+		"⚠️ 它补的是 probes.md §6.9 声明过的盲区：没有最新价就分不开"+
+		"「今结算价基准」与「最新价基准」——**而最该抓的一刻是开盘那一瞬**")
 	dump := fs.String("dump", "", "落盘目录（⚠️ **无默认值**；CTP 夹具要落 testdata/ctp/，"+
 		"别落进 testdata/probes —— 那是天勤 DIFF 的语料，混进去**不会报错**）")
 	if err := fs.Parse(args[2:]); err != nil {
@@ -405,9 +408,22 @@ func runCTPParams(args []string) error {
 	if *dump != "" {
 		// ⚠️ 落盘这一支**先脱敏再写**，且凭据复查在 Write 里面做 ——
 		// 一个「记得先查一下」的约定，与没有这道检查在出事那天是一样的。
-		fx, err := c.Capture(*timeout, "ctp-params + 账户 + 持仓")
+		note := "ctp-params + 账户 + 持仓"
+		if *quote != "" {
+			note += " + 行情"
+		}
+		fx, err := c.Capture(*timeout, note)
 		if err != nil {
 			return err
+		}
+		if *quote != "" {
+			// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：
+			// 一份少了 quotes 的截面与一份没要过 quotes 的截面
+			// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。
+			if err := c.AttachQuote(fx, *quote, *timeout); err != nil {
+				return fmt.Errorf("⚠️ 行情没补上，**整份截面不落盘**："+
+					"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w", err)
+			}
 		}
 		secrets := map[string]string{
 			"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,

@@ -75,5 +75,9 @@ func (c *Client) MarketData(string, time.Duration) (*def.CThostFtdcDepthMarketDa
 	return nil, errPlatform
 }
 
+// AttachQuote 在非 Windows 上没有实现 —— 返回明确错误，不是静默不补。
+// ⚠️ 静默不补会让「这个平台查不了行情」表现成「这个合约没有行情」。
+func (c *Client) AttachQuote(*Fixture, string, time.Duration) error { return errPlatform }
+
 // Order 在非 Windows 上永远查不到：这里一笔单都发不出去。
 func (c *Client) Order(string) (OrderState, bool) { return OrderState{}, false }

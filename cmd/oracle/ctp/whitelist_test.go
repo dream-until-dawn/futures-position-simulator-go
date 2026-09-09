@@ -33,6 +33,7 @@ func TestFieldDecisionsAreComplete(t *testing.T) {
 	}{
 		{"CThostFtdcTradingAccountField", def.CThostFtdcTradingAccountField{}, accountFields},
 		{"CThostFtdcInvestorPositionField", def.CThostFtdcInvestorPositionField{}, positionFields},
+		{"CThostFtdcDepthMarketDataField", def.CThostFtdcDepthMarketDataField{}, quoteFields},
 	}
 	for _, c := range cases {
 		rt := reflect.TypeOf(c.sample)
