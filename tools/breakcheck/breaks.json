@@ -2574,5 +2574,49 @@
 		"test": "TestEveryDecisionHasAReason",
 		"want": "没有理由",
 		"expect": "red"
+	},
+	{
+		"name": "232 脱敏对没有决定的字段**默默丢掉**而不是报错",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/sanitize.go",
+		"old": "\t\tif !ok {\n\t\t\treturn nil, nil, fmt.Errorf(\"字段 %s.%s **没有决定**",
+		"new": "\t\tif !ok {\n\t\t\tcontinue\n\t\t}\n\t\tif false {\n\t\t\treturn nil, nil, fmt.Errorf(\"字段 %s.%s **没有决定**",
+		"pkg": "./ctp/",
+		"test": "TestSanitizeRefusesUndecidedField",
+		"want": "被**默默丢掉**了",
+		"expect": "red"
+	},
+	{
+		"name": "233 定长字节数组不规范化：CNY 落成一串数字，看起来像数据不像 bug",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/sanitize.go",
+		"old": "\tif v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {",
+		"new": "\tif false && v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {",
+		"pkg": "./ctp/",
+		"test": "TestSanitizeDropsIdentifiersAndKeepsMoney",
+		"want": "应当被规范成字符串",
+		"expect": "red"
+	},
+	{
+		"name": "234 Scrubbed 的下界从 8 放到 0：短凭据一起查，误报淹掉真报警",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/sanitize.go",
+		"old": "\t\tif len(v) < 8 {\n\t\t\tcontinue\n\t\t}",
+		"new": "\t\tif len(v) < 0 {\n\t\t\tcontinue\n\t\t}",
+		"pkg": "./ctp/",
+		"test": "TestScrubbedIsIndependentOfTheWhitelist",
+		"want": "干净内容被误报",
+		"expect": "red"
+	},
+	{
+		"name": "235 CTP 夹具混进 DIFF 语料：加载器会**若无其事地解析成功**",
+		"dir": "",
+		"file": "testdata/probes/status-20260909-5.json",
+		"old": "{\n  \"trading_day\"",
+		"new": "{\n  \"source\": \"ctp-simnow\",\n  \"trading_day\"",
+		"pkg": "./",
+		"test": "TestCTPFixturesStayOutOfTheDIFFCorpus",
+		"want": "而 testdata/probes 是**天勤 DIFF** 的语料",
+		"expect": "red"
 	}
 ]
