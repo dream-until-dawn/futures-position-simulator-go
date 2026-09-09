@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
+	def "gitee.com/haifengat/goctp/ctpdefine"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe"
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture"
@@ -36,6 +38,9 @@ func usage() {
 用法:
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
+  oracle ctp-params [-env 路径]    ⚠️ **CTP/SimNow 侧**：查经纪商交易参数
+                                   （simnow_pending#9）。只读，不下单。
+                                   ⚠️ 查到的是**声明**不是**行为**，见 docs/ctp-oracle.md 第 3 节
   oracle status                    只读：登录并打印账户与持仓截面
   oracle conformance -specs <合约规格.json> -rules <实测规则.json>
                                    **连着柜台**取此刻的截面，与本库逐字段比
@@ -96,6 +101,11 @@ func main() {
 		fmt.Print(kq.WhitelistReport())
 	case "probe", "status":
 		if err := runProbe(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-params":
+		if err := runCTPParams(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -334,4 +344,89 @@ func loadCarry(fixturePath, settlePath string) (*conformance.Carry, error) {
 	fmt.Printf("结转输入：前一日夹具 %s（交易日 %s）、交易所结算价 %d 个合约\n",
 		filepath.Base(fixturePath), prev.TradingDay, len(m))
 	return &conformance.Carry{Prev: prev, Settlement: m}, nil
+}
+
+// runCTPParams 查 SimNow 的经纪商交易参数（simnow_pending#9）。
+//
+// ⚠️ 它**只读**：连接、认证、登录、确认结算单、查询，不下单。
+// 报单要等 docs/ctp-oracle.md 的 P3。
+func runCTPParams(args []string) error {
+	fs := flag.NewFlagSet("ctp-params", flag.ExitOnError)
+	envPath := fs.String("env", ".env", "凭据文件路径")
+	timeout := fs.Duration("timeout", 40*time.Second, "整条链路的超时")
+	if err := fs.Parse(args[2:]); err != nil {
+		return err
+	}
+	env, err := probe.LoadEnv(*envPath)
+	if err != nil {
+		return err
+	}
+	c := ctp.New(ctp.Credentials{
+		Front:    env.CTPTdFront,
+		BrokerID: env.CTPBrokerID,
+		UserID:   env.CTPUserID,
+		Password: env.CTPPassword,
+		AppID:    env.CTPAppID,
+		AuthCode: env.CTPAuthCode,
+	}, func(f string, a ...any) { fmt.Printf(f+"\n", a...) })
+	defer c.Close()
+
+	if err := c.Connect(*timeout); err != nil {
+		return err
+	}
+	p, err := c.BrokerParams(*timeout)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	fmt.Println("经纪商交易参数（simnow_pending#9）")
+	fmt.Printf("    MarginPriceType          %q  %s\n", string(p.MarginPriceType), marginPriceTypeName(p.MarginPriceType))
+	fmt.Printf("    Algorithm                %q  %s\n", string(p.Algorithm), algorithmName(p.Algorithm))
+	fmt.Printf("    AvailIncludeCloseProfit  %q  %s\n", string(p.AvailIncludeCloseProfit), includeCloseProfitName(p.AvailIncludeCloseProfit))
+	fmt.Println()
+	fmt.Println("⚠️ 这是**声明**不是**行为**：查到的是柜台配置成什么，")
+	fmt.Println("   而「它是否真按这个算」要有持仓才验得了。见 docs/ctp-oracle.md 第 3 节。")
+	return nil
+}
+
+// 下面三个把 CTP 的字符枚举翻成人看得懂的话。
+//
+// ⚠️ 每一个都带 default：一个没见过的取值必须**显式说出来**，
+// 而不是打印一个空字符串 —— 后者与「这一档没有名字」长得一样。
+func marginPriceTypeName(v def.TThostFtdcMarginPriceTypeType) string {
+	switch v {
+	case def.THOST_FTDC_MPT_PreSettlementPrice:
+		return "昨结算价"
+	case def.THOST_FTDC_MPT_SettlementPrice:
+		return "今结算价"
+	case def.THOST_FTDC_MPT_AveragePrice:
+		return "均价"
+	case def.THOST_FTDC_MPT_OpenPrice:
+		return "开仓价"
+	}
+	return "⚠️ 没见过的取值"
+}
+
+func algorithmName(v def.TThostFtdcAlgorithmType) string {
+	switch v {
+	case def.THOST_FTDC_AG_All:
+		return "浮盈浮亏都计算"
+	case def.THOST_FTDC_AG_OnlyLost:
+		return "只计浮动亏损"
+	case def.THOST_FTDC_AG_OnlyGain:
+		return "只计浮动盈利"
+	case def.THOST_FTDC_AG_None:
+		return "都不计"
+	}
+	return "⚠️ 没见过的取值"
+}
+
+func includeCloseProfitName(v def.TThostFtdcIncludeCloseProfitType) string {
+	switch v {
+	case def.THOST_FTDC_ICP_Include:
+		return "可用**包含**平仓盈利"
+	case def.THOST_FTDC_ICP_NotInclude:
+		return "可用**不含**平仓盈利"
+	}
+	return "⚠️ 没见过的取值"
 }
