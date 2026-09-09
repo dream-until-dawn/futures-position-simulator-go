@@ -2217,5 +2217,38 @@
 		"test": "TestEmptySideGivesDashNotZero",
 		"want": "这条断言在空转",
 		"expect": "red"
+	},
+	{
+		"name": "200 绊线找错开平标志：把 DCE/CLOSE 改成 DCE/CLOSETODAY（语料里有 224 笔）",
+		"dir": "",
+		"file": "conformance/fixture/offset_mix_test.go",
+		"old": "tr.Offset == types.Close {",
+		"new": "tr.Offset == types.CloseToday {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestDCEHasNeverUsedBareClose",
+		"want": "第一笔 DCE/CLOSE 成交出现了",
+		"expect": "red"
+	},
+	{
+		"name": "201 下界查错了键：拿 DCE/CLOSE（0 笔）去当承重证据",
+		"dir": "",
+		"file": "conformance/fixture/offset_mix_test.go",
+		"old": "byKey[\"DCE/\"+types.CloseToday.String()]",
+		"new": "byKey[\"DCE/\"+types.Close.String()]",
+		"pkg": "./conformance/fixture/",
+		"test": "TestDCEFillsCloseTodayRoutinely",
+		"want": "就没有语料撑着了",
+		"expect": "red"
+	},
+	{
+		"name": "202 用 string(tr.Offset) 建键：uint8 转成不可见控制字符，vet 不报",
+		"dir": "",
+		"file": "conformance/fixture/offset_mix_test.go",
+		"old": "byKey[ex+\"/\"+tr.Offset.String()]++",
+		"new": "byKey[ex+\"/\"+string(tr.Offset)]++",
+		"pkg": "./conformance/fixture/",
+		"test": "TestDCEFillsCloseTodayRoutinely",
+		"want": "就没有语料撑着了",
+		"expect": "red"
 	}
 ]
