@@ -54,17 +54,29 @@ func TestGuardCarriesProtectedLegs(t *testing.T) {
 // 而生产路径走的正是默认那条 —— 一条只在测试里被走过的分支，
 // 与一条没人走的分支在覆盖率上长得一样。
 func TestGuardFallsBackToDeclaredLegs(t *testing.T) {
+	// ⚠️ 临时把声明的那份换成**非空**的，再验默认路径。
+	//
+	// 不这么做的话这条测试会栽在与它自己要防的**同一个坑**里：
+	// protectedLegs 当下是空的，于是「用声明的那份」与「用注入的空清单」
+	// 给出同一个答案（都是 0 条）—— 破坏 188 当场演示了这一点，
+	// 它把判据改坏之后**测试照样绿**。
+	//
+	// **一条依赖「当前数据恰好非空」的测试，在数据变空那天会安静地失效。**
+	saved := protectedLegs
+	protectedLegs = []safety.ProtectedLeg{{
+		Symbol: "TEST.only1", Side: safety.Long,
+		TradingDay: "20260909", Why: "只在这条测试里存在的声明"}}
+	defer func() { protectedLegs = saved }()
+
 	r := &Runner{Env: Env{AllowOrder: true, MaxVolume: 1}}
 	if r.Protected != nil {
 		t.Fatal("Runner 的零值里 Protected 应当是 nil")
 	}
-	got := r.protectedLegs()
-	if len(got) != len(protectedLegs) {
-		t.Errorf("⚠️ 没有注入时取到 %d 条，而声明的那份有 %d 条 —— "+
-			"生产路径拿到的不是声明的那份", len(got), len(protectedLegs))
+	if n := len(r.protectedLegs()); n != 1 {
+		t.Errorf("⚠️ 没有注入时取到 %d 条，而声明的那份有 1 条 —— "+
+			"生产路径拿到的不是声明的那份", n)
 	}
 	// ⚠️ nil 与空切片含义不同：nil = 没注入；空切片 = 注入了一份空的。
-	// 混同会让「注入一个空清单」悄悄退回成「用声明的」。
 	r.Protected = []safety.ProtectedLeg{}
 	if n := len(r.protectedLegs()); n != 0 {
 		t.Errorf("⚠️ 注入了一份**空**清单，却取到 %d 条 —— "+
