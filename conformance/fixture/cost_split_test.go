@@ -1,7 +1,6 @@
 package fixture
 
 import (
-	"fmt"
 	"sort"
 	"testing"
 
@@ -165,56 +164,9 @@ func volumeOnSide(p map[string]Value, i int, todaySide bool) int64 {
 	return v.Number.IntPart()
 }
 
-// TestShortHistoryCostHasNeverBeenObserved 是一条**会在采样成功那天变红**的绊线。
+// ⚠️ 这里原有一条绊线 TestShortHistoryCostHasNeverBeenObserved，
+// 钉住「空头昨仓零观测」。**20260909 16:20 它如期变红并被删掉** ——
+// 那次采样成功了，判定见 state.md 的 kq_facts 52（假说 A 成立、B 被否）。
 //
-// # 它钉住的是一个洞，不是一条规则
-//
-// 全语料 466 条持仓记录里，`volume_short_his` / `volume_short_yd` /
-// `pos_short_his` 三者 **>0 的次数各为 0** —— 空头昨仓从来没有存在过。
-// 而空头**今**仓是有的（27 条）。于是：
-//
-//	kq_facts 28/33 那条「拆分在结算时按 PositionDateType 写一侧」，
-//	**全部非零证据都在多头侧**。空头侧一次都没有贡献过非零观测。
-//
-// ⚠️ 因此「这条规则是方向中性的」与「柜台只在多头侧写这个拆分」
-// **在当前语料上完全分不开** —— 而本库建的是前者。
-//
-// # 这条绊线红了要做什么
-//
-// 红了说明**那次采样成功了**：`position_cost_short_his` 第一次拿到了值。
-// 该做的是把观测写进 `kq_facts`，判定上面那个二选一，然后**删掉这条绊线**。
-//
-// ⚠️ 不是把它改绿。改绿它只需要在下一行加个例外，而那样就把
-// 「第一次量到」这件事变成了一次静默的常量修改。
-func TestShortHistoryCostHasNeverBeenObserved(t *testing.T) {
-	var hits []string
-	for _, f := range loadAll(t) {
-		for sym, p := range f.Positions {
-			for _, name := range []string{
-				"volume_short_his", "volume_short_yd", "pos_short_his",
-				"volume_short_frozen_his",
-			} {
-				if v, ok := p[name]; ok && !v.Absent && v.Number.Sign() > 0 {
-					hits = append(hits, fmt.Sprintf("%s %s %s=%s",
-						f.Path, sym, name, v.Number))
-				}
-			}
-			if v, ok := p["position_cost_short_his"]; ok && !v.Absent && v.Number.Sign() > 0 {
-				hits = append(hits, fmt.Sprintf("%s %s position_cost_short_his=%s",
-					f.Path, sym, v.Number))
-			}
-		}
-	}
-	if len(hits) > 0 {
-		sort.Strings(hits)
-		t.Fatalf("⚠️ **空头昨仓第一次出现了** —— 这条绊线红了不是坏消息，"+
-			"是那次采样成功了：\n  %v\n"+
-			"该做的是：把观测写进 kq_facts，判定「拆分是方向中性的」还是"+
-			"「柜台只在多头侧写」，然后**删掉这条绊线**（不是给它加例外），"+
-			"并把 cmd/oracle/probe 的 protectedLegs 里那条护着空今仓的声明一并划掉 —— "+
-			"⚠️ 种子已经用掉了，那条保护再留着就变成拦正当收尾平仓的东西",
-			hits)
-	}
-	t.Log("空头昨仓仍是零观测：kq_facts 28/33 的非零证据**全部在多头侧**，" +
-		"「方向中性」与「只写多头侧」尚未分开")
-}
+// ⚠️ 删而不是加例外，是它自己的失败信息要求的：
+// 加例外会把「第一次量到」变成一次静默的常量修改。

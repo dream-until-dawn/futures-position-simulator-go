@@ -168,6 +168,14 @@ func TestNoStrayFixtureTrees(t *testing.T) {
 		// 解析成功，然后带着一堆 CTP 字段名流进棘轮与覆盖率，而那些数字
 		// **看起来完全正常**：语料变大了，覆盖变好了。坏消息伪装成好消息。
 		"testdata/ctp": "CTP/SimNow 截面夹具：另一个口子的实测产出，字段名与 DIFF 无一相同",
+		// ⚠️ 这一棵与上面三棵**性质相反**：那三棵是「进 git 的证据」，
+		// 这一棵是「**刻意不进 git** 的证据」（使用者 20260909 裁决：
+		// 柜台通知的文案要留下来，但不上 git）。
+		// 它由 .gitignore 的 *.notify.json 按名挡着，守卫见
+		// TestLocalOnlyEvidenceIsGitIgnored 与 TestCommittedFixturesCarryNoNotifyContent。
+		// ⚠️ 登记它而不是让守卫跳过 gitignored 路径：跳过会让一棵**真的**杂散树
+		// 只要恰好被忽略就再也看不见。
+		"testdata/probes/local": "通知文案的本地旁档：**不进 git**，与其余三棵性质相反",
 	}
 	const canonical = "testdata/probes"
 	var stray []string

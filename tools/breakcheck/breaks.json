@@ -2020,15 +2020,16 @@
 		"why": "⚠️ 演示的盲区：判别样本数是个**下界**，守卫只查它 >0，不查它准不准。拿总手数比会把 rb2701 结算后「多头全是昨仓、_today 格给 \"-\"」也记成判别样本 —— 那一格今仓侧本来就没量，判别不出任何东西。实测 48 格虚高到 118 格，而测试全绿。堵不上是因为「对的数是多少」得先有一份独立算法，那就是把被测逻辑抄第二遍。"
 	},
 	{
-		"name": "182 绊线的字段表混进一个**本来就非零**的字段",
+		"name": "182 判别样本不再逐方向数：空头侧那个新样本（kq_facts 52）就白拿了",
 		"dir": "",
 		"file": "conformance/fixture/cost_split_test.go",
-		"old": "\t\t\t\t\"volume_short_his\", \"volume_short_yd\", \"pos_short_his\",\n\t\t\t\t\"volume_short_frozen_his\",\n",
-		"new": "\t\t\t\t\"volume_short_his\", \"volume_short_yd\", \"pos_short_his\",\n\t\t\t\t\"volume_short_frozen_his\", \"volume_short_today\",\n",
+		"old": "\t\t\t\tfor i := range absentNames(todayAbsent) {",
+		"new": "\t\t\t\tfor i := range absentNames(todayAbsent)[:1] {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestShortHistoryCostHasNeverBeenObserved",
-		"want": "空头昨仓第一次出现了",
-		"expect": "red"
+		"test": "TestCostSplitAbsentSideFollowsPositionDateType",
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ 演示的盲区：判别样本数只查 >0，不查它**覆盖了哪些方向**。只数多头侧仍然 >0，于是空头侧那个 20260909 结算后才拿到的新样本（kq_facts 52 的判别依据）**白拿了**，而测试照样绿。堵它要按方向分开卡下界，而那要先说清「每个方向至少要几个」——现在空头侧只有 1 个，卡下界等于把当前状态固化。写在这里，别当它已经被覆盖。"
 	},
 	{
 		"name": "183 sideAbsent 一律说「不是 \"-\"」：拆分记录全被当成未结算态",

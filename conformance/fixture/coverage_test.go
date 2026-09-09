@@ -112,7 +112,10 @@ func TestPositionFieldEvidence(t *testing.T) {
 	// ⚠️ 钉住的是**只见过零**那一档。它降下来是好消息，
 	// 但好消息同样需要有人被通知到：一个悄悄变好的数，
 	// 下一次悄悄变坏时也不会有动静。
-	const pinnedOnlyZero = 14
+	// 20260909 16:20：14 → 10。结算后空头昨仓第一次出现，
+	// volume_short_his / _yd / pos_short_his / position_cost_short_his 四个
+	// 同时拿到非零观测（kq_facts 52）。⚠️ 这个数只许降。
+	const pinnedOnlyZero = 10
 	switch {
 	case len(onlyZero) > pinnedOnlyZero:
 		t.Errorf("⚠️ 只见过零的字段从 %d 涨到 %d —— **退化**："+

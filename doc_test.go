@@ -942,6 +942,12 @@ func isCommandDir(t *testing.T, dir string) bool {
 // 一个可以随手加名字的豁免表，比没有这张表更坏 —— 那时
 // TestDocTestRefsResolve 会退化成「把红的那个加进白名单」。
 var goneTests = map[string]string{
+	"TestShortHistoryCostHasNeverBeenObserved": "⚠️ 它**完成使命之后被删掉了**：" +
+		"20260909 16:20 结算后空头昨仓第一次出现，绊线如期变红，" +
+		"判定写进了 kq_facts 52（拆分方向中性，假说 B 被否）。" +
+		"⚠️ 文档里那几处提到它的地方讲的是**那件事怎么发生的** —— " +
+		"改写成「某条现存守卫」会把「绊线红了就该删掉它」这条做法本身抹掉，" +
+		"而那正是它最值得留下的部分",
 	"TestIsProseDiscriminates": "方法论 18 讲的是**当时发生的那件事**" +
 		"（「我验了新加的测试」不等于「我验了套件」），那个测试后来删了。" +
 		"⚠️ 把这句话改写成现在的测试名会把教训的现场感抹掉 —— " +

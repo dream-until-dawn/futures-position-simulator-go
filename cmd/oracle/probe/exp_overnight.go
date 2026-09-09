@@ -49,13 +49,19 @@ var seedPlan = []struct {
 //
 // ⚠️ 每一条都必须带 TradingDay。过了那天保护自动失效，
 // 因为那时它拦的已经是正当的收尾平仓了。
-var protectedLegs = []safety.ProtectedLeg{
-	{Symbol: "SHFE.rb2701", Side: safety.Short, TradingDay: "20260909",
-		Why: "这一手**空今仓**要活过今天日终结算才变成空昨仓。" +
-			"空头昨仓在全语料 466 条持仓记录里从未存在过（kq_facts 51），" +
-			"它是分开「今昨拆分规则方向中性」与「柜台只写多头侧」的唯一样本；" +
-			"平掉就要再等一个交易日"},
-}
+// ⚠️ 这张表**现在是空的**，而空着是对的：
+// 20260909 那条护着 rb2701 空今仓的声明已经完成使命 —— 种子活过了结算、
+// 变成空昨 1、判掉了 kq_facts 51 挂着的二选一（见 kq_facts 52）。
+// 种子用掉之后再留着那条保护，它拦的就是**正当的收尾平仓**了。
+//
+// ⚠️ 顺带记一笔它是怎么退场的：那条声明带着 TradingDay: "20260909"，
+// 于是交易日滚到 20260910 的那一刻它**自己就失效了** ——
+// 不需要谁记得来删。到期机制在这里真的兑现了一次。
+//
+// ⚠️ 表空着的代价写在破坏 188 里：TestGuardCarriesProtectedLegs 会 t.Skip，
+// 于是**接线可以在没有保护的日子里静默烂掉**。下次往这里加东西之前，
+// 先看一眼那条接线测试是不是还活着。
+var protectedLegs = []safety.ProtectedLeg{}
 
 // expOvernightSetup 建立过夜种子。
 func (r *Runner) expOvernightSetup(ctx context.Context) error {
