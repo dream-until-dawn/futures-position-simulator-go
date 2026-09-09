@@ -56,9 +56,25 @@ var wipRe = regexp.MustCompile(`(?i)^(wip\b|wip\d*$)`)
 // 让缓存自己看得见 git 的状态。见 silent-risks 方法论 46。
 func TestNoNewWipCommits(t *testing.T) {
 	touchGitState(t) // ⚠️ 见它的注释：不读一遍 git 状态，这条测试会被缓存端出旧判决
-	out, err := exec.Command("git", "log", "--format=%h %s", "main..HEAD").Output()
+	// ⚠️ 范围是**整条历史**，不是 `main..HEAD`。
+	//
+	// 上一版查的是 `main..HEAD`，那默认了「dev 永远领先 main」——
+	// 而 2026-09-09 第一次真的合并之后，那个假设当场不成立：
+	//
+	//	main..HEAD 变成空       → 下面的空转下界 fatal
+	//	wipAllowed 的三个 SHA   → 都跑到 main 那侧去了，名单一条也命中不了
+	//
+	// ⚠️ 后果比「一条守卫红了」严重：**`main` 跑不过自己的测试套件** ——
+	// 任何人 clone 下 main 跑 `go test ./...` 都会看到红，
+	// 而这个仓库把「全绿」当成对外的第一句话。
+	//
+	// 换成整条历史之后它与在哪个分支上跑无关，名单里的 SHA 也永远可达。
+	// ⚠️ 这条守卫问的本来就是「有没有 wip 进过 main」，
+	// 而那是一个关于**历史**的问题，不是关于**分支差**的问题 ——
+	// 上一版把它写成了后者，因为当时两者恰好等价。
+	out, err := exec.Command("git", "log", "--format=%h %s", "HEAD").Output()
 	if err != nil {
-		t.Skipf("⚠️ 数不出 main..HEAD，这条守卫**没有查任何东西**：%v", err)
+		t.Skipf("⚠️ 数不出 git log，这条守卫**没有查任何东西**：%v", err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	checked, allowed := 0, 0
@@ -89,8 +105,9 @@ func TestNoNewWipCommits(t *testing.T) {
 	// ⚠️ 判别力两条：
 	//   数不到提交 → 这条恒绿而什么都没查（分支名变了、浅克隆）
 	//   名单一条都没命中 → 名单那一支从未被走到，它是不是还对得上？
-	if checked < 5 {
-		t.Fatalf("⚠️ main..HEAD 只数到 %d 个提交 —— 太少，这条很可能什么都没查", checked)
+	if checked < 50 {
+		t.Fatalf("⚠️ 整条历史只数到 %d 个提交 —— 太少，这条很可能什么都没查"+
+			"（浅克隆？）", checked)
 	}
 	if allowed != len(wipAllowed) {
 		t.Errorf("⚠️ 名单里有 %d 条，实际命中 %d 条 —— "+
@@ -98,5 +115,5 @@ func TestNoNewWipCommits(t *testing.T) {
 			"要么它们已经不在 main..HEAD 里，那就该把名单清掉",
 			len(wipAllowed), allowed)
 	}
-	t.Logf("main..HEAD 共 %d 个提交，wip 命中 %d 个（全在名单里）", checked, allowed)
+	t.Logf("整条历史共 %d 个提交，wip 命中 %d 个（全在名单里）", checked, allowed)
 }
