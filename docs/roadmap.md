@@ -701,6 +701,57 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 
 ### 2026-09-09：`order` 的八项校验落地（v0.4.0 的一半）
 
+#### 导出面（门禁④，**含枚举取值**）
+
+⚠️ 这一段是 20260909 送审前补的：上面那条变更记录写了**设计**，
+却没有像 09-07/09-08 那几条一样**逐个列出导出的标识符** ——
+而门禁④ 查的正是这个，且明写「含枚举取值」。
+**记了设计不等于记了导出面**，两者在变更记录里长得像。
+
+**主模块 `order`（新包）**：
+
+    类型   Request / Facts / Result / Rejection / Unchecked
+           Frozen / FreezeInput / Book
+    函数   Validate(Request, Facts) Result
+           FreezeOf(Request, FreezeInput) (Frozen, error)
+           NewBook() *Book
+    方法   Result.OK() / Result.FullyChecked() / Result.String()
+           Frozen.Add() / Frozen.IsZero()
+           Book.Insert() / Remove() / Total() / TotalOf() / Live()
+           Check.String()
+
+**枚举 `order.Check`（`uint8`）—— 取值与顺序都是导出面的一部分**：
+
+    CheckUnknown = iota   CheckTradable      CheckSession
+    CheckPriceTick        CheckPriceLimit    CheckVolumeRange
+    CheckClosable         CheckFunds         CheckPositionLimit
+
+⚠️ **顺序本身有语义**：它就是拒绝优先级（cn-futures-rules.md §9），
+`allChecks` 与它同序，守卫 `TestRejectionPriorityMatchesCounter`。
+⚠️ 20260909 我曾据一次坏测量把 `CheckPriceTick` 与 `CheckPriceLimit` 对调过，
+当天回退（破坏 144/145 钉住）—— **改这个顺序是改导出面语义，不是改实现**。
+
+**主模块 `view.Position` 新增字段**：`FrozenLongToday` / `FrozenLongHistory` /
+`FrozenShortToday` / `FrozenShortHistory` / `HasFrozen`。
+⚠️ `HasFrozen` 为假时那几个字段渲染成 `NotImplemented` 而不是 0 ——
+区分「没有挂单」与「没接冻结数据」，后者拿 0 去比会比出空洞的一致。
+
+**主模块 `conformance` 新增**：`KnownClass` / `Registry` / `CrossDay()` / `Live()`。
+
+**主模块 `conformance/fixture` 新增**：`Notify` / `NakedClosePolicy`（枚举，取值 **`NakedCloseRefuse`（零值）**
+与 `NakedCloseIsYesterday`）/ `FrozenOf` / `FrozenAccountOf` /
+`LiveOrderSymbols`。
+
+⚠️ `NakedClosePolicy` 的**零值是「拒绝」**，不是任何一种语义 ——
+默认值会被沿用而不被注意到，而这里选错一边会让平今/平昨整个错位。
+⚠️ 我在写上面这份清单时**第一遍就把这个枚举的取值写错了**（写成 `NakedCloseIsToday`，那个标识符根本不存在）——
+这正是门禁④ 要「含枚举取值」的原因：**导出面里最容易写错的就是取值**，
+而错了的清单比没有清单更糟，它看起来像核对过。
+
+**嵌套模块 `cmd/oracle`**：`kq.ProtectedLeg`（新类型，字段 `Symbol`/`Direction`/
+`TradingDay`/`Why`）、`kq.Guard` 新增字段 `Protected` / `TradingDay`、
+`kq.Notify` 新增 `Content`、`probe.WriteFixtureJSON`。
+
 八项校验按 cn-futures-rules.md §9 的**拒绝优先级**实现。⚠️ 冻结与撤单没做，
 `match` 也没开始 —— v0.4.0 仍未完成，这里只记已落地的那一半。
 
