@@ -80,9 +80,24 @@ func sectionWords(t *testing.T, heading string) map[string]bool {
 	} else {
 		body = body[i:]
 	}
+	// ⚠️ **只数缩进的清单行，散文不算。**
+	// 破坏 255 第一版就栽在这里：我抹掉清单里的 `MarketData`，测试照样绿 ——
+	// 因为同一节的散文里有一句「`MarketData` / `SplitSymbol` / `FarPrice`
+	// 三个都没有桩」。⚠️ **「这一节提到过这个名字」不等于「清单记了它」**，
+	// 而前者恰恰在讲一个缺陷的段落里最容易成立。
 	out := map[string]bool{}
-	for _, w := range wordRe.FindAllString(body, -1) {
-		out[w] = true
+	n := 0
+	for _, line := range strings.Split(body, "\n") {
+		if !strings.HasPrefix(line, "    ") {
+			continue
+		}
+		n++
+		for _, w := range wordRe.FindAllString(line, -1) {
+			out[w] = true
+		}
+	}
+	if n == 0 {
+		t.Fatalf("⚠️ 小节 %q 里一行缩进清单都没有 —— 格式变了？本条会在空集上通过", heading)
 	}
 	return out
 }
