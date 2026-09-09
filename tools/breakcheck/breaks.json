@@ -2471,7 +2471,7 @@
 		"new": "\tout, err := exec.Command(\"git\", \"ls-files\", \"testdata\").Output()",
 		"pkg": "./",
 		"test": "TestCommittedFixturesCarryNoNotifyContent",
-		"want": "太少，本条在空转",
+		"want": "范围没有覆盖全仓",
 		"expect": "red"
 	}
 ]
