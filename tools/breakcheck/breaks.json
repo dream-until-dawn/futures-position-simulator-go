@@ -2184,5 +2184,38 @@
 		"test": "TestTickFracAndOffTickAgreeOnTheHalfBoundary",
 		"want": "offTick 却说不是",
 		"expect": "red"
+	},
+	{
+		"name": "197 语料里一处空仓方向的 \"-\" 变成 0（柜台改行为 / 解析回退的形状）",
+		"dir": "",
+		"file": "testdata/probes/exp3-max-margin-side-20260908.json",
+		"old": "\"open_price_short\": \"-\"",
+		"new": "\"open_price_short\": 0",
+		"pkg": "./conformance/fixture/",
+		"test": "TestEmptySideGivesDashNotZero",
+		"want": "空仓方向却不是",
+		"expect": "red"
+	},
+	{
+		"name": "198 有仓方向那一半的断言反过来：609 格全报",
+		"dir": "",
+		"file": "conformance/fixture/dash_side_test.go",
+		"old": "\t\t\t\t\t\tif v.Absent {\n\t\t\t\t\t\t\tbad = append(bad, f.Path+\" \"+sym+\" \"+base+\"_\"+side+\n\t\t\t\t\t\t\t\t\" **有仓**却给了 \\\"-\\\"\")",
+		"new": "\t\t\t\t\t\tif !v.Absent {\n\t\t\t\t\t\t\tbad = append(bad, f.Path+\" \"+sym+\" \"+base+\"_\"+side+\n\t\t\t\t\t\t\t\t\" **有仓**却给了 \\\"-\\\"\")",
+		"pkg": "./conformance/fixture/",
+		"test": "TestEmptySideGivesDashNotZero",
+		"want": "有仓**却给了",
+		"expect": "red"
+	},
+	{
+		"name": "199 有没有仓判成恒真：空仓格全被当成有仓",
+		"dir": "",
+		"file": "conformance/fixture/dash_side_test.go",
+		"old": "\t\t\t\theld := vol.Sign() > 0",
+		"new": "\t\t\t\theld := vol.Sign() >= 0",
+		"pkg": "./conformance/fixture/",
+		"test": "TestEmptySideGivesDashNotZero",
+		"want": "这条断言在空转",
+		"expect": "red"
 	}
 ]
