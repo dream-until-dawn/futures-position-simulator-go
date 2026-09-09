@@ -2846,5 +2846,49 @@
 		"test": "TestRoadmapListsEveryExport",
 		"want": "roadmap 的清单里找不到",
 		"expect": "red"
+	},
+	{
+		"name": "256 补行情失败那一支的 return 降成一句日志 —— 半份截面照样落盘。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上",
+		"new": "\t\t\t\t_ = fmt.Errorf(\"⚠️ 行情没补上",
+		"pkg": ".",
+		"test": "TestQuoteFailureBlocksTheWrite",
+		"want": "没有 return",
+		"expect": "red"
+	},
+	{
+		"name": "257 补行情整块被拿掉 —— 守卫查不到它要查的东西，必须当场说话。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
+		"new": "",
+		"pkg": ".",
+		"test": "TestQuoteFailureBlocksTheWrite",
+		"want": "出现 0 次",
+		"expect": "red"
+	},
+	{
+		"name": "258 落盘挪到补行情**之前** —— 失败时半份证据已经在磁盘上了。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
+		"new": "\t\tif _, err := fx.Write(*dump, \"ctp-status\", secrets,\n\t\t\tfunc(f string, a ...any) { fmt.Printf(f+\"\n\", a...) }); err != nil {\n\t\t\treturn err\n\t\t}\n\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
+		"pkg": ".",
+		"test": "TestQuoteFailureBlocksTheWrite",
+		"want": "之后",
+		"expect": "red"
+	},
+	{
+		"name": "259 多出第二处 AttachQuote 调用 —— 它绕开「失败则不落盘」那两条断言。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tsecrets := map[string]string{\n\t\t\t\"CTP_USER_ID\": env.CTPUserID, \"CTP_PASSWORD\": env.CTPPassword,\n\t\t\t\"CTP_BROKER_ID\": env.CTPBrokerID, \"CTP_APP_ID\": env.CTPAppID,\n\t\t\t\"CTP_AUTH_CODE\": env.CTPAuthCode,\n\t\t}",
+		"new": "\t\t_ = c.AttachQuote(fx, *quote, *timeout)\n\t\tsecrets := map[string]string{\n\t\t\t\"CTP_USER_ID\": env.CTPUserID, \"CTP_PASSWORD\": env.CTPPassword,\n\t\t\t\"CTP_BROKER_ID\": env.CTPBrokerID, \"CTP_APP_ID\": env.CTPAppID,\n\t\t\t\"CTP_AUTH_CODE\": env.CTPAuthCode,\n\t\t}",
+		"pkg": ".",
+		"test": "TestAttachQuoteHasOneCallSite",
+		"want": "恰好 1 次",
+		"expect": "red"
 	}
 ]
