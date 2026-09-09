@@ -502,7 +502,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
 #### `cmd/oracle/safety`（新包，与协议无关的下单安全阀）
 
     类型   Side（枚举）/ Intent / ProtectedLeg / Valve
-    方法   Valve.Check(Intent) error
+    方法   Valve.Check(Intent) error；Side.String
 
 **枚举 `safety.Side`（`uint8`）—— 取值与零值都是导出面的一部分**：
 
@@ -519,10 +519,23 @@ D+1 日 baseline-full / close-order / yd-vs-his
 
     常量   Source / GoctpModule / DLLDirEnv / QueryGap
     变量   RequiredDLLs
-    类型   Client / Credentials / Fixture / OrderReq
-    函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots
+    类型   Client / Credentials / Fixture / OrderReq / OrderState
+    函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots /
+           Text / SplitSymbol / FarPrice
     方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
-           Capture / Check / Close；Fixture.Write；OrderReq.Symbol / String
+           MarketData / Capture / Check / Insert / Cancel / Order / Close；
+           Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
+
+⚠️ **这份清单在 20260910 之前停在 P2**：`Insert` / `Cancel` / `Order` /
+`MarketData` / `SplitSymbol` / `FarPrice` / `OrderState` 七项**一个都没记** ——
+而门禁第 ④ 条查的正是「导出面变更有没有记进 roadmap」。
+⚠️ 更糟的是我在给评审的回信里**说过它「已经改了」，而我当时没有核过** ——
+这是方法论 69 那条（一个假声明有两个副本）在**同一天内的第三次**，
+而这一次是在**汇报**里。⇒ 现在的清单是 `go doc -all ./ctp` 的输出，不是凭记忆写的。
+
+⚠️ 短命的一项：`SeedOrderSeq` 在 `08b4cf2..0b98aee` 之间存在过又被删掉，
+**从未进过本清单**。它删得对（见 probes.md §6.8 末），但「进来又出去、
+清单上一个字都没有」说明清单当时不是靠机制维持的。
 
 ⚠️ **平台**：实现只在 Windows；非 Windows 有同 API 的桩，**返回明确错误**
 而不是零值 —— 后者会让「这个平台没实现」在运行时表现成「柜台没反应」。

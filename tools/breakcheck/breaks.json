@@ -2835,5 +2835,16 @@
 		"test": "TestNonWindowsStubsCoverEveryMethod",
 		"want": "非 Windows 没有桩",
 		"expect": "red"
+	},
+	{
+		"name": "255 导出面清单里抹掉一项 —— 门禁第 ④ 条本身就靠这条守卫。",
+		"dir": "cmd/oracle",
+		"file": "docs/roadmap.md",
+		"old": "           MarketData / Capture / Check / Insert / Cancel / Order / Close；",
+		"new": "           Capture / Check / Insert / Cancel / Order / Close；",
+		"pkg": ".",
+		"test": "TestRoadmapListsEveryExport",
+		"want": "roadmap 的清单里找不到",
+		"expect": "red"
 	}
 ]
