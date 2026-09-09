@@ -871,7 +871,7 @@
 		"new": "\t\t\t\tdefault:\n\t\t\t\t\to.nonZero++\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\tvar never []string",
 		"pkg": "./conformance/fixture/",
 		"test": "TestFrozenFieldsAreTheThinnestEvidence",
-		"want": "六个冻结字段都拿到非零观测了",
+		"want": "零被算成了非零",
 		"expect": "red"
 	},
 	{
