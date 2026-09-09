@@ -2296,14 +2296,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "207 反引号路径那一类退化：去掉「带斜杠才查」之后仍不查任何东西",
+		"name": "207 去掉「只查带斜杠的」：裸文件名当场开始误报（这正是那个取舍）",
 		"dir": "",
 		"file": "doc_test.go",
 		"old": "\t\t\tif !strings.Contains(target, \"/\") {\n\t\t\t\tcontinue // 裸文件名不查，理由见上\n\t\t\t}",
 		"new": "\t\t\tif strings.Contains(target, \"/\") {\n\t\t\t\tcontinue // 裸文件名不查，理由见上\n\t\t\t}",
 		"pkg": "./",
 		"test": "TestDocPathRefsResolve",
-		"want": "本条在空转",
+		"want": "的路径 `state.md`",
 		"expect": "red"
 	},
 	{
