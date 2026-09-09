@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 )
 
 // guard 从 .env 构造下单安全阀，并把受保护的持仓腿一并交给它。
@@ -19,7 +20,28 @@ import (
 // **接线那一步在被省略时是不可见的**。
 func (r *Runner) guard() kq.Guard {
 	return kq.Guard{AllowOrder: r.Env.AllowOrder, MaxVolume: r.Env.MaxVolume,
-		Protected: protectedLegs, TradingDay: r.tradingDay()}
+		Protected: r.protectedLegs(), TradingDay: r.tradingDay()}
+}
+
+// protectedLegs 取这次运行要保护的持仓腿。
+//
+// ⚠️ 它可以被**注入**（Runner.Protected 非 nil 时用注入的），
+// 而注入这条路是为了让接线测试**不依赖清单当下是不是空的**。
+//
+// 上一版直接读包级的 protectedLegs，于是清单一空，
+// TestGuardCarriesProtectedLegs 就 t.Skip —— **接线可以在没有保护的日子里
+// 静默烂掉**。那个盲区当时写在破坏 188 里将就了，而 20260909 结算后
+// 清单真的空了，两条破坏（184/188）**同时失去意义** ——
+// ⚠️ 那说明它不是一个可以将就的盲区，是一个该修的设计。
+//
+// ⚠️ nil 与空切片在这里**含义不同**：nil = 没注入、用声明的那份；
+// 空切片 = 注入了一份空的。两者混同会让「注入一个空清单」
+// 悄悄退回成「用声明的」，而那正好是测试想区分的。
+func (r *Runner) protectedLegs() []safety.ProtectedLeg {
+	if r.Protected != nil {
+		return r.Protected
+	}
+	return protectedLegs
 }
 
 // tradingDay 取柜台报的交易日；截面还没回来时返回空串。

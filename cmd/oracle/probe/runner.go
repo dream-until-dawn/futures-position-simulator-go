@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 )
 
 // Runner 跑一条实验。
@@ -30,6 +31,11 @@ type Runner struct {
 	// 拿它去构造「不是最小变动价位的整数倍」，构造出来的价格是整数倍，
 	// 于是那一项**根本没被违反** —— 而实验照样会跑完、照样打印结果。
 	Specs string
+
+	// Protected 覆盖本次运行要保护的持仓腿；nil 表示用 exp_overnight.go 里声明的那份。
+	//
+	// ⚠️ 它存在**只为让接线测试不依赖清单当下是不是空的** —— 见 protectedLegs()。
+	Protected []safety.ProtectedLeg
 
 	cli *kq.Client
 }
