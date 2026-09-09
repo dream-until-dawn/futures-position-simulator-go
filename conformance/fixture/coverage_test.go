@@ -115,7 +115,9 @@ func TestPositionFieldEvidence(t *testing.T) {
 	// 20260909 16:20：14 → 10。结算后空头昨仓第一次出现，
 	// volume_short_his / _yd / pos_short_his / position_cost_short_his 四个
 	// 同时拿到非零观测（kq_facts 52）。⚠️ 这个数只许降。
-	const pinnedOnlyZero = 10
+	// 20260910：10 → 9。position-frozen 在过夜空仓上补掉了 volume_short_frozen_his，
+	// 那是持仓侧冻结六个字段里最后一个零观测的。⚠️ 这个数只许降。
+	const pinnedOnlyZero = 9
 	switch {
 	case len(onlyZero) > pinnedOnlyZero:
 		t.Errorf("⚠️ 只见过零的字段从 %d 涨到 %d —— **退化**："+
@@ -190,14 +192,24 @@ func TestFrozenFieldsAreTheThinnestEvidence(t *testing.T) {
 		t.Logf("  %-30s 非零 ×%d  零 ×%d  \"-\" ×%d", k, o.nonZero, o.zero, o.absent)
 	}
 	t.Logf("⚠️ 至今零非零观测的冻结字段共 %d 个：%v", len(never), never)
-	t.Log("⚠️ oracle 的 probe.zeroObserved 应当**正好是这几个**。" +
+	t.Log("⚠️ oracle 的 probe.zeroObserved 应当**正好是这几个**（现在：一个都不剩）。" +
 		"两处各记一份，对不上的后果是实验一直去补已经有的样本，且不报错。" +
 		"主模块不 import oracle，所以这里只能打出来给人对，断言不了。")
 
-	// ⚠️ 全都有观测时本条该被重写而不是留着 —— 那时它在空转。
-	if len(never) == 0 {
-		t.Error("⚠️ 六个冻结字段都拿到非零观测了 —— " +
-			"position-frozen 实验的目的已达成，去把 zeroObserved 表和本条一起重写")
+	// ⚠️ 本条 20260910 重写过一次，理由是它自己要求的：
+	// 六个字段全部拿到非零观测之后，「还差哪几个」这个问题就没有内容了。
+	//
+	// 判据因此翻过来：**不再问「还差几个」，改问「有没有退回去」**。
+	// 一个曾经有观测的字段变回零非零，只有两种可能 ——
+	// 语料被删了，或者采集器不再采它。两者都要当场知道。
+	//
+	// ⚠️ 这不是「把绿的条件放宽」：原判据要求 len(never) > 0，
+	// 而现在要求 len(never) == 0。**方向是反的，门槛更高。**
+	if len(never) > 0 {
+		t.Errorf("⚠️ 这几个冻结字段**退回**到零非零观测了：%v —— "+
+			"它们在 20260910 之前全部拿到过实测（最后一个 volume_short_frozen_his "+
+			"是结算后拿过夜空仓补上的）。退回只有两种可能：语料被删了，"+
+			"或者采集器不再采它", never)
 	}
 }
 

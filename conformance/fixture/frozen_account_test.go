@@ -116,7 +116,10 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 	// 20260909 第三次：34 → 36。日盘那次近半 tick 扫描的截面进了夹具树。
 	// ⚠️ 一天抬三次，本身值得看一眼 —— 三次都是**新证据进来**（实时对拍、
 	// 开盘前自检、日盘实验），不是判据放松。抬的理由不同，处理方式才相同。
-	const comparedRatchet = 36
+	// 20260910：36 → 48。position-frozen 在**过夜空仓**上跑了一轮，
+	// 落了五份带委托的截面 —— 空头昨仓这一侧此前一份都没有。
+	// ⚠️ 一天抬四次，每次都是**新证据进来**而不是判据放松。
+	const comparedRatchet = 48
 	switch {
 	case compared < comparedRatchet:
 		t.Errorf("⚠️ 只比了 %d 个字段，此前是 %d —— 覆盖变小了。"+

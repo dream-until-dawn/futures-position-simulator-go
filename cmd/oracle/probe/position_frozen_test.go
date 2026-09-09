@@ -39,6 +39,12 @@ func sig(cands []closable) []string {
 func TestClosableCandidates(t *testing.T) {
 	cases := []struct {
 		name    string
+		// inject 非空时，临时把它塞进 zeroObserved 再跑这条用例。
+		//
+		// ⚠️ 它让「排序」这件事**不依赖那张表当下是不是空的**。
+		// 20260910 那张表清空之后，原来考验排序的用例自动退化成考验原序 ——
+		// 而排序逻辑从此没人验，且没有任何东西会说话。
+		inject string
 		p       map[string]any
 		wantErr bool
 		want    []string // 期望的**完整顺序**
@@ -71,12 +77,21 @@ func TestClosableCandidates(t *testing.T) {
 			want: []string{"long/CLOSE/SELL", "short/CLOSETODAY/BUY", "short/CLOSE/BUY"},
 		},
 		{
-			// ⚠️ 这一条现在是**唯一**还能考验排序的用例：
-			// volume_short_frozen_his 是仅剩的零观测字段，而它只有
-			// 「空头有昨仓」时才够得着。空头昨仓要过夜，今晚造不出来。
-			name: "两边都只有昨仓 → 空头（仅剩的零观测）在前",
+			// ⚠️ 20260910 改：zeroObserved 已经空了（六个冻结字段全部拿到实测），
+			// 于是 hitsZeroObserved 恒假、候选**回到原序** —— 多头在前。
+			//
+			// ⚠️ 排序机制本身不能因此不测了：那正是这一天最容易发生的事 ——
+			// **表一空，测排序的用例就跟着变成测「原序」，而排序逻辑从此没人验。**
+			// 所以下一条用例**注入**一个零观测字段，专门考验排序。
+			name: "两边都只有昨仓、且无零观测字段 → 保持原序（多头在前）",
 			p:    pos("volume_long_today", 0.0, "volume_long_his", 2.0, "volume_short_today", 0.0, "volume_short_his", 2.0),
-			want: []string{"short/CLOSE/BUY", "long/CLOSE/SELL"},
+			want: []string{"long/CLOSE/SELL", "short/CLOSE/BUY"},
+		},
+		{
+			name:     "注入一个零观测字段 → 它对应的组合被提前",
+			p:        pos("volume_long_today", 0.0, "volume_long_his", 2.0, "volume_short_today", 0.0, "volume_short_his", 2.0),
+			inject:   "volume_short_frozen_his",
+			want:     []string{"short/CLOSE/BUY", "long/CLOSE/SELL"},
 		},
 		{
 			name:    "两边全空 → 报错",
@@ -97,6 +112,11 @@ func TestClosableCandidates(t *testing.T) {
 	}
 	okN, errN := 0, 0
 	for _, c := range cases {
+		if c.inject != "" {
+			saved := zeroObserved
+			zeroObserved = map[string]bool{c.inject: true}
+			defer func() { zeroObserved = saved }()
+		}
 		got, err := closableCandidates(c.p)
 		if c.wantErr {
 			errN++
@@ -189,19 +209,24 @@ func TestFmtFrozenKeepsNonZero(t *testing.T) {
 	}
 }
 
-// TestZeroObservedIsNotEverything 断言「零观测」表**不是全集**。
+// TestZeroObservedIsWellFormed 核零观测表的形状。
 //
-// ⚠️ 六个字段全列进去的话，排序退化成恒等 —— 那时
-// TestClosableCandidates 里那几条关于顺序的断言全都平凡成立，
-// 而它们看起来仍然在测顺序。
+// # ⚠️ 20260910 重写：原来那条要求这张表**非空**
 //
-// ⚠️ 这张表会过期：观测到一个就该挪走一个。挪空了本条会红，那是对的 ——
-// 到那时这个实验的目的已经达成，排序规则该重写而不是留着空转。
-func TestZeroObservedIsNotEverything(t *testing.T) {
-	if len(zeroObserved) == 0 {
-		t.Fatal("⚠️ 零观测表空了 —— 六个冻结字段都取到过非零值的话，" +
-			"本实验的排序规则已经没有意义，该重写而不是留着空转")
-	}
+// 原话是「零观测表空了 —— 本实验的排序规则已经没有意义，该重写而不是留着空转」。
+// 那天到了：六个冻结字段全部拿到非零观测，表清空了。
+//
+// ⚠️ 而「没有意义」这个判断**只对了一半**，去核代码才看清：
+// closableCandidates 的调用方是 `for i, pick := range cands`，**没有 break** ——
+// 每个候选都会被试。于是排序决定的只是**先试哪一个**，
+// 不决定**试不试**。
+//
+//	⇒ 排序是**便利**，不是**正确性机制**。表空着不是缺陷，是稳态。
+//
+// 所以这条守卫改成只查形状（键有效、不覆盖全部），不再要求非空。
+// ⚠️ 排序逻辑本身仍然被验着 —— TestClosableCandidates 里有一条
+// **注入**零观测字段的用例，它不依赖这张表当下是不是空的。
+func TestZeroObservedIsWellFormed(t *testing.T) {
 	if len(zeroObserved) >= len(frozenFields) {
 		t.Fatalf("⚠️ 零观测表有 %d 项，冻结字段共 %d 个 —— "+
 			"全列进去会让排序退化成恒等，而关于顺序的断言全都平凡成立",
@@ -217,6 +242,8 @@ func TestZeroObservedIsNotEverything(t *testing.T) {
 				"拼错的键谁都打不中，而排序会静默退化", k)
 		}
 	}
+	t.Logf("零观测表 %d 项（冻结字段共 %d 个）—— 空是稳态，见本条注释",
+		len(zeroObserved), len(frozenFields))
 }
 
 // TestPositionFrozenUsesTheGuards 断言几个判定**真的在实验路径上**。

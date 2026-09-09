@@ -229,16 +229,22 @@ func (c closable) target() string {
 //
 // ⚠️ 这张表是排序的依据，不是断言。它会过期 —— 一旦某个字段被观测到，
 // 它就该从这里挪走，否则实验会一直去补一份已经有了的样本。
-var zeroObserved = map[string]bool{
-	// 20260909 一晚补掉三个，按本表自己的规矩挪走了：
-	//	volume_long_frozen_today   DCE.m2701 挂平今 1 手
-	//	volume_short_frozen        rb2701 开一手空今仓后挂平今
-	//	volume_short_frozen_today  同上
-	//
-	// ⚠️ 只剩这一个，而它**今晚够不着**：要一手**过夜的空仓**，
-	// 昨仓只能等结算。留着它是对的 —— 明天结算后就够得着了。
-	"volume_short_frozen_his": true,
-}
+// ⚠️ **这张表现在是空的，而空着正是这个实验的目的达成。**
+//
+// 20260909 一晚补掉三个：
+//	volume_long_frozen_today   DCE.m2701 挂平今 1 手
+//	volume_short_frozen        rb2701 开一手空今仓后挂平今
+//	volume_short_frozen_today  同上
+//
+// 最后一个 volume_short_frozen_his 要一手**过夜的空仓** —— 昨仓只能等结算。
+// 20260909 日终结算后那手空今仓变成空昨 1，20260910 补上：
+// short 方向发 CLOSE 1 手 → volume_short_frozen_his 0 → 1，撤单完整释放。
+//
+// ⚠️ 表空了之后 hitsZeroObserved 恒假，于是候选**回到原序** ——
+// 那是对的：没有零观测字段要打，就没有理由偏爱某个组合。
+// ⚠️ 留着这张空表而不是删掉它：下一个零观测字段出现时（比如换了合约、
+// 换了口子），它是那时候唯一现成的挂钩。
+var zeroObserved = map[string]bool{}
 
 // closableCandidates 列出全部「方向×开平」组合，**按判别力排序**。
 //
