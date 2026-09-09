@@ -62,9 +62,21 @@ const devOnlyMarker = "**只在 `dev` 上**"
 // 评审方一度把本地的横幅与 origin 的包摆在一起，拼出过一个吓人的结论 ——
 // **两个事实取自不同的 ref**（见 silent-risks 方法论 65）。
 //
-// 不改成查 origin/main 的理由：全仓引用 `origin/` 的测试目前是 0 处，
-// 引进来意味着测试依赖**网络与远端状态**，而那会让离线跑不出结果。
-// ⚠️ 写下来，别当它已经守住了。
+// ⚠️ **这里原本写着一条「所以不改」的理由，而那条理由是假的**：
+// 「引进来意味着测试依赖**网络**，离线跑不出结果」—— 
+// `origin/main` 是 `refs/remotes/origin/main`，**本地引用，读它不联网**。实测：
+//
+//	GIT_ALLOW_PROTOCOL=none git ls-tree -r --name-only origin/main  → 211 个文件 ✅
+//	GIT_ALLOW_PROTOCOL=none git ls-remote origin                    → fatal: transport not allowed
+//
+// 对照组当场失败，证明协议确实被禁 —— 而前者根本没走传输。
+//
+// ⚠️ **一个错的理由比没有理由更糟**：没有理由时这个问题还开着；
+// 写了理由，它就结案了 —— 而这条理由结掉的是一个**刚被登记为盲区**的问题。
+//
+// 成立的只剩**陈旧性**：`origin/main` 只新鲜到上一次 `fetch`。
+// 而它弱得多 —— 陈旧的 `origin/main` 至少是**某个用户某一刻真的拿到过**的东西，
+// 本地 main 则谁都没拿到过。
 func TestDevOnlyClaimIsAccurate(t *testing.T) {
 	touchGitState(t) // ⚠️ 见它的注释：不读一遍 git 状态，这条测试会被缓存端出旧判决
 
@@ -77,12 +89,13 @@ func TestDevOnlyClaimIsAccurate(t *testing.T) {
 	// ⚠️ 一条守卫逼着文档写一句假话，比它不存在更坏。
 	// 它真正要防的从来不是「有没有领先」，是
 	// **「横幅有没有把 main 上没有的东西说成已实现」** —— 那是包的存在性问题。
-	onlyOnDev := packagesOnlyOn(t, "HEAD", "main")
+	base, how := mainRef(t)
+	onlyOnDev := packagesOnlyOn(t, "HEAD", base)
 
 	body := strings.Join(readLines(t, filepath.Join("docs", "fidelity.md")), "\n")
 	has := strings.Contains(body, devOnlyMarker)
-	t.Logf("只在 dev 上的包 %v；fidelity.md 里%s那句区分",
-		onlyOnDev, map[bool]string{true: "有", false: "没有"}[has])
+	t.Logf("只在 dev 上的包 %v（基准 %s，来自 %s）；fidelity.md 里%s那句区分",
+		onlyOnDev, base, how, map[bool]string{true: "有", false: "没有"}[has])
 	switch {
 	case len(onlyOnDev) > 0 && !has:
 		t.Errorf("⚠️ 这些包**只在 dev 上**：%v，而 docs/fidelity.md 里没有 %q —— "+
@@ -93,6 +106,33 @@ func TestDevOnlyClaimIsAccurate(t *testing.T) {
 			"那是一条**低报**：把已经合进去的东西说成还没合。"+
 			"评审门禁①明写「低报也算」", devOnlyMarker)
 	}
+}
+
+// mainRef 挑一个可用的 `main` 基准，并**报告用的是哪一个**。
+//
+// ⚠️ 它补的是本条第二处盲区：`git clone` 一个本地仓库**只带当前检出的那个分支**，
+// 于是副本里没有 `main`，而上一版在那种情况下直接 `t.Skip` —— 
+// **跳过是绿的，而 `go test ./...` 对「有 skip 的包」照样打 `ok`**：
+// 跳过在汇总层面**完全看不见**。
+//
+// 2026-09-09 评审方在副本里验证时正好走进这个盲区，并因此一度报出
+// 「破坏 160 与 244 都变绿了」—— 实际是这条守卫**根本没跑**。
+//
+// ⚠️ 回落到 `origin/main` 而不是继续 skip：它是**本地引用**（读它不联网，见上），
+// 且它至少是**某个用户某一刻真的拿到过**的东西。
+// ⚠️ 「用的是哪一个」必须打出来 —— 「查到了」与「拿什么当基准查的」是两件事。
+func mainRef(t *testing.T) (ref, how string) {
+	t.Helper()
+	for _, c := range []struct{ ref, how string }{
+		{"main", "本地 main"},
+		{"origin/main", "⚠️ 本地无 main，回落到 origin/main（只新鲜到上次 fetch）"},
+	} {
+		if err := exec.Command("git", "rev-parse", "--verify", c.ref).Run(); err == nil {
+			return c.ref, c.how
+		}
+	}
+	t.Skip("⚠️ 本地既没有 main 也没有 origin/main —— 这条守卫**没有查任何东西**")
+	return "", ""
 }
 
 // packagesOnlyOn 返回 ref 上有、而 base 上没有的 Go 包目录。
