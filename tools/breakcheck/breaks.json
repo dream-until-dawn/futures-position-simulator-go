@@ -1775,14 +1775,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "160 状态横幅删掉「只在 dev 上」那句区分",
+		"name": "160 横幅把「只在 dev 上」塞回去：而此刻没有任何包只在 dev 上（低报）",
 		"dir": "",
 		"file": "docs/fidelity.md",
-		"old": "**只在 `dev` 上**  报单校验与冻结（`order`）、对拍差异的分类登记",
-		"new": "已实现            报单校验与冻结（`order`）、对拍差异的分类登记",
+		"old": ">\tdev 与 main    **当前一致**",
+		"new": ">\tdev 与 main    **只在 `dev` 上** 没有任何东西",
 		"pkg": "./",
 		"test": "TestDevOnlyClaimIsAccurate",
-		"want": "说成了已实现",
+		"want": "那是一条**低报**",
 		"expect": "red"
 	},
 	{

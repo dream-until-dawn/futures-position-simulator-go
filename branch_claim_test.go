@@ -3,7 +3,7 @@ package futsim
 import (
 	"os/exec"
 	"path/filepath"
-	"strconv"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -29,8 +29,12 @@ const devOnlyMarker = "**只在 `dev` 上**"
 //
 // ⚠️ **两个方向都查**，理由与评审门禁①同：低报与高报同样是过期陈述。
 //
-//	dev 比 main 多  → 横幅里必须有那句区分
-//	两者一样        → 那句区分必须**消失**（否则是低报）
+//	有包只在 dev 上  → 横幅里必须有那句区分
+//	一个都没有      → 那句区分必须**消失**（否则是低报）
+//
+// ⚠️ 判据是**包的存在性**，不是提交数 —— 20260909 第一次合并之后当场换的，
+// 理由写在函数体里：纯文档提交会让 dev「领先」，而据此要求横幅写
+// 「order 只在 dev 上」是逼文档说一句**假话**。
 //
 // # ⚠️ 它的盲区，写出来
 //
@@ -42,29 +46,71 @@ const devOnlyMarker = "**只在 `dev` 上**"
 // 这条守卫**跳过**。跳过是绿的，而绿在这里意味着「没查」。
 func TestDevOnlyClaimIsAccurate(t *testing.T) {
 	touchGitState(t) // ⚠️ 见它的注释：不读一遍 git 状态，这条测试会被缓存端出旧判决
-	if _, err := exec.Command("git", "rev-parse", "--verify", "main").Output(); err != nil {
-		t.Skipf("⚠️ 本地没有 main 分支，这条守卫**没有查任何东西**：%v", err)
-	}
-	out, err := exec.Command("git", "rev-list", "--count", "main..HEAD").Output()
-	if err != nil {
-		t.Skipf("⚠️ 数不出 main..HEAD：%v —— 这条守卫没有查任何东西", err)
-	}
-	ahead, err := strconv.Atoi(strings.TrimSpace(string(out)))
-	if err != nil {
-		t.Fatalf("git 返回的不是数字：%q", out)
-	}
+
+	// ⚠️ 判据是**包在不在**，不是**领先几个提交**。
+	//
+	// 上一版数的是 `main..HEAD` 的提交数。2026-09-09 第一次真的合并之后立刻暴露：
+	// 合完再推两个**纯文档**提交，dev 就「领先 2 个」，于是它要求横幅重新写上
+	// 「报单校验与冻结只在 dev 上」—— **而那句话此刻是假的**，order 已经在 main 上了。
+	//
+	// ⚠️ 一条守卫逼着文档写一句假话，比它不存在更坏。
+	// 它真正要防的从来不是「有没有领先」，是
+	// **「横幅有没有把 main 上没有的东西说成已实现」** —— 那是包的存在性问题。
+	onlyOnDev := packagesOnlyOn(t, "HEAD", "main")
+
 	body := strings.Join(readLines(t, filepath.Join("docs", "fidelity.md")), "\n")
 	has := strings.Contains(body, devOnlyMarker)
-	t.Logf("dev 比 main 多 %d 个提交；fidelity.md 里%s那句区分",
-		ahead, map[bool]string{true: "有", false: "没有"}[has])
+	t.Logf("只在 dev 上的包 %v；fidelity.md 里%s那句区分",
+		onlyOnDev, map[bool]string{true: "有", false: "没有"}[has])
 	switch {
-	case ahead > 0 && !has:
-		t.Errorf("⚠️ dev 比 main 多 %d 个提交，而 docs/fidelity.md 里没有 %q —— "+
+	case len(onlyOnDev) > 0 && !has:
+		t.Errorf("⚠️ 这些包**只在 dev 上**：%v，而 docs/fidelity.md 里没有 %q —— "+
 			"横幅把只在 dev 上的东西说成了已实现。`go get` 默认拿 main，"+
-			"读的人会去 main 上找一个不存在的包，而那不会报错", ahead, devOnlyMarker)
-	case ahead == 0 && has:
-		t.Errorf("⚠️ dev 与 main 已经一样了，而 docs/fidelity.md 里还留着 %q —— "+
+			"读的人会去 main 上找一个不存在的包，而那不会报错", onlyOnDev, devOnlyMarker)
+	case len(onlyOnDev) == 0 && has:
+		t.Errorf("⚠️ 没有任何包只在 dev 上，而 docs/fidelity.md 里还留着 %q —— "+
 			"那是一条**低报**：把已经合进去的东西说成还没合。"+
 			"评审门禁①明写「低报也算」", devOnlyMarker)
 	}
+}
+
+// packagesOnlyOn 返回 ref 上有、而 base 上没有的 Go 包目录。
+//
+// ⚠️ 只看**非测试**的 .go：一个包在不在 main 上取得到由生产代码决定，
+// 测试文件在不在**不改变 `go get` 的结果**。
+func packagesOnlyOn(t *testing.T, ref, base string) []string {
+	t.Helper()
+	pkgs := func(r string) map[string]bool {
+		out, err := exec.Command("git", "ls-tree", "-r", "--name-only", r).Output()
+		if err != nil {
+			t.Skipf("⚠️ 列不出 %s 的文件，这条守卫**没有查任何东西**：%v", r, err)
+		}
+		set := map[string]bool{}
+		for _, f := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			f = strings.TrimSpace(f)
+			if !strings.HasSuffix(f, ".go") || strings.HasSuffix(f, "_test.go") {
+				continue
+			}
+			if i := strings.LastIndex(f, "/"); i > 0 {
+				set[f[:i]] = true
+			} else {
+				set["."] = true
+			}
+		}
+		return set
+	}
+	a, b := pkgs(ref), pkgs(base)
+	// ⚠️ 两侧都要卡下界：任一侧解析成空时，差集会变成一个看起来很有意义的答案
+	// （「全部都是 dev 独有」或者「什么都不独有」），而两者都是错的。
+	if len(a) < 5 || len(b) < 5 {
+		t.Fatalf("⚠️ 解析到的包数 %s=%d / %s=%d —— 太少，这条在空转", ref, len(a), base, len(b))
+	}
+	var only []string
+	for k := range a {
+		if !b[k] {
+			only = append(only, k)
+		}
+	}
+	sort.Strings(only)
+	return only
 }
