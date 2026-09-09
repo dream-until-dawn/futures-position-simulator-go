@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unsafe"
@@ -55,6 +56,20 @@ type Client struct {
 	posMu    sync.Mutex
 	pos      map[string]*def.CThostFtdcInvestorPositionField
 	posDone  chan struct{}
+	book     orderBook
+	// orderSeq 是本次会话的委托序号，**单调递增**。⚠️ 见 send 里的理由：
+	// 不递增的 OrderRef 会被 CTP 拒（ErrorID=22），而它只在第二笔单上暴露。
+	orderSeq int64
+	md       chan *def.CThostFtdcDepthMarketDataField
+	// wantInst 是**当前这次**行情查询要的合约。⚠️ 行情查询是前缀匹配，
+	// 不记下要的是哪个就会把别的合约当成答案。
+	wantInst string
+	// frontID / sessionID 来自登录应答，**撤单必须带**：
+	// CTP 用 (FrontID, SessionID, OrderRef) 三元组定位一笔委托。
+	// ⚠️ 少带一个不会报「参数缺失」，会报「找不到委托」——
+	// 而那与「这笔单已经不在了」长得一模一样。
+	frontID   int
+	sessionID int
 	params     chan *def.CThostFtdcBrokerTradingParamsField
 }
 
@@ -68,6 +83,7 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 		params:   make(chan *def.CThostFtdcBrokerTradingParamsField, 1),
 		account:  make(chan *def.CThostFtdcTradingAccountField, 1),
 		posDone:  make(chan struct{}, 1),
+		md:       make(chan *def.CThostFtdcDepthMarketDataField, 1),
 		pos:      map[string]*def.CThostFtdcInvestorPositionField{}}
 }
 
@@ -176,7 +192,21 @@ func (c *Client) Connect(timeout time.Duration) error {
 			return 0
 		}
 		c.tradingDay = text(lf.TradingDay[:])
-		c.logf("[ctp] 登录成功  交易日 %s", c.tradingDay)
+		c.frontID, c.sessionID = int(lf.FrontID), int(lf.SessionID)
+		// ⚠️ **`MaxOrderRef` 必须读，而漏读它的表现不是报错，是「第二笔单被拒」。**
+		// 登录应答里给的是该投资者**当日已经用掉的最大报单引用**，
+		// 客户端要从它往后续。20260910 夜盘之前这个字段一直没读 —— 见 probes.md §6.8。
+		max := text(lf.MaxOrderRef[:])
+		n, ok := parseMaxOrderRef(max)
+		if !ok {
+			// ⚠️ 解析不了就从 0 起，但要**说出来** —— 一个安静的回退会让
+			// 「柜台给的是个怪值」和「柜台给的是空」长得一模一样。
+			c.logf("[ctp] ⚠️ MaxOrderRef=%q 解析不出数字，报单引用从 0 起算", max)
+			n = 0
+		}
+		atomic.StoreInt64(&c.orderSeq, n)
+		c.logf("[ctp] 登录成功  交易日 %s  MaxOrderRef=%q ⇒ 报单引用从 %d 往后",
+			c.tradingDay, max, n+1)
 		f := def.CThostFtdcSettlementInfoConfirmField{}
 		copy(f.BrokerID[:], c.cred.BrokerID)
 		copy(f.InvestorID[:], c.cred.UserID)
@@ -213,6 +243,8 @@ func (c *Client) Connect(timeout time.Duration) error {
 	})
 
 	c.registerQueryCallbacks()
+	c.registerOrderCallbacks()
+	c.registerMarketDataCallback()
 
 	bs, err := syscall.BytePtrFromString(c.cred.Front)
 	if err != nil {

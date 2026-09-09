@@ -2725,5 +2725,126 @@
 		"test": "TestDevOnlyClaimIsAccurate",
 		"want": "那是一条**低报**",
 		"expect": "red"
+	},
+	{
+		"name": "245 ⚠️ 报单路径绕过安全阀（本仓库风险最高的一条）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "\tif err := c.Check(r); err != nil {\n\t\treturn \"\", err\n\t}",
+		"new": "\t_ = c.Check",
+		"pkg": "./ctp/",
+		"test": "TestSendIsTheOnlyPathToInsert",
+		"want": "没有先过安全阀",
+		"expect": "red"
+	},
+	{
+		"name": "246 多出第二条到达报单接口的路径",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))",
+		"new": "\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))\n\tif false {\n\t\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))\n\t}",
+		"pkg": "./ctp/",
+		"test": "TestSendIsTheOnlyPathToInsert",
+		"want": "只许有一条到达柜台报单接口的路径",
+		"expect": "red"
+	},
+	{
+		"name": "247 报单能力整个消失：结构守卫的循环一次都不执行，会恒绿",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "\tc.req(\"ReqOrderInsert\", unsafe.Pointer(&f))",
+		"new": "\t_ = f",
+		"pkg": "./ctp/",
+		"test": "TestSendIsTheOnlyPathToInsert",
+		"want": "报单路径不见了",
+		"expect": "red"
+	},
+	{
+		"name": "248 绕过开关的禁令改成扫原文（连注释一起扫）——第 6 处「讲/用」",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_structure_test.go",
+		"old": "\t\t\tif strings.Contains(stripComments(string(b)), w) {",
+		"new": "\t\t\tif strings.Contains(string(b), w) {",
+		"pkg": "./ctp/",
+		"test": "TestNoBypassKnob",
+		"want": "不许有绕过安全阀的开关",
+		"expect": "red"
+	},
+	{
+		"name": "249 报单引用改回带字母前缀 —— 柜台读不出数字，同一会话第二笔起全被拒。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/orderref.go",
+		"old": "return strconv.FormatInt(n, 10)",
+		"new": "return \"p\" + strconv.FormatInt(n, 10)",
+		"pkg": "./ctp/",
+		"test": "TestOrderRefIsReadableAsANumber",
+		"want": "柜台读不出数字",
+		"expect": "red"
+	},
+	{
+		"name": "250 「读不懂」被当成「读懂了是 0」—— 于是柜台给的怪值会安静地从 0 起算。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/orderref.go",
+		"old": "\t\treturn 0, false\n\t}\n\treturn n, true",
+		"new": "\t\treturn 0, true\n\t}\n\treturn n, true",
+		"pkg": "./ctp/",
+		"test": "TestParseMaxOrderRef",
+		"want": "parseMaxOrderRef",
+		"expect": "red"
+	},
+	{
+		"name": "251 发单前不再清簿 —— 重用 ref 时 Insert 秒回上一笔的终态。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/orderbook.go",
+		"old": "\tb.m[ref] = &OrderState{OrderRef: ref, VolumeTotal: volume}",
+		"new": "\tif _, ok := b.m[ref]; !ok { b.m[ref] = &OrderState{OrderRef: ref, VolumeTotal: volume} }",
+		"pkg": "./ctp/",
+		"test": "TestOrderBookResetClearsTerminalState",
+		"want": "上一笔的结局",
+		"expect": "red"
+	},
+	{
+		"name": "252 把与平台无关的函数打回 windows 专属 —— 跨平台编译当场断。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/symbol.go",
+		"old": "package ctp",
+		"new": "//go:build windows\n\npackage ctp",
+		"pkg": ".",
+		"test": "TestCrossCompiles",
+		"want": "编不过",
+		"expect": "red"
+	},
+	{
+		"name": "253 报单引用的续号旋钮被加回来 —— 它绕过的是引用唯一性这条不变量。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/send_windows.go",
+		"old": "// Insert 发一笔限价委托并等它到达一个**可判断**的状态。",
+		"new": "func (c *Client) SeedOrderSeq(n int64) { atomic.StoreInt64(&c.orderSeq, n-1) }\n\n// Insert 发一笔限价委托并等它到达一个**可判断**的状态。",
+		"pkg": "./ctp/",
+		"test": "TestNoBypassKnob",
+		"want": "拨动报单引用序号",
+		"expect": "red"
+	},
+	{
+		"name": "254 非 Windows 的桩少一个方法 —— 而 cmd/oracle 没调它，编译照样过。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/client_other.go",
+		"old": "func (c *Client) Order(string) (OrderState, bool) { return OrderState{}, false }",
+		"new": "",
+		"pkg": "./ctp/",
+		"test": "TestNonWindowsStubsCoverEveryMethod",
+		"want": "非 Windows 没有桩",
+		"expect": "red"
+	},
+	{
+		"name": "255 导出面清单里抹掉一项 —— 门禁第 ④ 条本身就靠这条守卫。",
+		"dir": "cmd/oracle",
+		"file": "docs/roadmap.md",
+		"old": "           MarketData / Capture / Check / Insert / Cancel / Order / Close；",
+		"new": "           Capture / Check / Insert / Cancel / Order / Close；",
+		"pkg": ".",
+		"test": "TestRoadmapListsEveryExport",
+		"want": "roadmap 的清单里找不到",
+		"expect": "red"
 	}
 ]

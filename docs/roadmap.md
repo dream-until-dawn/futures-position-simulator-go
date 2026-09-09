@@ -502,7 +502,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
 #### `cmd/oracle/safety`（新包，与协议无关的下单安全阀）
 
     类型   Side（枚举）/ Intent / ProtectedLeg / Valve
-    方法   Valve.Check(Intent) error
+    方法   Valve.Check(Intent) error；Side.String
 
 **枚举 `safety.Side`（`uint8`）—— 取值与零值都是导出面的一部分**：
 
@@ -519,14 +519,44 @@ D+1 日 baseline-full / close-order / yd-vs-his
 
     常量   Source / GoctpModule / DLLDirEnv / QueryGap
     变量   RequiredDLLs
-    类型   Client / Credentials / Fixture / OrderReq
-    函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots
+    类型   Client / Credentials / Fixture / OrderReq / OrderState
+    函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots /
+           Text / SplitSymbol / FarPrice
     方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
-           Capture / Check / Close；Fixture.Write；OrderReq.Symbol / String
+           MarketData / Capture / Check / Insert / Cancel / Order / Close；
+           Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
+
+⚠️ **这份清单在 20260910 之前停在 P2**：`Insert` / `Cancel` / `Order` /
+`MarketData` / `SplitSymbol` / `FarPrice` / `OrderState` 七项**一个都没记** ——
+而门禁第 ④ 条查的正是「导出面变更有没有记进 roadmap」。
+⚠️ 更糟的是我在给评审的回信里**说过它「已经改了」，而我当时没有核过** ——
+这是方法论 69 那条（一个假声明有两个副本）在**同一天内的第三次**，
+而这一次是在**汇报**里。⇒ 现在的清单是 `go doc -all ./ctp` 的输出，不是凭记忆写的。
+
+⚠️ 短命的一项：`SeedOrderSeq` 在 `08b4cf2..0b98aee` 之间存在过又被删掉，
+**从未进过本清单**。它删得对（见 probes.md §6.8 末），但「进来又出去、
+清单上一个字都没有」说明清单当时不是靠机制维持的。
 
 ⚠️ **平台**：实现只在 Windows；非 Windows 有同 API 的桩，**返回明确错误**
 而不是零值 —— 后者会让「这个平台没实现」在运行时表现成「柜台没反应」。
-`GOOS=linux go build` 已验证能过。
+`GOOS=linux go build` 能过。
+
+⚠️ **上面这两句在 20260910 之前都是假话，而且是同一个假声明的两次。**
+`MarketData` / `SplitSymbol` / `FarPrice` 三个都没有桩，跨平台根本编不过。
+第一次更正（`eb74361`，标题就叫「上一句是假的」）**只改了 5 个 `.go` 文件、
+一个 `.md` 都没碰** —— 于是「已验证能过」原封不动地留在这里，评审再次实测才抓到。
+
+> **一个标题就是「上一句是假的」的提交，把假话留在了文档里。**
+
+现在两句各有一条守卫，**它们查的不是同一件事**：
+
+    TestCrossCompiles（cmd/oracle）  真的跑 GOOS=linux / darwin 的 go build
+    TestNonWindowsStubsCoverEveryMethod（ctp）  用 AST 数两侧的方法名，双向比
+
+⚠️ 后者不能省：一个只被包外将来的调用方用到的方法缺了桩时，前者**一个字都不会说**
+（cmd/oracle 没调它，编译当然过），而这里写的是关于**包**的承诺。
+⚠️ `SplitSymbol` / `FarPrice` 当初根本不需要 tag，它们只是**被放错了文件** ——
+一个函数该不该带 tag，看的是它用了什么，不是它的邻居是谁。
 
 ⚠️ `OrderReq` 的 `Direction` / `Offset` 直接用 CTP 的枚举类型，**不新造一套**：
 新造会多一层映射，而这一侧的常量本来就容易混（`Buy` 与 `Open` 同为 `0`）。

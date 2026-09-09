@@ -53,3 +53,9 @@ testdata/probes/local/
 # 于是让**名字**带着保护，而不是让目录带着保护：DumpDir 指哪都一样。
 # ⚠️ 加这条之前核过 git ls-files "*.notify.json" == 0，不会把已入库文件变成 ignored。
 *.notify.json
+
+# CTP 的流水文件：柜台自己维护的序号，**每跑一次就变**。
+# 留在库里的后果不是冲突，是每次实测之后  都会顺手把它们带进提交，
+# 于是一个真正的改动被埋在一堆 6 字节的二进制 diff 里 —— 而那正是
+# 20260910「顺手提交了一条 breakcheck 破坏」那次的形状。
+cmd/oracle/log/
