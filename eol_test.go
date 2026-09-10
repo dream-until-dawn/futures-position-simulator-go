@@ -75,6 +75,35 @@ func scanLineEndings(root string) (scanned int, mixed, stray []string, err error
 		//
 		// ⚠️ 后果与上一条同形：breakcheck 是裸字节匹配，锚点里的换行
 		// 只按纯 CRLF 展开，打在这种文件上的破坏会**悄悄失配**。
+		// ⚠️ **第三个盲区，20260910 撞到，本条同样不查**：
+		// 一份文件**整份**从 CRLF 翻成 LF 时，`crlf == 0` ——
+		// 于是上面那个 `crlf > 0 && crlf != lf` 的**第一个合取项就假**，
+		// 而下面这条 `cr != crlf` 是 0 != 0，也假。**两条都不响。**
+		//
+		//	混用          crlf > 0 且 crlf != lf   ⇒ 查
+		//	多余的回车符  cr != crlf               ⇒ 查
+		//	⚠️ **整份翻成 LF** crlf == 0                ⇒ **不查**
+		//
+		// 起因是一句 `gofmt -w`：它把 `cmd/oracle/quote_wire_test.go` 整份写成了 LF
+		//（实测 CRLF 0 / LF 332），**而本条一个字都没说**。
+		// 评审在 `docs/design.md` 上独立复现过，跑出来是 `ok`。
+		//
+		// ⚠️ **而这个局面不是静止的**（评审 20260910 实测，我在字节级复核过）：
+		//
+		//	仓库存的（git cat-file blob）  **CRLF**，317/317，`.gitattributes` 不存在
+		//	gofmt 的输出                  ⚠️ **LF** —— eol_test.go 与 version.go 各测一次，都翻
+		//	本条                          **一个字都不会说**
+		//
+		// ⇒ **「没有约定」不等于「中立」**：两个候选里有一个**每次 `gofmt -w` 都在推进**，
+		// 另一个只靠「没人跑 gofmt -w」。20260910 已经走了一份
+		//（`cmd/oracle/quote_wire_test.go`），而它被发现纯属顺手看了一眼。
+		//
+		// ⚠️ 记在这里是**纯事实**，不含决定 —— 但读的人要知道
+		// 「先放着」不是第三个选项，**它是「归一到 LF」的慢速版本，只是没人签字**。
+		//
+		// ⚠️ **本条刻意不改**：判「整份 LF 算不算违规」要先定下全库的行尾约定，
+		// 而那个约定此刻只存在于「现状恰好是 CRLF」里 —— **没有一处写下来**。
+		// **一条守卫不该替一个从未被决定的约定做决定。**（列为待办。）
 		if cr := bytes.Count(b, []byte("\r")); cr != crlf {
 			stray = append(stray, fmt.Sprintf("%s（回车符 %d 个，其中只有 %d 个跟着换行）",
 				p, cr, crlf))
@@ -146,5 +175,81 @@ func TestStrayCRIsActuallyCaught(t *testing.T) {
 		t.Fatalf("⚠️ 期望**只有** bad.md 被判出多余回车符，得到 %v —— "+
 			"bad.md 正是 20260909 那次真实事故的形状：每个换行前面都有回车，"+
 			"条数相等，因此躲得过「混着 CRLF 与 LF」那一条", stray)
+	}
+}
+
+// TestNoFileUsesCRLF 钉住 **2026-09-10 使用者裁决的行尾约定：全库 LF**。
+//
+// # ⚠️ 为什么它是新加的一维，而不是改上面那条
+//
+// `TestNoFileMixesLineEndings` 查两件事：**混用**、**多余的回车符**。
+// ⚠️ 两者对「一份文件**整份**从 CRLF 翻成 LF」都是瞎的（`crlf == 0` 时
+// 两个判据的第一个合取项都假）—— 而在**约定未定**的年代，那个瞎是对的：
+// **一条守卫不该替一个从未被决定的约定做决定。**
+//
+// 约定定下来之后，那个瞎就该补上了。而补法是**加一维**，不是改那两维 ——
+// 那两维有自己的单元测试与破坏（189/190）钉着，改它们会把它们打死。
+//
+// # ⚠️ 这条约定为什么必须有守卫
+//
+//	git 对象库里   **一直是 LF**（`core.autocrlf=true` 在 add 时归一）
+//	工作树         **CRLF**（同一个 autocrlf 在 checkout 时铺回去）
+//	而上面那条     读的是**工作树**
+//
+// ⚠️ ⇒ **它此前量的是本机 git 配置的产物，不是仓库的内容。**
+// 同一个提交在 `autocrlf=false` 的机器上检出会是 LF，那条看到的东西完全不同 ——
+// **一条判据依赖每台机器的本地配置，而它自己不知道这一点。**
+//
+// ⇒ `.gitattributes` 写下 `eol=lf` 之后，工作树与对象库一致，
+// 这条守卫看到的才是仓库里真正存着的东西。见 `.gitattributes` 的完整理由。
+func TestNoFileUsesCRLF(t *testing.T) {
+	var withCRLF []string
+	n := 0
+	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		switch strings.ToLower(filepath.Ext(p)) {
+		case ".go", ".json", ".md", ".sh", ".yml", ".yaml":
+		default:
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		n++
+		if c := bytes.Count(b, []byte("\r\n")); c > 0 {
+			withCRLF = append(withCRLF, fmt.Sprintf("%s（%d 处 CRLF）", p, c))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ⚠️ **把两条扫描的范围钉在一起。** 两处各写一份过滤规则，
+	// 它们会悄悄分叉 —— 而分叉之后「两条都绿」说明不了任何事：
+	// 可能只是各自扫了自己那一半。
+	scanned, _, _, err := scanLineEndings(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != scanned {
+		t.Fatalf("⚠️ 本条扫到 %d 个文件，而 TestNoFileMixesLineEndings 扫到 %d 个 —— "+
+			"**两处的过滤规则分叉了**，此后「两条都绿」说明不了任何事", n, scanned)
+	}
+	if n < 50 {
+		t.Fatalf("⚠️ 只扫了 %d 个文件（下界 50）—— 过滤条件八成写错了，本条在空转", n)
+	}
+	if len(withCRLF) > 0 {
+		t.Errorf("⚠️ 这些文件用了 CRLF，而 `.gitattributes` 定的是 **LF**（2026-09-10 裁决）：\n  %s\n"+
+			"⚠️ 多半是一次 `gofmt -w` 之外的写入 —— 归一回 LF。"+
+			"**约定已经写下来了，所以这条现在有东西可执行**", strings.Join(withCRLF, "\n  "))
 	}
 }

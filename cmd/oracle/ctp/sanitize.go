@@ -38,6 +38,9 @@ type Fixture struct {
 	Account map[string]any `json:"account,omitempty"`
 	// Positions 按 "SHFE.rb2701" 键。
 	Positions map[string]map[string]any `json:"positions,omitempty"`
+	// Quotes 是行情快照，按 "SHFE.rb2701" 键。⚠️ **可以为空**：
+	// 多数截面不需要行情，而**要行情的那些必须显式要**（见 AttachQuote）。
+	Quotes map[string]map[string]any `json:"quotes,omitempty"`
 
 	// Dropped 逐个记下**被白名单去掉的键名**（不记值）。
 	//

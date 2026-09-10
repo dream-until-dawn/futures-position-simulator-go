@@ -523,7 +523,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
     函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots /
            Text / SplitSymbol / FarPrice
     方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
-           MarketData / Capture / Check / Insert / Cancel / Order / Close；
+           MarketData / Capture / AttachQuote / Check / Insert / Cancel / Order / Close；
            Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
 
 ⚠️ **这份清单在 20260910 之前停在 P2**：`Insert` / `Cancel` / `Order` /

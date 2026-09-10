@@ -14,6 +14,40 @@ import (
 // ⚠️ 顺序是**先脱敏、再落盘**，与 kq 那侧同一条纪律：
 // 先落原始盘再擦，原始文件已经上过磁盘、可能已经进过 git index ——
 // 一次 `git add -A` 就够了。
+// AttachQuote 往一份已经拍好的截面上补一条行情快照。
+//
+// # ⚠️ 为什么是**单独一步**，不并进 Capture
+//
+// 行情要指定合约，而 `Capture` 拍的是账户与持仓 —— 它不知道该问哪个合约，
+// 也不该猜。⚠️ 更要紧的是：把它并进去意味着**每一次拍截面都会多发一次查询**，
+// 而 CTP 的查询是**限流**的（见 QueryGap），一次多余的查询会让下一次该查的排队。
+//
+// # ⚠️ 它补的是一个**已经声明过的盲区**
+//
+// probes.md §6.9 写着：`PositionProfit` 与今结算价严格对上，
+// 但夹具里没有最新价字段，所以「基准是今结算价」与「基准是最新价而此刻两者相等」
+// **分不开**。⚠️ **而声明一个盲区不等于关掉它** —— 20260910 评审指出，
+// 次日那份实验清单里没有一件抓行情，于是那个盲区会原样留到后天。
+//
+// ⚠️ 最该抓的一刻是**开盘那一瞬**：停盘期间最新价与结算价大概率相等（分不开），
+// 而重开之后行情在动，两者最可能不等（分得开）。
+func (c *Client) AttachQuote(f *Fixture, symbol string, timeout time.Duration) error {
+	md, err := c.MarketData(symbol, timeout)
+	if err != nil {
+		return fmt.Errorf("查 %s 的行情：%w", symbol, err)
+	}
+	m, dropped, err := sanitizeStruct(*md, quoteFields)
+	if err != nil {
+		return fmt.Errorf("脱敏 %s 的行情：%w", symbol, err)
+	}
+	if f.Quotes == nil {
+		f.Quotes = map[string]map[string]any{}
+	}
+	f.Quotes[symbol] = m
+	f.Dropped = append(f.Dropped, dropped...)
+	return nil
+}
+
 func (c *Client) Capture(timeout time.Duration, note string) (*Fixture, error) {
 	f := &Fixture{
 		Source:     Source,

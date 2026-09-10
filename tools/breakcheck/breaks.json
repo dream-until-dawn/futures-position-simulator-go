@@ -2837,14 +2837,136 @@
 		"expect": "red"
 	},
 	{
-		"name": "255 导出面清单里抹掉一项 —— 门禁第 ④ 条本身就靠这条守卫。",
+		"name": "255 包里多出一个没记进 roadmap 的导出标识符 —— 门禁第 ④ 条本身就靠这条守卫。⚠️ 锚**故意放在代码上**：上一版锚在导出面清单那一行，而那条守卫存在的唯一目的就是逼那一行改 —— 于是它每成功一次，这条破坏就死一次。",
 		"dir": "cmd/oracle",
-		"file": "docs/roadmap.md",
-		"old": "           MarketData / Capture / Check / Insert / Cancel / Order / Close；",
-		"new": "           Capture / Check / Insert / Cancel / Order / Close；",
+		"file": "cmd/oracle/ctp/orderbook.go",
+		"old": "import \"sync\"",
+		"new": "import \"sync\"\n\n// Unlisted 是破坏 255 注入的导出面：它不在 roadmap 的清单里。\nfunc Unlisted() {}",
 		"pkg": ".",
 		"test": "TestRoadmapListsEveryExport",
-		"want": "roadmap 的清单里找不到",
+		"want": "而 roadmap 的清单里找不到",
+		"expect": "red"
+	},
+	{
+		"name": "256 补行情失败那一支的 return 降成一句日志 —— 半份截面照样落盘。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上",
+		"new": "\t\t\t\t_ = fmt.Errorf(\"⚠️ 行情没补上",
+		"pkg": ".",
+		"test": "TestQuoteFailureBlocksTheWrite",
+		"want": "没有 return",
+		"expect": "red"
+	},
+	{
+		"name": "257 补行情整块被拿掉 —— 守卫查不到它要查的东西，必须当场说话。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
+		"new": "",
+		"pkg": ".",
+		"test": "TestQuoteFailureBlocksTheWrite",
+		"want": "出现 0 次",
+		"expect": "red"
+	},
+	{
+		"name": "258 落盘挪到补行情**之前** —— 失败时半份证据已经在磁盘上了。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
+		"new": "\t\t_, _ = fx.Write(*dump, \"early\", nil, nil)\n\t\tif *quote != \"\" {\n\t\t\t// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：\n\t\t\t// 一份少了 quotes 的截面与一份没要过 quotes 的截面\n\t\t\t// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。\n\t\t\tif err := c.AttachQuote(fx, *quote, *timeout); err != nil {\n\t\t\t\treturn fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+\n\t\t\t\t\t\"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w\", err)\n\t\t\t}\n\t\t}\n",
+		"pkg": ".",
+		"test": "TestQuoteFailureBlocksTheWrite",
+		"want": "之后",
+		"expect": "red"
+	},
+	{
+		"name": "259 多出第二处 AttachQuote 调用 —— 它绕开「失败则不落盘」那两条断言。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tsecrets := map[string]string{\n\t\t\t\"CTP_USER_ID\": env.CTPUserID, \"CTP_PASSWORD\": env.CTPPassword,\n\t\t\t\"CTP_BROKER_ID\": env.CTPBrokerID, \"CTP_APP_ID\": env.CTPAppID,\n\t\t\t\"CTP_AUTH_CODE\": env.CTPAuthCode,\n\t\t}",
+		"new": "\t\t_ = c.AttachQuote(fx, *quote, *timeout)\n\t\tsecrets := map[string]string{\n\t\t\t\"CTP_USER_ID\": env.CTPUserID, \"CTP_PASSWORD\": env.CTPPassword,\n\t\t\t\"CTP_BROKER_ID\": env.CTPBrokerID, \"CTP_APP_ID\": env.CTPAppID,\n\t\t\t\"CTP_AUTH_CODE\": env.CTPAuthCode,\n\t\t}",
+		"pkg": ".",
+		"test": "TestAttachQuoteHasOneCallSite",
+		"want": "恰好 1 次",
+		"expect": "red"
+	},
+	{
+		"name": "260 挂价的方向与委托的方向被拆开 —— 探针会当场成交，而日志长得一模一样。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tVolume: 1, LimitPrice: ctp.FarPrice(md, dir),",
+		"new": "\t\tVolume: 1, LimitPrice: ctp.FarPrice(md, def.THOST_FTDC_D_Buy),",
+		"pkg": ".",
+		"test": "TestRestingPriceMatchesDirection",
+		"want": "必须是同一个",
+		"expect": "red"
+	},
+	{
+		"name": "261 开平从平今改成开仓 —— ⚠️ 单子照样挂得上、阀不拦，而冻结保证金那个数把结论翻过来。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\t\tdef.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)",
+		"new": "\t\t\tdef.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_Open)",
+		"pkg": ".",
+		"test": "TestDirectionAndOffsetAreSetTogether",
+		"want": "开平与方向不配对",
+		"expect": "red"
+	},
+	{
+		"name": "262 方向与开平拆成两行分别赋值 —— 「只改了一行」在源码里看不出任何异样。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tdir, off = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell),\n\t\t\tdef.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)",
+		"new": "\t\tdir = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell)\n\t\toff = def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)",
+		"pkg": ".",
+		"test": "TestDirectionAndOffsetAreSetTogether",
+		"want": "必须成对赋值",
+		"expect": "red"
+	},
+	{
+		"name": "263 挂着时的截面挪到撤单之后拍 —— ⚠️ 冻结字段已归零，夹具看起来完美支持结论，而它什么都没测。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\tif err := c.Cancel(st.OrderRef, req); err != nil {\n\t\treturn err\n\t}\n\tif capErr != nil {\n\t\treturn capErr\n\t}",
+		"new": "\tif err := c.Cancel(st.OrderRef, req); err != nil {\n\t\treturn err\n\t}\n\tif fx2, e2 := c.Capture(*timeout, \"late\"); e2 == nil {\n\t\t_ = fx2\n\t}\n\tif capErr != nil {\n\t\treturn capErr\n\t}",
+		"pkg": ".",
+		"test": "TestHeldCaptureHappensBeforeCancel",
+		"want": "之后",
+		"expect": "red"
+	},
+	{
+		"name": "264 拍截面失败就提前返回 —— ⚠️ 那笔单还挂在柜台上，而进程走了。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\tif err := c.Cancel(st.OrderRef, req); err != nil {",
+		"new": "\tif capErr != nil {\n\t\treturn capErr\n\t}\n\tif err := c.Cancel(st.OrderRef, req); err != nil {",
+		"pkg": ".",
+		"test": "TestHeldCaptureHappensBeforeCancel",
+		"want": "出现了 return",
+		"expect": "red"
+	},
+	{
+		"name": "265 保证金去掉「按手数」那一项 —— ⚠️ CTP 对拍**仍然绿**：那一项在这批样本上恒为零。",
+		"dir": "",
+		"file": "margin/margin.go",
+		"old": "\texchange = notional.Mul(byMoney).Add(v.Mul(byVolume))",
+		"new": "\texchange = notional.Mul(byMoney)",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "",
+		"expect": "green",
+		"why": "CTP 这批夹具里 `MarginRateByVolume` **全是 0**，于是 `exchange = notional×byMoney + volume×byVolume` 的第二项**永远不参与** —— 去掉它，本条照样全绿。⚠️ 与手续费那次同形（一个恒为零的项让「相加」与「二选一」无从区分），而这里更进一步：**它让那一项连「有没有被算」都测不出来**。⇒ 要它开口，需要一个 ByVolume 非零的品种，本口子上暂时没有。"
+	},
+	{
+		"name": "266 保证金去掉「按金额」那一项 —— CTP 对拍必须红。",
+		"dir": "",
+		"file": "margin/margin.go",
+		"old": "\texchange = notional.Mul(byMoney).Add(v.Mul(byVolume))",
+		"new": "\texchange = v.Mul(byVolume)",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "柜台给",
 		"expect": "red"
 	}
 ]
