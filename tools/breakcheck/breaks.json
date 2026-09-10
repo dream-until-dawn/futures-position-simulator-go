@@ -770,10 +770,10 @@
 		"old": "\t\tif st, found := cli.OrderOf(orderID); found &&\n\t\t\tstrings.EqualFold(st.Status, \"FINISHED\") {\n\t\t\treturn cur, orderFinished\n\t\t}",
 		"new": "",
 		"pkg": "./probe/",
-		"test": "TestPositionFrozen",
+		"test": "TestPositionFrozenUsesTheGuards|TestPositionFrozenDumpsWhileHeld|TestPositionFrozenStopsOnFill|TestPositionFrozenLimitPriceIsFar",
 		"want": "",
 		"expect": "green",
-		"why": "删掉这一段之后，柜台拒单会走到 timedOut，于是被记成「该柜台不在持仓侧记冻结手数」——一条关于柜台的**错误结论**，而它看起来与真结论一模一样。全套单测照样绿。⚠️ 这是本实验声明的盲区：waitFrozen 的三态只有连着真柜台才验得了，单测这一层覆盖不到它。跑 position-frozen 时必须**亲眼看那三行日志分支**，不能只看它没报错。"
+		"why": "删掉这一段之后，柜台拒单会走到 timedOut，于是被记成「该柜台不在持仓侧记冻结手数」——一条关于柜台的**错误结论**，而它看起来与真结论一模一样。全套单测照样绿。⚠️ 这是本实验声明的盲区：waitFrozen 的三态只有连着真柜台才验得了，单测这一层覆盖不到它。跑 position-frozen 时必须**亲眼看那三行日志分支**，不能只看它没报错。\n\n⚠️ 20260910 更正：这一条此前的 test 字段写的是 `TestPositionFrozen`，而 breakcheck 是**锚定**跑 `-run '^…$'` 的，那个名字在 probe 包里并不存在（真实名字是四个更长的）。于是它一条测试也没选中，go test 打印 \"no tests to run\"、PASS、退出 0，**每一次全量运行都把它报成「如预期仍然绿」**。它跑了零条测试，却一直在替我背书这个盲区。现在写全那四个名字。"
 	},
 	{
 		"name": "71 下单限价换成对手价（是个调用，但不是 FarPrice）",
@@ -1453,16 +1453,15 @@
 		"expect": "red"
 	},
 	{
-		"name": "131 冻结合计漏掉昨仓那部分",
+		"name": "131 冻结合计漏掉昨仓那部分（19 份夹具接了冻结，其中 1 份有昨仓冻结）",
 		"dir": "",
 		"file": "view/position.go",
 		"old": "\t\t\tv[\"volume_\"+n+\"_frozen\"] = Num(decimal.NewFromInt(int64(ft + fh)))",
 		"new": "\t\t\tv[\"volume_\"+n+\"_frozen\"] = Num(decimal.NewFromInt(int64(ft)))",
 		"pkg": "./conformance/fixture/",
-		"test": "TestPositionViewCoversMeasuredFields",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 现有夹具**一份都没有**接上 order 包（HasFrozen 恒为假），于是合计那一支根本走不到，改坏它照样绿。声明的盲区：冻结这一块要到实时对拍把柜台的 orders 喂进来才验得了 —— 而那正是下一步。⚠️ 本条与「测试写错了」不同：判据本身是对的，只是**没有输入能走到它**。"
+		"test": "TestPositionViewAcrossAllFixtures",
+		"want": "失败字段 volume_long_frozen",
+		"expect": "red"
 	},
 	{
 		"name": "132 委托冻结把「下单方向」当成「被平持仓方向」",
@@ -2976,7 +2975,7 @@
 		"old": "\t\t\tif err := r.dump(\"position-frozen-held\", fmt.Sprintf(",
 		"new": "\t\t\tif err := r.dump(\"position-frozen-late\", fmt.Sprintf(",
 		"pkg": "./probe/",
-		"test": "TestPositionFrozen",
+		"test": "TestPositionFrozenDumpsWhileHeld",
 		"want": "没有落盘",
 		"expect": "red"
 	},
@@ -3000,6 +2999,39 @@
 		"pkg": "./conformance/fixture/",
 		"test": "TestCloseOrderIsStructurallyUnmeasurable",
 		"want": "有昨仓",
+		"expect": "red"
+	},
+	{
+		"name": "270 清单点名的测试被改名 —— ⚠️ TestEveryBreakNamesARealTest 的红搭档",
+		"dir": "",
+		"file": "view/position_test.go",
+		"old": "func TestFlatSideIsAbsentNotZero(t *testing.T) {",
+		"new": "func TestFlatSideIsAbsentNotZeroRenamed(t *testing.T) {",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestEveryBreakNamesARealTest",
+		"want": "点名的测试 TestFlatSideIsAbsentNotZero",
+		"expect": "red"
+	},
+	{
+		"name": "271 运行期不再拦「no tests to run」 —— ⚠️ TestZeroTestsIsNotAVerdict 的红搭档",
+		"dir": "",
+		"file": "tools/breakcheck/breakcheck.go",
+		"old": "\tif strings.Contains(text, \"no tests to run\") {",
+		"new": "\tif false && strings.Contains(text, \"no tests to run\") {",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestZeroTestsIsNotAVerdict",
+		"want": "判定却是「如预期仍然绿」",
+		"expect": "red"
+	},
+	{
+		"name": "272 neverWereTests 里的名字真的变成了测试（豁免过期而没人说）",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "var neverWereTests = map[string]string{",
+		"new": "func TestPositionFrozen(t *testing.T) {}\n\nvar neverWereTests = map[string]string{",
+		"pkg": "./",
+		"test": "TestDocTestRefsResolve",
+		"want": "现在真的是一条测试了",
 		"expect": "red"
 	}
 ]

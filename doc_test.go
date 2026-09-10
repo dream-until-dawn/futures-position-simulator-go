@@ -941,6 +941,23 @@ func isCommandDir(t *testing.T, dir string) bool {
 // ⚠️ 它必须逐条写理由，且**只能收「讲历史的那种引用」**。
 // 一个可以随手加名字的豁免表，比没有这张表更坏 —— 那时
 // TestDocTestRefsResolve 会退化成「把红的那个加进白名单」。
+// neverWereTests 是**文档里写出、但它从来就不是一条测试**的名字。
+//
+// ⚠️ 与 goneTests 分开，不是洁癖：goneTests 的含义是「曾经有，后来没了」，
+// 把一个从没存在过的名字塞进去，会在那张表里种一句假话 ——
+// 将来读的人会据此以为它曾经存在过。
+//
+// ⚠️ 同样只收「讲历史」的引用，同样逐条写理由。
+// 而且下面额外钉一条：**表里的名字一旦真的成了测试，本条要红** ——
+// 否则这张表会烂在原地，替一个已经能解析的名字继续开着口子。
+var neverWereTests = map[string]string{
+	"TestPositionFrozen": "⚠️ 它是 breaks.json 里破坏 70 的 `test` 字段写错的那个值 —— " +
+		"probe 包里只有四个更长的名字。breakcheck 锚定跑 `-run '^…$'`，" +
+		"于是它选中零条测试、退出 0，**每一次全量运行都把那条破坏报成「如预期仍然绿」**。" +
+		"⚠️ 文档里那几处写出这个字符串，讲的正是**这个名字不解析**这件事本身，" +
+		"改写成一个真实测试名会把整段更正抹掉。见 silent-risks.md 那一节的 20260910 更正",
+}
+
 var goneTests = map[string]string{
 	"TestShortHistoryCostHasNeverBeenObserved": "⚠️ 它**完成使命之后被删掉了**：" +
 		"20260909 16:20 结算后空头昨仓第一次出现，绊线如期变红，" +
@@ -1027,6 +1044,10 @@ func TestDocTestRefsResolve(t *testing.T) {
 			t.Logf("ⓘ %s 已不在代码里，按 goneTests 放行：%s", name, why)
 			continue
 		}
+		if why, ok := neverWereTests[name]; ok {
+			t.Logf("ⓘ %s 从来就不是一条测试，按 neverWereTests 放行：%s", name, why)
+			continue
+		}
 		sort.Strings(where)
 		missing = append(missing, fmt.Sprintf("%s（%s）", name, strings.Join(where, "、")))
 	}
@@ -1037,8 +1058,18 @@ func TestDocTestRefsResolve(t *testing.T) {
 			"⚠️ 修法是把文档指到现在那条上；只有当那句话讲的是**历史**"+
 			"（记一次误判、一次翻案）时，才把它加进 goneTests 并写清理由", m)
 	}
-	t.Logf("文档点名的测试 %d 个，代码里有 %d 个测试函数，已不在的 %d 个（都在 goneTests 里）",
-		len(refs), len(have), len(goneTests))
+	// ⚠️ 豁免表要会自己过期：名字一旦真的成了测试，这条豁免就该拆掉。
+	// 不然它会替一个**已经能解析**的名字继续开着口子，而没有任何东西会说。
+	for name, why := range neverWereTests {
+		if have[name] {
+			t.Errorf("⚠️ neverWereTests 里的 %s **现在真的是一条测试了** —— "+
+				"把它从表里删掉，让 TestDocTestRefsResolve 正常解析它。"+
+				"原来的理由：%s", name, why)
+		}
+	}
+	t.Logf("文档点名的测试 %d 个，代码里有 %d 个测试函数，"+
+		"已不在的 %d 个（goneTests）、从来不是测试的 %d 个（neverWereTests）",
+		len(refs), len(have), len(goneTests), len(neverWereTests))
 }
 
 var (
@@ -1139,7 +1170,7 @@ func TestDocPathRefsResolve(t *testing.T) {
 }
 
 var (
-	mdLinkRe   = regexp.MustCompile(`\[[^\]]*\]\(([^)\s]+)\)`)
+	mdLinkRe = regexp.MustCompile(`\[[^\]]*\]\(([^)\s]+)\)`)
 	// ⚠️ 这个模式里有反引号，写不成 Go 的原始字符串，只能用带转义的那种 ——
 	// 于是点号要写成两个反斜杠加点。写错一次的表现是**编译不过**，
 	// 那反而是好消息：换成少一个反斜杠而仍然合法的写法，它会安静地匹配错。
