@@ -376,7 +376,7 @@
 | `docs/design.md` | 28 |
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
-| `docs/probes.md` | 112 |
+| `docs/probes.md` | 118 |
 | `docs/roadmap.md` | 32 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
