@@ -96,9 +96,39 @@
 `SettlementPrice 3141` / `UseMargin 5033.60` = 1.6×3146 —— 用结算价算不出这个数）。
 ① 问的是**跨过一次结算之后 B 还成不成立**，不是重复。
 
+#### ✅ 已建仓（自然日 2026-09-10 13:57，交易日 20260910 日盘）
+
+    P（开仓价）= **3148**            截面 testdata/ctp/ctp-status-20260910-7.json
+    OpenCost   31480 = 3148×10
+    UseMargin  5036.80 = 1.6×3148    PositionDate "1"（今仓）/ YdPosition 0
+    昨结       3164                   涨停 3322 / 跌停 3005
+    账户       Available 19994888.493 = Balance 19999925.293 − CurrMargin 5036.8 ✓
+
+**两个候选于是变成具体的数**：
+
+    候选 B（开仓价定死）    明日 UseMargin = **5036.80**
+    候选 A（逐日盯市重置）  明日 UseMargin = 1.6 × S，S = 交易日 20260910 的结算价
+
+⚠️ **柜台的声明站在 B 这边**：`ctp-params` 读到 `MarginPriceType "4" 开仓价`。
+但工具自己标了「这是**声明**不是**行为**」—— ① 问的正是它跨过结算之后还算不算数。
+
+##### ⚠️ 建仓当场就看得见的两个「判别力为零」风险
+
+    截面里 SettlementPrice（盘中滚动）= 3148 = P
+      ⇒ 若今天收盘的结算价仍是 3148，**① 什么都分不开**，不许当成 B 的确认
+    截面里 LastPrice = 3148 = P
+      ⇒ **③ 此刻判别力为零**（probes.md §6.10 要的是 LastPrice ≠ 开仓价）
+        必须等价格走开之后再拍，而不是现在拍一张「拍到了」的截面
+
+> ⚠️ 一张在判别力为零的时刻拍下的截面，**会通过所有守卫、进夹具、被将来的人引用** ——
+> 而它测的是一件所有人都同意的事。这正是方法论 79 那一格。
+
+⇒ **收盘后（15:00 之后）第一件事：读交易日 20260910 的结算价 S，与 3148 比。**
+S == 3148 时如实记「未触发」，不改任何结论。
+
 **命令**：
 
-    建   oracle ctp-hold -symbol SHFE.rb2701 -keep
+    建   oracle ctp-hold -symbol SHFE.rb2701 -keep      ✅ 已跑
     拍   oracle ctp-hold   -symbol SHFE.rb2701 -rounds 1        ①
          oracle ctp-order  -close -dump testdata/ctp            ②  ⚠️ 这条代码路径**从没跑过**
          oracle ctp-params -dump testdata/ctp -quote SHFE.rb2701 ③  ⚠️ 要挑 LastPrice ≠ P 的时刻
