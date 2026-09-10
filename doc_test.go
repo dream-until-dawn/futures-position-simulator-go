@@ -1362,3 +1362,62 @@ func TestDateRoleMatchesFormat(t *testing.T) {
 	t.Logf("角色词与格式一致 %d 处，错配 %d 处；⚠️ 光秃秃的日期（无角色词）本条**不查**",
 		okPairs, bad)
 }
+
+// methodologyNumRe 认的是方法论条目的行首编号：`**80. ⚠️ …**`。
+var methodologyNumRe = regexp.MustCompile(`(?m)^\*\*(\d+)\. `)
+
+// TestMethodologyNumbersAreContiguous 钉住方法论编号**不重、不缺、从 1 起**。
+//
+// ⚠️ 这一条补的是仓库自己记过的一个洞：state.md 里写着某次编号错
+// 「是我后来**核方法论编号时撞见的**，不是任何守卫抓到的」。
+//
+// 编号是这份文档的**引用地址** —— 代码注释里到处是「方法论第 28 条」。
+// 重号之后两条内容抢同一个地址，而**被引用的那一方不会有任何变化**：
+// 读的人跳过去，看见一条讲得通的条目，就停下了。
+//
+//	⚠️ 引错地址的失败模式，是**读到了另一条同样成立的话**。
+//
+// ⚠️ 而产生重号的动作极其平常：手工在末尾追加一条，编号自己敲。
+// 本条就是在一次连加两条（80、81）之后立刻补的。
+func TestMethodologyNumbersAreContiguous(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("docs", "silent-risks.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := methodologyNumRe.FindAllSubmatch(b, -1)
+	// ⚠️ 判别力：正则一旦不匹配，下面每一条断言都在空集合上成立
+	// （方法论 80）。条数下界让「正则写坏了」以红的形式出现。
+	if len(ms) < 60 {
+		t.Fatalf("⚠️ 只认出 %d 条方法论 —— 太少，正则八成不对，本条在空转", len(ms))
+	}
+	seen := map[int]int{}
+	max := 0
+	for _, m := range ms {
+		n, err := strconv.Atoi(string(m[1]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		seen[n]++
+		if n > max {
+			max = n
+		}
+	}
+	for n, c := range seen {
+		if c > 1 {
+			t.Errorf("⚠️ 方法论第 %d 条**编号重复**（出现 %d 次）—— "+
+				"代码注释里「方法论第 %d 条」从此指向两条内容，"+
+				"而跳过去的人会读到其中一条、觉得讲得通，然后停下", n, c, n)
+		}
+	}
+	var gaps []int
+	for n := 1; n <= max; n++ {
+		if seen[n] == 0 {
+			gaps = append(gaps, n)
+		}
+	}
+	if len(gaps) > 0 {
+		t.Errorf("⚠️ 方法论**缺号** %v（最大 %d）—— "+
+			"要么是删条目时没重排，要么是新加的那条敲错了数字", gaps, max)
+	}
+	t.Logf("方法论 %d 条，编号 1..%d 连续无重", len(ms), max)
+}

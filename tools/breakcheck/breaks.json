@@ -1453,7 +1453,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "131 冻结合计漏掉昨仓那部分（19 份夹具接了冻结，其中 1 份有昨仓冻结）",
+		"name": "131 冻结合计漏掉昨仓那部分（19 个样本接上了冻结）",
 		"dir": "",
 		"file": "view/position.go",
 		"old": "\t\t\tv[\"volume_\"+n+\"_frozen\"] = Num(decimal.NewFromInt(int64(ft + fh)))",
@@ -3032,6 +3032,28 @@
 		"pkg": "./",
 		"test": "TestDocTestRefsResolve",
 		"want": "现在真的是一条测试了",
+		"expect": "red"
+	},
+	{
+		"name": "273 方法论编号重号（新加一条时敲了个已有的数）",
+		"dir": "",
+		"file": "docs/silent-risks.md",
+		"old": "**81. ⚠️ 拿两次运行相减",
+		"new": "**80. ⚠️ 拿两次运行相减",
+		"pkg": "./",
+		"test": "TestMethodologyNumbersAreContiguous",
+		"want": "编号重复",
+		"expect": "red"
+	},
+	{
+		"name": "274 方法论缺号（删条目时没重排）",
+		"dir": "",
+		"file": "docs/silent-risks.md",
+		"old": "**80. ⚠️ 空集合上",
+		"new": "**82. ⚠️ 空集合上",
+		"pkg": "./",
+		"test": "TestMethodologyNumbersAreContiguous",
+		"want": "缺号",
 		"expect": "red"
 	}
 ]
