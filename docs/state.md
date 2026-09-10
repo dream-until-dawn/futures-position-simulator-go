@@ -290,16 +290,23 @@
 
 #### ✅ 那个动作当天就做了（12:48 → 12:59），重算一遍
 
-    清单            274 → **290** 条（+16）
-    被钉过的测试    157 → **173** 个 ⇒ 42.0% → **46.3%**
-    零破坏的生产包    6 → **5** 个（account 出列）
+    清单            274 → **296** 条（+22）
+    被钉过的测试    157 → **176** 个 ⇒ 42.0% → **47.1%**
+    零破坏的生产包    6 → **4** 个（account、internal/decimalx 出列）
     核心四包        account 0→5   margin 2→5   fee 2→6   pnl 1→5
-    want 为空的红破坏  0 → **0**（新加的 16 条每条都验到第三层）
+    internal/decimalx  0 → **6**
+    want 为空的红破坏  0 → **0**（新加的 22 条每条都验到第三层）
 
-⚠️ **剩下的 5 个零破坏包**：`types` / `internal/decimalx` / `refdata/live` /
-`cmd/refdata-sync` / `cmd/settlement` —— 它们不在「逐日盯市的算术本体」里，
-所以不在本批。⚠️ 但 `internal/decimalx` 是取整口径的实现，
-而取整口径是判别实验 5 的对象，**下一批该轮到它**。
+⚠️ **剩下的 4 个零破坏包**：`types` / `refdata/live` /
+`cmd/refdata-sync` / `cmd/settlement` —— 都不在「逐日盯市的算术本体」里。
+⚠️ 其中 `types` 是 `TradingDay` / `Direction` / `Offset` 的定义处，
+**下一批该轮到它**：交易日的合法性判定错了，会以「日期看起来正常」的形态往下传。
+
+⚠️ `internal/decimalx` 那一批里 293 值得单记：`TestLibrarySemantics`
+**直接调 `v.Round(Cents)` / `v.Truncate(Cents)`，从不经过 `Apply`** ——
+它测的是**依赖库的语义**（它的注释写明了这一点），
+所以它看不见「`HalfUpToCent` 派发错了」。一眼看去它像是盖住了取整。
+实测下来 `TestThreeCandidatesDiffer` 抓得住 ⇒ **没有洞，而这件事此前没人核过。**
 
 ⚠️ 这一批里最值钱的不是那 16 条，是**它逼出来的两句缺掉的断言**：
 
