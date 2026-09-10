@@ -192,12 +192,16 @@ func TestStrayCRIsActuallyCaught(t *testing.T) {
 //
 // # ⚠️ 这条约定为什么必须有守卫
 //
-//	仓库此前存的  CRLF，317/317，而**没有任何一处写下过这个约定**
-//	gofmt 的输出  **LF** —— 每个 Go 文件、每次 `gofmt -w` 都翻一份
+//	git 对象库里   **一直是 LF**（`core.autocrlf=true` 在 add 时归一）
+//	工作树         **CRLF**（同一个 autocrlf 在 checkout 时铺回去）
+//	而上面那条     读的是**工作树**
 //
-// ⇒ 定成 CRLF 意味着每个人每次格式化后都要**记得**还原，而本仓库
-// 反复证明过纪律挡不住；定成 LF 则与工具链一致，`gofmt` 从此不再制造漂移。
-// 见 `.gitattributes` 里的完整理由。
+// ⚠️ ⇒ **它此前量的是本机 git 配置的产物，不是仓库的内容。**
+// 同一个提交在 `autocrlf=false` 的机器上检出会是 LF，那条看到的东西完全不同 ——
+// **一条判据依赖每台机器的本地配置，而它自己不知道这一点。**
+//
+// ⇒ `.gitattributes` 写下 `eol=lf` 之后，工作树与对象库一致，
+// 这条守卫看到的才是仓库里真正存着的东西。见 `.gitattributes` 的完整理由。
 func TestNoFileUsesCRLF(t *testing.T) {
 	var withCRLF []string
 	n := 0
