@@ -2945,5 +2945,27 @@
 		"test": "TestHeldCaptureHappensBeforeCancel",
 		"want": "出现了 return",
 		"expect": "red"
+	},
+	{
+		"name": "265 保证金去掉「按手数」那一项 —— ⚠️ CTP 对拍**仍然绿**：那一项在这批样本上恒为零。",
+		"dir": "",
+		"file": "margin/margin.go",
+		"old": "\texchange = notional.Mul(byMoney).Add(v.Mul(byVolume))",
+		"new": "\texchange = notional.Mul(byMoney)",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "",
+		"expect": "green"
+	},
+	{
+		"name": "266 保证金去掉「按金额」那一项 —— CTP 对拍必须红。",
+		"dir": "",
+		"file": "margin/margin.go",
+		"old": "\texchange = notional.Mul(byMoney).Add(v.Mul(byVolume))",
+		"new": "\texchange = v.Mul(byVolume)",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "柜台给",
+		"expect": "red"
 	}
 ]
