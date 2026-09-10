@@ -3264,7 +3264,7 @@ breakcheck 跑的是这一行：
     干净跑： go test ./conformance/fixture/ -run '^(TestPositionViewAcrossAllFixtures)$' -v
     破坏跑： go test ./conformance/fixture/ -v            ⚠️ **整包**
 
-    grep -c volume_short_frozen  →  干净 0 / 破坏 6
+    grep -c volume_short_frozen  →  干净那一跑 0 / 破坏那一跑 6
 
 我读成了「短边也新失败了 6 处」。实际上那 6 行来自 `coverage_test.go` ——
 **它在干净那一跑里根本没被执行**。0 不是「没有」，是「没跑到」。

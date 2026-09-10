@@ -13,6 +13,7 @@ package futsim
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -1420,4 +1421,156 @@ func TestMethodologyNumbersAreContiguous(t *testing.T) {
 			"要么是删条目时没重排，要么是新加的那条敲错了数字", gaps, max)
 	}
 	t.Logf("方法论 %d 条，编号 1..%d 连续无重", len(ms), max)
+}
+
+// breakRefRe 认的是文档与注释里对破坏的引用：`破坏 265`。
+var breakRefRe = regexp.MustCompile(`破坏 (\d+)`)
+
+// retiredBreakNums 是**文字里提到、而清单里已经没有**的破坏编号，逐个写理由。
+//
+// ⚠️ 与 goneTests 同一条规矩：只收「讲历史的那种引用」，逐条写理由。
+// 一个可以随手加名字的豁免表，比没有这张表更坏。
+//
+// ⚠️ 而且下面额外钉一条：**编号一旦回到清单里，本条要红** ——
+// 否则这张表会烂在原地，替一个已经能解析的编号继续开着口子。
+var retiredBreakNums = map[string]string{
+	"1": "⚠️ 讲的是 20260910 重编号**之前**那件事：前缀 1 当时被 12 条共用。" +
+		"state.md 那一段记的正是「我写下『零处歧义引用』，而加进歧义引用的是同一个提交」——" +
+		"把它改写成新号 356 会把「当时它是歧义的」这件事本身抹掉",
+	"4": "⚠️ 同上：前缀 4 当时被 11 条共用（新号 359）。" +
+		"testnames_test.go 里那句「一句『破坏 4』指向十一条内容」是这条守卫存在的理由，" +
+		"改写成一个唯一编号会让那句话变成废话",
+}
+
+// TestBreakRefsResolve 断言**文字里点名的每一个破坏编号都真的存在**。
+//
+// ⚠️ 它是被一次自己打脸逼出来的：我核完 `docs/` 与 `*.go`，写下
+// 「仓库里零处歧义引用」，而**加进两处歧义引用的正是写下它的那个提交** ——
+// 那两处在 `breaks.json` 自己的破坏名里。
+//
+//	我把清单当成「被描述的东西」，没当成「引用住的地方」。
+//	而它两样都是：破坏名里既讲别的破坏，又被别人讲。
+//
+// ⇒ 所以本条**不挑地方**：`.md` / `.go` / `.json` 一律扫。
+// 「核查的范围由我此刻想到的地方决定，而漏掉的那个地方不会举手」——
+// 这条守卫就是用来替掉「此刻想到」的。
+//
+// ⚠️ 它防的是**悬空**，不是歧义。歧义那一半由
+// TestBreakNumbersAreUniqueAndPresent 在清单侧保证编号唯一来防。
+func TestBreakRefsResolve(t *testing.T) {
+	breaksPath := filepath.Join("tools", "breakcheck", "breaks.json")
+	raw, err := os.ReadFile(breaksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var breaks []struct {
+		Name string `json:"name"`
+		Why  string `json:"why"`
+	}
+	if err := json.Unmarshal(raw, &breaks); err != nil {
+		t.Fatal(err)
+	}
+	have := map[string]bool{}
+	for _, b := range breaks {
+		if m := regexp.MustCompile(`^(\d+) `).FindStringSubmatch(b.Name); m != nil {
+			have[m[1]] = true
+		}
+	}
+	if len(have) < 100 {
+		t.Fatalf("⚠️ 只认出 %d 个破坏编号 —— 太少，本条在空转", len(have))
+	}
+
+	refs := map[string][]string{}
+	err = filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" || d.Name() == "testdata" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// ⚠️ 破坏清单**按字段扫**，不扫原文 —— 见下面那一段。
+		if p == breaksPath {
+			return nil
+		}
+		if !strings.HasSuffix(p, ".md") && !strings.HasSuffix(p, ".go") &&
+			!strings.HasSuffix(p, ".json") {
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		for _, m := range breakRefRe.FindAllSubmatch(b, -1) {
+			refs[string(m[1])] = append(refs[string(m[1])], p)
+		}
+		return nil
+	})
+	// ⚠️ **`old` / `new` 是补丁载荷，不是散文。**
+	//
+	// 一条破坏的 new 字段里出现一个「破坏 + 某个不存在的号」，
+	// 那是**要写进别的文件的字节**，不是一句引用。
+	// 按原文扫清单会把它当成悬空引用 ——
+	// 而那条破坏的全部作用正是**制造**一处悬空引用去验本条。
+	//
+	// ⚠️ 顺带记一次现场：这段注释的第一版里**写出了那个号的数字**，
+	// 于是 doc_test.go 自己成了一处悬空引用，本条当场把自己弄红。
+	// **写关于引用的话，本身就造了一次引用** —— 与「讲/用」同一族。
+	//
+	//	⚠️ 于是本条会被「验它的那条破坏」自己弄红：每成功一次死一次（方法论 74）。
+	//
+	// ⇒ 清单只扫 name 与 why：那两个字段是写给人读的，其余是给机器用的。
+	for _, b := range breaks {
+		for _, text := range []string{b.Name, b.Why} {
+			for _, m := range breakRefRe.FindAllStringSubmatch(text, -1) {
+				refs[m[1]] = append(refs[m[1]], breaksPath+"（name/why）")
+			}
+		}
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(refs) < 10 {
+		t.Fatalf("⚠️ 只认出 %d 个破坏引用 —— 太少，正则八成不对，本条在空转", len(refs))
+	}
+
+	for num, where := range refs {
+		if have[num] {
+			continue
+		}
+		if why, ok := retiredBreakNums[num]; ok {
+			t.Logf("ⓘ 破坏 %s 已不在清单里，按 retiredBreakNums 放行：%s", num, why)
+			continue
+		}
+		sort.Strings(where)
+		t.Errorf("⚠️ 文字里点名的**破坏 %s 在清单里不存在**（%s）—— "+
+			"多半是重编号或删掉了，而**改一个破坏的编号不会让任何文档变红**。"+
+			"修法是把文字指到现在那条上；只有当那句话讲的是**历史**时，"+
+			"才把它加进 retiredBreakNums 并写清理由",
+			num, strings.Join(uniq(where), "、"))
+	}
+	// ⚠️ 豁免表要会自己过期：编号一旦回到清单，这条豁免就该拆掉。
+	for num, why := range retiredBreakNums {
+		if have[num] {
+			t.Errorf("⚠️ retiredBreakNums 里的破坏 %s **又回到清单里了** —— "+
+				"把它从表里删掉，让本条正常解析它。原来的理由：%s", num, why)
+		}
+	}
+	t.Logf("文字里点名的破坏编号 %d 个，清单里有 %d 条，已退休的 %d 个",
+		len(refs), len(have), len(retiredBreakNums))
+}
+
+// uniq 去重且保序，用来让报错里的文件列表不重复。
+func uniq(ss []string) []string {
+	seen := map[string]bool{}
+	out := ss[:0:0]
+	for _, s := range ss {
+		if !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	return out
 }
