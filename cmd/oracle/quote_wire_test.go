@@ -241,13 +241,23 @@ func TestRestingPriceMatchesDirection(t *testing.T) {
 	}
 }
 
-// legalLegs 是 `ctp-order` 允许的**方向与开平的配对**，⚠️ 只有这两种。
+// legalLegs 是 `ctp-order` 允许的**方向与开平的配对**。
+//
+// ⚠️ 20260910 夜盘从两种加到三种。加的是**卖+平昨**，而它是被一次真实拒单逼出来的：
+// `-close` 把平今写死，拿它去平一手**昨仓**，上期所直接
+// `ErrorID=50 平仓位不足` —— 而上期所是 `UseHistory`，今昨必须显式声明。
+//
+//	⚠️ 那一支从建立起就没跑过，所以没人知道它平不了昨仓。
+//
+// 判据没变：三种都是「**挂得上、成不了**」的那一端 ——
+// 买+开挂跌停、卖+平今与卖+平昨挂涨停。**不是「又多允许一种」，是同一条判据下的第三个成员。**
 //
 //	买 + 开      挂跌停 —— 挂得上、成不了
 //	卖 + 平今    挂涨停 —— 挂得上、成不了
 var legalLegs = map[[2]string]bool{
-	{"THOST_FTDC_D_Buy", "THOST_FTDC_OF_Open"}:        true,
-	{"THOST_FTDC_D_Sell", "THOST_FTDC_OF_CloseToday"}: true,
+	{"THOST_FTDC_D_Buy", "THOST_FTDC_OF_Open"}:            true,
+	{"THOST_FTDC_D_Sell", "THOST_FTDC_OF_CloseToday"}:     true,
+	{"THOST_FTDC_D_Sell", "THOST_FTDC_OF_CloseYesterday"}: true,
 }
 
 // TestDirectionAndOffsetAreSetTogether 钉住 `runCTPOrder` 的**第二条**不变式：
@@ -313,7 +323,8 @@ func TestDirectionAndOffsetAreSetTogether(t *testing.T) {
 		pair := [2]string{exprName(as.Rhs[di]), exprName(as.Rhs[oi])}
 		if !legalLegs[pair] {
 			t.Errorf("⚠️ 第 %d 处的配对是 %v —— **开平与方向不配对**。"+
-				"只允许「买+开」与「卖+平今」，两者都是「挂得上、成不了」的那一端", n, pair)
+				"只允许「买+开」「卖+平今」「卖+平昨」，三者都是"+
+				"「挂得上、成不了」的那一端", n, pair)
 		}
 		return true
 	})
@@ -402,8 +413,8 @@ func TestHeldCaptureHappensBeforeCancel(t *testing.T) {
 	// `Capture`，而只看第一处的守卫**一个字都不会说** —— 那份晚拍的截面会以
 	// 另一个文件名落进 testdata/，冻结字段全是零，**而它看起来完美支持结论**。
 	if lastCapPos > cancelPos {
-		t.Errorf("⚠️ 有 `Capture` 出现在 `Cancel` **之后** —— 撤单已经把冻结字段释放回零，"+
-			"⚠️ **而一份撤单后拍的截面，与一份「本来就不冻」的截面长得一模一样**。"+
+		t.Errorf("⚠️ 有 `Capture` 出现在 `Cancel` **之后** —— 撤单已经把冻结字段释放回零，" +
+			"⚠️ **而一份撤单后拍的截面，与一份「本来就不冻」的截面长得一模一样**。" +
 			"它会看起来完美支持 kq_facts 42，而其实什么都没测 —— **比拍不到更坏**")
 	}
 	// ⚠️ 四：Capture 与 Cancel 之间不许有 return。
@@ -426,8 +437,8 @@ func TestHeldCaptureHappensBeforeCancel(t *testing.T) {
 	}
 	for _, st := range fn.Body.List[i+1 : j] {
 		if hasReturn(blockOf(st)) {
-			t.Errorf("⚠️ `Capture` 与 `Cancel` 之间出现了 return —— "+
-				"**那笔单还挂在柜台上，而进程走了**。"+
+			t.Errorf("⚠️ `Capture` 与 `Cancel` 之间出现了 return —— " +
+				"**那笔单还挂在柜台上，而进程走了**。" +
 				"拍截面失败要留到撤完再报（与落盘那边**方向相反**：那边失败必须提前返回）")
 		}
 	}
