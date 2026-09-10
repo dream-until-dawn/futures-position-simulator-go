@@ -3110,5 +3110,82 @@
 		"test": "TestUnfreezeBeyondFrozenRejected",
 		"want": "超过已冻结的 5000，本该报错",
 		"expect": "red"
+	},
+	{
+		"name": "280 逐日盯市口径退化成逐笔对冲（平仓盈亏用开仓价而非基线）",
+		"dir": "",
+		"file": "pnl/pnl.go",
+		"old": "\t\tr.ByDate = r.ByDate.Add(closePrice.Sub(l.Basis).Mul(q))\n",
+		"new": "\t\tr.ByDate = r.ByDate.Add(closePrice.Sub(l.OpenPrice).Mul(q))\n",
+		"pkg": "./pnl/",
+		"test": "TestCloseProfitTwoStandardsDiffer",
+		"want": "逐日盯市应为 500，实为 700",
+		"expect": "red"
+	},
+	{
+		"name": "281 卖出方向不翻号（空头盈亏与多头同号）",
+		"dir": "",
+		"file": "pnl/pnl.go",
+		"old": "\tcase types.Sell:\n\t\treturn decimal.NewFromInt(-1), nil\n",
+		"new": "\tcase types.Sell:\n\t\treturn decimal.NewFromInt(1), nil\n",
+		"pkg": "./pnl/",
+		"test": "TestSellSignFlips",
+		"want": "空头应是多头的相反数",
+		"expect": "red"
+	},
+	{
+		"name": "282 「解不出来」被报成解出来了（分母太小时返回 ok=true）",
+		"dir": "",
+		"file": "pnl/pnl.go",
+		"old": "\t\treturn decimal.Zero, false\n",
+		"new": "\t\treturn decimal.Zero, true\n",
+		"pkg": "./pnl/",
+		"test": "TestSolveBasisRecoversAndRefuses",
+		"want": "本该报解不出",
+		"expect": "red"
+	},
+	{
+		"name": "283 当日盈亏改成平仓盈亏减持仓盈亏",
+		"dir": "",
+		"file": "pnl/pnl.go",
+		"old": "\treturn closeProfit.Add(positionProfit)\n",
+		"new": "\treturn closeProfit.Sub(positionProfit)\n",
+		"pkg": "./pnl/",
+		"test": "TestDayProfit",
+		"want": "当日盈亏应为 300，实为 700",
+		"expect": "red"
+	},
+	{
+		"name": "284 交易所口径丢掉按手数那一项 —— ⚠️ 补上 Exchange 断言之前本条是绿的",
+		"dir": "",
+		"file": "margin/margin.go",
+		"old": "\texchange = notional.Mul(byMoney).Add(v.Mul(byVolume))\n",
+		"new": "\texchange = notional.Mul(byMoney)\n",
+		"pkg": "./margin/",
+		"test": "TestBothTermsAlwaysSummed",
+		"want": "交易所口径两项相加应为 6420",
+		"expect": "red"
+	},
+	{
+		"name": "285 公司加收失效（公司口径塌回交易所口径）",
+		"dir": "",
+		"file": "margin/margin.go",
+		"old": "\tcompany = notional.Mul(byMoney.Add(l.Rates.CompanyAddOn)).Add(v.Mul(byVolume))\n",
+		"new": "\tcompany = notional.Mul(byMoney).Add(v.Mul(byVolume))\n",
+		"pkg": "./margin/",
+		"test": "TestCompanyAddOnRaisesOnlyCompanySide",
+		"want": "加收百分之二后公司口径应为 3792",
+		"expect": "red"
+	},
+	{
+		"name": "286 名义金额漏乘合约乘数",
+		"dir": "",
+		"file": "margin/margin.go",
+		"old": "\tnotional := v.Mul(px).Mul(l.Multiplier)\n",
+		"new": "\tnotional := v.Mul(px)\n",
+		"pkg": "./margin/",
+		"test": "TestBasisChangesResult",
+		"want": "今仓用开仓价应为 3150，实为 315",
+		"expect": "red"
 	}
 ]
