@@ -2549,7 +2549,8 @@ fixtures_test.go 一个文件  8          0
       **22 条**：同一个 test 上还有 expect=red 的搭档
                 ⇒ 守卫真死了，红那半会报出来 ✅ **配对救了它们**
       ⚠️ **3 条没有红搭档**（守卫若死，`未按预期 0` 照样成立，没有任何东西会说话）：
-          70  waitFrozen 不再识别拒单        test=TestPositionFrozen
+          70  waitFrozen 不再识别拒单        test 字段是一个**前缀**（`-run` 用正则），
+                                             它覆盖持仓冻结那一族的四条
           95  消耗顺序守卫的样本量下界去掉    test=TestCloseOrderIsStructurallyUnmeasurable
           96  消耗顺序守卫把「大商所有昨仓」当成正常  同上
 
