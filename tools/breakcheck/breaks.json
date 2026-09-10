@@ -2968,5 +2968,38 @@
 		"test": "TestMarginAgainstCTP",
 		"want": "柜台给",
 		"expect": "red"
+	},
+	{
+		"name": "267 冻结发生时不落盘（改成另一个名字）—— ⚠️ 破坏 70 的红搭档：证明这一族守卫没死。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/exp_position_frozen.go",
+		"old": "\t\t\tif err := r.dump(\"position-frozen-held\", fmt.Sprintf(",
+		"new": "\t\t\tif err := r.dump(\"position-frozen-late\", fmt.Sprintf(",
+		"pkg": "./probe/",
+		"test": "TestPositionFrozen",
+		"want": "没有落盘",
+		"expect": "red"
+	},
+	{
+		"name": "268 大商所前缀改掉，样本量归零 —— ⚠️ 破坏 95 的红搭档：证明那条下界真的会拦。",
+		"dir": "",
+		"file": "conformance/fixture/close_order_test.go",
+		"old": "strings.HasPrefix(sym, \"DCE.\")",
+		"new": "strings.HasPrefix(sym, \"ZZZ.\")",
+		"pkg": "./conformance/fixture/",
+		"test": "TestCloseOrderIsStructurallyUnmeasurable",
+		"want": "说明不了什么",
+		"expect": "red"
+	},
+	{
+		"name": "269 把「昨仓手数」换成「总手数」—— ⚠️ 破坏 96 的红搭档：证明那条报警支路是通的。",
+		"dir": "",
+		"file": "conformance/fixture/close_order_test.go",
+		"old": "numberOf(pos, \"volume_\"+side+\"_his\")",
+		"new": "numberOf(pos, \"volume_\"+side)",
+		"pkg": "./conformance/fixture/",
+		"test": "TestCloseOrderIsStructurallyUnmeasurable",
+		"want": "有昨仓",
+		"expect": "red"
 	}
 ]
