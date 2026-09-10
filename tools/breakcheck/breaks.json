@@ -3595,5 +3595,38 @@
 		"test": "TestBreakRefsResolve",
 		"want": "又回到清单里了",
 		"expect": "red"
+	},
+	{
+		"name": "384 拒单用例的方向翻反（那笔单会当场成交）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/reject.go",
+		"old": "Dir:  def.THOST_FTDC_D_Sell, Off: def.THOST_FTDC_OF_Open,\n\t\tPrice: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.UpperLimitPrice) + 1 },",
+		"new": "Dir:  def.THOST_FTDC_D_Buy, Off: def.THOST_FTDC_OF_Open,\n\t\tPrice: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.UpperLimitPrice) + 1 },",
+		"pkg": "./",
+		"test": "TestRejectCasesAreNonExecutable",
+		"want": "方向与挂价端不配对",
+		"expect": "red"
+	},
+	{
+		"name": "385 费率探针改成卖单（挂低价会当场成交）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/fee.go",
+		"old": "Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,\n\t\t\tVolume: 1, LimitPrice: px}, *timeout)",
+		"new": "Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_Open,\n\t\t\tVolume: 1, LimitPrice: px}, *timeout)",
+		"pkg": "./",
+		"test": "TestFeeProbeOnlyBuysAtTheLowEnd",
+		"want": "本探针**只许买**",
+		"expect": "red"
+	},
+	{
+		"name": "386 费率探针的价位从涨停那端起算",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/fee.go",
+		"old": "low, high := float64(md.LowerLimitPrice), float64(md.LastPrice)",
+		"new": "low, high := float64(md.UpperLimitPrice), float64(md.LastPrice)",
+		"pkg": "./",
+		"test": "TestFeeProbeOnlyBuysAtTheLowEnd",
+		"want": "必须挂在跌停那一端",
+		"expect": "red"
 	}
 ]
