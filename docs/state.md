@@ -43,6 +43,10 @@
 
 ### 重做它需要什么（⚠️ 别再算错一次）
 
+⚠️ **重做时要顺带补一张欠着的截面**：「最新价基准被否」这一条目前**只有散文、
+没有夹具**（probes.md §6.10）—— 需要一张**有持仓且 `LastPrice ≠ 开仓价`** 的
+带 `-quote` 截面。⚠️ 它必须**有持仓**才有 `UseMargin` 可比，所以只能搭着这次重做一起拍。
+
     建仓   在**某个交易日的日盘收盘之前**建一手
     等     ⚠️ 等它跨过**那个交易日的结算**（日盘收盘之后），
            也就是**下一个交易日**的夜盘或日盘才看得到昨仓
@@ -289,7 +293,7 @@
 | `docs/design.md` | 28 |
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
-| `docs/probes.md` | 126 |
+| `docs/probes.md` | 127 |
 | `docs/roadmap.md` | 32 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
