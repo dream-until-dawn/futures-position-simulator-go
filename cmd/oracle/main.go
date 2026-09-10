@@ -125,6 +125,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
+	case "ctp-reject":
+		if err := runCTPReject(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
 	case "ctp-dup":
 		if err := runCTPDup(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)

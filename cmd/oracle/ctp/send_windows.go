@@ -172,12 +172,30 @@ func (c *Client) registerOrderCallbacks() {
 			return 0
 		}
 		ref := text(o.OrderRef[:])
-		msg := ""
+		msg, code := "", 0
 		if err := errOf(info); err != nil {
 			msg = err.Error()
 		}
+		if info != nil {
+			code = int(info.ErrorID)
+		}
 		c.book.put(ref, func(s *OrderState) {
 			s.Status, s.StatusMsg = def.THOST_FTDC_OST_Canceled, msg
+			// ⚠️ 柜台级拒单的数值码同样要交出去 —— 两条拒单通道各填一次。
+			//
+			// ⚠️⚠️ **而「ErrorID==0 就是没被拒」是错的，这句话写下二十分钟就被实测否掉。**
+			// 20260910 夜盘 `ctp-reject` 四条用例：
+			//
+			//	价格非最小变动价位倍数 / 低于跌停 / 高于涨停
+			//	  → 确实被拒，而 `RspInfo.ErrorID` **是 0**，
+			//	    码在 StatusMsg 的**文本前缀**里（`48:` / `50:` / `49:`，SHFE 的码）
+			//	平昨仓位不足
+			//	  → 走 ErrRtn，`RspInfo.ErrorID` = **51**（CTP 的码）
+			//
+			// ⇒ **交易所级的价格类拒单根本不经过 RspInfo。**判「有没有被拒」要看
+			// `Status`（`OST_Canceled`）与 StatusMsg，不能看 ErrorID 是不是 0。
+			// ⚠️ 而两套码**撞号**：CTP 50 = 平今仓位不足，SHFE 50 = 价格跌破跌停板。
+			s.ErrorID = code
 		})
 		c.logf("[ctp] ⚠️ 报单被柜台拒绝 ref=%s  %s", ref, msg)
 		return 0
@@ -195,12 +213,17 @@ func (c *Client) registerOrderCallbacks() {
 		if o != nil {
 			ref = text(o.OrderRef[:])
 		}
-		msg := ""
+		msg, code := "", 0
 		if err := errOf(info); err != nil {
 			msg = err.Error()
 		}
+		if info != nil {
+			code = int(info.ErrorID)
+		}
 		c.book.put(ref, func(s *OrderState) {
 			s.Status, s.StatusMsg = def.THOST_FTDC_OST_Canceled, "交易所拒单："+msg
+			// ⚠️ 数值码要**交出去**，不能只打进日志。见 OrderState.ErrorID 的注释。
+			s.ErrorID = code
 		})
 		c.logf("[ctp] ⚠️ **交易所**拒单 ref=%s  %s", ref, msg)
 		return 0
@@ -228,11 +251,11 @@ func (c *Client) registerOrderCallbacks() {
 func settled(st byte) bool {
 	switch st {
 	case def.THOST_FTDC_OST_AllTraded, // 全部成交
-		def.THOST_FTDC_OST_PartTradedQueueing,  // 部分成交还在队列
+		def.THOST_FTDC_OST_PartTradedQueueing,    // 部分成交还在队列
 		def.THOST_FTDC_OST_PartTradedNotQueueing, // 部分成交不在队列（已撤余量）
-		def.THOST_FTDC_OST_NoTradeQueueing,     // 未成交还在队列 —— 挂上了
-		def.THOST_FTDC_OST_NoTradeNotQueueing,  // 未成交不在队列
-		def.THOST_FTDC_OST_Canceled:            // 已撤单（含被拒）
+		def.THOST_FTDC_OST_NoTradeQueueing,       // 未成交还在队列 —— 挂上了
+		def.THOST_FTDC_OST_NoTradeNotQueueing,    // 未成交不在队列
+		def.THOST_FTDC_OST_Canceled:              // 已撤单（含被拒）
 		return true
 	}
 	// ⚠️ 其余（"a" 未知/已提交 等）一律当成**还没有结果**。
