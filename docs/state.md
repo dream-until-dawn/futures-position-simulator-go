@@ -96,7 +96,7 @@
 |---|---|---|
 | `rules_pending` | **13** | [cn-futures-rules.md](./cn-futures-rules.md) §13。⚠️ 交易日 20260908 的夜盘先从 7 涨到 10（新增三条全部由实测本身暴露），当晚补测掉一条；送审后核实评审的重新框定时又撞出两条，净 +4；⚠️ 自然日 2026-09-08 日盘的破坏验证又撞出两条（第 13/14 条），**两条都是「本口子上分不开」而不是「没建模」** —— 一条声称的盲区被破坏演示过一次，才算确认它存在 |
 | `rules_wired` | `PositionDateType` | v0.3.0 起**接进 position**：`New` 带上它、`Settle` 按它分岔（`UseHistory` 滚今昨、`NoUseHistory` 只推进基线），零值**结算时**报错。⚠️ `New` 刻意不拦零值 —— 那会逼只重放、永不结算的调用方编一个值出来，而**一个逼人编数据的守卫比没有守卫更坏**：编出来的值会被后来的人当成实测值 |
-| `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `refdata/live` `refdata/exchange` `conformance` `conformance/fixture` `view` `order` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` 未开始） |
+| `packages_done` | `types` `position` `account` `pnl` `fee` `margin` `refdata` `refdata/live` `refdata/exchange` `conformance` `conformance/fixture` `conformance/ctpfixture` `view` `order` `internal/decimalx` | v0.1.0 已落地的包（`ctperr` 未开始） |
 | `rules_measured` | **2** | 规则**已被两个独立来源同向证实**的条数。⚠️ 20260909 使用者裁决升格 `kq_facts` 37（逐日盯市基线的昨仓那一端用收盘价）后 1 → 2。升格判据见下节，它**同时否掉了**看起来最硬的第 20 条 —— 那条只有一个候选，对不上说明数据错了，不说明规则是另一条 |
 | `rules_listed` | **15** | §13 一共问过几条（**含已收敛，只增不减**）。⚠️ 它是 20260909 新增的**第二个分母**，因为 `rules_pending` 只数还欠着的：一条被测掉的项会离开分母，于是「只记解决不记发现」时**分子涨、分母缩**，两个方向叠起来让比值凭空变好看。恒等式 `rules_listed = rules_pending + 已收敛` 由 `TestRulesListedMatchesTable` 钉住 |
 | `reject_priority_measured` | **4** | 报单校验八项两两共 **28** 对，实测判出先后的对数。见下节。⚠️ **其余各处一律链接、不抄数** —— 这个数 20260909 当天从 3 涨到 4，而五处复述里只有一处跟上了。它说的正是「生产代码里有多少顺序是猜的」，是这批里最不该含糊的数字 |

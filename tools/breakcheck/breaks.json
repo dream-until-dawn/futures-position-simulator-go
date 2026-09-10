@@ -2955,7 +2955,8 @@
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestMarginAgainstCTP",
 		"want": "",
-		"expect": "green"
+		"expect": "green",
+		"why": "CTP 这批夹具里 `MarginRateByVolume` **全是 0**，于是 `exchange = notional×byMoney + volume×byVolume` 的第二项**永远不参与** —— 去掉它，本条照样全绿。⚠️ 与手续费那次同形（一个恒为零的项让「相加」与「二选一」无从区分），而这里更进一步：**它让那一项连「有没有被算」都测不出来**。⇒ 要它开口，需要一个 ByVolume 非零的品种，本口子上暂时没有。"
 	},
 	{
 		"name": "266 保证金去掉「按金额」那一项 —— CTP 对拍必须红。",
