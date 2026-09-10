@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -138,5 +140,43 @@ func TestFeeProbeOnlyBuysAtTheLowEnd(t *testing.T) {
 	if sawUpper {
 		t.Logf("ⓘ 源码里出现了 UpperLimitPrice —— 本条**看不出它有没有进价格计算**。" +
 			"⚠️ 这是本条声明的盲区：AST 这一层分不开「打印行情」与「参与算价」")
+	}
+}
+
+// TestPositionKeyCarriesBothDimensions 钉住持仓缓存的键**同时**带方向与今昨。
+//
+// ⚠️ 20260910 夜盘撞到的真 bug：键里只有 `PositionDate`，于是同一合约的
+// 多头与空头**互相覆盖，后到的赢** —— 而丢失是**静默**的：
+// 查询正常返回，只是少了一条。
+//
+//	⚠️ 而上一版的注释写着「同一个合约会回多条（今仓一条、昨仓一条）」——
+//	**它想到了一个维度会撞键，就停在了那里。**
+//	「还有没有别的维度」这个问题没有被问出来。
+//
+// ⚠️ 本条只能查**源码里出现了这两个字段名**，查不出它们真的进了键 ——
+// 这是它声明的盲区。真正的判据要一次「同合约同时有多空」的观测，
+// 而那要两笔反向开仓，超出当前安全阀（MaxVolume=1 不限制笔数，但那是另一次实验）。
+func TestPositionKeyCarriesBothDimensions(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("ctp", "query_windows.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	// 找形如 `c.pos[...] = ` 的那一行，只看它。
+	i := strings.Index(src, "c.pos[")
+	if i < 0 {
+		t.Fatal("⚠️ 找不到 `c.pos[` —— 形状变了，本条在空转")
+	}
+	line := src[i:]
+	if j := strings.IndexByte(line, '\n'); j > 0 {
+		line = line[:j]
+	}
+	for _, want := range []string{"PosiDirection", "PositionDate"} {
+		if !strings.Contains(line, want) {
+			t.Errorf("⚠️ 持仓缓存的键里没有 %s —— 键是 %q。\n"+
+				"同一合约的多条记录由**两个**维度区分（方向、今昨），"+
+				"少一个就会**互相覆盖，后到的赢**，而丢失是静默的：查询正常返回、只是少了一条",
+				want, strings.TrimSpace(line))
+		}
 	}
 }

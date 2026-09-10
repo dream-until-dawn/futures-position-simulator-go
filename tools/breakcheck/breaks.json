@@ -3628,5 +3628,16 @@
 		"test": "TestFeeProbeOnlyBuysAtTheLowEnd",
 		"want": "必须挂在跌停那一端",
 		"expect": "red"
+	},
+	{
+		"name": "387 持仓缓存的键丢掉方向（多空互相覆盖，且丢失是静默的）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/query_windows.go",
+		"old": "c.pos[key+\"/\"+string(rune(cp.PosiDirection))+\"/\"+string(rune(cp.PositionDate))] = &cp",
+		"new": "c.pos[key+\"/\"+string(rune(cp.PositionDate))] = &cp",
+		"pkg": "./",
+		"test": "TestPositionKeyCarriesBothDimensions",
+		"want": "键里没有 PosiDirection",
+		"expect": "red"
 	}
 ]

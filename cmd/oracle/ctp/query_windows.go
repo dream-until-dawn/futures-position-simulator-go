@@ -123,9 +123,24 @@ func (c *Client) registerQueryCallbacks() {
 			cp := *p
 			key := text(cp.ExchangeID[:]) + "." + text(cp.InstrumentID[:])
 			c.posMu.Lock()
-			// ⚠️ 同一个合约会回**多条**（今仓一条、昨仓一条，由 PositionDate 区分）。
-			// 按合约键会互相覆盖，所以键里带上 PositionDate。
-			c.pos[key+"/"+string(rune(cp.PositionDate))] = &cp
+			// ⚠️ 同一个合约会回**多条**，而它们由**两个**维度区分：
+			//
+			//	PositionDate    今仓一条、昨仓一条
+			//	PosiDirection   多头一条、空头一条   ← ⚠️ 20260910 夜盘补上的
+			//
+			// ⚠️ 原先键里只有 PositionDate ⇒ **多头与空头互相覆盖，后到的赢**，
+			// 而丢失是**静默**的：查询正常返回，只是少了一条。
+			//
+			// 撞到它的经过：`ctp-profit` 开空之后连查五次都「读不到开仓价」——
+			// 因为账上还留着一条已归零的**多头**记录，键相同，把空头盖掉了。
+			//
+			//	⚠️ 上一版的注释写着「同一个合约会回多条（今仓一条、昨仓一条）」——
+			//	**它想到了一个维度会撞键，就停在了那里。**
+			//	而「还有没有别的维度」这个问题，没有被问出来。
+			//
+			// ⚠️ 键的格式因此变了（`SHFE.rb2701/1` → `SHFE.rb2701/2/1`，
+			// 先方向后今昨），落进夹具的键也跟着变 —— 读夹具的那一侧要兼容两种。
+			c.pos[key+"/"+string(rune(cp.PosiDirection))+"/"+string(rune(cp.PositionDate))] = &cp
 			c.posMu.Unlock()
 		}
 		if isLast {

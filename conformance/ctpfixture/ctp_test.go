@@ -137,9 +137,14 @@ func TestMarginAgainstCTP(t *testing.T) {
 			}
 			id, err := types.ParseSymbol(sym[:len(sym)-len(filepath.Ext(sym))], types.TradingDay(20260910))
 			if err != nil {
-				// 键形如 "SHFE.rb2701/1"，末尾带方向后缀。
+				// ⚠️ 键形如 `SHFE.rb2701/1`（旧）或 `SHFE.rb2701/2/1`（20260910 夜盘起，
+				// 先方向后今昨）—— **截到第一个 `/`**，兼容两种。
+				//
+				// ⚠️ 上一版截的是**最后一个** `/`，那在旧格式上对、在新格式上
+				// 会留下 `SHFE.rb2701/2` —— 而它解析失败会 Fatal，不会静默。
+				// 那算走运：一个「多截一段」的解析错，更常见的下场是解出**另一个合约**。
 				base := sym
-				for i := len(base) - 1; i >= 0; i-- {
+				for i := 0; i < len(base); i++ {
 					if base[i] == '/' {
 						base = base[:i]
 						break
