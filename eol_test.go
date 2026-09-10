@@ -177,3 +177,75 @@ func TestStrayCRIsActuallyCaught(t *testing.T) {
 			"条数相等，因此躲得过「混着 CRLF 与 LF」那一条", stray)
 	}
 }
+
+// TestNoFileUsesCRLF 钉住 **2026-09-10 使用者裁决的行尾约定：全库 LF**。
+//
+// # ⚠️ 为什么它是新加的一维，而不是改上面那条
+//
+// `TestNoFileMixesLineEndings` 查两件事：**混用**、**多余的回车符**。
+// ⚠️ 两者对「一份文件**整份**从 CRLF 翻成 LF」都是瞎的（`crlf == 0` 时
+// 两个判据的第一个合取项都假）—— 而在**约定未定**的年代，那个瞎是对的：
+// **一条守卫不该替一个从未被决定的约定做决定。**
+//
+// 约定定下来之后，那个瞎就该补上了。而补法是**加一维**，不是改那两维 ——
+// 那两维有自己的单元测试与破坏（189/190）钉着，改它们会把它们打死。
+//
+// # ⚠️ 这条约定为什么必须有守卫
+//
+//	仓库此前存的  CRLF，317/317，而**没有任何一处写下过这个约定**
+//	gofmt 的输出  **LF** —— 每个 Go 文件、每次 `gofmt -w` 都翻一份
+//
+// ⇒ 定成 CRLF 意味着每个人每次格式化后都要**记得**还原，而本仓库
+// 反复证明过纪律挡不住；定成 LF 则与工具链一致，`gofmt` 从此不再制造漂移。
+// 见 `.gitattributes` 里的完整理由。
+func TestNoFileUsesCRLF(t *testing.T) {
+	var withCRLF []string
+	n := 0
+	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		switch strings.ToLower(filepath.Ext(p)) {
+		case ".go", ".json", ".md", ".sh", ".yml", ".yaml":
+		default:
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		n++
+		if c := bytes.Count(b, []byte("\r\n")); c > 0 {
+			withCRLF = append(withCRLF, fmt.Sprintf("%s（%d 处 CRLF）", p, c))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ⚠️ **把两条扫描的范围钉在一起。** 两处各写一份过滤规则，
+	// 它们会悄悄分叉 —— 而分叉之后「两条都绿」说明不了任何事：
+	// 可能只是各自扫了自己那一半。
+	scanned, _, _, err := scanLineEndings(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != scanned {
+		t.Fatalf("⚠️ 本条扫到 %d 个文件，而 TestNoFileMixesLineEndings 扫到 %d 个 —— "+
+			"**两处的过滤规则分叉了**，此后「两条都绿」说明不了任何事", n, scanned)
+	}
+	if n < 50 {
+		t.Fatalf("⚠️ 只扫了 %d 个文件（下界 50）—— 过滤条件八成写错了，本条在空转", n)
+	}
+	if len(withCRLF) > 0 {
+		t.Errorf("⚠️ 这些文件用了 CRLF，而 `.gitattributes` 定的是 **LF**（2026-09-10 裁决）：\n  %s\n"+
+			"⚠️ 多半是一次 `gofmt -w` 之外的写入 —— 归一回 LF。"+
+			"**约定已经写下来了，所以这条现在有东西可执行**", strings.Join(withCRLF, "\n  "))
+	}
+}
