@@ -375,7 +375,7 @@ func TestHeldCaptureHappensBeforeCancel(t *testing.T) {
 	if fn == nil {
 		t.Fatal("⚠️ 找不到 runCTPOrder —— 改名了？本条会在空集上跑")
 	}
-	var capPos, cancelPos token.Pos
+	var capPos, lastCapPos, cancelPos token.Pos
 	ast.Inspect(fn, func(x ast.Node) bool {
 		c, ok := x.(*ast.CallExpr)
 		if !ok {
@@ -386,6 +386,7 @@ func TestHeldCaptureHappensBeforeCancel(t *testing.T) {
 			if capPos == token.NoPos {
 				capPos = c.Pos()
 			}
+			lastCapPos = c.Pos()
 		case "Cancel":
 			if cancelPos == token.NoPos {
 				cancelPos = c.Pos()
@@ -397,8 +398,11 @@ func TestHeldCaptureHappensBeforeCancel(t *testing.T) {
 		t.Fatalf("⚠️ 没能同时取到 Capture（%d）与 Cancel（%d）的位置 —— "+
 			"形状变了，本条查不到它要查的东西", capPos, cancelPos)
 	}
-	if capPos > cancelPos {
-		t.Errorf("⚠️ `Capture` 出现在 `Cancel` **之后** —— 撤单已经把冻结字段释放回零，"+
+	// ⚠️ 查**最后一处**而不只是第一处：破坏 263 第一版**加了一处**晚拍的
+	// `Capture`，而只看第一处的守卫**一个字都不会说** —— 那份晚拍的截面会以
+	// 另一个文件名落进 testdata/，冻结字段全是零，**而它看起来完美支持结论**。
+	if lastCapPos > cancelPos {
+		t.Errorf("⚠️ 有 `Capture` 出现在 `Cancel` **之后** —— 撤单已经把冻结字段释放回零，"+
 			"⚠️ **而一份撤单后拍的截面，与一份「本来就不冻」的截面长得一模一样**。"+
 			"它会看起来完美支持 kq_facts 42，而其实什么都没测 —— **比拍不到更坏**")
 	}
