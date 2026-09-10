@@ -2890,5 +2890,16 @@
 		"test": "TestAttachQuoteHasOneCallSite",
 		"want": "恰好 1 次",
 		"expect": "red"
+	},
+	{
+		"name": "260 挂价的方向与委托的方向被拆开 —— 探针会当场成交，而日志长得一模一样。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tVolume: 1, LimitPrice: ctp.FarPrice(md, dir),",
+		"new": "\t\tVolume: 1, LimitPrice: ctp.FarPrice(md, def.THOST_FTDC_D_Buy),",
+		"pkg": ".",
+		"test": "TestRestingPriceMatchesDirection",
+		"want": "必须是同一个",
+		"expect": "red"
 	}
 ]

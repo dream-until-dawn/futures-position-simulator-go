@@ -168,3 +168,55 @@ func goFilesHere(t *testing.T) []string {
 	}
 	return out
 }
+
+// TestRestingPriceMatchesDirection 钉住 `ctp-order` 的核心不变式：
+//
+//	挂价必须由**同一个方向**算出来
+//
+// # ⚠️ 它防的是什么
+//
+// 这个命令的全部意义是「挂得上、成不了」—— 买开挂跌停、卖平挂涨停。
+// `FarPrice(md, dir)` 给出的正是与 `dir` 配套的那一端。
+// ⚠️ 若有人把 `Direction` 与 `FarPrice` 的方向拆开设（比如卖平却挂跌停），
+// 这笔单会**当场成交** —— 于是一个只该挂一下的探针变成了一次真实的开/平仓，
+// **而它在日志里长得和成功的探针一模一样**（都有回报、都有状态）。
+//
+// ⚠️ 20260910 加 `-close` 时引入了这条不变式，而当时**破坏数没变（259→259）**——
+// 按 silent-risks.md 74 的那条检查：**加了代码而破坏数没变，本身就该是一个问句。**
+// 这条守卫是那个问句的答案。
+func TestRestingPriceMatchesDirection(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "main.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := findFunc(f, "runCTPOrder")
+	if fn == nil {
+		t.Fatal("⚠️ main.go 里找不到 runCTPOrder —— 改名了？本条会在空集上跑")
+	}
+	var dirIdent, farIdent string
+	ast.Inspect(fn, func(n ast.Node) bool {
+		if kv, ok := n.(*ast.KeyValueExpr); ok {
+			if k, ok := kv.Key.(*ast.Ident); ok && k.Name == "Direction" {
+				if v, ok := kv.Value.(*ast.Ident); ok {
+					dirIdent = v.Name
+				}
+			}
+		}
+		if c, ok := n.(*ast.CallExpr); ok && selName(c.Fun) == "FarPrice" && len(c.Args) == 2 {
+			if v, ok := c.Args[1].(*ast.Ident); ok {
+				farIdent = v.Name
+			}
+		}
+		return true
+	})
+	if dirIdent == "" || farIdent == "" {
+		t.Fatalf("⚠️ 没能同时取到 Direction 的取值（%q）与 FarPrice 的方向实参（%q）—— "+
+			"形状变了，本条查不到它要查的东西", dirIdent, farIdent)
+	}
+	if dirIdent != farIdent {
+		t.Errorf("⚠️ 委托方向用的是 %q，而挂价用的是 FarPrice(…, %q) —— **两者必须是同一个**。"+
+			"拆开之后这笔单会**当场成交**，而一个只该挂一下的探针会变成一次真实的开/平仓，"+
+			"**在日志里与成功的探针长得一模一样**", dirIdent, farIdent)
+	}
+}
