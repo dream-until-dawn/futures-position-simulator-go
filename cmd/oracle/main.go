@@ -522,6 +522,9 @@ func runCTPOrder(args []string) error {
 	fs := flag.NewFlagSet("ctp-order", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 SHFE.rb2701（⚠️ 无默认值）")
+	closeToday := fs.Bool("close", false, "挂**平今**而不是买开（⚠️ 需要账上已有多头今仓）。"+
+		"它要量的是 `kq_facts` 42（平仓挂单不冻保证金、只冻手续费）在 CTP 侧成不成立 —— "+
+		"⚠️ 那条此前只有快期一个来源，而**账上有仓的时候才量得到**")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
@@ -559,12 +562,21 @@ func runCTPOrder(args []string) error {
 		return err
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// ⚠️ 方向与开平**成对**决定，不许分开设：买开挂跌停、卖平挂涨停，
+	// 两者都是「挂得上、成不了」的那一端。⚠️ 拆开设会让人配出
+	// 「卖平挂跌停」这种当场成交的组合，而那与本命令要验的往返完全不是一回事。
+	dir := def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy)
+	off := def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_Open)
+	if *closeToday {
+		dir = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell)
+		off = def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)
+	}
 	req := ctp.OrderReq{
 		Exchange: ex, Instrument: inst,
-		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
-		Volume: 1, LimitPrice: ctp.FarPrice(md, def.THOST_FTDC_D_Buy),
+		Direction: dir, Offset: off,
+		Volume: 1, LimitPrice: ctp.FarPrice(md, dir),
 	}
-	logf("[P3] 行情  最新=%.2f 涨停=%.2f 跌停=%.2f  ⇒ 买开挂在跌停 %.2f（挂得上、成不了）",
+	logf("[P3] 行情  最新=%.2f 涨停=%.2f 跌停=%.2f  ⇒ 挂在 %.2f（挂得上、成不了）",
 		float64(md.LastPrice), float64(md.UpperLimitPrice), float64(md.LowerLimitPrice),
 		req.LimitPrice)
 
