@@ -3529,5 +3529,27 @@
 		"test": "TestExpireDateRefusesUnexpectedClock",
 		"want": "ts=0 报的是",
 		"expect": "red"
+	},
+	{
+		"name": "318 -day 默认成「今天」的**诊断**没了（交易日不是自然日）",
+		"dir": "",
+		"file": "cmd/settlement/main.go",
+		"old": "\tif dayStr == \"\" {",
+		"new": "\tif false && dayStr == \"\" {",
+		"pkg": "./cmd/settlement/",
+		"test": "TestRunRefusesDefaultingToToday",
+		"want": "但不是那条诊断",
+		"expect": "red"
+	},
+	{
+		"name": "319 探不动就跳过而不是停下（日历里留一个看不出来的洞）",
+		"dir": "",
+		"file": "cmd/settlement/main.go",
+		"old": "\t\t\treturn fmt.Errorf(\"探 %s 失败：%w —— **就此停下**，\"+\n\t\t\t\t\"跳过会在日历里留一个看不出来的洞\", day, err)",
+		"new": "\t\t\td = d.AddDate(0, 0, -1)\n\t\t\tcontinue",
+		"pkg": "./cmd/settlement/",
+		"test": "TestProbeCalendarStopsOnError",
+		"want": "照样跑完了",
+		"expect": "red"
 	}
 ]
