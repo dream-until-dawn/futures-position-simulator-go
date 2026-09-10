@@ -13,6 +13,7 @@ package futsim
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -941,6 +942,23 @@ func isCommandDir(t *testing.T, dir string) bool {
 // ⚠️ 它必须逐条写理由，且**只能收「讲历史的那种引用」**。
 // 一个可以随手加名字的豁免表，比没有这张表更坏 —— 那时
 // TestDocTestRefsResolve 会退化成「把红的那个加进白名单」。
+// neverWereTests 是**文档里写出、但它从来就不是一条测试**的名字。
+//
+// ⚠️ 与 goneTests 分开，不是洁癖：goneTests 的含义是「曾经有，后来没了」，
+// 把一个从没存在过的名字塞进去，会在那张表里种一句假话 ——
+// 将来读的人会据此以为它曾经存在过。
+//
+// ⚠️ 同样只收「讲历史」的引用，同样逐条写理由。
+// 而且下面额外钉一条：**表里的名字一旦真的成了测试，本条要红** ——
+// 否则这张表会烂在原地，替一个已经能解析的名字继续开着口子。
+var neverWereTests = map[string]string{
+	"TestPositionFrozen": "⚠️ 它是 breaks.json 里破坏 70 的 `test` 字段写错的那个值 —— " +
+		"probe 包里只有四个更长的名字。breakcheck 锚定跑 `-run '^…$'`，" +
+		"于是它选中零条测试、退出 0，**每一次全量运行都把那条破坏报成「如预期仍然绿」**。" +
+		"⚠️ 文档里那几处写出这个字符串，讲的正是**这个名字不解析**这件事本身，" +
+		"改写成一个真实测试名会把整段更正抹掉。见 silent-risks.md 那一节的 20260910 更正",
+}
+
 var goneTests = map[string]string{
 	"TestShortHistoryCostHasNeverBeenObserved": "⚠️ 它**完成使命之后被删掉了**：" +
 		"20260909 16:20 结算后空头昨仓第一次出现，绊线如期变红，" +
@@ -1027,6 +1045,10 @@ func TestDocTestRefsResolve(t *testing.T) {
 			t.Logf("ⓘ %s 已不在代码里，按 goneTests 放行：%s", name, why)
 			continue
 		}
+		if why, ok := neverWereTests[name]; ok {
+			t.Logf("ⓘ %s 从来就不是一条测试，按 neverWereTests 放行：%s", name, why)
+			continue
+		}
 		sort.Strings(where)
 		missing = append(missing, fmt.Sprintf("%s（%s）", name, strings.Join(where, "、")))
 	}
@@ -1037,8 +1059,18 @@ func TestDocTestRefsResolve(t *testing.T) {
 			"⚠️ 修法是把文档指到现在那条上；只有当那句话讲的是**历史**"+
 			"（记一次误判、一次翻案）时，才把它加进 goneTests 并写清理由", m)
 	}
-	t.Logf("文档点名的测试 %d 个，代码里有 %d 个测试函数，已不在的 %d 个（都在 goneTests 里）",
-		len(refs), len(have), len(goneTests))
+	// ⚠️ 豁免表要会自己过期：名字一旦真的成了测试，这条豁免就该拆掉。
+	// 不然它会替一个**已经能解析**的名字继续开着口子，而没有任何东西会说。
+	for name, why := range neverWereTests {
+		if have[name] {
+			t.Errorf("⚠️ neverWereTests 里的 %s **现在真的是一条测试了** —— "+
+				"把它从表里删掉，让 TestDocTestRefsResolve 正常解析它。"+
+				"原来的理由：%s", name, why)
+		}
+	}
+	t.Logf("文档点名的测试 %d 个，代码里有 %d 个测试函数，"+
+		"已不在的 %d 个（goneTests）、从来不是测试的 %d 个（neverWereTests）",
+		len(refs), len(have), len(goneTests), len(neverWereTests))
 }
 
 var (
@@ -1139,7 +1171,7 @@ func TestDocPathRefsResolve(t *testing.T) {
 }
 
 var (
-	mdLinkRe   = regexp.MustCompile(`\[[^\]]*\]\(([^)\s]+)\)`)
+	mdLinkRe = regexp.MustCompile(`\[[^\]]*\]\(([^)\s]+)\)`)
 	// ⚠️ 这个模式里有反引号，写不成 Go 的原始字符串，只能用带转义的那种 ——
 	// 于是点号要写成两个反斜杠加点。写错一次的表现是**编译不过**，
 	// 那反而是好消息：换成少一个反斜杠而仍然合法的写法，它会安静地匹配错。
@@ -1330,4 +1362,215 @@ func TestDateRoleMatchesFormat(t *testing.T) {
 	}
 	t.Logf("角色词与格式一致 %d 处，错配 %d 处；⚠️ 光秃秃的日期（无角色词）本条**不查**",
 		okPairs, bad)
+}
+
+// methodologyNumRe 认的是方法论条目的行首编号：`**80. ⚠️ …**`。
+var methodologyNumRe = regexp.MustCompile(`(?m)^\*\*(\d+)\. `)
+
+// TestMethodologyNumbersAreContiguous 钉住方法论编号**不重、不缺、从 1 起**。
+//
+// ⚠️ 这一条补的是仓库自己记过的一个洞：state.md 里写着某次编号错
+// 「是我后来**核方法论编号时撞见的**，不是任何守卫抓到的」。
+//
+// 编号是这份文档的**引用地址** —— 代码注释里到处是「方法论第 28 条」。
+// 重号之后两条内容抢同一个地址，而**被引用的那一方不会有任何变化**：
+// 读的人跳过去，看见一条讲得通的条目，就停下了。
+//
+//	⚠️ 引错地址的失败模式，是**读到了另一条同样成立的话**。
+//
+// ⚠️ 而产生重号的动作极其平常：手工在末尾追加一条，编号自己敲。
+// 本条就是在一次连加两条（80、81）之后立刻补的。
+func TestMethodologyNumbersAreContiguous(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("docs", "silent-risks.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := methodologyNumRe.FindAllSubmatch(b, -1)
+	// ⚠️ 判别力：正则一旦不匹配，下面每一条断言都在空集合上成立
+	// （方法论 80）。条数下界让「正则写坏了」以红的形式出现。
+	if len(ms) < 60 {
+		t.Fatalf("⚠️ 只认出 %d 条方法论 —— 太少，正则八成不对，本条在空转", len(ms))
+	}
+	seen := map[int]int{}
+	max := 0
+	for _, m := range ms {
+		n, err := strconv.Atoi(string(m[1]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		seen[n]++
+		if n > max {
+			max = n
+		}
+	}
+	for n, c := range seen {
+		if c > 1 {
+			t.Errorf("⚠️ 方法论第 %d 条**编号重复**（出现 %d 次）—— "+
+				"代码注释里「方法论第 %d 条」从此指向两条内容，"+
+				"而跳过去的人会读到其中一条、觉得讲得通，然后停下", n, c, n)
+		}
+	}
+	var gaps []int
+	for n := 1; n <= max; n++ {
+		if seen[n] == 0 {
+			gaps = append(gaps, n)
+		}
+	}
+	if len(gaps) > 0 {
+		t.Errorf("⚠️ 方法论**缺号** %v（最大 %d）—— "+
+			"要么是删条目时没重排，要么是新加的那条敲错了数字", gaps, max)
+	}
+	t.Logf("方法论 %d 条，编号 1..%d 连续无重", len(ms), max)
+}
+
+// breakRefRe 认的是文档与注释里对破坏的引用：`破坏 265`。
+var breakRefRe = regexp.MustCompile(`破坏 (\d+)`)
+
+// retiredBreakNums 是**文字里提到、而清单里已经没有**的破坏编号，逐个写理由。
+//
+// ⚠️ 与 goneTests 同一条规矩：只收「讲历史的那种引用」，逐条写理由。
+// 一个可以随手加名字的豁免表，比没有这张表更坏。
+//
+// ⚠️ 而且下面额外钉一条：**编号一旦回到清单里，本条要红** ——
+// 否则这张表会烂在原地，替一个已经能解析的编号继续开着口子。
+var retiredBreakNums = map[string]string{
+	"1": "⚠️ 讲的是 20260910 重编号**之前**那件事：前缀 1 当时被 12 条共用。" +
+		"state.md 那一段记的正是「我写下『零处歧义引用』，而加进歧义引用的是同一个提交」——" +
+		"把它改写成新号 356 会把「当时它是歧义的」这件事本身抹掉",
+	"4": "⚠️ 同上：前缀 4 当时被 11 条共用（新号 359）。" +
+		"testnames_test.go 里那句「一句『破坏 4』指向十一条内容」是这条守卫存在的理由，" +
+		"改写成一个唯一编号会让那句话变成废话",
+}
+
+// TestBreakRefsResolve 断言**文字里点名的每一个破坏编号都真的存在**。
+//
+// ⚠️ 它是被一次自己打脸逼出来的：我核完 `docs/` 与 `*.go`，写下
+// 「仓库里零处歧义引用」，而**加进两处歧义引用的正是写下它的那个提交** ——
+// 那两处在 `breaks.json` 自己的破坏名里。
+//
+//	我把清单当成「被描述的东西」，没当成「引用住的地方」。
+//	而它两样都是：破坏名里既讲别的破坏，又被别人讲。
+//
+// ⇒ 所以本条**不挑地方**：`.md` / `.go` / `.json` 一律扫。
+// 「核查的范围由我此刻想到的地方决定，而漏掉的那个地方不会举手」——
+// 这条守卫就是用来替掉「此刻想到」的。
+//
+// ⚠️ 它防的是**悬空**，不是歧义。歧义那一半由
+// TestBreakNumbersAreUniqueAndPresent 在清单侧保证编号唯一来防。
+func TestBreakRefsResolve(t *testing.T) {
+	breaksPath := filepath.Join("tools", "breakcheck", "breaks.json")
+	raw, err := os.ReadFile(breaksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var breaks []struct {
+		Name string `json:"name"`
+		Why  string `json:"why"`
+	}
+	if err := json.Unmarshal(raw, &breaks); err != nil {
+		t.Fatal(err)
+	}
+	have := map[string]bool{}
+	for _, b := range breaks {
+		if m := regexp.MustCompile(`^(\d+) `).FindStringSubmatch(b.Name); m != nil {
+			have[m[1]] = true
+		}
+	}
+	if len(have) < 100 {
+		t.Fatalf("⚠️ 只认出 %d 个破坏编号 —— 太少，本条在空转", len(have))
+	}
+
+	refs := map[string][]string{}
+	err = filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" || d.Name() == "testdata" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// ⚠️ 破坏清单**按字段扫**，不扫原文 —— 见下面那一段。
+		if p == breaksPath {
+			return nil
+		}
+		if !strings.HasSuffix(p, ".md") && !strings.HasSuffix(p, ".go") &&
+			!strings.HasSuffix(p, ".json") {
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		for _, m := range breakRefRe.FindAllSubmatch(b, -1) {
+			refs[string(m[1])] = append(refs[string(m[1])], p)
+		}
+		return nil
+	})
+	// ⚠️ **`old` / `new` 是补丁载荷，不是散文。**
+	//
+	// 一条破坏的 new 字段里出现一个「破坏 + 某个不存在的号」，
+	// 那是**要写进别的文件的字节**，不是一句引用。
+	// 按原文扫清单会把它当成悬空引用 ——
+	// 而那条破坏的全部作用正是**制造**一处悬空引用去验本条。
+	//
+	// ⚠️ 顺带记一次现场：这段注释的第一版里**写出了那个号的数字**，
+	// 于是 doc_test.go 自己成了一处悬空引用，本条当场把自己弄红。
+	// **写关于引用的话，本身就造了一次引用** —— 与「讲/用」同一族。
+	//
+	//	⚠️ 于是本条会被「验它的那条破坏」自己弄红：每成功一次死一次（方法论 74）。
+	//
+	// ⇒ 清单只扫 name 与 why：那两个字段是写给人读的，其余是给机器用的。
+	for _, b := range breaks {
+		for _, text := range []string{b.Name, b.Why} {
+			for _, m := range breakRefRe.FindAllStringSubmatch(text, -1) {
+				refs[m[1]] = append(refs[m[1]], breaksPath+"（name/why）")
+			}
+		}
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(refs) < 10 {
+		t.Fatalf("⚠️ 只认出 %d 个破坏引用 —— 太少，正则八成不对，本条在空转", len(refs))
+	}
+
+	for num, where := range refs {
+		if have[num] {
+			continue
+		}
+		if why, ok := retiredBreakNums[num]; ok {
+			t.Logf("ⓘ 破坏 %s 已不在清单里，按 retiredBreakNums 放行：%s", num, why)
+			continue
+		}
+		sort.Strings(where)
+		t.Errorf("⚠️ 文字里点名的**破坏 %s 在清单里不存在**（%s）—— "+
+			"多半是重编号或删掉了，而**改一个破坏的编号不会让任何文档变红**。"+
+			"修法是把文字指到现在那条上；只有当那句话讲的是**历史**时，"+
+			"才把它加进 retiredBreakNums 并写清理由",
+			num, strings.Join(uniq(where), "、"))
+	}
+	// ⚠️ 豁免表要会自己过期：编号一旦回到清单，这条豁免就该拆掉。
+	for num, why := range retiredBreakNums {
+		if have[num] {
+			t.Errorf("⚠️ retiredBreakNums 里的破坏 %s **又回到清单里了** —— "+
+				"把它从表里删掉，让本条正常解析它。原来的理由：%s", num, why)
+		}
+	}
+	t.Logf("文字里点名的破坏编号 %d 个，清单里有 %d 条，已退休的 %d 个",
+		len(refs), len(have), len(retiredBreakNums))
+}
+
+// uniq 去重且保序，用来让报错里的文件列表不重复。
+func uniq(ss []string) []string {
+	seen := map[string]bool{}
+	out := ss[:0:0]
+	for _, s := range ss {
+		if !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	return out
 }

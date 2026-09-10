@@ -371,11 +371,38 @@ func run(b Break) (verdict, detail string) {
 		}
 	}
 
-	cmd := exec.Command("go", "test", b.Pkg, "-run", "^"+b.Test+"$", "-v")
+	// ⚠️ 括号不是装饰：`^A|B$` 在正则里是 `(^A)|(B$)` —— **前缀或后缀**，
+	// 不是「A 或 B 的全名」。清单里有 5 条用 `A|B` 写多个测试名，
+	// 它们此前选对了人纯属侥幸：恰好没有别的测试名以 A 开头、以 B 结尾。
+	cmd := exec.Command("go", "test", b.Pkg, "-run", "^("+b.Test+")$", "-v")
 	cmd.Dir = b.Dir // 空串表示当前目录
 	out, runErr := cmd.CombinedOutput()
 	text := string(out)
 	green := runErr == nil
+
+	// ⚠️ **跑了零条测试，也是退出 0。**
+	//
+	// 这一句补的是一个真实的静默洞。破坏 70 的 test 字段写的是
+	// `TestPositionFrozen`，而那个包里只有四个更长的名字
+	// （TestPositionFrozenUsesTheGuards 等）。上面这一行一锚定，
+	// `-run '^(TestPositionFrozen)$'` 一条也选不中，go test 打印
+	// "no tests to run"、PASS、退出 0 —— 于是**每一次全量运行**
+	// 都把它报成「如预期仍然绿」，并把它那条精心写过的「盲区」一起打出来。
+	//
+	// ⚠️ 方向正是最贵的那一边：expect=green 的破坏，跑零条测试
+	// **必然**满足期望。它永远不会喊，只会一直点头。
+	// 而我和评审方都写下过「那个字段是前缀，覆盖那一族四条」—— 两个人都错了。
+	//
+	// 同类的还有 131：pkg 指 ./conformance/fixture/，test 却是住在
+	// ./view/ 的函数名 —— 空转掩护着它那句早已过期的「夹具一份都没接上冻结」。
+	//
+	// 清单侧另有一道（TestEveryBreakNamesARealTest），在写清单的时候拦。
+	if strings.Contains(text, "no tests to run") {
+		return "零层未成立", fmt.Sprintf(
+			"`-run '^(%s)$'` 在 %s 里一条测试也没选中 —— "+
+				"这个名字要么不存在，要么只是某个更长的测试名的前缀。"+
+				"跑了零条，说明不了任何事。", b.Test, b.Pkg)
+	}
 
 	if b.Expect == "green" {
 		if green {

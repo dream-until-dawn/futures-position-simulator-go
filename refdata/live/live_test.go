@@ -2,6 +2,7 @@ package live
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -241,17 +242,34 @@ func TestToSessionTable(t *testing.T) {
 
 // TestSessionTablesRefuseConflict 断言同品种内时段不一致时**不自动取第一个**。
 func TestSessionTablesRefuseConflict(t *testing.T) {
+	// ⚠️ Class 必须显式给 "FUTURE"。
+	//
+	// 20260910 之前这两条**没设 Class**，于是零值 "" != "FUTURE"，
+	// 两条都在冲突检查之前就被当成非 FUTURE 跳过了 ——
+	// 本条拿到的错误其实是「一个 FUTURE 合约都没有（按 class 跳过了 map[:2]）」。
+	// 而它只断言了 `err != nil`，**任何错误都能满足**。
+	//
+	//	⇒ 这条测试从建立起就没走到过它名字里那条路，而它一直是绿的。
+	//
+	// 破坏验证当场揭出来的：把 `if len(conflicts) > 0` 关掉，本条照样绿。
 	syms := map[string]Symbol{
 		"SHFE.rb2701": {InstrumentID: "SHFE.rb2701", ExchangeID: "SHFE", ProductID: "rb",
-			VolumeMultiple: 10, PriceTick: 1,
+			Class: "FUTURE", VolumeMultiple: 10, PriceTick: 1,
 			TradingTime: TradingTime{Day: [][]string{{"09:00:00", "15:00:00"}}}},
 		"SHFE.rb2705": {InstrumentID: "SHFE.rb2705", ExchangeID: "SHFE", ProductID: "rb",
-			VolumeMultiple: 10, PriceTick: 1,
+			Class: "FUTURE", VolumeMultiple: 10, PriceTick: 1,
 			TradingTime: TradingTime{Day: [][]string{{"09:30:00", "15:00:00"}}}},
 	}
-	if _, err := SessionTablesOf(syms); err == nil {
-		t.Error("⚠️ 同品种两个月份时段表不同却被接受了 —— " +
+	_, err := SessionTablesOf(syms)
+	if err == nil {
+		t.Fatal("⚠️ 同品种两个月份时段表不同却被接受了 —— " +
 			"自动取第一个会把「上游数据有问题」和「时段按品种这个假设错了」一起藏掉")
+	}
+	// ⚠️ 错在**哪一条**上必须查：只查 err != nil 的话，
+	// 任何一个更早的失败（比如上面那次 class 跳过）都会冒充成功。
+	if !strings.Contains(err.Error(), "不自动取第一个") {
+		t.Errorf("⚠️ 报错了，但不是冲突那条：%v —— "+
+			"本条要的是冲突检查真的走到了，不是「有个错误」", err)
 	}
 }
 
@@ -392,6 +410,86 @@ func TestParseClockHandlesHoursBeyond24(t *testing.T) {
 		}
 		if c.ok && got.String() != c.want {
 			t.Errorf("%q 解成 %s，应为 %s", c.in, got, c.want)
+		}
+	}
+	// ⚠️ ≥48 那一格的**诊断**要单独钉，因为「结果对」在这里不代表「守卫还在」。
+	//
+	// 把 `if h >= 48` 关掉之后：h=48 走进 `h >= 24` 那一支，
+	// 减 24 落到 24，而 refdata.NewClockTime 的越界守卫照样拦下它。
+	// ⇒ **ok 仍然是 false，上面整个表照样全绿** —— 变的只有理由：
+	// 从「跨过第二个零点的盘不存在，这是数据错」变成一句通用的越界。
+	//
+	//	⚠️ 两个守卫叠在同一个结果上时，删掉外面那个不改变结果，只删掉诊断。
+	//	而诊断正是那一层存在的全部理由。
+	if _, err := parseClock("48:00:00"); err == nil {
+		t.Fatal("⚠️ 48:00:00 本该被拒")
+	} else if !strings.Contains(err.Error(), "跨过第二个零点") {
+		t.Errorf("⚠️ 48:00:00 被拒了，但不是那条诊断：%v —— "+
+			"外层那个 `h >= 48` 多半没了，而只查 ok 的话这个差别看不见", err)
+	}
+}
+
+// TestFetchRefusesEmptyDict 断言**空字典不是可用结果**。
+//
+// ⚠️ 20260910 补：此前**全库**没有任何东西测它。把 `if scanned == 0` 关掉，
+// `go test ./...` 全绿 —— 而它的后果是拿到一份 0 个合约的字典时静默返回空 map，
+// 而空 map 与「这批筛选条件确实一个都没命中」长得一模一样。
+//
+// ⚠️ 这正是方法论 80 那一格：**空集合上一切全称判断都成立**。
+// 上游换了个 URL、返回一个 `{}`、或者字典结构变了顶层键 ——
+// 三种情形都会走到这里，而没有这条守卫时它们都表现为「同步成功，0 个合约」。
+func TestFetchRefusesEmptyDict(t *testing.T) {
+	srv := serve(t, `{}`, http.StatusOK)
+	defer srv.Close()
+	got, err := FetchSymbols(context.Background(), srv.URL,
+		func(string) bool { return true }, nil)
+	if err == nil {
+		t.Fatalf("⚠️ 空字典被当成了可用结果（返回 %d 个条目）—— "+
+			"「一个都没命中」与「拿到的根本不是字典」在这里长得一样", len(got))
+	}
+	// ⚠️ 判别力：非空的必须照常成功。只测拒绝那一侧的话，
+	// 一个「永远报错」的实现也能过 —— 而那会让整条同步链路死掉。
+	srv2 := serve(t, sampleDict, http.StatusOK)
+	defer srv2.Close()
+	if _, err := FetchSymbols(context.Background(), srv2.URL,
+		func(id string) bool { return id == "SHFE.rb2701" }, nil); err != nil {
+		t.Errorf("⚠️ 非空字典本该成功，却报了 %v —— "+
+			"上面那条断言可能只是因为它什么都拒绝", err)
+	}
+}
+
+// TestFromFloatGuardCannotFireOnFloat64 记录一个**结构上打不响的守卫**。
+//
+// `fromFloat` 里那句往返校验（decimal 转回 float64 必须逐位相同）
+// 在**任何有限 float64 上都恒真** —— shopspring 的 NewFromFloat 按设计
+// 就用最短可往返表示。实测七个极端值全部相等：
+//
+//	0.1+0.2 / 1e300 / 1e-300 / MaxFloat64 / 次正规数 / 1.0÷3.0 / 1.2345678901234569e23
+//
+// ⚠️ 于是它防不住它注释里说要防的那件事。「上游开始给高精度小数」
+// 那个损失发生在**更早一步**：JSON 数字被解进 float64 的那一刻。
+// 到了 fromFloat 手上，精度已经没了，而它看到的是一个自洽的 float64。
+//
+//	⚠️ 一个瞄错了位置的守卫，和一个成立的守卫，在代码里长得一模一样 ——
+//	差别只在它防的那件事有没有可能走到它面前。
+//
+// ⇒ **欠着的动作**：真要防这件事，得在解析处把数字读成 `json.Number`
+// （原始文本）再与转换结果比。那是 Symbol 线格式的改动，不在本批。
+// 在那之前，「高精度小数静默截断」这一条**没有守卫**，别以为有。
+//
+// 本条把「恒真」这件事钉住：哪天依赖库改了行为，它会红，
+// 而那时上面这段说明也就该重写了。
+func TestFromFloatGuardCannotFireOnFloat64(t *testing.T) {
+	extremes := []float64{0.1 + 0.2, 1e300, 1e-300, math.MaxFloat64,
+		math.SmallestNonzeroFloat64, 1.0 / 3.0, 123456789012345678901234.0}
+	if len(extremes) != 7 {
+		t.Fatalf("用例 %d 个，应为 7 —— 增删了就同步改上面的说明", len(extremes))
+	}
+	for _, f := range extremes {
+		if _, err := fromFloat(f, "price_tick", "测试"); err != nil {
+			t.Errorf("⚠️ %v 上往返校验竟然打响了：%v —— "+
+				"若这条红了，是**好消息**：那个守卫不再是死的。"+
+				"去把它上面那段「结构上打不响」的说明重写", f, err)
 		}
 	}
 }

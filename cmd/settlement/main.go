@@ -51,7 +51,7 @@ func run(dayStr, symbols, out string, back int, timeout time.Duration) error {
 	defer cancel()
 
 	if back > 0 {
-		return probeCalendar(ctx, day, back, out)
+		return probeCalendar(ctx, day, back, out, exchange.ProbeDay)
 	}
 	fmt.Printf("取上期所交易日 %s 的日行情\n", day)
 	got, rep, err := exchange.FetchSHFE(ctx, day)
@@ -163,7 +163,16 @@ func run(dayStr, symbols, out string, back int, timeout time.Duration) error {
 //
 // 把最后一类直接当成「非交易日」，会在每次「今天的还没发」时少算一个交易日，
 // 而少一个交易日会让此后每一次今昨仓滚动错位，且不报错。
-func probeCalendar(ctx context.Context, from types.TradingDay, back int, out string) error {
+// probe 是探一天的函数，由调用方注入。
+//
+// ⚠️ 抽出这个参数**只为一件事**：让「探不动就停，不跳过」那条守卫验得了。
+// 它在真实运行里恒等于 exchange.ProbeDay —— 而在此之前，
+// 那条守卫要连着上期所的服务器才走得到，于是它一次都没被验过。
+//
+//	一条只有在上游出故障时才会执行的分支，正是最不可能被人看见的那种。
+type probe func(context.Context, types.TradingDay) (exchange.DayStatus, error)
+
+func probeCalendar(ctx context.Context, from types.TradingDay, back int, out string, ask probe) error {
 	fmt.Printf("从 %s 往前探 %d 个自然日\n", from, back)
 	fmt.Println("⚠️ 每天一次请求，慢；结果照实记三态，不把「取不到」当成「非交易日」")
 
@@ -176,7 +185,7 @@ func probeCalendar(ctx context.Context, from types.TradingDay, back int, out str
 	d := from.CalendarDate()
 	for i := 0; i < back; i++ {
 		day := types.NewTradingDay(d.Year(), int(d.Month()), d.Day())
-		st, err := exchange.ProbeDay(ctx, day)
+		st, err := ask(ctx, day)
 		if err != nil {
 			// ⚠️ 探不动就停，不跳过：跳过会在列表里留一个**看不出来的洞**，
 			// 而一个缺了几天的交易日历比没有日历更危险。

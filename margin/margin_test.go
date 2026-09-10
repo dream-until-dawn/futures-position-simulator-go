@@ -264,6 +264,19 @@ func TestBothTermsAlwaysSummed(t *testing.T) {
 	if !r.Company.Equal(d("6420")) {
 		t.Errorf("两项相加应为 6420，实为 %s —— 只算一项会得到 6320 或 100", r.Company)
 	}
+	// ⚠️ 交易所口径这一行**结构相同、此前无人看着**。
+	//
+	// 本条的名字承诺「两项永远相加」，而它原先只查了 company ——
+	// 把 exchange 那一行的 `.Add(v.Mul(byVolume))` 删掉，本条照样绿。
+	// ⚠️ 而 CTP 对拍那一侧**已登记为盲区**（破坏 265：按手数那一项在那批样本上恒为零）
+	// ⇒ 两边都盖不住，这个口径的按手数项此前一点覆盖都没有。
+	//
+	// 本例 CompanyAddOn 为零，故两个口径同值 —— 它分不开公司/交易所，
+	// 但它分得开「加了按手数项」与「没加」，而那正是本条要的。
+	if !r.Exchange.Equal(d("6420")) {
+		t.Errorf("交易所口径两项相加应为 6420，实为 %s —— "+
+			"只算按金额那一项会得到 6320", r.Exchange)
+	}
 }
 
 // TestUnmeasuredRefuses 断言两个未实测项都**拒绝运行**。
