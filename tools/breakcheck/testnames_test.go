@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -163,5 +164,58 @@ func TestZeroTestsIsNotAVerdict(t *testing.T) {
 	if !strings.Contains(d, "一条测试也没选中") {
 		t.Errorf("⚠️ 判成了 %q，但说明里没提「一条也没选中」（%s）—— "+
 			"红对了理由才算数：它可能是因为别的原因没绿", v, d)
+	}
+}
+
+// breakNumRe 认的是破坏名开头的编号：`70 waitFrozen 不再识别拒单`。
+var breakNumRe = regexp.MustCompile(`^(\d+) `)
+
+// TestBreakNumbersAreUniqueAndPresent 钉住破坏编号**每条都有、且全局唯一**。
+//
+// ⚠️ 20260910 补。此前前缀 1–6 各被 12/12/12/11/9/4 条共用 ——
+// 早期按**批次**编号（每批从 1 起），后来改成**全局**编号，
+// **同一个字段里混着两套方案**。
+//
+// 编号是**引用地址**：文档、注释、破坏名自己都靠它指人。
+// 重号之后一句「破坏 4」指向十一条内容，而**被引用的那一方不会有任何变化** ——
+// 读的人跳过去，看见一条讲得通的，就停下了。
+//
+// ⚠️ 这条的直接起因是一次自己打脸：我核完 `docs/` 与 `*.go`，
+// 写下「仓库里零处歧义引用」，而**加进两处歧义引用的正是同一个提交** ——
+// 那两处在 `breaks.json` 自己的破坏名里。
+//
+//	我把清单当成「被描述的东西」，没当成「引用住的地方」。
+//
+// ⇒ 60 条已重编到 320–379。1–6 这几个号从此**不存在**：
+// 悬空引用是响的，歧义引用是哑的。
+func TestBreakNumbersAreUniqueAndPresent(t *testing.T) {
+	var breaks []Break
+	if err := json.Unmarshal(registryJSON, &breaks); err != nil {
+		t.Fatalf("⚠️ 读不了破坏清单：%v", err)
+	}
+	if len(breaks) < 100 {
+		t.Fatalf("⚠️ 只读到 %d 条 —— 太少，本条在空转", len(breaks))
+	}
+	seen := map[string]string{}
+	for _, b := range breaks {
+		m := breakNumRe.FindStringSubmatch(b.Name)
+		if m == nil {
+			t.Errorf("⚠️ %q 开头没有编号 —— 没有编号就没法被引用，"+
+				"而将来引用它的人会去引它的**文字**，那句文字改一次就断一次", b.Name)
+			continue
+		}
+		if prev, dup := seen[m[1]]; dup {
+			t.Errorf("⚠️ 编号 %s **重复**：\n    %q\n    %q\n"+
+				"编号是引用地址：一句「破坏 %s」从此指向两条内容，"+
+				"而跳过去的人会读到其中一条、觉得讲得通，然后停下", m[1], prev, b.Name, m[1])
+			continue
+		}
+		seen[m[1]] = b.Name
+	}
+	// ⚠️ 判别力：上面每一条都是「有问题才喊」。一个 breaks 提前空掉的循环
+	// 也能全绿。这里钉住确实逐条看过。
+	if len(seen) != len(breaks) {
+		t.Fatalf("⚠️ 收到 %d 个不同编号，而清单有 %d 条 —— 有条目被跳过了",
+			len(seen), len(breaks))
 	}
 }

@@ -1,6 +1,6 @@
 [
 	{
-		"name": "1 空仓均价改成 Num(0)",
+		"name": "320 空仓均价改成 Num(0)",
 		"dir": "",
 		"file": "view/position.go",
 		"old": "\t\t\tv[\"open_price_\"+n] = None(\"该方向空仓，没有开仓均价 —— \" +",
@@ -11,7 +11,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 合计把「两边都无值」当成 0",
+		"name": "321 合计把「两边都无值」当成 0",
 		"dir": "",
 		"file": "view/position.go",
 		"old": "\tcase a.Presence == Absent && b.Presence == Absent:\n\t\treturn None(whyNone)",
@@ -22,7 +22,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 视图漏渲染一个字段",
+		"name": "322 视图漏渲染一个字段",
 		"dir": "",
 		"file": "view/position.go",
 		"old": "\tv[\"market_status\"] = Todo(\"盘口状态来自行情，本库不建模\")",
@@ -33,7 +33,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 判定不再区分「一侧无值」",
+		"name": "323 判定不再区分「一侧无值」",
 		"dir": "",
 		"file": "conformance/conformance.go",
 		"old": "\tcase f.LibraryAbsent != f.OracleAbsent:\n\t\treturn Failed",
@@ -44,7 +44,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 空头浮盈符号反过来",
+		"name": "324 空头浮盈符号反过来",
 		"dir": "",
 		"file": "view/position.go",
 		"old": "\t\t\tif n == \"short\" {\n\t\t\t\tsign = decimal.NewFromInt(-1)\n\t\t\t}",
@@ -55,7 +55,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "6 今昨拆分守卫：夹具目录读不到",
+		"name": "325 今昨拆分守卫：夹具目录读不到",
 		"dir": "",
 		"file": "view/position_test.go",
 		"old": "\tpaths, err := filepath.Glob(filepath.Join(\"..\", \"testdata\", \"probes\", \"*.json\"))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\t// 这两类**任何时候**都不该是真实数字。",
@@ -66,7 +66,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 未登记的账户键被静默保留",
+		"name": "326 未登记的账户键被静默保留",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/kq/sanitize.go",
 		"old": "\t\tunknown[\"accounts/\"+k] = struct{}{}",
@@ -77,7 +77,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 未登记的成交键被静默丢弃",
+		"name": "327 未登记的成交键被静默丢弃",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/kq/sanitize.go",
 		"old": "\t\t\tunknown[\"trades/\"+k] = struct{}{}",
@@ -88,7 +88,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 成交整段不进夹具",
+		"name": "328 成交整段不进夹具",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/kq/sanitize.go",
 		"old": "\t\tf.Trades[id] = out",
@@ -99,7 +99,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 独立复查的 UUID 正则失效",
+		"name": "329 独立复查的 UUID 正则失效",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/kq/sanitize.go",
 		"old": "\tuuidRe = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)",
@@ -110,7 +110,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 盲区下界改成含等号",
+		"name": "330 盲区下界改成含等号",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/kq/sanitize.go",
 		"old": "\t\tif s.Value != \"\" && len(s.Value) < minCheckable {",
@@ -121,7 +121,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 昨结相同也判成按手",
+		"name": "331 昨结相同也判成按手",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_fee_predict.go",
 		"old": "\tif preSpread <= feeEps {\n\t\treturn feeUndecidable, \"各月份昨结算价相同：两类给出同一个数，分不开\"\n\t}",
@@ -132,7 +132,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 两类互斥的前提被绕过",
+		"name": "332 两类互斥的前提被绕过",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_fee_predict.go",
 		"old": "\tbyLot := feeSpread <= feeEps",
@@ -143,7 +143,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 判不了改成默认按额",
+		"name": "333 判不了改成默认按额",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_fee_predict.go",
 		"old": "\t\treturn feeUndecidable, \"只有一个月份：单点上按手与按额给出同一个数\"",
@@ -154,7 +154,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 零值不再是「判不了」",
+		"name": "334 零值不再是「判不了」",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_fee_predict.go",
 		"old": "\tfeeUndecidable feeMode = iota\n\tfeeByLot               // 按手固定额",
@@ -165,7 +165,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 纯函数没接回生产路径",
+		"name": "335 纯函数没接回生产路径",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_fee_predict.go",
 		"old": "\t\tmode, detail := classifyFeeMode(rs)",
@@ -176,7 +176,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 \"-\" 解析成 0",
+		"name": "336 \"-\" 解析成 0",
 		"dir": "",
 		"file": "conformance/fixture/fixture.go",
 		"old": "\t\tif x == dashToken {\n\t\t\treturn Value{Absent: true}, nil\n\t\t}",
@@ -187,7 +187,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 歧义检查被绕过",
+		"name": "337 歧义检查被绕过",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\t\tif sig != firstSig {",
@@ -198,7 +198,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 拷贝昨仓走 Open（今仓化）",
+		"name": "338 拷贝昨仓走 Open（今仓化）",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\t\tfor _, l := range from.Lots() {\n\t\t\tto.Append(l)\n\t\t}",
@@ -209,7 +209,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 摘要只看均价",
+		"name": "339 摘要只看均价",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\t\ts += fmt.Sprintf(\"|%v:\", d)\n\t\tfor _, l := range side.Lots() {\n\t\t\ts += fmt.Sprintf(\"(%s×%d,基线%s,昨仓%t)\", l.OpenPrice, l.Volume, l.Basis, l.Settled)\n\t\t}",
@@ -220,7 +220,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 未实现项填 0 再比（旧 bug）",
+		"name": "340 未实现项填 0 再比（旧 bug）",
 		"dir": "",
 		"file": "conformance/fixture/compare.go",
 		"old": "\t\t\tf.LibraryUnimplemented = true",
@@ -231,7 +231,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "6 平仓方向不取反",
+		"name": "341 平仓方向不取反",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\t\t\tclosing := opposite(t.Direction)",
@@ -242,7 +242,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 不核对 report_date",
+		"name": "342 不核对 report_date",
 		"dir": "",
 		"file": "refdata/exchange/shfe.go",
 		"old": "\tif got != day {",
@@ -253,7 +253,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 汇总行也当合约",
+		"name": "343 汇总行也当合约",
 		"dir": "",
 		"file": "refdata/exchange/shfe.go",
 		"old": "\t\tif !allDigits(month) {",
@@ -264,7 +264,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 丢弃不记账（静默）",
+		"name": "344 丢弃不记账（静默）",
 		"dir": "",
 		"file": "refdata/exchange/shfe.go",
 		"old": "func (r *Report) drop(reason, sample string) {",
@@ -275,7 +275,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 解析路径绕道 float64",
+		"name": "345 解析路径绕道 float64",
 		"dir": "",
 		"file": "refdata/exchange/shfe.go",
 		"old": "\t\td, err := decimal.NewFromString(settle)",
@@ -286,7 +286,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 结算价为零也收",
+		"name": "346 结算价为零也收",
 		"dir": "",
 		"file": "refdata/exchange/shfe.go",
 		"old": "\t\tif !d.IsPositive() {",
@@ -297,7 +297,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "6 非期货也收（TAS 混进来）",
+		"name": "347 非期货也收（TAS 混进来）",
 		"dir": "",
 		"file": "refdata/exchange/shfe.go",
 		"old": "\t\tif row.ProductClass != shfeFutures {",
@@ -308,7 +308,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 结算也动逐笔对冲基线（UseHistory 路）",
+		"name": "348 结算也动逐笔对冲基线（UseHistory 路）",
 		"dir": "",
 		"file": "position/lot.go",
 		"old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
@@ -319,7 +319,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 今仓不滚成昨仓",
+		"name": "349 今仓不滚成昨仓",
 		"dir": "",
 		"file": "position/lot.go",
 		"old": "\t\ts.lots[i].Settled = true",
@@ -330,7 +330,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 结转空仓合约不报错",
+		"name": "350 结转空仓合约不报错",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\tif p.IsFlat() {",
@@ -341,7 +341,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 判别力守卫恒说「分开了」",
+		"name": "351 判别力守卫恒说「分开了」",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\treturn o, b, !o.Equal(b), nil",
@@ -352,7 +352,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 没成交也照结转",
+		"name": "352 没成交也照结转",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\tif len(trades) == 0 {",
@@ -363,7 +363,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 \"-\" 又渲染成 0",
+		"name": "353 \"-\" 又渲染成 0",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_settle_watch.go",
 		"old": "\tcase string:\n\t\treturn x",
@@ -374,7 +374,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 缺字段也当 0",
+		"name": "354 缺字段也当 0",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_settle_watch.go",
 		"old": "\t\treturn \"(缺字段)\"",
@@ -385,7 +385,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 采集器三处渲染退回去一处",
+		"name": "355 采集器三处渲染退回去一处",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_settle_watch.go",
 		"old": "\t\t\tm[\"account.\"+k] = numOrDash(acc, k)",
@@ -396,7 +396,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 公式漏掉按手那一项",
+		"name": "356 公式漏掉按手那一项",
 		"dir": "",
 		"file": "fee/fee.go",
 		"old": "\treturn rounding.Apply(amount.Add(perLot))",
@@ -407,7 +407,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 rb 的标定费率改错一位",
+		"name": "357 rb 的标定费率改错一位",
 		"dir": "",
 		"file": "conformance/fixture/fee_test.go",
 		"old": "{product: \"rb\", byMoney: \"0.00001\"",
@@ -418,7 +418,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 昨结算价缺失时回落到 0",
+		"name": "358 昨结算价缺失时回落到 0",
 		"dir": "",
 		"file": "conformance/fixture/fixture.go",
 		"old": "\tv, ok := q[\"pre_settlement\"]\n\tif !ok || v.Absent || v.IsText || !v.Number.IsPositive() {\n\t\treturn decimal.Zero, false\n\t}",
@@ -429,7 +429,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 平今档换成开仓档（期望**仍然绿**）",
+		"name": "359 平今档换成开仓档（期望**仍然绿**）",
 		"dir": "",
 		"file": "fee/fee.go",
 		"old": "\tcase types.CloseToday:\n\t\treturn r.CloseTodayByMoney, r.CloseTodayByVolume, nil",
@@ -441,7 +441,7 @@
 		"why": "平今与开仓在快期模拟上同费率（kq_facts 18），所以「开平标志选错档」这个错在本口子上查不出来。真实 CTP 上平今常另有费率。"
 	},
 	{
-		"name": "1 公司口径换交易所口径（期望**仍然绿**）",
+		"name": "360 公司口径换交易所口径（期望**仍然绿**）",
 		"dir": "",
 		"file": "conformance/fixture/margin.go",
 		"old": "\t\tlong = long.Add(g.LongExchange)\n\t\tshort = short.Add(g.ShortExchange)",
@@ -453,7 +453,7 @@
 		"why": "实测费率里公司加收为零，交易所口径与公司口径恒等，本口子上分不开（待实测第 14 条）。⚠️ 风险度用的是公司口径，两层混用时错的方向是「看起来更安全」。"
 	},
 	{
-		"name": "2 逐笔翻译改成按方向合并手数",
+		"name": "361 逐笔翻译改成按方向合并手数",
 		"dir": "",
 		"file": "conformance/fixture/margin.go",
 		"old": "\t\tfor _, l := range s.Lots() {",
@@ -464,7 +464,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 rb 的保证金率改错",
+		"name": "362 rb 的保证金率改错",
 		"dir": "",
 		"file": "conformance/fixture/margin_test.go",
 		"old": "\"rb\": \"0.07\", \"m\": \"0.07\",",
@@ -475,7 +475,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 费率表塌成一档",
+		"name": "363 费率表塌成一档",
 		"dir": "",
 		"file": "conformance/fixture/margin_test.go",
 		"old": "\t\"i\": \"0.11\", \"cu\": \"0.11\",\n\t\"ag\": \"0.22\",",
@@ -486,7 +486,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 空仓也返回 0 而不是报错",
+		"name": "364 空仓也返回 0 而不是报错",
 		"dir": "",
 		"file": "conformance/fixture/margin.go",
 		"old": "\t\treturn decimal.Zero, decimal.Zero, errNoPosition",
@@ -497,7 +497,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "1 平仓盈亏的方向搞反",
+		"name": "365 平仓盈亏的方向搞反",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\t\t\t\t\tTradeID: t.TradeID, Instrument: inst, Direction: closing,",
@@ -508,7 +508,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 已实现片段只取第一片",
+		"name": "366 已实现片段只取第一片",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\t\t\t\t\tOffset: t.Offset, ClosePrice: t.Price, Consumed: res.Consumed,",
@@ -519,7 +519,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 手续费基准换成成交价",
+		"name": "367 手续费基准换成成交价",
 		"dir": "",
 		"file": "conformance/fixture/account_test.go",
 		"old": "\t\t\tc, err := fee.Compute(rates, tr.Offset, pre, mult, tr.Volume, decimalx.NoRounding)",
@@ -530,7 +530,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 逐笔对冲基线改用 Basis",
+		"name": "368 逐笔对冲基线改用 Basis",
 		"dir": "",
 		"file": "pnl/pnl.go",
 		"old": "\t\tr.ByTrade = r.ByTrade.Add(closePrice.Sub(l.OpenPrice).Mul(q))",
@@ -542,7 +542,7 @@
 		"why": "本批夹具全是今仓，两条基线（开仓价 / 逐日盯市基线）本就相同，所以两套盈亏口径必然同值。要等昨仓样本才分得开。"
 	},
 	{
-		"name": "1 手续费不进账户",
+		"name": "369 手续费不进账户",
 		"dir": "",
 		"file": "conformance/fixture/rebuild.go",
 		"old": "\t\t\tif err := acc.AddCommission(f.TradingDay, c); err != nil {\n\t\t\t\treturn zero, err\n\t\t\t}",
@@ -553,7 +553,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 持仓盈亏不进账户",
+		"name": "370 持仓盈亏不进账户",
 		"dir": "",
 		"file": "conformance/fixture/rebuild.go",
 		"old": "\tif err := acc.SetPositionProfit(f.TradingDay, totalPositionProfit); err != nil {",
@@ -564,7 +564,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 保证金不进账户",
+		"name": "371 保证金不进账户",
 		"dir": "",
 		"file": "conformance/fixture/rebuild.go",
 		"old": "\tif err := acc.SetMargin(f.TradingDay, totalMarginCompany, totalMarginExchange); err != nil {",
@@ -575,7 +575,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 平仓盈亏不进账户",
+		"name": "372 平仓盈亏不进账户",
 		"dir": "",
 		"file": "conformance/fixture/rebuild.go",
 		"old": "\t\t\tif err := acc.AddCloseProfit(f.TradingDay, res.ByDate); err != nil {\n\t\t\t\treturn zero, err\n\t\t\t}",
@@ -586,7 +586,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 结存改用逐笔对冲口径（期望**仍然绿**）",
+		"name": "373 结存改用逐笔对冲口径（期望**仍然绿**）",
 		"dir": "",
 		"file": "conformance/fixture/rebuild.go",
 		"old": "\t\t\tif err := acc.AddCloseProfit(f.TradingDay, res.ByDate); err != nil {",
@@ -598,7 +598,7 @@
 		"why": "同上：今仓下两套口径同值。⚠️ 中国期货的资金结算走逐日盯市，这一条在有昨仓之后必须变红。"
 	},
 	{
-		"name": "6 内部不变式自查被绕过",
+		"name": "374 内部不变式自查被绕过",
 		"dir": "",
 		"file": "conformance/fixture/rebuild.go",
 		"old": "\tif err := acc.Check(); err != nil {",
@@ -610,7 +610,7 @@
 		"why": "acc.Check() 抓的是「忘了把冻结算进可用」，而本批样本里冻结全为零，那条不变式无从被违反。报单冻结要到 v0.4.0。"
 	},
 	{
-		"name": "1 版本推到 v1.0.0（欠账应当当场到期）",
+		"name": "375 版本推到 v1.0.0（欠账应当当场到期）",
 		"dir": "",
 		"file": "version.go",
 		"old": "const Version = \"v0.4.0\"",
@@ -621,7 +621,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "2 到期版本写成非法字符串",
+		"name": "376 到期版本写成非法字符串",
 		"dir": "",
 		"file": "view/position.go",
 		"old": "v[\"market_value\"] = Skip(\"v1.0.0\", \"期权市值合计；v1.0 不含期权\")",
@@ -632,7 +632,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "3 扫描认不出 Skip（机制空转）",
+		"name": "377 扫描认不出 Skip（机制空转）",
 		"dir": "",
 		"file": "version_test.go",
 		"old": "\t\t\t\t\tmatched = fn.Name == \"Skip\" && f.Name.Name == \"view\"",
@@ -643,7 +643,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "4 版本比较把「相等」判成未到期",
+		"name": "378 版本比较把「相等」判成未到期",
 		"dir": "",
 		"file": "version_test.go",
 		"old": "\t\tif a[i] != b[i] {\n\t\t\treturn a[i] < b[i]\n\t\t}\n\t}\n\treturn false\n}",
@@ -654,7 +654,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "5 包文档的版本与常量漂开",
+		"name": "379 包文档的版本与常量漂开",
 		"dir": "",
 		"file": "version.go",
 		"old": "const Version = \"v0.4.0\"",
@@ -3189,7 +3189,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "287 平今档换成开仓档 —— ⚠️ 破坏 4 在对拍侧登记为盲区，本条是它在单测侧的红搭档",
+		"name": "287 平今档换成开仓档 —— ⚠️ 破坏 359 在对拍侧登记为盲区，本条是它在单测侧的红搭档",
 		"dir": "",
 		"file": "fee/fee.go",
 		"old": "\tcase types.CloseToday:\n\t\treturn r.CloseTodayByMoney, r.CloseTodayByVolume, nil\n",
@@ -3211,7 +3211,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "289 手续费公式丢掉按手数那一项（单测侧；破坏 1 走的是对拍侧）",
+		"name": "289 手续费公式丢掉按手数那一项（单测侧；破坏 356 走的是对拍侧）",
 		"dir": "",
 		"file": "fee/fee.go",
 		"old": "\treturn rounding.Apply(amount.Add(perLot))\n",
@@ -3550,6 +3550,28 @@
 		"pkg": "./cmd/settlement/",
 		"test": "TestProbeCalendarStopsOnError",
 		"want": "照样跑完了",
+		"expect": "red"
+	},
+	{
+		"name": "380 两条破坏撞号 —— ⚠️ TestBreakNumbersAreUniqueAndPresent 的红搭档",
+		"dir": "",
+		"file": "tools/breakcheck/breaks.json",
+		"old": "\t\t\"name\": \"70 【期望仍绿】waitFrozen",
+		"new": "\t\t\"name\": \"131 【期望仍绿】waitFrozen",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestBreakNumbersAreUniqueAndPresent",
+		"want": "**重复**",
+		"expect": "red"
+	},
+	{
+		"name": "381 一条破坏没有编号（将来引用它的人只能去引它的文字）",
+		"dir": "",
+		"file": "tools/breakcheck/breaks.json",
+		"old": "\t\t\"name\": \"70 【期望仍绿】waitFrozen",
+		"new": "\t\t\"name\": \"【期望仍绿】waitFrozen",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestBreakNumbersAreUniqueAndPresent",
+		"want": "开头没有编号",
 		"expect": "red"
 	}
 ]
