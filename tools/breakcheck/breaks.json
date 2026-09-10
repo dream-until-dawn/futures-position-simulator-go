@@ -2901,5 +2901,27 @@
 		"test": "TestRestingPriceMatchesDirection",
 		"want": "必须是同一个",
 		"expect": "red"
+	},
+	{
+		"name": "261 开平从平今改成开仓 —— ⚠️ 单子照样挂得上、阀不拦，而冻结保证金那个数把结论翻过来。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\t\tdef.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)",
+		"new": "\t\t\tdef.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_Open)",
+		"pkg": ".",
+		"test": "TestDirectionAndOffsetAreSetTogether",
+		"want": "开平与方向不配对",
+		"expect": "red"
+	},
+	{
+		"name": "262 方向与开平拆成两行分别赋值 —— 「只改了一行」在源码里看不出任何异样。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\tdir, off = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell),\n\t\t\tdef.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)",
+		"new": "\t\tdir = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell)\n\t\toff = def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)",
+		"pkg": ".",
+		"test": "TestDirectionAndOffsetAreSetTogether",
+		"want": "必须成对赋值",
+		"expect": "red"
 	}
 ]

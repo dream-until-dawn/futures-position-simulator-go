@@ -565,11 +565,15 @@ func runCTPOrder(args []string) error {
 	// ⚠️ 方向与开平**成对**决定，不许分开设：买开挂跌停、卖平挂涨停，
 	// 两者都是「挂得上、成不了」的那一端。⚠️ 拆开设会让人配出
 	// 「卖平挂跌停」这种当场成交的组合，而那与本命令要验的往返完全不是一回事。
-	dir := def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy)
-	off := def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_Open)
+	// ⚠️ 写成**元组赋值**，是为了让「成对」这件事在语法上就成立 ——
+	// 两行分开写时，「只改了一行」在源码里看不出任何异样。
+	// 守卫 `TestRestingPriceMatchesDirection` 断言每一处赋值都同时给出两者，
+	// 且配对只能是 买+开 或 卖+平今。破坏 261。
+	dir, off := def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy),
+		def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_Open)
 	if *closeToday {
-		dir = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell)
-		off = def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)
+		dir, off = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell),
+			def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)
 	}
 	req := ctp.OrderReq{
 		Exchange: ex, Instrument: inst,

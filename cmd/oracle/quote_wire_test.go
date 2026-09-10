@@ -77,7 +77,7 @@ func TestQuoteFailureBlocksTheWrite(t *testing.T) {
 	//    ⚠️ 这一条不能省：顺序对了而错误被吞掉，落盘照样发生，
 	//    而**只查顺序的守卫在那种改法下一个字都不会说**。
 	if !hasReturn(quoteIf.Body) {
-		t.Errorf("⚠️ 补行情失败那一支里**没有 return** —— 错误被吞掉，"+
+		t.Errorf("⚠️ 补行情失败那一支里**没有 return** —— 错误被吞掉，" +
 			"落盘照样发生。⚠️ 一句日志与一次拦截在磁盘上的区别是：前者留下半份证据")
 	}
 }
@@ -93,6 +93,15 @@ func exprName(e ast.Expr) string {
 		return x.Name
 	case *ast.SelectorExpr:
 		return x.Sel.Name
+	case *ast.CallExpr:
+		// ⚠️ **类型转换要剥掉**：`def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy)`
+		// 在 AST 里是一次调用，而我们要的是里面那个常量名。
+		// ⚠️ 这是第二次因为「守卫太窄」而扩它（第一次是选择器，破坏 260）——
+		// 判据同 silent-risks 78：**那个写法在真实代码里会不会出现？**
+		// 显式类型转换是 Go 里再正常不过的写法 ⇒ 是守卫窄，不是代码偏。
+		if len(x.Args) == 1 {
+			return exprName(x.Args[0])
+		}
 	}
 	return ""
 }
@@ -230,4 +239,103 @@ func TestRestingPriceMatchesDirection(t *testing.T) {
 			"拆开之后这笔单会**当场成交**，而一个只该挂一下的探针会变成一次真实的开/平仓，"+
 			"**在日志里与成功的探针长得一模一样**", dirIdent, farIdent)
 	}
+}
+
+// legalLegs 是 `ctp-order` 允许的**方向与开平的配对**，⚠️ 只有这两种。
+//
+//	买 + 开      挂跌停 —— 挂得上、成不了
+//	卖 + 平今    挂涨停 —— 挂得上、成不了
+var legalLegs = map[[2]string]bool{
+	{"THOST_FTDC_D_Buy", "THOST_FTDC_OF_Open"}:        true,
+	{"THOST_FTDC_D_Sell", "THOST_FTDC_OF_CloseToday"}: true,
+}
+
+// TestDirectionAndOffsetAreSetTogether 钉住 `runCTPOrder` 的**第二条**不变式：
+//
+//	方向与开平必须**成对**赋值，且配对只有两种
+//
+// # ⚠️ 它为什么比「挂价方向」那条更隐蔽
+//
+// 若拆成 `dir = Sell` / `off = **Open**`：
+//
+//	FarPrice(md, Sell) = 涨停      ⇒ 卖单挂涨停，**挂得上、成不了** —— 表面完全正常
+//	Offset = Open                  ⇒ 这是一笔**开仓**单，不是平仓单
+//	安全阀                         ⇒ `intentOf` 判 Closing=false，**开仓是合法的，阀不拦**
+//	⚠️ 而**开仓挂单会冻保证金**
+//
+// ⇒ 量出来的会是 `FrozenMargin ≈ 5000` 而不是 0，
+// 于是 `kq_facts` 42（平仓挂单不冻保证金）的结论**整个翻过来**。
+//
+//	第一条不变式坏掉  探针会**成交** —— 至少留下一个成交回报
+//	本条坏掉          ⚠️ 探针照样挂得上、照样撤得掉、日志一切正常，**只有那个数变了**
+//	                  而那个数**正是结论本身**
+//
+// ⚠️ **它不改变任何行为，只改变测到的量** —— 这是 20260910 评审抓到的，
+// 而我用第 74 条那一问只问出了第一条就停了。**「找到了一个」和「找完了」是两件事。**
+func TestDirectionAndOffsetAreSetTogether(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "main.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := findFunc(f, "runCTPOrder")
+	if fn == nil {
+		t.Fatal("⚠️ 找不到 runCTPOrder —— 改名了？本条会在空集上跑")
+	}
+	n := 0
+	ast.Inspect(fn, func(x ast.Node) bool {
+		as, ok := x.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		var names []string
+		for _, l := range as.Lhs {
+			names = append(names, exprName(l))
+		}
+		touches := has2(names, "dir") || has2(names, "off")
+		if !touches {
+			return true
+		}
+		n++
+		// ⚠️ 一、必须**同时**赋两者。分开赋值时「只改了一行」在源码里看不出异样。
+		if !has2(names, "dir") || !has2(names, "off") {
+			t.Errorf("⚠️ 第 %d 处赋值只给了 %v —— **方向与开平必须成对赋值**。"+
+				"拆开之后可以配出「卖+开」：挂涨停照样挂得上、阀不拦（开仓合法），"+
+				"⚠️ **而开仓挂单会冻保证金 ⇒ 量出来的数把 kq_facts 42 整个翻过来**", n, names)
+			return true
+		}
+		if len(as.Rhs) != 2 {
+			t.Errorf("⚠️ 第 %d 处赋值左边是 dir/off，右边却有 %d 个值 —— 形状变了", n, len(as.Rhs))
+			return true
+		}
+		// ⚠️ 二、配对只能是那两种。
+		di, oi := indexOf(names, "dir"), indexOf(names, "off")
+		pair := [2]string{exprName(as.Rhs[di]), exprName(as.Rhs[oi])}
+		if !legalLegs[pair] {
+			t.Errorf("⚠️ 第 %d 处的配对是 %v —— **开平与方向不配对**。"+
+				"只允许「买+开」与「卖+平今」，两者都是「挂得上、成不了」的那一端", n, pair)
+		}
+		return true
+	})
+	if n < 2 {
+		t.Fatalf("⚠️ 只扫到 %d 处 dir/off 赋值（要至少 2 处：默认与 -close 分支）—— 本条在空转", n)
+	}
+}
+
+func has2(xs []string, s string) bool {
+	for _, x := range xs {
+		if x == s {
+			return true
+		}
+	}
+	return false
+}
+
+func indexOf(xs []string, s string) int {
+	for i, x := range xs {
+		if x == s {
+			return i
+		}
+	}
+	return -1
 }
