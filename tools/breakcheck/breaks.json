@@ -3297,5 +3297,71 @@
 		"test": "TestAlignToTick",
 		"want": "0.02, 0) = 512.34",
 		"expect": "red"
+	},
+	{
+		"name": "297 20260231 这种不存在的日期不再被拒",
+		"dir": "",
+		"file": "types/trading_day.go",
+		"old": "\tif t.Year() != y || int(t.Month()) != m || t.Day() != dd {",
+		"new": "\tif false && (t.Year() != y || int(t.Month()) != m || t.Day() != dd) {",
+		"pkg": "./types/",
+		"test": "TestTradingDay",
+		"want": "本该报错，却得到 20260230",
+		"expect": "red"
+	},
+	{
+		"name": "298 After 方向对调 —— ⚠️ 补测试之前 types 整包全绿，红的是 account（红在症状上）",
+		"dir": "",
+		"file": "types/trading_day.go",
+		"old": "func (d TradingDay) After(o TradingDay) bool { return d > o }",
+		"new": "func (d TradingDay) After(o TradingDay) bool { return d < o }",
+		"pkg": "./types/",
+		"test": "TestTradingDayOrdering",
+		"want": "After 的方向反了",
+		"expect": "red"
+	},
+	{
+		"name": "299 Before 放宽成「或等于」（重复结算同一天被放行）",
+		"dir": "",
+		"file": "types/trading_day.go",
+		"old": "func (d TradingDay) Before(o TradingDay) bool { return d < o }",
+		"new": "func (d TradingDay) Before(o TradingDay) bool { return d <= o }",
+		"pkg": "./types/",
+		"test": "TestTradingDayOrdering",
+		"want": "既不早于也不晚于自己",
+		"expect": "red"
+	},
+	{
+		"name": "300 三位年月恰好等距时不再报错 —— ⚠️ 补测试之前**全库**都抓不到",
+		"dir": "",
+		"file": "types/instrument.go",
+		"old": "\tif tie {",
+		"new": "\tif false && tie {",
+		"pkg": "./types/",
+		"test": "TestDecadeTieIsRefused",
+		"want": "本该拒绝定年代",
+		"expect": "red"
+	},
+	{
+		"name": "301 IsClose 漏掉三个强平标志（强平成交被当成开仓）",
+		"dir": "",
+		"file": "types/order.go",
+		"old": "\tcase Close, CloseToday, CloseYesterday, ForceClose, ForceOff, LocalForceClose:",
+		"new": "\tcase Close, CloseToday, CloseYesterday:",
+		"pkg": "./types/",
+		"test": "TestOffsetIsClose",
+		"want": "交易所强平 应算平仓",
+		"expect": "red"
+	},
+	{
+		"name": "302 裸 Close 被当成显式声明了今昨（simnow_pending#1 还没裁决）",
+		"dir": "",
+		"file": "types/order.go",
+		"old": "\treturn o == CloseToday || o == CloseYesterday",
+		"new": "\treturn o == CloseToday || o == CloseYesterday || o == Close",
+		"pkg": "./types/",
+		"test": "TestOffsetIsClose",
+		"want": "裸 Close 不算显式声明今昨",
+		"expect": "red"
 	}
 ]

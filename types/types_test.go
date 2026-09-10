@@ -346,3 +346,61 @@ func TestHedgeDIFFTokensAreMeasuredNotGuessed(t *testing.T) {
 		}
 	}
 }
+
+// TestTradingDayOrdering 钉住 Before / After 的方向与**严格性**。
+//
+// ⚠️ 20260910 补：`types` 自己**一条都没测过**它们。
+// 把 After 改成 `d < o` 之后，本包全绿；红的是 account 那三条 ——
+// 而它们红在**症状**上（「下一交易日不晚于当前交易日」，结算被拒），
+// 不在「After 的方向反了」这件事上。
+//
+//	⚠️ 一个方向反了的比较函数，报出来的是「结算拒绝了」。
+//	顺着那句话去查，人会先怀疑结算，而不是怀疑 `>`。
+//
+// ⚠️ 而 account.Settle 的守卫正是 `!nextDay.After(day)` —— 方向一反，
+// 「不能倒着结算」这条保护就掉个头，变成「只能倒着结算」。
+func TestTradingDayOrdering(t *testing.T) {
+	a, b := TradingDay(20260909), TradingDay(20260910)
+	if !a.Before(b) {
+		t.Errorf("⚠️ %d 应当早于 %d —— Before 的方向反了", a, b)
+	}
+	if !b.After(a) {
+		t.Errorf("⚠️ %d 应当晚于 %d —— After 的方向反了", b, a)
+	}
+	if b.Before(a) {
+		t.Errorf("⚠️ %d 不该早于 %d", b, a)
+	}
+	if a.After(b) {
+		t.Errorf("⚠️ %d 不该晚于 %d", a, b)
+	}
+	// ⚠️ 相等这一格单独钉：两者都必须为 false。
+	// 「早于或等于」会让重复结算同一个交易日被放行，而账面看不出异样。
+	if a.Before(a) || a.After(a) {
+		t.Errorf("⚠️ 同一个交易日既不早于也不晚于自己 —— "+
+			"Before=%t / After=%t。放宽成「或等于」会让重复结算同一天被放行",
+			a.Before(a), a.After(a))
+	}
+}
+
+// TestDecadeTieIsRefused 钉住**三位年月恰好等距时拒绝定年代**。
+//
+// ⚠️ 20260910 补：这条判据此前**全库没有任何东西测它**。
+// 把 `if tie` 关掉之后，`go test ./...` 全绿 —— 而它的后果是
+// 郑商所的三位合约码在跨十年等距时**静默挑一个年代**。
+//
+//	MA109 @ 20260910   候选 2021-09 与 2031-09 各距 60 个月
+//	                   关掉判据 ⇒ 挑一个 ⇒ **合约年份差十年，而它长得像个正常合约**
+//
+// ⚠️ 这正是本库反复记的那种形状：错的不是「报错了」，是**得到一个看起来正常的值**。
+func TestDecadeTieIsRefused(t *testing.T) {
+	if _, err := ParseNative(CZCE, "MA109", 20260910); err == nil {
+		t.Fatal("⚠️ MA109 在 20260910 上两个年代恰好等距，本该拒绝定年代 —— " +
+			"静默挑一个会得到一个年份差十年、却完全正常的合约")
+	}
+	// ⚠️ 判别力：不等距的必须照常解析成功。只测拒绝那一侧的话，
+	// 一个「永远拒绝」的实现也能过。
+	if _, err := ParseNative(CZCE, "MA209", 20260910); err != nil {
+		t.Errorf("⚠️ MA209 并不等距，本该解析成功，却报了 %v —— "+
+			"上面那条断言可能只是因为它什么都拒绝", err)
+	}
+}
