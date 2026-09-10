@@ -3055,5 +3055,60 @@
 		"test": "TestMethodologyNumbersAreContiguous",
 		"want": "缺号",
 		"expect": "red"
+	},
+	{
+		"name": "275 可用资金漏减挂单冻结的保证金",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\t\tSub(a.frozenMargin).\n",
+		"new": "",
+		"pkg": "./account/",
+		"test": "TestFrozenCountsAgainstAvailableNotMargin",
+		"want": "不变量破裂：可用",
+		"expect": "red"
+	},
+	{
+		"name": "276 穿仓账户的风险度报成「有值且为 0」（最危险的状态看起来最安全）",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\treturn decimal.Zero, false\n",
+		"new": "\treturn decimal.Zero, true\n",
+		"pkg": "./account/",
+		"test": "TestRiskRatioDistinguishesZeroFromAbsent",
+		"want": "HasRiskRatio = true，期望 false",
+		"expect": "red"
+	},
+	{
+		"name": "277 持仓盈亏改成累加而非覆盖（盘中每刷新一次就多算一次）",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\ta.positionProfit = profit\n",
+		"new": "\ta.positionProfit = a.positionProfit.Add(profit)\n",
+		"pkg": "./account/",
+		"test": "TestPositionProfitOverwritesNotAccumulates",
+		"want": "累加会得到",
+		"expect": "red"
+	},
+	{
+		"name": "278 结算后持仓盈亏不归零（今日浮盈明日被重复计入）",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\ta.positionProfit = decimal.Zero // 基线已推进，相对新基线的持仓盈亏为零\n",
+		"new": "",
+		"pkg": "./account/",
+		"test": "TestSettleCrystallizesAndResets",
+		"want": "结算后持仓盈亏应归零",
+		"expect": "red"
+	},
+	{
+		"name": "279 超额解冻不再被拒（冻结额可以被解成负的）",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\tif margin.GreaterThan(a.frozenMargin) {\n",
+		"new": "\tif false && margin.GreaterThan(a.frozenMargin) {\n",
+		"pkg": "./account/",
+		"test": "TestUnfreezeBeyondFrozenRejected",
+		"want": "超过已冻结的 5000，本该报错",
+		"expect": "red"
 	}
 ]
