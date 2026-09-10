@@ -3485,5 +3485,49 @@
 		"want": "",
 		"expect": "green",
 		"why": "⚠️ 那句往返校验**结构上打不响**：shopspring 的 NewFromFloat 按设计用最短可往返表示，实测七个极端 float64（0.1+0.2 / 1e300 / 1e-300 / MaxFloat64 / 次正规数 / 1÷3 / 1.2345678901234569e23）全部往返相等。关掉它，什么都不变。⚠️ 于是它防不住它注释里说要防的那件事：「上游开始给高精度小数」那个损失发生在**更早一步** —— JSON 数字被解进 float64 的那一刻，到 fromFloat 手上精度已经没了，它看到的是一个自洽的 float64。⇒ **欠着的动作**：真要防它，得在解析处把数字读成 json.Number（原始文本）再与转换结果比，那是 Symbol 线格式的改动。在那之前「高精度小数静默截断」这一条**没有守卫**，别以为有。⚠️ 红搭档是 312：把转换换成定点两位，守卫立刻打响 —— 证明守卫本身没死，死的是它面前那条路。"
+	},
+	{
+		"name": "314 品种前缀不再要求后接数字（DCE.c 会把 DCE.cs 一起拉进来）",
+		"dir": "",
+		"file": "cmd/refdata-sync/main.go",
+		"old": "\t\t\tif c := id[len(w)]; c >= '0' && c <= '9' {\n\t\t\t\treturn true\n\t\t\t}",
+		"new": "\t\t\treturn true",
+		"pkg": "./cmd/refdata-sync/",
+		"test": "TestMatcherDoesNotCrossProducts",
+		"want": "DCE.cs2701：判为 true",
+		"expect": "red"
+	},
+	{
+		"name": "315 空品种清单变成「全都要」",
+		"dir": "",
+		"file": "cmd/refdata-sync/main.go",
+		"old": "\treturn func(id string) bool {\n\t\tfor _, w := range want {",
+		"new": "\treturn func(id string) bool {\n\t\tif len(want) == 0 {\n\t\t\treturn true\n\t\t}\n\t\tfor _, w := range want {",
+		"pkg": "./cmd/refdata-sync/",
+		"test": "TestMatcherEmptyWantMatchesNothing",
+		"want": "空品种清单却匹配上了",
+		"expect": "red"
+	},
+	{
+		"name": "316 到期时刻的 15:00 约定不再校验（到期日整体偏一天，且不会有任何动静）",
+		"dir": "",
+		"file": "cmd/refdata-sync/main.go",
+		"old": "\tif t.Hour() != 15 || t.Minute() != 0 || t.Second() != 0 {",
+		"new": "\tif false && (t.Hour() != 15 || t.Minute() != 0 || t.Second() != 0) {",
+		"pkg": "./cmd/refdata-sync/",
+		"test": "TestExpireDateRefusesUnexpectedClock",
+		"want": "到期时刻 16:00 被接受了",
+		"expect": "red"
+	},
+	{
+		"name": "317 到期时刻缺失的**诊断**没了（1970-01-01 08:00 被 15:00 那条顺手拦下）",
+		"dir": "",
+		"file": "cmd/refdata-sync/main.go",
+		"old": "\tif ts <= 0 {",
+		"new": "\tif false && ts <= 0 {",
+		"pkg": "./cmd/refdata-sync/",
+		"test": "TestExpireDateRefusesUnexpectedClock",
+		"want": "ts=0 报的是",
+		"expect": "red"
 	}
 ]
