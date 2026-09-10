@@ -150,6 +150,8 @@ func main() {
 
 	bad := 0
 	ran := 0
+	// ⚠️ 分解要单独数：只有总数时，「内部分解」只能靠人手数，而人会编。
+	red, green := 0, 0
 	for _, b := range breaks {
 		if *only != "" && !strings.Contains(b.Name, *only) {
 			continue
@@ -160,7 +162,12 @@ func main() {
 		if detail != "" {
 			fmt.Printf("    %s\n", strings.ReplaceAll(detail, "\n", "\n    "))
 		}
-		if verdict != "红对了" && verdict != "如预期仍然绿" {
+		switch verdict {
+		case "红对了":
+			red++
+		case "如预期仍然绿":
+			green++
+		default:
 			bad++
 		}
 	}
@@ -230,7 +237,17 @@ func main() {
 		fmt.Fprintf(os.Stderr,
 			"\nⓘ 收尾自检：工作树与开跑前一致，**全程无外部改动**\n")
 	}
-	fmt.Printf("\n跑了 %d 条，未按预期 %d 条\n", ran, bad)
+	// ⚠️ **把分解打出来，不只是总数。**
+	//
+	// 20260910：有人在一份**报告验证结果**的消息里写「红对了 240 + 期望绿 26 = 266」——
+	// 而本程序当时**只打总数**，那个分解在任何输出里都不存在，是写的人编的。
+	// 实数是 241 / 25。⚠️ 它能活下来是因为**合计正确**：
+	// **一个内部分解错了、而总数对的数，没有任何东西会说话。**
+	//
+	// ⇒ 打出来之后，「编一个分解」这件事就没有空间了 ——
+	// **这是把一次纪律失败换成结构**（silent-risks.md 66：验证防这一次，结构防每一次）。
+	fmt.Printf("\n跑了 %d 条：红对了 %d / 如预期仍然绿 %d / **未按预期 %d**\n",
+		ran, red, green, bad)
 	if bad > 0 {
 		os.Exit(1)
 	}
