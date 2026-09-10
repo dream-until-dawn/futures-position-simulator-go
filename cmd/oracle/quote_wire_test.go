@@ -82,6 +82,21 @@ func TestQuoteFailureBlocksTheWrite(t *testing.T) {
 	}
 }
 
+// exprName 把方向实参归约成一个名字，**同时认标识符与选择器**。
+//
+// ⚠️ 只认 `*ast.Ident` 是不够的：破坏 260 把方向换成 `def.THOST_FTDC_D_Buy`
+// （一个选择器），于是取不到值、守卫红在**反空转的 Fatal** 上而不是红在断言上
+// —— 分层判定当场报了「红错了理由」。**一条红了的破坏，不等于一条红对了的破坏。**
+func exprName(e ast.Expr) string {
+	switch x := e.(type) {
+	case *ast.Ident:
+		return x.Name
+	case *ast.SelectorExpr:
+		return x.Sel.Name
+	}
+	return ""
+}
+
 func findFunc(f *ast.File, name string) *ast.FuncDecl {
 	for _, d := range f.Decls {
 		if fd, ok := d.(*ast.FuncDecl); ok && fd.Recv == nil && fd.Name.Name == name {
@@ -198,15 +213,11 @@ func TestRestingPriceMatchesDirection(t *testing.T) {
 	ast.Inspect(fn, func(n ast.Node) bool {
 		if kv, ok := n.(*ast.KeyValueExpr); ok {
 			if k, ok := kv.Key.(*ast.Ident); ok && k.Name == "Direction" {
-				if v, ok := kv.Value.(*ast.Ident); ok {
-					dirIdent = v.Name
-				}
+				dirIdent = exprName(kv.Value)
 			}
 		}
 		if c, ok := n.(*ast.CallExpr); ok && selName(c.Fun) == "FarPrice" && len(c.Args) == 2 {
-			if v, ok := c.Args[1].(*ast.Ident); ok {
-				farIdent = v.Name
-			}
+			farIdent = exprName(c.Args[1])
 		}
 		return true
 	})
