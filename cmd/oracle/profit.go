@@ -140,9 +140,28 @@ func runCTPProfit(args []string) error {
 			time.Sleep(*every)
 			continue
 		}
-		last := float64(q.LastPrice)
-		logf("[pf] 最新 %.2f（开仓 %.2f，差 %+.2f）", last, entry, last-entry)
-		if (!*short && last >= want) || (*short && last <= want) {
+		// ⚠️ **判据用的是「平掉那一笔能成交在哪」，不是最新价。**
+		//
+		// 20260910 夜盘第四轮：开空 3139，最新价跌到 3138（对空头是 +1 跳），
+		// 判据满足、平掉 —— 而这一笔的平仓盈亏是 **0**。
+		// 因为买入平仓吃的是**卖一**，那时卖一多半还是 3139。
+		//
+		//	⚠️ **`LastPrice` 不是你能成交的价** —— 平仓要**穿过买卖价差**，
+		//	而「最新价对我有利」与「我平掉能赚」之间，隔着那个价差。
+		//
+		// ⇒ 多头平仓卖给**买一**、空头平仓买自**卖一**，判据就用那一端。
+		// 取不到盘口时退回最新价，并**说出来**（那一轮的判据弱一格）。
+		exit := float64(q.BidPrice1)
+		side := "买一"
+		if *short {
+			exit, side = float64(q.AskPrice1), "卖一"
+		}
+		if exit <= 0 || exit > float64(q.UpperLimitPrice) || exit < float64(q.LowerLimitPrice) {
+			exit, side = float64(q.LastPrice), "最新价（⚠️ 盘口取不到，判据弱一格）"
+		}
+		logf("[pf] %s %.2f（开仓 %.2f，平掉能赚 %+.2f）", side, exit, entry,
+			map[bool]float64{false: (exit - entry) * 10, true: (entry - exit) * 10}[*short])
+		if (!*short && exit >= want) || (*short && exit <= want) {
 			logf("[pf] ⇒ **够了，平掉**（平仓盈亏应当为正）")
 			return flattenNow(c, ex, inst, *timeout, logf, cp0, *short)
 		}
