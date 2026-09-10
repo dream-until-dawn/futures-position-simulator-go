@@ -339,3 +339,95 @@ func indexOf(xs []string, s string) int {
 	}
 	return -1
 }
+
+// TestHeldCaptureHappensBeforeCancel 钉住 `runCTPOrder` 的**第三、第四**条不变式：
+//
+//	三  「挂着时」的截面必须在 `Cancel` **之前**拍
+//	四  拍失败**不许提前返回** —— 那笔单还挂在柜台上
+//
+// # ⚠️ 三：撤单之后拍，量到的是零，而零正是结论本身
+//
+// 撤单会把 `FrozenMargin` / `FrozenCommission` 释放回零。
+// ⚠️ **一份撤单后拍的截面，与一份「本来就不冻」的截面长得一模一样** ——
+// 而「平仓挂单不冻保证金」（`kq_facts` 42）这条结论，量的正是这个零。
+//
+//	⇒ 把拍挪到撤单之后，会得到一份**看起来完美支持结论**的夹具，
+//	  而它其实什么都没测。**比拍不到更坏。**
+//
+// # ⚠️ 四：拍失败提前返回，会把一笔活单留在柜台上
+//
+// 这是安全性质，不是正确性性质：`Cancel` 之前的任何 `return`
+// 都意味着**那笔单还挂着而进程走了**。
+//
+// ⚠️ 本条与 `TestQuoteFailureBlocksTheWrite` 的方向**恰好相反**，值得对照：
+//
+//	落盘那边   补行情失败 ⇒ **必须**提前 return（不许落半份证据）
+//	这边       拍截面失败 ⇒ **不许**提前 return（不许留一笔活单）
+//
+// **同样是「失败了怎么办」，答案由「返回之后留下什么」决定，不由一致性决定。**
+func TestHeldCaptureHappensBeforeCancel(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "main.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := findFunc(f, "runCTPOrder")
+	if fn == nil {
+		t.Fatal("⚠️ 找不到 runCTPOrder —— 改名了？本条会在空集上跑")
+	}
+	var capPos, cancelPos token.Pos
+	ast.Inspect(fn, func(x ast.Node) bool {
+		c, ok := x.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch selName(c.Fun) {
+		case "Capture":
+			if capPos == token.NoPos {
+				capPos = c.Pos()
+			}
+		case "Cancel":
+			if cancelPos == token.NoPos {
+				cancelPos = c.Pos()
+			}
+		}
+		return true
+	})
+	if capPos == token.NoPos || cancelPos == token.NoPos {
+		t.Fatalf("⚠️ 没能同时取到 Capture（%d）与 Cancel（%d）的位置 —— "+
+			"形状变了，本条查不到它要查的东西", capPos, cancelPos)
+	}
+	if capPos > cancelPos {
+		t.Errorf("⚠️ `Capture` 出现在 `Cancel` **之后** —— 撤单已经把冻结字段释放回零，"+
+			"⚠️ **而一份撤单后拍的截面，与一份「本来就不冻」的截面长得一模一样**。"+
+			"它会看起来完美支持 kq_facts 42，而其实什么都没测 —— **比拍不到更坏**")
+	}
+	// ⚠️ 四：Capture 与 Cancel 之间不许有 return。
+	//
+	// ⚠️ 按**语句下标**取区间，不按 token 位置：包着 `Cancel` 的那个 `if`
+	// 起始位置在 `Cancel` 调用**之前**，于是「位置在 cancelPos 之前」会把
+	// `if err := c.Cancel(…); err != nil { return err }` 自己算进去 ——
+	// 第一版就这么误报了一次。**这不是守卫太窄，是守卫的边界画错了。**
+	i, j := -1, -1
+	for k, st := range fn.Body.List {
+		if st.Pos() <= capPos && capPos <= st.End() {
+			i = k
+		}
+		if st.Pos() <= cancelPos && cancelPos <= st.End() {
+			j = k
+		}
+	}
+	if i < 0 || j < 0 {
+		t.Fatalf("⚠️ 没能定位到包着 Capture(%d) 与 Cancel(%d) 的顶层语句 —— 本条在空转", i, j)
+	}
+	for _, st := range fn.Body.List[i+1 : j] {
+		if hasReturn(blockOf(st)) {
+			t.Errorf("⚠️ `Capture` 与 `Cancel` 之间出现了 return —— "+
+				"**那笔单还挂在柜台上，而进程走了**。"+
+				"拍截面失败要留到撤完再报（与落盘那边**方向相反**：那边失败必须提前返回）")
+		}
+	}
+}
+
+// blockOf 把一条语句包成一个块，好复用 hasReturn。
+func blockOf(s ast.Stmt) *ast.BlockStmt { return &ast.BlockStmt{List: []ast.Stmt{s}} }

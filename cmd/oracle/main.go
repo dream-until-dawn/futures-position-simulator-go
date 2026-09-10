@@ -525,6 +525,9 @@ func runCTPOrder(args []string) error {
 	closeToday := fs.Bool("close", false, "挂**平今**而不是买开（⚠️ 需要账上已有多头今仓）。"+
 		"它要量的是 `kq_facts` 42（平仓挂单不冻保证金、只冻手续费）在 CTP 侧成不成立 —— "+
 		"⚠️ 那条此前只有快期一个来源，而**账上有仓的时候才量得到**")
+	dump := fs.String("dump", "", "把**挂着时**那一刻的截面落盘到该目录（留空则不落）。"+
+		"⚠️ 不落盘的话，冻结保证金/冻结手续费那两个数**只会出现在控制台上，跑完就没了** —— "+
+		"而它们正是 kq_facts 42 与 46 的证据（silent-risks.md 77）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
@@ -602,8 +605,34 @@ func runCTPOrder(args []string) error {
 	logf("[P3] 挂着时  available=%.4f 冻结保证金=%.4f 冻结手续费=%.4f",
 		float64(held.Available), float64(held.FrozenMargin), float64(held.FrozenCommission))
 
+	// ⚠️ **必须在撤单之前拍**：撤单之后那两个冻结字段就归零了，
+	// 而一份归零的截面与一份「本来就不冻」的截面**长得一模一样** ——
+	// 那正是 kq_facts 42 的结论所在。守卫 `TestHeldCaptureHappensBeforeCancel`。
+	//
+	// ⚠️ 而拍失败**不许提前返回**：这笔单还挂在柜台上，
+	// 提前返回就把它留在那里了。错误留到撤完再报。守卫同一条。
+	var capErr error
+	if *dump != "" {
+		note := "ctp-order 挂着时的截面（冻结字段）"
+		if fx, err := c.Capture(*timeout, note); err != nil {
+			capErr = fmt.Errorf("拍挂着时的截面：%w", err)
+		} else {
+			secrets := map[string]string{
+				"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,
+				"CTP_BROKER_ID": env.CTPBrokerID, "CTP_APP_ID": env.CTPAppID,
+				"CTP_AUTH_CODE": env.CTPAuthCode,
+			}
+			if _, err := fx.Write(*dump, "ctp-frozen", secrets, logf); err != nil {
+				capErr = err
+			}
+		}
+	}
+
 	if err := c.Cancel(st.OrderRef, req); err != nil {
 		return err
+	}
+	if capErr != nil {
+		return capErr
 	}
 	time.Sleep(2 * time.Second)
 

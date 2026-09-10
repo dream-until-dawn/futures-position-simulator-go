@@ -2923,5 +2923,27 @@
 		"test": "TestDirectionAndOffsetAreSetTogether",
 		"want": "必须成对赋值",
 		"expect": "red"
+	},
+	{
+		"name": "263 挂着时的截面挪到撤单之后拍 —— ⚠️ 冻结字段已归零，夹具看起来完美支持结论，而它什么都没测。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\tif err := c.Cancel(st.OrderRef, req); err != nil {\n\t\treturn err\n\t}\n\tif capErr != nil {\n\t\treturn capErr\n\t}",
+		"new": "\tif err := c.Cancel(st.OrderRef, req); err != nil {\n\t\treturn err\n\t}\n\tif fx2, e2 := c.Capture(*timeout, \"late\"); e2 == nil {\n\t\t_ = fx2\n\t}\n\tif capErr != nil {\n\t\treturn capErr\n\t}",
+		"pkg": ".",
+		"test": "TestHeldCaptureHappensBeforeCancel",
+		"want": "之后",
+		"expect": "red"
+	},
+	{
+		"name": "264 拍截面失败就提前返回 —— ⚠️ 那笔单还挂在柜台上，而进程走了。",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\tif err := c.Cancel(st.OrderRef, req); err != nil {",
+		"new": "\tif capErr != nil {\n\t\treturn capErr\n\t}\n\tif err := c.Cancel(st.OrderRef, req); err != nil {",
+		"pkg": ".",
+		"test": "TestHeldCaptureHappensBeforeCancel",
+		"want": "出现了 return",
+		"expect": "red"
 	}
 ]
