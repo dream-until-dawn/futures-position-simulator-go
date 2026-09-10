@@ -1,5 +1,23 @@
 # 项目状态：唯一来源
 
+## 📮 送审中：`main..dev` 23 个提交（20260910 15:05 送出）
+
+    范围   af1e662 → 36f2dae，13 个文件 +2235/−82
+    ⚠️ 生产代码只动两处，都在 package main 里 ⇒ **零导出面变更**
+           breakcheck.go      -run 锚点 ^X$ → ^(X)$；新增「no tests to run ⇒ 零层未成立」
+           settlement/main.go probeCalendar 的探测函数抽成参数（未导出）
+    自验   全量破坏 323 条：红对了 298 / 如预期仍然绿 25 / **未按预期 0**
+           测试 root 300 PASS / **0 SKIP** / 0 FAIL；cmd/oracle 83 PASS / 0 SKIP / 0 FAIL
+
+⚠️ 自认的风险点里**第一枪请打这个**：我断言 `fromFloat` 的往返校验结构上打不响，
+据此把破坏 313 登记成盲区 —— 而**那是一个关于依赖库行为的全称判断，只测了 7 个 float64**。
+
+⚠️ 本批最该被怀疑的动作：**我改了三条既有测试的断言**
+（`TestBothTermsAlwaysSummed` / `TestFloatRoundTripGuard` / `TestSessionTablesRefuseConflict`）。
+可能改成了「适应当前实现」而不是「压住性质」。
+
+**合并与打 tag 在评审通过之前不动。**
+
 ⚠️ **本文件是项目状态与计数的唯一断言处。** 其余任何文档提到这些数字，
 要么给链接，要么就是**复述**——而复述会过期，且过期时不会有任何动静。
 
@@ -681,7 +699,7 @@ shopspring 的 `NewFromFloat` 按设计就用最短可往返表示。
 | `docs/roadmap.md` | 32 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
-| `docs/state.md` | 23 |
+| `docs/state.md` | 24 |
 
 ⚠️ **增删小节时要同步改这里**，这是刻意的摩擦：一次有意的增删是一行改动，
 一次意外的删除则会红。守卫是 `TestDocSectionCountsMatch`。
