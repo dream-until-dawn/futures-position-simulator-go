@@ -3231,5 +3231,71 @@
 		"test": "TestComputeRawIsUnrounded",
 		"want": "应保留完整精度，期望 3.1505",
 		"expect": "red"
+	},
+	{
+		"name": "291 未实测的取整口径不再拒绝，静默返回原值",
+		"dir": "",
+		"file": "internal/decimalx/decimalx.go",
+		"old": "\tcase RoundingUnmeasured:\n\t\treturn decimal.Zero, fmt.Errorf(\"金额取整口径未指定：判别实验 5 尚未收敛，\"+\n\t\t\t\"本库不提供默认值。见 docs/state.md 的 rules_pending。\"+\n\t\t\t\"（候选：%v / %v / %v）\", HalfUpToCent, TruncateToCent, NoRounding)\n",
+		"new": "\tcase RoundingUnmeasured:\n\t\treturn v, nil\n",
+		"pkg": "./internal/decimalx/",
+		"test": "TestRoundingUnmeasuredRefuses",
+		"want": "本该报错，而不是挑一个默认",
+		"expect": "red"
+	},
+	{
+		"name": "292 截断档派发到四舍五入（两个候选塌成一个）",
+		"dir": "",
+		"file": "internal/decimalx/decimalx.go",
+		"old": "\tcase TruncateToCent:\n\t\treturn v.Truncate(Cents), nil\n",
+		"new": "\tcase TruncateToCent:\n\t\treturn v.Round(Cents), nil\n",
+		"pkg": "./internal/decimalx/",
+		"test": "TestThreeCandidatesDiffer",
+		"want": "四舍五入与截断在 1.005 上同值",
+		"expect": "red"
+	},
+	{
+		"name": "293 四舍五入档派发到截断 —— ⚠️ TestLibrarySemantics 看不见它（它不经过 Apply）",
+		"dir": "",
+		"file": "internal/decimalx/decimalx.go",
+		"old": "\tcase HalfUpToCent:\n\t\treturn v.Round(Cents), nil\n",
+		"new": "\tcase HalfUpToCent:\n\t\treturn v.Truncate(Cents), nil\n",
+		"pkg": "./internal/decimalx/",
+		"test": "TestThreeCandidatesDiffer",
+		"want": "四舍五入与截断在 1.005 上同值",
+		"expect": "red"
+	},
+	{
+		"name": "294 向下对齐改成向上",
+		"dir": "",
+		"file": "internal/decimalx/decimalx.go",
+		"old": "\tcase TickDown:\n\t\tn = n.Floor()\n",
+		"new": "\tcase TickDown:\n\t\tn = n.Ceil()\n",
+		"pkg": "./internal/decimalx/",
+		"test": "TestAlignToTick",
+		"want": "0.02, 1) = 512.36",
+		"expect": "red"
+	},
+	{
+		"name": "295 向上对齐改成向下",
+		"dir": "",
+		"file": "internal/decimalx/decimalx.go",
+		"old": "\tcase TickUp:\n\t\tn = n.Ceil()\n",
+		"new": "\tcase TickUp:\n\t\tn = n.Floor()\n",
+		"pkg": "./internal/decimalx/",
+		"test": "TestAlignToTick",
+		"want": "0.02, 2) = 512.34",
+		"expect": "red"
+	},
+	{
+		"name": "296 就近对齐改成向下",
+		"dir": "",
+		"file": "internal/decimalx/decimalx.go",
+		"old": "\tcase TickNearest:\n\t\tn = n.Round(0)\n",
+		"new": "\tcase TickNearest:\n\t\tn = n.Floor()\n",
+		"pkg": "./internal/decimalx/",
+		"test": "TestAlignToTick",
+		"want": "0.02, 0) = 512.34",
+		"expect": "red"
 	}
 ]
