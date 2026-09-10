@@ -75,6 +75,22 @@ func scanLineEndings(root string) (scanned int, mixed, stray []string, err error
 		//
 		// ⚠️ 后果与上一条同形：breakcheck 是裸字节匹配，锚点里的换行
 		// 只按纯 CRLF 展开，打在这种文件上的破坏会**悄悄失配**。
+		// ⚠️ **第三个盲区，20260910 撞到，本条同样不查**：
+		// 一份文件**整份**从 CRLF 翻成 LF 时，`crlf == 0` ——
+		// 于是上面那个 `crlf > 0 && crlf != lf` 的**第一个合取项就假**，
+		// 而下面这条 `cr != crlf` 是 0 != 0，也假。**两条都不响。**
+		//
+		//	混用          crlf > 0 且 crlf != lf   ⇒ 查
+		//	多余的回车符  cr != crlf               ⇒ 查
+		//	⚠️ **整份翻成 LF** crlf == 0                ⇒ **不查**
+		//
+		// 起因是一句 `gofmt -w`：它把 `cmd/oracle/quote_wire_test.go` 整份写成了 LF
+		//（实测 CRLF 0 / LF 332），**而本条一个字都没说**。
+		// 评审在 `docs/design.md` 上独立复现过，跑出来是 `ok`。
+		//
+		// ⚠️ **本条刻意不改**：判「整份 LF 算不算违规」要先定下全库的行尾约定，
+		// 而那个约定此刻只存在于「现状恰好是 CRLF」里 —— **没有一处写下来**。
+		// **一条守卫不该替一个从未被决定的约定做决定。**（列为待办。）
 		if cr := bytes.Count(b, []byte("\r")); cr != crlf {
 			stray = append(stray, fmt.Sprintf("%s（回车符 %d 个，其中只有 %d 个跟着换行）",
 				p, cr, crlf))
