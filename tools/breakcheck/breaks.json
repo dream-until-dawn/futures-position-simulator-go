@@ -3187,5 +3187,49 @@
 		"test": "TestBasisChangesResult",
 		"want": "今仓用开仓价应为 3150，实为 315",
 		"expect": "red"
+	},
+	{
+		"name": "287 平今档换成开仓档 —— ⚠️ 破坏 4 在对拍侧登记为盲区，本条是它在单测侧的红搭档",
+		"dir": "",
+		"file": "fee/fee.go",
+		"old": "\tcase types.CloseToday:\n\t\treturn r.CloseTodayByMoney, r.CloseTodayByVolume, nil\n",
+		"new": "\tcase types.CloseToday:\n\t\treturn r.OpenByMoney, r.OpenByVolume, nil\n",
+		"pkg": "./fee/",
+		"test": "TestThreeTiersAreDistinct",
+		"want": "平今 的手续费 = 3.15，期望 18.9",
+		"expect": "red"
+	},
+	{
+		"name": "288 手续费按金额那一项漏乘合约乘数",
+		"dir": "",
+		"file": "fee/fee.go",
+		"old": "\tamount := v.Mul(price).Mul(multiplier).Mul(byMoney)\n",
+		"new": "\tamount := v.Mul(price).Mul(byMoney)\n",
+		"pkg": "./fee/",
+		"test": "TestVolumeAndMultiplierAreLinear",
+		"want": "乘数翻倍时手续费应翻倍",
+		"expect": "red"
+	},
+	{
+		"name": "289 手续费公式丢掉按手数那一项（单测侧；破坏 1 走的是对拍侧）",
+		"dir": "",
+		"file": "fee/fee.go",
+		"old": "\treturn rounding.Apply(amount.Add(perLot))\n",
+		"new": "\treturn rounding.Apply(amount.Add(perLot.Mul(decimal.Zero)))\n",
+		"pkg": "./fee/",
+		"test": "TestBothTermsAlwaysSummed",
+		"want": "两项相加应为 16.3，实为 6.3",
+		"expect": "red"
+	},
+	{
+		"name": "290 ComputeRaw 偷偷取整到分（「未取整」这个承诺没人看着）",
+		"dir": "",
+		"file": "fee/fee.go",
+		"old": "\treturn Compute(rates, offset, price, multiplier, volume, decimalx.NoRounding)\n",
+		"new": "\treturn Compute(rates, offset, price, multiplier, volume, decimalx.HalfUpToCent)\n",
+		"pkg": "./fee/",
+		"test": "TestComputeRawIsUnrounded",
+		"want": "应保留完整精度，期望 3.1505",
+		"expect": "red"
 	}
 ]
