@@ -3650,5 +3650,16 @@
 		"test": "TestRoadmapListsEveryExport",
 		"want": "ZzzUnlisted",
 		"expect": "red"
+	},
+	{
+		"name": "389 两个平台变体的导出**字段**分叉（守卫此前只比方法）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/client_other.go",
+		"old": "\tAuthCode string",
+		"new": "\tAuthCodeX string",
+		"pkg": "./ctp/",
+		"test": "TestPlatformParityCoversFieldsToo",
+		"want": "Windows 侧有导出字段 Credentials.AuthCode",
+		"expect": "red"
 	}
 ]
