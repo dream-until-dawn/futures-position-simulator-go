@@ -836,6 +836,11 @@ func runCTPRoundTrip(args []string) error {
 func runCTPFlatten(args []string) error {
 	fs := flag.NewFlagSet("ctp-flatten", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
+	only := fs.String("symbol", "", "只平这一个合约（形如 SHFE.ag2702）。"+
+		"留空 = **全平**，那是原来的行为。"+
+		"⚠️ 20260911 夜盘补的：当晚账上有一手**刻意**留的过夜种子（#4/#7 要等它变昨仓），"+
+		"而本命令没有作用域⇒ 想平掉别的腿就会把它一起平掉。"+
+		"**「平干净」与「平掉别人故意留的仓」在账户上长得一模一样**")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
@@ -858,7 +863,7 @@ func runCTPFlatten(args []string) error {
 	if err != nil {
 		return err
 	}
-	n := 0
+	n, skipped := 0, 0
 	for key, p := range pos {
 		// ⚠️ **今仓与昨仓都要平**，而开平标志必须按它是哪一种来选。
 		//
@@ -878,8 +883,13 @@ func runCTPFlatten(args []string) error {
 		if today == 0 && yd == 0 {
 			continue
 		}
-		n++
 		symbol := ctp.Text(p.ExchangeID[:]) + "." + ctp.Text(p.InstrumentID[:])
+		if *only != "" && symbol != *only {
+			logf("[flat] 跳过 %s（-symbol 只要 %s）", symbol, *only)
+			skipped++
+			continue
+		}
+		n++
 		// 平多发卖、平空发买。⚠️ 方向取反在这里做一次，不散在调用处。
 		var dir def.TThostFtdcDirectionType = def.THOST_FTDC_D_Sell
 		if p.PosiDirection == def.THOST_FTDC_PD_Short {
@@ -936,6 +946,18 @@ func runCTPFlatten(args []string) error {
 	}
 	logf("[flat] 之后  balance=%.4f 占用保证金=%.4f 手续费累计=%.4f",
 		float64(after.Balance), float64(after.CurrMargin), float64(after.Commission))
+	// ⚠️ 「占用保证金归零」只在**全平**时才是正确的收尾断言。
+	// 限定了合约时账上本就该还有仓 ——
+	// ⚠️ 这一条若不分岳，一次**成功的**局部平仓会以错误退出，
+	// 而调用方会去收拾一个不存在的事故。
+	if *only != "" {
+		logf("[flat] ⚠️ 仅平 %s，跳过 %d 个合约 —— 占用保证金不归零是预期的",
+			*only, skipped)
+		if n == 0 {
+			return fmt.Errorf("⚠️ -symbol %s 上**没有仓** —— 写错合约名与真的无仓可平在输出上长得一样，所以这里报错", *only)
+		}
+		return nil
+	}
 	if float64(after.CurrMargin) != 0 {
 		return fmt.Errorf("⚠️⚠️ 占用保证金仍为 %.4f —— **账上还有仓**", float64(after.CurrMargin))
 	}
