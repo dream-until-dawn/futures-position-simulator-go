@@ -1003,7 +1003,22 @@ func runCTPHold(args []string) error {
 
 	logf("")
 	logf("%-8s %10s %10s %10s %12s %12s", "时刻", "最新价", "今结算", "昨结", "占用保证金", "持仓盈亏")
-	var first, last float64
+	// ⚠️ **只跟本命令自己建的那一条腿**，而且只在账上恰好只有它时才下判断。
+	//
+	// 20260911 夜盘这段给过一个**自信的假结论**：账上当时有 ag2701 多与 ag2702 空
+	// 两条腿，它打印「占用保证金变了 ⇒ 基准是某个动态价，开仓价被否」——
+	// 而那个变化来自**账上多了一条反向腿**，不是行情走动。
+	//
+	//	⚠️ 而细看之下它比「前提被违反」还糟一格：`first`/`last` 是在
+	//	**遍历 map 的循环体里**赋的，多条腿时它们可能取自**不同的合约** ——
+	//	于是那个「变了」的差额，是两个不相干的数相减。
+	//	⚠️ Go 的 map 遍历顺序是随机的 ⇒ **同一份账户跑两次可能给出不同结论**。
+	//
+	// ⇒ 两半改法：一、按 `symbol` 只认自己那条腿；
+	// 二、**账上不止一条今仓时根本不下判断** —— 说「我的前提不成立了」，
+	// 而不是照常打印。判据的前提要由判据自己检查，见 silent-risks 方法论 85 那一节。
+	var first, last, firstPx, lastPx float64
+	var legs int
 	for i := 0; i < *rounds; i++ {
 		if i > 0 {
 			time.Sleep(*every)
@@ -1018,8 +1033,13 @@ func runCTPHold(args []string) error {
 			logf("  持仓读不到：%v", err)
 			continue
 		}
+		legs = 0
 		for _, p := range pos {
 			if int(p.TodayPosition) == 0 {
+				continue
+			}
+			legs++
+			if ctp.Text(p.InstrumentID[:]) != inst {
 				continue
 			}
 			um := float64(p.UseMargin)
@@ -1027,6 +1047,10 @@ func runCTPHold(args []string) error {
 				first = um
 			}
 			last = um
+			if firstPx == 0 {
+				firstPx = float64(m.LastPrice)
+			}
+			lastPx = float64(m.LastPrice)
 			logf("%-8s %10.2f %10.2f %10.2f %12.2f %12.2f",
 				time.Now().Format("15:04:05"), float64(m.LastPrice),
 				float64(p.SettlementPrice), float64(p.PreSettlementPrice),
@@ -1034,13 +1058,28 @@ func runCTPHold(args []string) error {
 		}
 	}
 	logf("")
-	switch {
-	case first != 0 && first == last:
-		logf("⇒ ⚠️ 占用保证金**全程不变**（%.2f）", first)
-		logf("   若期间行情有过变动 ⇒ 基准是**建仓时定死的价**（开仓价），今结算价被否")
-		logf("   ⚠️ 若行情也没动 ⇒ **这一轮什么都没分开**，别当结论")
-	default:
-		logf("⇒ ⚠️ 占用保证金**变了**：%.2f → %.2f ⇒ 基准是某个**动态价**，开仓价被否", first, last)
+	// ⚠️ 判定本身在 `holdVerdict` 里，这里只负责把它翻成人话。
+	// 分开的理由见 holdverdict.go：**一个只能在盘中检验的判据等于没被检验过。**
+	switch holdVerdict(legs, first, last, firstPx, lastPx) {
+	case holdNoPremise:
+		// ⚠️ 这一支存在的全部理由，就是**不让它说出那句结论**。
+		logf("⇒ ⚠️⚠️ **前提不成立，本轮不下判断**：账上有 %d 条今仓。", legs)
+		logf("   本判据默认「只有这一条腿，只有价格在动」—— 多一条腿，")
+		logf("   占用保证金的变动就有了第二个来源，而**两个来源在这张表里长得一模一样**。")
+		logf("   ⇒ 先 `ctp-flatten` 平干净再跑。")
+	case holdNoData:
+		logf("⇒ ⚠️ 一轮都没读到 %s 的今仓 —— **没有观测，不是结论**", *symbol)
+	case holdNoMove:
+		logf("⇒ ⚠️ **这一轮什么都没分开**：期间最新价始终是 %.2f，", firstPx)
+		logf("   开仓价与今结算价在不动的行情上给出同一个数。别当结论。")
+	case holdStatic:
+		logf("⇒ 占用保证金**全程不变**（%.2f），而行情从 %.2f 走到 %.2f",
+			first, firstPx, lastPx)
+		logf("   ⇒ 基准是**建仓时定死的价**（开仓价），今结算价被否")
+	case holdDynamic:
+		logf("⇒ ⚠️ 占用保证金**变了**：%.2f → %.2f（行情 %.2f → %.2f）",
+			first, last, firstPx, lastPx)
+		logf("   ⇒ 基准是某个**动态价**，开仓价被否")
 	}
 	logf("")
 	if *keep {

@@ -3706,5 +3706,49 @@
 		"want": "前提检查要排在第一笔委托之前",
 		"expect": "green",
 		"why": "这一改让检查**永不触发**，而它在源码里的位置没动 —— 守卫是按 AST 位置判先后的，位置没变就该照常绿。⚠️ 它记在这里正是要把这半个盲区写明：**「排在前面」与「真的会拦住」是两件事**，本条守卫只管前者。后者靠 ctp-slices 跑在脏账户上才看得见。"
+	},
+	{
+		"name": "394 holdVerdict 的「账上不止一条腿」那一支形同虚设——20260911 那次假结论会重现",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/holdverdict.go",
+		"old": "\tif legs > 1 {\n\t\treturn holdNoPremise\n\t}",
+		"new": "\tif legs > 1000000 {\n\t\treturn holdNoPremise\n\t}",
+		"pkg": ".",
+		"test": "TestHoldVerdictRefusesBeforeItConcludes",
+		"want": "两条腿时不下判断",
+		"expect": "red"
+	},
+	{
+		"name": "395 holdVerdict 把「真结论」排到「没有判别力」之前——不动的行情会得到一个正常结论",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/holdverdict.go",
+		"old": "\tif firstPx == 0 || firstPx == lastPx {\n\t\treturn holdNoMove\n\t}\n\tif first == last {\n\t\treturn holdStatic\n\t}",
+		"new": "\tif first == last {\n\t\treturn holdStatic\n\t}\n\tif firstPx == 0 || firstPx == lastPx {\n\t\treturn holdNoMove\n\t}",
+		"pkg": ".",
+		"test": "TestHoldVerdictRefusesBeforeItConcludes",
+		"want": "行情全程没动",
+		"expect": "red"
+	},
+	{
+		"name": "396 captureWithQuote 补行情失败时改成 return fx, err——半份截面交到调用方手上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/capture.go",
+		"old": "\t\t\treturn nil, fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+",
+		"new": "\t\t\treturn fx, fmt.Errorf(\"⚠️ 行情没补上，**整份截面不落盘**：\"+",
+		"pkg": ".",
+		"test": "TestQuoteFailureBlocksTheWrite",
+		"want": "第一个返回值不是",
+		"expect": "red"
+	},
+	{
+		"name": "397 ctp-slices 里 captureWithQuote 的错误检查被降成日志——拍失败时拿着 nil 往下走",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\tfx, err := captureWithQuote(c, *timeout, \"ctp-slices：两片俱在、尚未平仓\", *symbol)\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}",
+		"new": "\t\tfx, err := captureWithQuote(c, *timeout, \"ctp-slices：两片俱在、尚未平仓\", *symbol)\n\t\tif err != nil {\n\t\t\tlogf(\"拍截面失败：%v\", err)\n\t\t}",
+		"pkg": ".",
+		"test": "TestEveryCaptureWithQuoteCallChecksItsError",
+		"want": "不是 `if err != nil { return",
+		"expect": "red"
 	}
 ]
