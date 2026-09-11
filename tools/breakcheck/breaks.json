@@ -3661,5 +3661,50 @@
 		"test": "TestPlatformParityCoversFieldsToo",
 		"want": "Windows 侧有导出字段 Credentials.AuthCode",
 		"expect": "red"
+	},
+	{
+		"name": "390 均价那一片的成本改成「取第一片」——三个成本候选会撞在一起",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\treturn p1 * mult, p2 * mult, ((p1 + p2) / 2) * mult",
+		"new": "\treturn p1 * mult, p2 * mult, p1 * mult",
+		"pkg": ".",
+		"test": "TestSliceCostCandidateIsAveragePriceTimesMultiplier",
+		"want": "三个成本候选必须两两分得开，且均价夹在两片之间",
+		"expect": "red"
+	},
+	{
+		"name": "391 均价候选改成算术平均**价**而不乘乘数——数小一个量级，而它只被打印",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\treturn p1 * mult, p2 * mult, ((p1 + p2) / 2) * mult",
+		"new": "\treturn p1 * mult, p2 * mult, (p1 + p2) / 2",
+		"pkg": ".",
+		"test": "TestSliceCostCandidateIsAveragePriceTimesMultiplier",
+		"want": "均价那一片的成本 = ((p1+p2)/2) × 乘数 = 31010",
+		"expect": "red"
+	},
+	{
+		"name": "392 平仓盈亏的均价候选改用 p1——p1≠p2 时它与 FIFO 撞号",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\treturn (q - p1) * mult, (q - p2) * mult, (q - (p1+p2)/2) * mult",
+		"new": "\treturn (q - p1) * mult, (q - p2) * mult, (q - p1) * mult",
+		"pkg": ".",
+		"test": "TestSliceCandidatesSeparateOnlyWhenPricesDiffer",
+		"want": "p1≠p2 时三个盈亏候选两两分得开",
+		"expect": "red"
+	},
+	{
+		"name": "393 把前提检查挪到第一笔委托之后——检查的是被自己破坏过的前提",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\tif p := longToday(pos0, inst); p != nil && int(p.Position) != 0 {",
+		"new": "\tif p := longToday(pos0, inst); false && p != nil && int(p.Position) != 0 {",
+		"pkg": ".",
+		"test": "TestSlicePreconditionCheckedBeforeAnyOrder",
+		"want": "前提检查要排在第一笔委托之前",
+		"expect": "green",
+		"why": "这一改让检查**永不触发**，而它在源码里的位置没动 —— 守卫是按 AST 位置判先后的，位置没变就该照常绿。⚠️ 它记在这里正是要把这半个盲区写明：**「排在前面」与「真的会拦住」是两件事**，本条守卫只管前者。后者靠 ctp-slices 跑在脏账户上才看得见。"
 	}
 ]

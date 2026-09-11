@@ -39,6 +39,9 @@ func usage() {
 用法:
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
+  oracle ctp-slices -symbol SHFE.rb2701 -multiplier 10 -tick 1
+                                   ⚠️ **CTP/SimNow 侧**：分两笔各开一手造两片（片价不同），
+                                   只平一手 ⇒ 逐片 FIFO / LIFO / 按均价 三个候选分得开（rules_pending #13）
   oracle ctp-params [-env 路径]    ⚠️ **CTP/SimNow 侧**：查经纪商交易参数
                                    （simnow_pending#9）。只读，不下单。
                                    ⚠️ 查到的是**声明**不是**行为**，见 docs/ctp-oracle.md 第 3 节
@@ -147,6 +150,11 @@ func main() {
 		}
 	case "ctp-dup":
 		if err := runCTPDup(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-slices":
+		if err := runCTPSlices(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -432,18 +440,11 @@ func runCTPParams(args []string) error {
 		if *quote != "" {
 			note += " + 行情"
 		}
-		fx, err := c.Capture(*timeout, note)
+		// ⚠️ 补行情**失败就整份不落盘**那条不变式
+		// 现在只有一个实现，在 captureWithQuote 里。
+		fx, err := captureWithQuote(c, *timeout, note, *quote)
 		if err != nil {
 			return err
-		}
-		if *quote != "" {
-			// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：
-			// 一份少了 quotes 的截面与一份没要过 quotes 的截面
-			// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。
-			if err := c.AttachQuote(fx, *quote, *timeout); err != nil {
-				return fmt.Errorf("⚠️ 行情没补上，**整份截面不落盘**："+
-					"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w", err)
-			}
 		}
 		secrets := map[string]string{
 			"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,
