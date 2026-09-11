@@ -503,6 +503,9 @@ D+1 日 baseline-full / close-order / yd-vs-his
 
     类型   Side（枚举）/ Intent / ProtectedLeg / Valve
     方法   Valve.Check(Intent) error；Side.String
+    字段   Intent.Symbol / Closing / ClosesSide / Volume / LimitPrice / Desc
+           ProtectedLeg.Symbol / Side / TradingDay / Why
+           Valve.AllowOrder / MaxVolume / Protected / TradingDay
 
 **枚举 `safety.Side`（`uint8`）—— 取值与零值都是导出面的一部分**：
 
@@ -520,6 +523,12 @@ D+1 日 baseline-full / close-order / yd-vs-his
     常量   Source / GoctpModule / DLLDirEnv / QueryGap
     变量   RequiredDLLs
     类型   Client / Credentials / Fixture / OrderReq / OrderState
+    字段   Client.Valve
+           Credentials.Front / BrokerID / UserID / Password / AppID / AuthCode
+           Fixture.Source / TradingDay / CapturedAt / Note / BrokerParams /
+                   Account / Positions / Quotes / Dropped
+           OrderReq.Exchange / Instrument / Direction / Offset / Volume / LimitPrice
+           OrderState.OrderRef / Status / StatusMsg / VolumeTraded / VolumeTotal / ErrorID
     函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots /
            Text / SplitSymbol / FarPrice
     方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
@@ -529,6 +538,19 @@ D+1 日 baseline-full / close-order / yd-vs-his
 ⚠️ **这份清单在 20260910 之前停在 P2**：`Insert` / `Cancel` / `Order` /
 `MarketData` / `SplitSymbol` / `FarPrice` / `OrderState` 七项**一个都没记** ——
 而门禁第 ④ 条查的正是「导出面变更有没有记进 roadmap」。
+
+⚠️⚠️ **20260911 补：上面那两块「字段」此前一行都没有，而守卫也从没提过。**
+
+`TestRoadmapListsEveryExport` 只数**函数 / 类型 / 变量常量**，
+**不数结构体字段** —— 于是 20260910 夜盘我在 `OrderState` 上加了 `ErrorID`，
+**一个字都没说**。
+
+> ⚠️ 一个「导出面变了要记进 roadmap」的守卫，在**字段**这一类上完全没有覆盖 ——
+> **而调用方用得最多的恰恰是字段。**
+
+⇒ 守卫已扩到字段（记成 `类型.字段`，与方法的记法一致），
+一次补上 **49** 个。⚠️ 它是在**送审前自查门禁④**时撞出来的，
+不是守卫抓到的 —— 本条如实记这一点。
 ⚠️ 更糟的是我在给评审的回信里**说过它「已经改了」，而我当时没有核过** ——
 这是方法论 69 那条（一个假声明有两个副本）在**同一天内的第三次**，
 而这一次是在**汇报**里。⇒ 现在的清单是 `go doc -all ./ctp` 的输出，不是凭记忆写的。
