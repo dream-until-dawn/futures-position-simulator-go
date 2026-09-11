@@ -102,6 +102,11 @@ type Break struct {
 
 func main() {
 	only := flag.String("only", "", "只跑名字含这个子串的")
+	out := flag.String("out", "", "把每条破坏的判定与**它红在哪一行**写成 JSON（留空则不写）。"+
+		"⚠️ 这两样分层判定**本来就在算** —— 它要判「want 出现在输出里没有」，"+
+		"于是手里已经有命中的那一行；此前跑完就丢掉了。"+
+		"⇒ 与给本工具加红/绿分解那次同形：**数据本来就有，缺的只是留下来**。"+
+		"⚠️ 只持久化，**不建模**：「红的是哪句话」要结构化表达是另一件事，先别做")
 	list := flag.Bool("list", false, "只列出，不跑")
 	flag.Parse()
 
@@ -131,6 +136,21 @@ func main() {
 	// 本命令会**改生产代码再改回来**。若中途被杀，改坏的那份会留在盘上，
 	// 而干净的工作树让 `git checkout` 一句话就能收拾。
 	// 工作树本来就脏的话，收拾时分不清哪些改动是自己的。
+	// result 是一条破坏跑完之后**留得下来**的东西。
+	//
+	// ⚠️ Detail 对 expect=red 来说就是**命中 Want 的那一行**，
+	// 而那一行自带 `xxx_test.go:NNN:` 前缀 ⇒ 「红在哪一行」与「红在哪句话上」
+	// 都在里面，不需要额外计算 —— 此前它只活在控制台上，跑完就没了。
+	type result struct {
+		Name    string `json:"name"`
+		Pkg     string `json:"pkg"`
+		Test    string `json:"test"`
+		Expect  string `json:"expect"`
+		Want    string `json:"want"`
+		Verdict string `json:"verdict"`
+		Detail  string `json:"detail"`
+	}
+	var results []result
 	var before string
 	if dirty, err := gitDirty(); err != nil {
 		fmt.Fprintf(os.Stderr, "查工作树状态失败：%v\n", err)
@@ -158,6 +178,8 @@ func main() {
 		}
 		ran++
 		verdict, detail := run(b)
+		results = append(results, result{Name: b.Name, Pkg: b.Pkg, Test: b.Test,
+			Expect: b.Expect, Want: b.Want, Verdict: verdict, Detail: detail})
 		fmt.Printf("%-46s %s\n", b.Name, verdict)
 		if detail != "" {
 			fmt.Printf("    %s\n", strings.ReplaceAll(detail, "\n", "\n    "))
@@ -248,6 +270,21 @@ func main() {
 	// **这是把一次纪律失败换成结构**（silent-risks.md 66：验证防这一次，结构防每一次）。
 	fmt.Printf("\n跑了 %d 条：红对了 %d / 如预期仍然绿 %d / **未按预期 %d**\n",
 		ran, red, green, bad)
+
+	if *out != "" {
+		// ⚠️ 写盘失败要**改退出码**：一个「跑完了但没留下记录」的运行，
+		// 与没跑过的区别只在控制台上，而控制台会滚掉。
+		blob, err := json.MarshalIndent(results, "", "\t")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "⚠️ 序列化判定结果失败：%v\n", err)
+			os.Exit(2)
+		}
+		if err := os.WriteFile(*out, append(blob, '\n'), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "⚠️ 写 %s 失败：%v —— **这一轮的判定没有留下来**\n", *out, err)
+			os.Exit(2)
+		}
+		fmt.Printf("ⓘ 判定已写入 %s（%d 条）\n", *out, len(results))
+	}
 	if bad > 0 {
 		os.Exit(1)
 	}
