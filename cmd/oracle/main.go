@@ -125,6 +125,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
+	case "ctp-cancel":
+		if err := runCTPCancel(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
 	case "ctp-profit":
 		if err := runCTPProfit(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)

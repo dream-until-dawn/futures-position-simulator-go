@@ -98,6 +98,46 @@ func (c *Client) Positions(timeout time.Duration) (map[string]*def.CThostFtdcInv
 }
 
 // registerQueryCallbacks 注册账户与持仓的应答回调。由 Connect 调用。
+// LiveOrders 查**还挂着的**委托。
+//
+// ⚠️ 20260911 夜盘补的，而它补的是一整类缺失的动作：此前这个包
+// **能下单、却不能清理自己下出去的单**。
+//
+// 当晚我用 `timeout 150` 包着 `go run ctp-fee`，150 秒不够，
+// 外部 kill 落在「下单之后、撤单之前」⇒ 两笔买开挂单留在账上，
+// **而没有任何办法拿到它们的 `OrderRef`**，只能等 GFD 在收盘时自动撤。
+//
+//	⚠️ 撤单需要 ref，而 ref 只活在下单的那个进程里 ——
+//	**一个只能由制造者清理的残留，在制造者死掉时就清理不了了。**
+//
+// ⚠️ 返回的是**当前还活着**的那些（`OST_NoTradeQueueing` / `PartTradedQueueing`），
+// 不是全部委托：已成交与已撤的没有可撤性，混在一起只会让调用方再筛一次。
+func (c *Client) LiveOrders(timeout time.Duration) ([]*def.CThostFtdcOrderField, error) {
+	c.q.wait()
+	defer c.q.done()
+	c.ordMu.Lock()
+	c.ord = nil
+	c.ordMu.Unlock()
+
+	f := def.CThostFtdcQryOrderField{}
+	copy(f.BrokerID[:], c.cred.BrokerID)
+	copy(f.InvestorID[:], c.cred.UserID)
+	c.req("ReqQryOrder", unsafe.Pointer(&f))
+	select {
+	case <-c.ordDone:
+		c.ordMu.Lock()
+		defer c.ordMu.Unlock()
+		out := make([]*def.CThostFtdcOrderField, len(c.ord))
+		copy(out, c.ord)
+		return out, nil
+	case <-time.After(timeout):
+		// ⚠️ 与查持仓同一条纪律：超时是**没有结论**，不是「没有挂单」。
+		// 空仓/空委托时柜台会回一条**空的** isLast，两者在数据上分得开。
+		return nil, fmt.Errorf("%v 内没有等到委托查询的最后一条 —— "+
+			"⚠️ **没有结论**，不是「没有挂单」", timeout)
+	}
+}
+
 func (c *Client) registerQueryCallbacks() {
 	c.on("SetOnRspQryTradingAccount", func(a *def.CThostFtdcTradingAccountField,
 		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
@@ -112,6 +152,27 @@ func (c *Client) registerQueryCallbacks() {
 		}
 		cp := *a
 		c.account <- &cp
+		return 0
+	})
+	c.on("SetOnRspQryOrder", func(o *def.CThostFtdcOrderField,
+		info *def.CThostFtdcRspInfoField, _ int, isLast bool) uintptr {
+		if err := errOf(info); err != nil {
+			c.logf("[ctp] ⚠️ 查委托失败 %v", err)
+		}
+		// ⚠️ 只收**还挂着**的：已成交/已撤的没有可撤性。
+		if o != nil && (o.OrderStatus == def.THOST_FTDC_OST_NoTradeQueueing ||
+			o.OrderStatus == def.THOST_FTDC_OST_PartTradedQueueing) {
+			co := *o
+			c.ordMu.Lock()
+			c.ord = append(c.ord, &co)
+			c.ordMu.Unlock()
+		}
+		if isLast {
+			select {
+			case c.ordDone <- struct{}{}:
+			default:
+			}
+		}
 		return 0
 	})
 	c.on("SetOnRspQryInvestorPosition", func(p *def.CThostFtdcInvestorPositionField,

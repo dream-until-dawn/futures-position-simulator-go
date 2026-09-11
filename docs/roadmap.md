@@ -532,6 +532,11 @@ D+1 日 baseline-full / close-order / yd-vs-his
     函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots /
            Text / SplitSymbol / FarPrice
     方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
+           **LiveOrders**（20260911 夜盘新增：查还挂着的委托 —— 此前这个包
+           **能下单、却不能清理自己下出去的单**）/
+           **CancelByOrder**（20260911 夜盘新增：按**交易所的 OrderSysID** 撤单。
+           ⚠️ 而 Cancel 按 FrontID+SessionID+OrderRef 定位 —— 那三个都是**当前会话的**，
+           于是它**只撤得掉自己这次会话下的单**，对残留单发出去不报错、单还在）/
            MarketData / Capture / AttachQuote / Check / Insert / Cancel / Order / Close；
            Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
 

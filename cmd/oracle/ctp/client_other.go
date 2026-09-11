@@ -40,12 +40,12 @@ func New(cred Credentials, _ func(string, ...any)) *Client { return &Client{cred
 var errPlatform = fmt.Errorf("CTP 客户端**只支持 Windows** —— " +
 	"Linux 侧是 .so + cgo，形状完全不同，不在本期范围内（docs/ctp-oracle.md 第 1 节）")
 
-func (c *Client) TradingDay() string                    { return "" }
-func (c *Client) Connect(time.Duration) error           { return errPlatform }
+func (c *Client) TradingDay() string          { return "" }
+func (c *Client) Connect(time.Duration) error { return errPlatform }
 func (c *Client) BrokerParams(time.Duration) (*def.CThostFtdcBrokerTradingParamsField, error) {
 	return nil, errPlatform
 }
-func (c *Client) Close()                                {}
+func (c *Client) Close() {}
 
 // ⚠️ 这几个同样返回错误而不是空值：一个返回 (nil, nil) 的桩
 // 会让「这个平台没实现」在调用方表现成「账户是空的」。
@@ -81,3 +81,13 @@ func (c *Client) AttachQuote(*Fixture, string, time.Duration) error { return err
 
 // Order 在非 Windows 上永远查不到：这里一笔单都发不出去。
 func (c *Client) Order(string) (OrderState, bool) { return OrderState{}, false }
+
+// LiveOrders 在非 Windows 上不可用。⚠️ 桩必须跟着加，否则
+// TestNonWindowsStubsCoverEveryMethod 会红 —— 而它红是对的：
+// 包外的调用方在别的平台上会整个包用不了。
+func (c *Client) LiveOrders(time.Duration) ([]*def.CThostFtdcOrderField, error) {
+	return nil, errPlatform
+}
+
+// CancelByOrder 在非 Windows 上不可用。
+func (c *Client) CancelByOrder(*def.CThostFtdcOrderField) error { return errPlatform }

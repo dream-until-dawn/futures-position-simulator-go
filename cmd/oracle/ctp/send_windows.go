@@ -149,6 +149,41 @@ func (c *Client) Cancel(ref string, r OrderReq) error {
 	return nil
 }
 
+// CancelByOrder 按**交易所的 `OrderSysID`** 撤单，而不是按本地 `OrderRef`。
+//
+// ⚠️ 20260911 夜盘逼出来的，而它揭出 `Cancel` 的一个结构性边界：
+//
+//	Cancel(ref, …)        用 FrontID + SessionID + OrderRef 定位
+//	                      ⇒ 那三个**都是当前会话的** ⇒ **只撤得掉自己这次会话下的单**
+//	CancelByOrder(o)      用 ExchangeID + OrderSysID 定位
+//	                      ⇒ 交易所自己的编号，**与会话无关**
+//
+// 当晚两笔残留是被 kill 掉的进程在**另一个会话**里下的，
+// 于是按 ref 撤打在了一个不存在的单上 —— 柜台不报错，单还挂着。
+//
+//	⚠️ **「只能由制造者清理」不是纪律问题，是定位方式决定的。**
+//	而它的表现是：撤单发出去了、没有任何错误、单还在。
+func (c *Client) CancelByOrder(o *def.CThostFtdcOrderField) error {
+	if o == nil {
+		return fmt.Errorf("撤单要一条委托，得到 nil")
+	}
+	sysID := text(o.OrderSysID[:])
+	if sysID == "" {
+		return fmt.Errorf("⚠️ 这笔委托没有 OrderSysID —— 它还没被交易所接受，"+
+			"只能按 ref 撤，而那要求**同一个会话**（ref=%s）", text(o.OrderRef[:]))
+	}
+	f := def.CThostFtdcInputOrderActionField{ActionFlag: def.THOST_FTDC_AF_Delete}
+	copy(f.BrokerID[:], c.cred.BrokerID)
+	copy(f.InvestorID[:], c.cred.UserID)
+	copy(f.UserID[:], c.cred.UserID)
+	copy(f.ExchangeID[:], text(o.ExchangeID[:]))
+	copy(f.InstrumentID[:], text(o.InstrumentID[:]))
+	copy(f.OrderSysID[:], sysID)
+	c.logf("[ctp] 撤单 OrderSysID=%s（按交易所编号，与会话无关）", sysID)
+	c.req("ReqOrderAction", unsafe.Pointer(&f))
+	return nil
+}
+
 // registerOrderCallbacks 注册委托回报。由 Connect 调用。
 func (c *Client) registerOrderCallbacks() {
 	c.on("SetOnRtnOrder", func(o *def.CThostFtdcOrderField) uintptr {
