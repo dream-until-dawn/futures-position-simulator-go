@@ -26,8 +26,18 @@ type rejectCase struct {
 	Name string
 	Dir  def.TThostFtdcDirectionType
 	Off  def.TThostFtdcOffsetFlagType
-	// Price 相对涨跌停的偏移，由 priceOf 解释。用相对量是因为涨跌停每天都变。
-	Price func(md *def.CThostFtdcDepthMarketDataField) float64
+	// Price 由涨跌停与**最小变动价位**一起算出来。用相对量是因为涨跌停每天都变；
+	// ⚠️ **带 tick 是 20260911 夜盘补的，而它补的是一次真实的误标**：
+	// 原先偏移写死成 ±0.5 / ±1（注释里明写「rb 的最小变动价位是 1」）。
+	// 拿它去跑 `INE.bc2611`（tick = **10**）时，「低于跌停 @87899」这一笔
+	// **同时**违反了步长，柜台报的是步长那个码（48），
+	// **而输出上标着「低于跌停」** —— 一条用例测的东西与它的名字不是一回事。
+	//
+	//	⚠️ 更糟的是它看起来成功了：命令打印「跑完 4 条，没有任何一条成交」，
+	//	四条都拿到了码，**而其中两条的码属于另一种拒因**。
+	//
+	// ⇒ 越界那两条改成 ±tick（仍是整倍数），非整倍数那条改成 +tick/2。
+	Price func(md *def.CThostFtdcDepthMarketDataField, tick float64) float64
 	Why   string
 }
 
@@ -37,26 +47,34 @@ var rejectCases = []rejectCase{
 	{
 		Name: "非最小变动价位整倍数",
 		Dir:  def.THOST_FTDC_D_Buy, Off: def.THOST_FTDC_OF_Open,
-		Price: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.LowerLimitPrice) + 0.5 },
-		Why:   "rb 的最小变动价位是 1，挂 .5 应当被拒；且是**买单挂在跌停附近**，放过了也成不了交",
+		Price: func(md *def.CThostFtdcDepthMarketDataField, tick float64) float64 {
+			return float64(md.LowerLimitPrice) + tick/2
+		},
+		Why: "半个最小变动价位一定不是整倍数（不论 tick 多大）；且是**买单挂在跌停附近**，放过了也成不了交",
 	},
 	{
 		Name: "低于跌停",
 		Dir:  def.THOST_FTDC_D_Buy, Off: def.THOST_FTDC_OF_Open,
-		Price: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.LowerLimitPrice) - 1 },
-		Why:   "越界应当被拒；且是**买单挂在跌停之下**，放过了也成不了交",
+		Price: func(md *def.CThostFtdcDepthMarketDataField, tick float64) float64 {
+			return float64(md.LowerLimitPrice) - tick
+		},
+		Why: "越界应当被拒，而**减一个 tick 仍是整倍数** ⇒ 只违反越界这一项；且是**买单挂在跌停之下**，放过了也成不了交",
 	},
 	{
 		Name: "高于涨停",
 		Dir:  def.THOST_FTDC_D_Sell, Off: def.THOST_FTDC_OF_Open,
-		Price: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.UpperLimitPrice) + 1 },
-		Why:   "越界应当被拒；且是**卖单挂在涨停之上**，放过了也成不了交",
+		Price: func(md *def.CThostFtdcDepthMarketDataField, tick float64) float64 {
+			return float64(md.UpperLimitPrice) + tick
+		},
+		Why: "越界应当被拒，而**加一个 tick 仍是整倍数** ⇒ 只违反越界这一项；且是**卖单挂在涨停之上**，放过了也成不了交",
 	},
 	{
 		Name: "平仓位不足（账上无仓时平昨）",
 		Dir:  def.THOST_FTDC_D_Sell, Off: def.THOST_FTDC_OF_CloseYesterday,
-		Price: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.UpperLimitPrice) },
-		Why:   "账上没有昨仓时平昨应当被拒；且是**卖单挂在涨停**，放过了也成不了交",
+		Price: func(md *def.CThostFtdcDepthMarketDataField, tick float64) float64 {
+			return float64(md.UpperLimitPrice)
+		},
+		Why: "账上没有昨仓时平昨应当被拒；且是**卖单挂在涨停**，放过了也成不了交",
 	},
 }
 
@@ -72,9 +90,15 @@ func runCTPReject(args []string) error {
 	fs := flag.NewFlagSet("ctp-reject", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 SHFE.rb2701（⚠️ 无默认值）")
+	tick := fs.Float64("tick", 0, "最小变动价位（⚠️ **无默认值**）。"+
+		"⚠️ 猜错的表现不是报错，是**一条用例测到了另一种拒因**，而输出上仍标着原来那个名字")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
+	}
+	if *tick <= 0 {
+		return fmt.Errorf("⚠️ -tick 没有默认值：bc 是 10、rb 是 1、sc 是 0.1 —— " +
+			"猜错了本命令**照样跑完四条、照样拿到四个码**，而其中两条的码属于另一种拒因")
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：真实委托的合约必须显式指定")
@@ -105,7 +129,7 @@ func runCTPReject(args []string) error {
 	ex, inst := ctp.SplitSymbol(*symbol)
 	traded := 0
 	for i, rc := range rejectCases {
-		px := rc.Price(md)
+		px := rc.Price(md, *tick)
 		logf("")
 		logf("[rej] %d/%d %s → dir=%q off=%q @%.2f", i+1, len(rejectCases),
 			rc.Name, string(rc.Dir), string(rc.Off), px)
