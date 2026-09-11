@@ -135,46 +135,81 @@ func runCTPSlices(args []string) error {
 	if err != nil {
 		return err
 	}
-	logf("[sl] 等卖一离开 %.4f 且落在 %q 一侧（一个价位就够：腿2 挂涨停，成交在卖一上），上限 %s ——",
+	logf("[sl] 等行情走到 %.4f 的 %q 一侧（一个最小变动价位就够），上限 %s ——",
 		p1, *second, *wait)
-	moved := false
 	deadline := time.Now().Add(*wait)
-	for time.Now().Before(deadline) {
-		m, err := c.MarketData(*symbol, *timeout)
+	var p2 float64
+	tries, askSeen, askDead := 0, 0, 0
+	for {
+		// ——— 一、等触发 ———
+		triggered := false
+		for time.Now().Before(deadline) {
+			m, err := c.MarketData(*symbol, *timeout)
+			if err != nil {
+				logf("  行情读不到：%v", err)
+				time.Sleep(*every)
+				continue
+			}
+			// ⚠️ **优先看卖一**（腿 2 挂涨停，成交在卖一上），读不到才退回最新价。
+			//
+			// ⚠️ 20260911 夜盘栽在这里，而栽的方式值得写全：第一版**只看卖一**，
+			// 读不到就 `continue` —— 而 CTP 的**行情查询**（`ReqQryDepthMarketData`，
+			// 不是订阅）应答里盘口档位并不可靠，`AskVolume1` 常是 0。
+			// 于是那个 `continue` **每一轮都命中**，整整两个窗口（12 分 + 20 分）
+			// 一次都没触发过。
+			//
+			//	⚠️ 而日志里它长得和「行情就是没往那边走」一模一样 ——
+			//	我差一点把它当成「白银今晚一路下行」写进结论。
+			//
+			// ⇒ 两半改法：读不到就退回最新价并**说出来**；
+			// 而「最新价不是成交价」这个顾虑由下面的**事后核对**兜底 ——
+			// 触发只管把我们叫醒，**方向对不对以成交价为准**。
+			px, src := float64(m.AskPrice1), "卖一"
+			if px <= 0 || px > 1e300 || int(m.AskVolume1) <= 0 {
+				px, src = float64(m.LastPrice), "最新价"
+				askDead++
+			} else {
+				askSeen++
+			}
+			if math.Abs(px-p1) >= *tick && want(px, p1) {
+				logf("[sl] %s 走到了 %.4f（距 p1 %.4f，在要的那一侧）", src, px, math.Abs(px-p1))
+				triggered = true
+				break
+			}
+			time.Sleep(*every)
+		}
+		if !triggered {
+			return fmt.Errorf("⚠️ **等不到行情走到 %q 一侧，不开第二腿**（已试 %d 次，"+
+				"卖一可用 %d 轮 / 读不到 %d 轮）：开了也是两片同价或同侧 ⇒ "+
+				"**一个没有判别力、或者拆不开混淆的样本，而它会打印得像个结论**",
+				*second, tries, askSeen, askDead)
+		}
+
+		// ——— 二、开腿 2，然后**以成交价为准**核一次 ———
+		tries++
+		p2, err = openOneLot(c, ex, inst, *mult, *timeout, logf)
 		if err != nil {
-			logf("  行情读不到：%v", err)
-			time.Sleep(*every)
-			continue
+			return err
 		}
-		ask := float64(m.AskPrice1)
-		// ⚠️ 卖一可能读不到（停盘、或该档为空）：那时**不拿最新价顶替** ——
-		// 用一个不是成交价的数去判「成交价会不会不同」，是换了个问题在答。
-		if ask <= 0 || int(m.AskVolume1) <= 0 {
-			time.Sleep(*every)
-			continue
-		}
-		if math.Abs(ask-p1) >= *tick && want(ask, p1) {
-			logf("[sl] 卖一走开了：%.4f（距 p1 %.4f，在要的那一侧）", ask, math.Abs(ask-p1))
-			moved = true
+		logf("[sl] 腿2 成交价 p2 = %.4f（第 %d 次尝试）", p2, tries)
+		if p2 != p1 && want(p2, p1) {
 			break
 		}
-		time.Sleep(*every)
-	}
-	if !moved {
-		return fmt.Errorf("⚠️ **等不到卖一走到 %q 一侧，不开第二腿**：%s 内卖一没离开过 %.4f "+
-			"的那一边。开了也是两片同价或同侧 ⇒ **一个没有判别力、或者拆不开混淆的样本，"+
-			"而它会打印得像个结论**", *second, *wait, p1)
-	}
-
-	// ——— 腿 2 ———
-	p2, err := openOneLot(c, ex, inst, *mult, *timeout, logf)
-	if err != nil {
-		return err
-	}
-	logf("[sl] 腿2 成交价 p2 = %.4f", p2)
-	if p1 == p2 {
-		return fmt.Errorf("⚠️ **p1 == p2 = %.4f，本轮没有判别力**：行情走开过又弹回来了，"+
-			"两片同价 ⇒ 三个候选给出同一个数。不当结论，重跑", p1)
+		// ⚠️ **这一手不能留**：它要么与腿 1 同价（没有判别力），
+		// 要么落在不要的那一侧（拆不开混淆）。留着它样本就废了，
+		// 而废样本会照常打印出「✅ 命中」。
+		why := "与腿1同价"
+		if p2 != p1 {
+			why = fmt.Sprintf("落在 %q 的反面", *second)
+		}
+		logf("[sl] ⚠️ 腿2 %s（p1=%.4f p2=%.4f）—— **平掉它重来**", why, p1, p2)
+		if err := flattenOneLongToday(c, ex, inst, *timeout); err != nil {
+			return fmt.Errorf("平掉不合格的腿2 失败，账上现在有两片：%w", err)
+		}
+		if !time.Now().Before(deadline) {
+			return fmt.Errorf("⚠️ **窗口用完，没拿到合格的腿2**（试了 %d 次）—— "+
+				"不当结论，重跑", tries)
+		}
 	}
 
 	pos2 := longToday(mustPositions(c, *timeout, logf), inst)
@@ -368,6 +403,26 @@ func openOneLot(c *ctp.Client, ex, inst string, mult float64,
 		return 0, fmt.Errorf("⚠️ 开完之后查不到今仓 —— 不猜价，直接停")
 	}
 	return (float64(p.OpenCost) - before) / mult, nil
+}
+
+// flattenOneLongToday 只平**一手**多头今仓 —— 用来退掉一个不合格的腿 2。
+//
+// ⚠️ 它与 flattenLongToday 是两件事：后者是收尾、清空；
+// 这一个是**撤回一步**，账上还得留着腿 1。用错了会把腿 1 也平掉，
+// 而那之后的一切读数仍然会打印得很正常。
+func flattenOneLongToday(c *ctp.Client, ex, inst string, timeout time.Duration) error {
+	md, err := c.MarketData(ex+"."+inst, timeout)
+	if err != nil {
+		return err
+	}
+	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout)
+	if err != nil || st.VolumeTraded == 0 {
+		return fmt.Errorf("平一手没成交：status=%q %s err=%v",
+			string(st.Status), st.StatusMsg, err)
+	}
+	return nil
 }
 
 // flattenLongToday 把该合约的多头**今仓**清干净。⚠️ 它不碰昨仓：
