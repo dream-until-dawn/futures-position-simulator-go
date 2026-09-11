@@ -19,12 +19,18 @@ import (
 )
 
 type ctpFixture struct {
-	Source     string                    `json:"source"`
-	TradingDay string                    `json:"trading_day"`
-	CapturedAt string                    `json:"captured_at"`
-	Account    map[string]any            `json:"account"`
-	Positions  map[string]map[string]any `json:"positions"`
-	Quotes     map[string]map[string]any `json:"quotes"`
+	Source     string `json:"source"`
+	TradingDay string `json:"trading_day"`
+	CapturedAt string `json:"captured_at"`
+	// BrokerParams 是柜台的**声明**（经纪商交易参数）。
+	//
+	// ⚠️ 它 20260909 起就落在每一份夹具里，而加载器此前**根本没读它** ——
+	// 于是 20260910 写下的那条可用资金恒等式与它矛盾了整整一天，
+	// 而没有任何东西负责把两者对上。见 TestIdentityAgreesWithDeclaredAlgorithm。
+	BrokerParams map[string]any            `json:"broker_params"`
+	Account      map[string]any            `json:"account"`
+	Positions    map[string]map[string]any `json:"positions"`
+	Quotes       map[string]map[string]any `json:"quotes"`
 }
 
 func loadCTP(t *testing.T) map[string]ctpFixture {

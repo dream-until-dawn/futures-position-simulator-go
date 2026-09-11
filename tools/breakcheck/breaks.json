@@ -3794,5 +3794,28 @@
 		"test": "TestAccountIdentityAgainstCTP",
 		"want": "一次都没被求值",
 		"expect": "red"
+	},
+	{
+		"name": "402 声明「只计浮动亏损」被读成「全部计算」——恒等式退回被推翻的那一版",
+		"dir": ".",
+		"file": "conformance/ctpfixture/algorithm_test.go",
+		"old": "\tcase \"2\": // THOST_FTDC_AG_OnlyLost 只计浮动亏损 ⇒ 浮盈被排除\n\t\treturn math.Max(positionProfit, 0), nil",
+		"new": "\tcase \"2\": // THOST_FTDC_AG_OnlyLost 只计浮动亏损 ⇒ 浮盈被排除\n\t\treturn 0, nil",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestIdentityAgreesWithDeclaredAlgorithm",
+		"want": "声明与行为不一致",
+		"expect": "red"
+	},
+	{
+		"name": "403 认不得的盈亏算法悄悄回落到 0——那等于假设「全部计算」，而那个模型已被推翻",
+		"dir": ".",
+		"file": "conformance/ctpfixture/algorithm_test.go",
+		"old": "\treturn 0, fmt.Errorf(\"认不得的盈亏算法 %q —— CTP 只定义了 1/2/3/4\", algorithm)",
+		"new": "\treturn 0, nil",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestIdentityAgreesWithDeclaredAlgorithm",
+		"want": "没有一份夹具声明 Algorithm",
+		"expect": "green",
+		"why": "⚠️ **这一条如预期仍然绿，而它记的正是本守卫的半格盲区**：当前全部夹具的 Algorithm 都是 \"2\"，认不得的那一支**一次都没被走到** ⇒ 回落到 0 与报错在这批语料上给出同一个结果。⇒ 真要让它红，需要一份 Algorithm 取值在 1/2/3/4 之外的夹具，而那要换一个柜台。**在那之前「认不得就报错」这条只由代码保证，不由测试保证。**"
 	}
 ]
