@@ -18,12 +18,12 @@ import (
 )
 
 type ctpFixture struct {
-	Source     string                            `json:"source"`
-	TradingDay string                            `json:"trading_day"`
-	CapturedAt string                            `json:"captured_at"`
-	Account    map[string]any                    `json:"account"`
-	Positions  map[string]map[string]any         `json:"positions"`
-	Quotes     map[string]map[string]any         `json:"quotes"`
+	Source     string                    `json:"source"`
+	TradingDay string                    `json:"trading_day"`
+	CapturedAt string                    `json:"captured_at"`
+	Account    map[string]any            `json:"account"`
+	Positions  map[string]map[string]any `json:"positions"`
+	Quotes     map[string]map[string]any `json:"quotes"`
 }
 
 func loadCTP(t *testing.T) map[string]ctpFixture {
@@ -128,7 +128,7 @@ func num(t *testing.T, m map[string]any, k string) decimal.Decimal {
 // 给出同一个数 —— **本条对大边这一维判别力为零**（silent-risks.md 77）。
 func TestMarginAgainstCTP(t *testing.T) {
 	fx := loadCTP(t)
-	checked := 0
+	checked, history := 0, 0
 	for name, f := range fx {
 		for sym, p := range f.Positions {
 			vol := num(t, p, "Position")
@@ -137,9 +137,14 @@ func TestMarginAgainstCTP(t *testing.T) {
 			}
 			id, err := types.ParseSymbol(sym[:len(sym)-len(filepath.Ext(sym))], types.TradingDay(20260910))
 			if err != nil {
-				// 键形如 "SHFE.rb2701/1"，末尾带方向后缀。
+				// ⚠️ 键形如 `SHFE.rb2701/1`（旧）或 `SHFE.rb2701/2/1`（20260910 夜盘起，
+				// 先方向后今昨）—— **截到第一个 `/`**，兼容两种。
+				//
+				// ⚠️ 上一版截的是**最后一个** `/`，那在旧格式上对、在新格式上
+				// 会留下 `SHFE.rb2701/2` —— 而它解析失败会 Fatal，不会静默。
+				// 那算走运：一个「多截一段」的解析错，更常见的下场是解出**另一个合约**。
 				base := sym
-				for i := len(base) - 1; i >= 0; i-- {
+				for i := 0; i < len(base); i++ {
 					if base[i] == '/' {
 						base = base[:i]
 						break
@@ -150,7 +155,25 @@ func TestMarginAgainstCTP(t *testing.T) {
 				}
 			}
 			bm, bv := num(t, p, "MarginRateByMoney"), num(t, p, "MarginRateByVolume")
+			// ⚠️ **柜台在昨仓上把 `MarginRateByMoney` 报成 0。**
+			//
+			// 20260910 夜盘第一份昨仓截面（ctp-status-20260911.json）实测：
+			// 今仓那几份都给 0.16，昨仓那份给 **0**。
+			// ⇒ 拿它去算会得到保证金 0，而 0 与「这个合约免保证金」在数上一样。
+			//
+			//	⚠️ **「没有」不是「零」** —— 这正是本库到处在防的那件事，
+			//	而这一次是**柜台自己**用零值表达了「没有」。
+			//
+			// ⇒ 跳过并**大声说**，不拿 0 顶替。要把这一格接上，
+			// 得让夹具带上费率的独立来源（refdata 的合约规格），那是另一件事。
+			if bm.IsZero() && bv.IsZero() {
+				t.Logf("⚠️ %s / %s：柜台没给保证金率（两个都是 0）—— **跳过**。"+
+					"昨仓截面上实测如此；拿 0 去算会得到「免保证金」，"+
+					"而那与「柜台没告诉我费率」在数上分不开", name, sym)
+				continue
+			}
 			cost := num(t, p, "PositionCost")
+			openCost := num(t, p, "OpenCost")
 			dir := types.Buy // ⚠️ 多头持仓在本库用 Buy 表示
 			// ⚠️ `PosiDirection` 在夹具里是**字符串**（白名单把那个字节按文本落盘），
 			// 不是数。第一版按数读，当场 Fatal —— **而那正是它该做的**：
@@ -164,11 +187,23 @@ func TestMarginAgainstCTP(t *testing.T) {
 				Volume:     int(vol.IntPart()),
 				// ⚠️ 乘数折进价里，见函数注释「边界一」。
 				Multiplier: decimal.NewFromInt(1),
-				OpenPrice:  cost.Div(vol),
+				// ⚠️ **开仓价取自 `OpenCost`，昨结算价取自 `PositionCost`** ——
+				// 而判别力全在这一对上：结算**只重置 PositionCost**，OpenCost 不动。
+				//
+				//	20260911 实测   OpenCost 31480（= 3148×10，开仓价）
+				//	                PositionCost 31470（= 3147×10，**已按昨结算价重置**）
+				//
+				// ⇒ 本库若在昨仓上用开仓价，会算出 5036.80；柜台给 5035.20。**分得开。**
+				// ⚠️ 第一版这里两个都取 PositionCost，那样两个价相等 ⇒
+				// **这条对拍在昨仓样本上判别力为零，而它照样会绿。**
+				OpenPrice: openCost.Div(vol),
 				// ⚠️ `PositionDate` 也是**字符串**（"1" 今仓 / "2" 昨仓）。
 				// 两个枚举字段都栽在同一处：**白名单把 CTP 的单字节枚举按文本落盘**，
 				// 而读的人按数字读。⚠️ 这不是夹具错，是**读的人没看夹具**。
 				IsHistory: func() bool { d, _ := p["PositionDate"].(string); return d != "1" }(),
+				// ⚠️ 昨仓才有昨结算价这一项；今仓给了也用不到（基准是开仓价）。
+				PreSettlement:    cost.Div(vol),
+				HasPreSettlement: true,
 				Rates: margin.Rates{
 					LongByMoney: bm, LongByVolume: bv,
 					ShortByMoney: bm, ShortByVolume: bv,
@@ -179,10 +214,32 @@ func TestMarginAgainstCTP(t *testing.T) {
 				t.Fatalf("⚠️ %s / %s：Compute 报错：%v", name, sym, err)
 			}
 			want := num(t, p, "UseMargin")
-			if !got.Exchange.Equal(want) {
+			// ⚠️ 容差 **1e-6**，而它有一个说得出来的理由，不是把差抹掉。
+			//
+			// 柜台的数经 CTP 的 `double` 回来：20260911 那份昨仓截面里
+			// `UseMargin` 是 **5035.200000000001** —— 尾巴上的 1e-12 是
+			// float64 的表示噪声，不是口径差。
+			//
+			// ⚠️ **而容差要多小才算安全，取决于「最小要分开的差」是多少**：
+			//
+			//	本实验的三个候选  5035.20 / 5036.80 / 5033.60 —— 两两差 **1.60**
+			//	容差             1e-6
+			//	⇒ 相差 **1.6 × 10⁶ 倍**：一次真的口径错落不进这个容差里
+			//
+			// ⇒ 而残差**每次都打印**：容差挡掉的是噪声，不该顺手挡掉可见性。
+			// 哪天残差从 1e-12 变成 1e-7，它仍然会绿，但日志里看得见它在长。
+			resid := got.Exchange.Sub(want)
+			if resid.Abs().GreaterThan(decimal.RequireFromString("0.000001")) {
 				t.Errorf("⚠️ %s / %s：本库算 %s，柜台给 %s（差 %s）—— "+
-					"这是**第一次**本库的计算与柜台的数正面对上，红了要先查是哪一边",
-					name, sym, got.Exchange, want, got.Exchange.Sub(want))
+					"这是**第一次**本库的计算与柜台的数正面对上，红了要先查是哪一边。"+
+					"⚠️ 差已超出 1e-6 的 float64 噪声容差，那不是表示误差",
+					name, sym, got.Exchange, want, resid)
+			} else if !resid.IsZero() {
+				t.Logf("ⓘ %s / %s：残差 %s（≤1e-6，判为 CTP double 的表示噪声；"+
+					"最小要分开的口径差是 1.60）", name, sym, resid)
+			}
+			if leg.IsHistory {
+				history++
 			}
 			checked++
 		}
@@ -190,7 +247,20 @@ func TestMarginAgainstCTP(t *testing.T) {
 	if checked < 3 {
 		t.Fatalf("⚠️ 只比了 %d 条持仓（下界 3）—— 夹具里有仓的那几份没被读到，本条在空转", checked)
 	}
-	t.Logf("ⓘ 对上了 %d 条持仓（⚠️ 全是今仓、单合约单方向 —— 见函数注释的三个边界）", checked)
+	// ⚠️ **昨仓样本的下界单列。**
+	//
+	// 20260910 夜盘之前，这条对拍比过的**全是今仓** —— 而
+	// `OpenTodayPreSettleHistory` 的两条支路里，昨仓那条**一次都没走到**。
+	// 那时它绿，说明的只是今仓那半对。
+	//
+	//	⚠️ 一条覆盖两条支路的判据，在只走过一条时和全走过时长得一样。
+	if history < 1 {
+		t.Errorf("⚠️ 比过的 %d 条里**一条昨仓都没有** —— "+
+			"OpenTodayPreSettleHistory 的昨仓支路没被走到，"+
+			"本条此刻只验了今仓那一半", checked)
+	}
+	t.Logf("ⓘ 对上了 %d 条持仓，其中昨仓 %d 条（⚠️ 单合约单方向 —— 见函数注释的边界）",
+		checked, history)
 }
 
 // TestAccountIdentityAgainstCTP 钉住账户侧的恒等式。

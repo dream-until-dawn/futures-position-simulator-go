@@ -23,12 +23,12 @@ import (
 	"strings"
 	"time"
 
+	def "gitee.com/haifengat/goctp/ctpdefine"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
-	def "gitee.com/haifengat/goctp/ctpdefine"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq"
-	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture"
 	"github.com/shopspring/decimal"
 )
@@ -122,6 +122,21 @@ func main() {
 		}
 	case "ctp-order":
 		if err := runCTPOrder(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-profit":
+		if err := runCTPProfit(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-fee":
+		if err := runCTPFee(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-reject":
+		if err := runCTPReject(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -525,6 +540,10 @@ func runCTPOrder(args []string) error {
 	closeToday := fs.Bool("close", false, "挂**平今**而不是买开（⚠️ 需要账上已有多头今仓）。"+
 		"它要量的是 `kq_facts` 42（平仓挂单不冻保证金、只冻手续费）在 CTP 侧成不成立 —— "+
 		"⚠️ 那条此前只有快期一个来源，而**账上有仓的时候才量得到**")
+	closeYd := fs.Bool("closeyd", false, "挂**平昨**而不是买开（⚠️ 需要账上已有多头**昨仓**）。"+
+		"⚠️ 20260910 夜盘加的：`-close` 把平今写死了，而上期所是 UseHistory —— "+
+		"拿平今去平一手昨仓，交易所直接 ErrorID=50「平仓位不足」，"+
+		"**而那一支从没跑过，所以没人知道**")
 	dump := fs.String("dump", "", "把**挂着时**那一刻的截面落盘到该目录（留空则不落）。"+
 		"⚠️ 不落盘的话，冻结保证金/冻结手续费那两个数**只会出现在控制台上，跑完就没了** —— "+
 		"而它们正是 kq_facts 42 与 46 的证据（silent-risks.md 77）")
@@ -574,9 +593,17 @@ func runCTPOrder(args []string) error {
 	// 且配对只能是 买+开 或 卖+平今。破坏 261。
 	dir, off := def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy),
 		def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_Open)
+	if *closeToday && *closeYd {
+		return fmt.Errorf("⚠️ -close 与 -closeyd 只能给一个 —— " +
+			"平今与平昨在 UseHistory 交易所上是两回事，本命令不替你猜")
+	}
 	if *closeToday {
 		dir, off = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell),
 			def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday)
+	}
+	if *closeYd {
+		dir, off = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell),
+			def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseYesterday)
 	}
 	req := ctp.OrderReq{
 		Exchange: ex, Instrument: inst,
@@ -819,8 +846,22 @@ func runCTPFlatten(args []string) error {
 	}
 	n := 0
 	for key, p := range pos {
-		today := int(p.TodayPosition)
-		if today == 0 {
+		// ⚠️ **今仓与昨仓都要平**，而开平标志必须按它是哪一种来选。
+		//
+		// 20260910 夜盘撞上的：本函数原先只看 `TodayPosition`，
+		// 昨仓被 `continue` 整个跳过，然后打印「没有今仓可平」**并报成功退出** ——
+		// 而账上那一手还在。⚠️ 这是最坏的形状：
+		//
+		//	一个报「无事可做」的平仓命令，比一个报错的更坏 ——
+		//	报错会有人去看，「无事可做」只会让人放心。
+		//
+		// ⚠️ 而它同时让一句文档变成假话：`-keep` 的提示里写着
+		// 「平仓用 ctp-flatten（它会自己挑平今/平昨）」—— 它当时并不会挑。
+		//
+		// 上期所是 `UseHistory`：拿平今去平昨仓，交易所直接
+		// `ErrorID=50 平仓位不足`（同一晚在 `ctp-order -close` 上先撞到的）。
+		today, yd := int(p.TodayPosition), int(p.YdPosition)
+		if today == 0 && yd == 0 {
 			continue
 		}
 		n++
@@ -846,18 +887,34 @@ func runCTPFlatten(args []string) error {
 			px = float64(md.UpperLimitPrice)
 		}
 		ex, inst := ctp.SplitSymbol(symbol)
-		logf("[flat] %s 今仓 %d 手（%s）→ 平今 @%.2f", key, today, string(p.PosiDirection), px)
-		st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
-			Direction: dir, Offset: def.THOST_FTDC_OF_CloseToday,
-			Volume: today, LimitPrice: px}, *timeout)
-		if err != nil || st.VolumeTraded == 0 {
-			return fmt.Errorf("⚠️⚠️ **%s 没平掉，仓还在** —— status=%q %s err=%v",
-				symbol, string(st.Status), st.StatusMsg, err)
+		// ⚠️ 两腿分开发：平今与平昨在 UseHistory 交易所上是**两笔不同的委托**，
+		// 合成一笔发过去会被拒，而拒了之后仓还在。
+		for _, leg := range []struct {
+			vol  int
+			off  def.TThostFtdcOffsetFlagType
+			name string
+		}{
+			{today, def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday), "今仓"},
+			{yd, def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseYesterday), "昨仓"},
+		} {
+			if leg.vol == 0 {
+				continue
+			}
+			logf("[flat] %s %s %d 手（%s）→ 平%s @%.2f",
+				key, leg.name, leg.vol, string(p.PosiDirection),
+				map[string]string{"今仓": "今", "昨仓": "昨"}[leg.name], px)
+			st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+				Direction: dir, Offset: leg.off,
+				Volume: leg.vol, LimitPrice: px}, *timeout)
+			if err != nil || st.VolumeTraded == 0 {
+				return fmt.Errorf("⚠️⚠️ **%s 的%s没平掉，仓还在** —— status=%q %s err=%v",
+					symbol, leg.name, string(st.Status), st.StatusMsg, err)
+			}
+			logf("[flat] 已平%s %d 手", leg.name, st.VolumeTraded)
 		}
-		logf("[flat] 已平 %d 手", st.VolumeTraded)
 	}
 	if n == 0 {
-		logf("[flat] 没有今仓可平")
+		logf("[flat] 没有可平的仓（今仓与昨仓都为零）")
 	}
 	after, err := c.Account(*timeout)
 	if err != nil {

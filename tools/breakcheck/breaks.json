@@ -2420,25 +2420,25 @@
 		"expect": "red"
 	},
 	{
-		"name": "218 分子被单独抬高：rules_measured 报 3 而已收敛只有 2",
+		"name": "218 分子被单独抬高：rules_measured 报得比已收敛还多",
 		"dir": "",
 		"file": "docs/state.md",
-		"old": "| `rules_measured` | **2** |",
-		"new": "| `rules_measured` | **3** |",
+		"old": "| `rules_measured` | **3** |",
+		"new": "| `rules_measured` | **7** |",
 		"pkg": "./",
 		"test": "TestRulesListedMatchesTable",
 		"want": "分子不可能比它大",
 		"expect": "red"
 	},
 	{
-		"name": "219 §13 第 15 行没有划掉：新增即收敛写成了新增未收敛",
+		"name": "219 §13 第 15 行没有划掉：新增即收敛写成了新增未收敛 —— ⚠️ 20260911 改锚：此前它靠 `rules_measured ≤ 已收敛` 贴着才红，而那两个数一拉开就不触发了",
 		"dir": "",
 		"file": "docs/cn-futures-rules.md",
 		"old": "| 15 | ~~`position_price` 的**昨仓**那一端用哪个价~~",
 		"new": "| 15 | `position_price` 的**昨仓**那一端用哪个价",
 		"pkg": "./",
-		"test": "TestRulesListedMatchesTable",
-		"want": "分子不可能比它大",
+		"test": "TestRulesPendingMatchesTable",
+		"want": "在册",
 		"expect": "red"
 	},
 	{
@@ -3594,6 +3594,61 @@
 		"pkg": "./",
 		"test": "TestBreakRefsResolve",
 		"want": "又回到清单里了",
+		"expect": "red"
+	},
+	{
+		"name": "384 拒单用例的方向翻反（那笔单会当场成交）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/reject.go",
+		"old": "Dir:  def.THOST_FTDC_D_Sell, Off: def.THOST_FTDC_OF_Open,\n\t\tPrice: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.UpperLimitPrice) + 1 },",
+		"new": "Dir:  def.THOST_FTDC_D_Buy, Off: def.THOST_FTDC_OF_Open,\n\t\tPrice: func(md *def.CThostFtdcDepthMarketDataField) float64 { return float64(md.UpperLimitPrice) + 1 },",
+		"pkg": "./",
+		"test": "TestRejectCasesAreNonExecutable",
+		"want": "方向与挂价端不配对",
+		"expect": "red"
+	},
+	{
+		"name": "385 费率探针改成卖单（挂低价会当场成交）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/fee.go",
+		"old": "Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,\n\t\t\tVolume: 1, LimitPrice: px}, *timeout)",
+		"new": "Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_Open,\n\t\t\tVolume: 1, LimitPrice: px}, *timeout)",
+		"pkg": "./",
+		"test": "TestFeeProbeOnlyBuysAtTheLowEnd",
+		"want": "本探针**只许买**",
+		"expect": "red"
+	},
+	{
+		"name": "386 费率探针的价位从涨停那端起算",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/fee.go",
+		"old": "low, high := float64(md.LowerLimitPrice), float64(md.LastPrice)",
+		"new": "low, high := float64(md.UpperLimitPrice), float64(md.LastPrice)",
+		"pkg": "./",
+		"test": "TestFeeProbeOnlyBuysAtTheLowEnd",
+		"want": "必须挂在跌停那一端",
+		"expect": "red"
+	},
+	{
+		"name": "387 持仓缓存的键丢掉方向（多空互相覆盖，且丢失是静默的）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/query_windows.go",
+		"old": "c.pos[key+\"/\"+string(rune(cp.PosiDirection))+\"/\"+string(rune(cp.PositionDate))] = &cp",
+		"new": "c.pos[key+\"/\"+string(rune(cp.PositionDate))] = &cp",
+		"pkg": "./",
+		"test": "TestPositionKeyCarriesBothDimensions",
+		"want": "键里没有 PosiDirection",
+		"expect": "red"
+	},
+	{
+		"name": "388 导出结构上多出一个没登记的字段（守卫此前完全不数字段）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/order.go",
+		"old": "\t// ErrorID 是柜台/交易所给的**数值错误码**，没有拒单时为 0。",
+		"new": "\tZzzUnlisted int\n\n\t// ErrorID 是柜台/交易所给的**数值错误码**，没有拒单时为 0。",
+		"pkg": "./",
+		"test": "TestRoadmapListsEveryExport",
+		"want": "ZzzUnlisted",
 		"expect": "red"
 	}
 ]

@@ -146,6 +146,26 @@ func packageExports(t *testing.T, dir string) []string {
 					case *ast.TypeSpec:
 						if sp.Name.IsExported() {
 							seen[sp.Name.Name] = true
+							// ⚠️ **导出结构上的导出字段也是导出面。**
+							//
+							// 20260911 送审前撞到的：我在 `OrderState` 上加了
+							// `ErrorID`，而本条**一个字都没说** —— 它只数
+							// 函数 / 类型 / 变量常量，不数字段。
+							//
+							//	⚠️ 一个「导出面变了要记进 roadmap」的守卫，
+							//	在**字段**这一类上完全没有覆盖 ——
+							//	而调用方用得最多的恰恰是字段。
+							//
+							// ⇒ 记成 `类型.字段`，与方法的记法一致。
+							if st, ok := sp.Type.(*ast.StructType); ok && st.Fields != nil {
+								for _, f := range st.Fields.List {
+									for _, id := range f.Names {
+										if id.IsExported() {
+											seen[sp.Name.Name+"."+id.Name] = true
+										}
+									}
+								}
+							}
 						}
 					case *ast.ValueSpec:
 						for _, id := range sp.Names {

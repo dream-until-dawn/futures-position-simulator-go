@@ -3,8 +3,8 @@ package ctp
 import (
 	"fmt"
 
-	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 	def "gitee.com/haifengat/goctp/ctpdefine"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 )
 
 // OrderReq 是一笔限价委托。
@@ -41,6 +41,16 @@ type OrderState struct {
 	// VolumeTraded / VolumeTotal 是已成交与剩余。
 	VolumeTraded int
 	VolumeTotal  int
+	// ErrorID 是柜台/交易所给的**数值错误码**，没有拒单时为 0。
+	//
+	// ⚠️ 20260910 夜盘加的，而它补的洞是：这个码此前**只以日志文本存在** ——
+	// `c.logf("… ErrorID=%d …")` 打出来就没了，调用方拿不到。
+	// 而 `rules_pending` #6 卡的正是它：快期的拒因**文案**已实测，
+	// CTP 的**数值码**一个都没有，于是 `ctperr` 包的取值不得填、包至今未开始。
+	//
+	//	⚠️ 一个已经在日志里出现过很多次的数，与一个从没观测过的数，
+	//	对下游是同一件事 —— **它没有被交到任何人手上。**
+	ErrorID int
 }
 
 // Alive 报告这笔委托是不是还挂着。
