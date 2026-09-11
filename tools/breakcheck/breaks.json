@@ -3670,7 +3670,7 @@
 		"new": "\treturn p1 * mult, p2 * mult, p1 * mult",
 		"pkg": ".",
 		"test": "TestSliceCostCandidateIsAveragePriceTimesMultiplier",
-		"want": "三个成本候选必须两两分得开，且均价夹在两片之间",
+		"want": "三个成本候选没分开",
 		"expect": "red"
 	},
 	{
@@ -3681,7 +3681,7 @@
 		"new": "\treturn p1 * mult, p2 * mult, (p1 + p2) / 2",
 		"pkg": ".",
 		"test": "TestSliceCostCandidateIsAveragePriceTimesMultiplier",
-		"want": "均价那一片的成本 = ((p1+p2)/2) × 乘数 = 31010",
+		"want": "没有夹在两片",
 		"expect": "red"
 	},
 	{
@@ -3692,7 +3692,7 @@
 		"new": "\treturn (q - p1) * mult, (q - p2) * mult, (q - p1) * mult",
 		"pkg": ".",
 		"test": "TestSliceCandidatesSeparateOnlyWhenPricesDiffer",
-		"want": "p1≠p2 时三个盈亏候选两两分得开",
+		"want": "两个候选撞上了",
 		"expect": "red"
 	},
 	{

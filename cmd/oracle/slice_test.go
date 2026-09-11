@@ -28,18 +28,29 @@ import (
 func TestSliceCostCandidateIsAveragePriceTimesMultiplier(t *testing.T) {
 	const p1, p2, mult = 3100, 3102, 10.0
 	first, second, avg := sliceCostCandidates(p1, p2, mult)
-	const want = 31010.0 // ((3100+3102)/2) × 10
-	if math.Abs(avg-want) > 1e-9 {
-		t.Fatalf("均价那一片的成本 = %.4f，要的是 %.4f", avg, want)
-	}
-	// ⚠️ 三个候选要**两两分得开**，否则「命中哪一个」这句话没有意义。
+
+	// ⚠️ **结构性质先断言，具体数值最后。**顺序不是风格问题：
+	// 三条断言都用 `Fatalf`，于是**排在前面那条决定了红在哪一行** ——
+	// 而破坏验证的第三层查的正是「红在被测性质上」。
+	// 第一版把数值那条放在最前，于是每一条破坏都红在同一句
+	// 「均价那一片的成本 = … 要的是 …」上，**三条破坏在输出里分不开**，
+	// breakcheck 一口气报了三个「红错了理由」。
+	//
+	//	⚠️ 三条断言全在、全会红、而它们**测的是不是三件事，从绿的那一侧看不出来**。
+
+	// 一、三个候选要**两两分得开**，否则「命中哪一个」这句话没有意义。
 	if first == second || first == avg || second == avg {
 		t.Fatalf("⚠️ 三个成本候选没分开：%.4f / %.4f / %.4f", first, second, avg)
 	}
-	// ⚠️ 而均价那一个必须**夹在**两片之间 —— 这是它作为「均价」的定义性质，
-	// 也是唯一一条不依赖具体数字的断言。
+	// 二、均价那一个必须**夹在**两片之间 —— 这是它作为「均价」的定义性质，
+	//     也是唯一一条不依赖具体数字的断言。
 	if !(first < avg && avg < second) {
 		t.Fatalf("⚠️ 均价 %.4f 没有夹在两片 %.4f / %.4f 之间", avg, first, second)
+	}
+	// 三、量级：夹在中间也可能整体错一个乘数。
+	const want = 31010.0 // ((3100+3102)/2) × 10
+	if math.Abs(avg-want) > 1e-9 {
+		t.Fatalf("均价那一片的成本 = %.4f，要的是 %.4f", avg, want)
 	}
 }
 
