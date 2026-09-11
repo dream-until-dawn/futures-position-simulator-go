@@ -138,7 +138,69 @@ func (c *Client) LiveOrders(timeout time.Duration) ([]*def.CThostFtdcOrderField,
 	}
 }
 
+// CommissionRate 查柜台**声明**的手续费率。
+
+// ⚠️ 它补的是一整类此前只能反解的东西：本项目的手续费公式
+// （`名义金额 × ByMoney + 手数 × ByVolume`）一直是**从冻结额解出来的** ——
+// 三个点解两个参数，余量当证据。而柜台一直能直接把这六个数说出来：
+//
+//	开仓   OpenRatioByMoney / OpenRatioByVolume
+//	平昨   CloseRatioByMoney / CloseRatioByVolume
+//	平今   CloseTodayRatioByMoney / CloseTodayRatioByVolume
+//
+// ⚠️ **而这不是第二个独立来源。**它与冻结额来自同一个柜台，
+// 只是换了条查询路径 —— 声明与行为。§13 #1 的教训正在这里：
+// `MarginPriceType "4" 开仓价` 是一句真的声明，而它**只管今仓**，
+// 把它读成「对所有持仓都成立」就错了。
+//
+//	⇒ 声明对得上行为时，它涨的是**这条公式的可读性**，不是证据等级。
+//	   对不上时才是新东西 —— 那说明我把某句声明读宽了。
+func (c *Client) CommissionRate(symbol string, timeout time.Duration) (
+	*def.CThostFtdcInstrumentCommissionRateField, error) {
+	c.q.wait()
+	defer c.q.done()
+	ex, inst := SplitSymbol(symbol)
+	f := def.CThostFtdcQryInstrumentCommissionRateField{}
+	copy(f.BrokerID[:], c.cred.BrokerID)
+	copy(f.InvestorID[:], c.cred.UserID)
+	copy(f.ExchangeID[:], ex)
+	copy(f.InstrumentID[:], inst)
+	// ⚠️ 排空上一次可能残留的应答：这个通道深度 1，
+	// 一条陈旧的费率与一条刚查到的**在类型上一模一样**。
+	select {
+	case <-c.comm:
+	default:
+	}
+	c.req("ReqQryInstrumentCommissionRate", unsafe.Pointer(&f))
+	select {
+	case r := <-c.comm:
+		if r == nil {
+			return nil, fmt.Errorf("查 %s 的手续费率：柜台回了空", symbol)
+		}
+		return r, nil
+	case <-time.After(timeout):
+		// ⚠️ 与查持仓同一条纪律：超时是**没有结论**，不是「这个合约没有费率」。
+		return nil, fmt.Errorf("%v 内没有等到 %s 的手续费率 —— "+
+			"⚠️ **没有结论**，不是「它不收费」", timeout, symbol)
+	}
+}
+
 func (c *Client) registerQueryCallbacks() {
+	c.on("SetOnRspQryInstrumentCommissionRate", func(r *def.CThostFtdcInstrumentCommissionRateField,
+		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
+		if err := errOf(info); err != nil {
+			c.logf("[ctp] ⚠️ 查手续费率失败 %v", err)
+			c.comm <- nil
+			return 0
+		}
+		if r == nil {
+			c.comm <- nil
+			return 0
+		}
+		cp := *r
+		c.comm <- &cp
+		return 0
+	})
 	c.on("SetOnRspQryTradingAccount", func(a *def.CThostFtdcTradingAccountField,
 		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
 		if err := errOf(info); err != nil {

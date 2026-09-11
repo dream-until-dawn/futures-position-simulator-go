@@ -537,6 +537,12 @@ D+1 日 baseline-full / close-order / yd-vs-his
            **CancelByOrder**（20260911 夜盘新增：按**交易所的 OrderSysID** 撤单。
            ⚠️ 而 Cancel 按 FrontID+SessionID+OrderRef 定位 —— 那三个都是**当前会话的**，
            于是它**只撤得掉自己这次会话下的单**，对残留单发出去不报错、单还在）/
+           **CommissionRate**（20260911 夜盘新增：查柜台**声明**的手续费率，
+           开仓/平昨/平今 三档各两项。⚠️ 它补的是 `rules_pending` #5 那一半：
+           #5 卡的不是样本数，rb 的 1e-4 费率让「不取整」与「取到三位或更细」
+           **天然同值** ⇒ 要换一个更细的费率，而找它得先看得见费率。
+           ⚠️ **它不是第二个独立来源**：声明与行为同一个柜台，
+           对得上只涨可读性，**对不上才是新东西**）/
            MarketData / Capture / AttachQuote / Check / Insert / Cancel / Order / Close；
            Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
 

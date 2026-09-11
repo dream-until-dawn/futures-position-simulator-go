@@ -3750,5 +3750,27 @@
 		"test": "TestEveryCaptureWithQuoteCallChecksItsError",
 		"want": "不是 `if err != nil { return",
 		"expect": "red"
+	},
+	{
+		"name": "398 sameTier 只比「按额」那两项——「按额同、每手不同」的柜台会被报成三档相同",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/rates.go",
+		"old": "\treturn float64(r.OpenRatioByMoney) == float64(r.CloseRatioByMoney) &&\n\t\tfloat64(r.OpenRatioByMoney) == float64(r.CloseTodayRatioByMoney) &&\n\t\tfloat64(r.OpenRatioByVolume) == float64(r.CloseRatioByVolume) &&\n\t\tfloat64(r.OpenRatioByVolume) == float64(r.CloseTodayRatioByVolume)",
+		"new": "\treturn float64(r.OpenRatioByMoney) == float64(r.CloseRatioByMoney) &&\n\t\tfloat64(r.OpenRatioByMoney) == float64(r.CloseTodayRatioByMoney)",
+		"pkg": ".",
+		"test": "TestSameTierComparesAllSixNumbers",
+		"want": "个位置被改了却仍报",
+		"expect": "red"
+	},
+	{
+		"name": "399 rateDigits 不去掉末尾零——每个费率都报 12 位，「更细」这个判据当场失效",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/rates.go",
+		"old": "\ts = strings.TrimRight(s, \"0\")",
+		"new": "\ts = strings.TrimRight(s, \"\")",
+		"pkg": ".",
+		"test": "TestRateDigitsCountsSignificantDecimals",
+		"want": "rateDigits(0.0001)",
+		"expect": "red"
 	}
 ]

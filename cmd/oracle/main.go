@@ -39,6 +39,9 @@ func usage() {
 用法:
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
+  oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
+                                   ⚠️ **CTP/SimNow 侧**：查柜台**声明**的手续费率（三档各两项）。
+                                   只读，不下单。⚠️ 声明与行为同源，对得上**不升证据等级**
   oracle ctp-slices -symbol SHFE.rb2701 -multiplier 10 -tick 1
                                    ⚠️ **CTP/SimNow 侧**：分两笔各开一手造两片（片价不同），
                                    只平一手 ⇒ 逐片 FIFO / LIFO / 按均价 三个候选分得开（rules_pending #13）
@@ -155,6 +158,11 @@ func main() {
 		}
 	case "ctp-slices":
 		if err := runCTPSlices(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-rates":
+		if err := runCTPRates(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}

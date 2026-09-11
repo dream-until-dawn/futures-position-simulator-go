@@ -90,4 +90,9 @@ func (c *Client) LiveOrders(time.Duration) ([]*def.CThostFtdcOrderField, error) 
 }
 
 // CancelByOrder 在非 Windows 上不可用。
+func (c *Client) CommissionRate(string, time.Duration) (
+	*def.CThostFtdcInstrumentCommissionRateField, error) {
+	return nil, errPlatform
+}
+
 func (c *Client) CancelByOrder(*def.CThostFtdcOrderField) error { return errPlatform }
