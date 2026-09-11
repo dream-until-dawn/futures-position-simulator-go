@@ -954,6 +954,9 @@ func runCTPHold(args []string) error {
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约（⚠️ 无默认值）")
 	rounds := fs.Int("rounds", 6, "轮询次数")
+	short := fs.Bool("short", false, "开**空**而不是开多。"+
+		"⚠️ 20260911 夜盘加的，为的是判别实验 #3（单向大边按品种还是按合约）—— "+
+		"那要求**同品种两个月份一多一空**，而本命令此前只会开多")
 	keep := fs.Bool("keep", false, "⚠️ **不平仓，把这手仓留过夜**。"+
 		"只有一件事需要它：昨仓的保证金基准要等结算，而结算要有隔夜持仓")
 	every := fs.Duration("every", 20*time.Second, "轮询间隔")
@@ -983,13 +986,19 @@ func runCTPHold(args []string) error {
 		return err
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// ⚠️ 开仓挂**对自己不利**的那一端 ⇒ 保证成交（本命令要的是真持仓）：
+	// 开多挂涨停、开空挂跌停。写成元组，让「方向与挂价端成对」在语法上成立。
+	openDir, openPx := def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy), float64(md.UpperLimitPrice)
+	if *short {
+		openDir, openPx = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell), float64(md.LowerLimitPrice)
+	}
 	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
-		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
-		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, *timeout)
+		Direction: openDir, Offset: def.THOST_FTDC_OF_Open,
+		Volume: 1, LimitPrice: openPx}, *timeout)
 	if err != nil || st.VolumeTraded == 0 {
 		return fmt.Errorf("建仓没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
-	logf("[hold] 建仓成交 %d 手", st.VolumeTraded)
+	logf("[hold] 建%s成交 %d 手", map[bool]string{false: "多", true: "空"}[*short], st.VolumeTraded)
 
 	logf("")
 	logf("%-8s %10s %10s %10s %12s %12s", "时刻", "最新价", "今结算", "昨结", "占用保证金", "持仓盈亏")
