@@ -3772,5 +3772,27 @@
 		"test": "TestRateDigitsCountsSignificantDecimals",
 		"want": "rateDigits(0.0001)",
 		"expect": "red"
+	},
+	{
+		"name": "400 恒等式退回旧式（去掉 max(浮盈,0)）——它在十八份夹具上照样全绿，第十九份会红",
+		"dir": ".",
+		"file": "conformance/ctpfixture/ctp_test.go",
+		"old": "\t\tunreal := math.Max(pp, 0)",
+		"new": "\t\tunreal := math.Max(pp, 0) * 0",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestAccountIdentityAgainstCTP",
+		"want": "要么**本式还缺一项**",
+		"expect": "red"
+	},
+	{
+		"name": "401 判别力检查形同虚设：正浮盈那一支永不计数——本条与被推翻的旧式等价",
+		"dir": ".",
+		"file": "conformance/ctpfixture/ctp_test.go",
+		"old": "\t\tif pp > 0 {\n\t\t\tpositives++",
+		"new": "\t\tif pp > 1e9 {\n\t\t\tpositives++",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestAccountIdentityAgainstCTP",
+		"want": "一次都没被求值",
+		"expect": "red"
 	}
 ]
