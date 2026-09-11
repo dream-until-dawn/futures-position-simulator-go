@@ -29,8 +29,12 @@ import (
 //	按均价     (q − (p1+p2)/2) × mult
 //
 // ⚠️ **判别力的前提是 p1 ≠ p2**，否则三个候选给出同一个数。
-// 本命令为此会**等行情走开至少两个最小变动价位**才开第二腿，
-// 并在开完之后**再核一次** —— 等到了不等于成交价就不同，盘口会弹回去。
+// 本命令为此等行情走开才开第二腿，并在开完之后**以成交价再核一次** ——
+// 等到了不等于成交价就不同，盘口会弹回去。不合格的腿 2 平掉重来。
+//
+// ⚠️ 而 `-second higher` 那个方向（拆「先开的」与「价高的」这个混淆）
+// **不该靠等行情往上走**：20260911 夜盘为此空等了两个窗口共 32 分钟。
+// ⇒ `-restfirst` 把腿 1 挂在最新价下方等成交，让价差保证 p2 > p1。
 //
 // ⚠️ 而它有**两个互相独立的读数**，这是刻意的：
 //
@@ -53,6 +57,10 @@ func runCTPSlices(args []string) error {
 		"同样能被「柜台先平价高的」解释。要拆开它，得再拍一个 p2 > p1 的样本")
 	wait := fs.Duration("wait", 8*time.Minute, "等行情走开的上限。等不到就**不开第二腿**")
 	every := fs.Duration("every", 3*time.Second, "等行情时的轮询间隔")
+	firstRest := fs.Bool("restfirst", false, "腿1 **挂在低一个价位上等成交**，而不是打卖一。"+
+		"⚠️ 它把「p2 > p1」从**赌行情方向**换成**靠买卖价差** ——卖一总在最新价之上或与之齐平，"+
+		"于是 p2 必定高出至少一个价位。配 -second higher 用")
+	fillWait := fs.Duration("fillwait", 6*time.Minute, "-restfirst 时等腿1 成交的上限。等不到就**撤掉并报错**，不留单")
 	dump := fs.String("dump", "", "把**两片俱在、尚未平仓**那一刻的截面落盘到该目录"+
 		"（⚠️ CTP 夹具只能落 testdata/ctp/）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
@@ -105,7 +113,12 @@ func runCTPSlices(args []string) error {
 	}
 
 	// ——— 腿 1 ———
-	p1, err := openOneLot(c, ex, inst, *mult, *timeout, logf)
+	var p1 float64
+	if *firstRest {
+		p1, err = openOneLotResting(c, ex, inst, *mult, *tick, *fillWait, *timeout, logf)
+	} else {
+		p1, err = openOneLot(c, ex, inst, *mult, *timeout, logf)
+	}
 	if err != nil {
 		return err
 	}
@@ -375,21 +388,18 @@ func mustPositions(c *ctp.Client, timeout time.Duration,
 	return pos
 }
 
-// openOneLot 开一手多头今仓，并**由 OpenCost 的增量反解成交价**。
+// openOneLot 开一手多头今仓（**打卖一，立即成交**），并由 OpenCost 增量反解成交价。
 //
 // ⚠️ 为什么不直接读成交回报的价：OrderState 里没有成交价这一项，
 // 而补它要动回调层。**OpenCost 的增量给的是同一个数，且它来自持仓本身** ——
 // 这条路顺带让「柜台认为这一片值多少」与「我以为它值多少」变成同一个读数。
 func openOneLot(c *ctp.Client, ex, inst string, mult float64,
 	timeout time.Duration, logf func(string, ...any)) (float64, error) {
-	before := 0.0
-	if p := longToday(mustPositions(c, timeout, logf), inst); p != nil {
-		before = float64(p.OpenCost)
-	}
 	md, err := c.MarketData(ex+"."+inst, timeout)
 	if err != nil {
 		return 0, err
 	}
+	before := openCostOf(c, inst, timeout, logf)
 	// ⚠️ 挂涨停 ⇒ 一定成交（本命令要的是真持仓，不是挂单）。
 	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
@@ -398,6 +408,77 @@ func openOneLot(c *ctp.Client, ex, inst string, mult float64,
 		return 0, fmt.Errorf("开一手没成交：status=%q %s err=%v",
 			string(st.Status), st.StatusMsg, err)
 	}
+	return filledPrice(c, inst, before, mult, timeout, logf)
+}
+
+// openOneLotResting 把腿 1 **挂在低一个价位上等成交**，而不是打卖一。
+//
+// # ⚠️ 它存在的理由：把「p2 > p1」从**赌行情方向**变成**靠买卖价差**
+//
+// #13 的第一个样本 p1 > p2 ⇒「先开的那片」与「价高的那片」是同一片，
+// 混淆拆不开。要拆它得有一个 p2 > p1 的样本，而两腿都打卖一时，
+// 那**完全取决于这段时间行情往哪边走** —— 20260911 夜盘为此空等了
+// 12 分钟（rb）+ 20 分钟（ag）**两个窗口，一个样本都没拿到**。
+//
+//	⚠️ 而「等不到」这件事本身没有上限：它取决于行情，
+//	**而行情不会因为我这边等着就转向**。
+//
+// ⇒ 换个造法：腿 1 挂 `最新价 − 一个最小变动价位`**等别人卖给我**，
+// 腿 2 照旧打卖一。卖一总在最新价之上或与之齐平
+// ⇒ **p2 ≥ p1 + 一个价位，由价差保证，与行情走向无关。**
+//
+// ⚠️ 代价是它**可能挂不上成交**：那时不留单 —— 撤掉并报错，
+// 因为一笔留在柜台上的挂单会在下一次运行里变成「账上已有今仓」，
+// 而那时的前提检查会拦下整条实验，**看起来像是别的毛病**。
+func openOneLotResting(c *ctp.Client, ex, inst string, mult, tick float64,
+	fillWait, timeout time.Duration, logf func(string, ...any)) (float64, error) {
+	md, err := c.MarketData(ex+"."+inst, timeout)
+	if err != nil {
+		return 0, err
+	}
+	px := float64(md.LastPrice) - tick
+	if px <= float64(md.LowerLimitPrice) {
+		return 0, fmt.Errorf("⚠️ 挂价 %.4f 已到跌停 —— 不挂", px)
+	}
+	before := openCostOf(c, inst, timeout, logf)
+	req := ctp.OrderReq{Exchange: ex, Instrument: inst,
+		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
+		Volume: 1, LimitPrice: px}
+	st, err := c.Insert(req, timeout)
+	if err != nil {
+		return 0, err
+	}
+	logf("[sl] 腿1 挂在 %.4f（最新 %.4f − 一个价位）等成交，上限 %s ——",
+		px, float64(md.LastPrice), fillWait)
+	deadline := time.Now().Add(fillWait)
+	for st.VolumeTraded == 0 && time.Now().Before(deadline) {
+		time.Sleep(2 * time.Second)
+		if s, ok := c.Order(st.OrderRef); ok {
+			st = s
+		}
+	}
+	if st.VolumeTraded == 0 {
+		if err := c.Cancel(st.OrderRef, req); err != nil {
+			return 0, fmt.Errorf("⚠️⚠️ 挂单没成交**而且撤不掉**，它还在柜台上：%w", err)
+		}
+		return 0, fmt.Errorf("⚠️ 腿1 挂在 %.4f 等了 %s 没成交，已撤 —— "+
+			"不当结论，重跑（或把 -fillwait 调大）", px, fillWait)
+	}
+	return filledPrice(c, inst, before, mult, timeout, logf)
+}
+
+// openCostOf 读该合约多头今仓当前的 OpenCost；没有持仓时是 0。
+func openCostOf(c *ctp.Client, inst string, timeout time.Duration,
+	logf func(string, ...any)) float64 {
+	if p := longToday(mustPositions(c, timeout, logf), inst); p != nil {
+		return float64(p.OpenCost)
+	}
+	return 0
+}
+
+// filledPrice 由 OpenCost 的增量反解刚成交那一手的价。
+func filledPrice(c *ctp.Client, inst string, before, mult float64,
+	timeout time.Duration, logf func(string, ...any)) (float64, error) {
 	p := longToday(mustPositions(c, timeout, logf), inst)
 	if p == nil {
 		return 0, fmt.Errorf("⚠️ 开完之后查不到今仓 —— 不猜价，直接停")
