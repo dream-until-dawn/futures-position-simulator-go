@@ -68,8 +68,9 @@ func runCTPRates(args []string) error {
 		return err
 	}
 	logf("")
-	logf("%-16s %12s %10s %12s %10s %12s %10s", "合约",
-		"开仓/按额", "开仓/每手", "平昨/按额", "平昨/每手", "平今/按额", "平今/每手")
+	logf("%-16s %12s %10s %12s %10s %12s %10s  %s", "合约",
+		"开仓/按额", "开仓/每手", "平昨/按额", "平昨/每手", "平今/按额", "平今/每手",
+		"适用范围")
 	var interesting []string
 	for _, sym := range strings.Split(*symbols, ",") {
 		sym = strings.TrimSpace(sym)
@@ -81,10 +82,11 @@ func runCTPRates(args []string) error {
 			logf("%-16s ⚠️ %v", sym, err)
 			continue
 		}
-		logf("%-16s %12.8g %10.8g %12.8g %10.8g %12.8g %10.8g", sym,
+		logf("%-16s %12.8g %10.8g %12.8g %10.8g %12.8g %10.8g  %s", sym,
 			float64(r.OpenRatioByMoney), float64(r.OpenRatioByVolume),
 			float64(r.CloseRatioByMoney), float64(r.CloseRatioByVolume),
-			float64(r.CloseTodayRatioByMoney), float64(r.CloseTodayRatioByVolume))
+			float64(r.CloseTodayRatioByMoney), float64(r.CloseTodayRatioByVolume),
+			investorRange(r))
 
 		// ⚠️ 三档是不是同一组数 —— #8 的后半格（平今档仍未测）就挂在这里。
 		if !sameTier(r) {
@@ -110,6 +112,42 @@ func runCTPRates(args []string) error {
 		logf("   而那取决于当时的价格与乘数 —— 拿 `ctp-fee` 去那个合约上实测才算数。")
 	}
 	return nil
+}
+
+// investorRange 把这条费率记录的**适用范围**翻成人话。
+//
+// # ⚠️ 它补的是本批里最实在的一个洞
+//
+// 20260911 夜盘读到 `SHFE.rb2701` 声明 `每手 0`，而行为是 `每手 0.005`，
+// 我把它写成「声明不完整」（§13 第 19 条）。
+//
+//	⚠️ **而那句话有一个我当时没排除的替代解释**：
+//	CTP 的费率记录带 `InvestorRange`（所有 / 投资者组 / 单一投资者），
+//	我读到的可能**不是实际适用的那一条** —— 那就不是「声明不完整」，
+//	是「我读错了记录」。
+//
+// ⚠️ 而当时它既没被打印、也没落盘 ⇒ **那一轮的原始数据里根本没有能排除它的信息**。
+// 一个说不清自己适用于谁的费率，与一个适用范围不对的费率，在输出上长得一模一样。
+//
+// ⇒ 现在每一行都带上它。⚠️ **只打范围，不打 `InvestorID`** ——
+// 那是凭据一类的值，落进日志或夹具都算泄漏（同 `kq.Scrubbed` 那条纪律）。
+// 只报「带没带投资者代码」这一个比特，够用来判记录的粒度。
+func investorRange(r *def.CThostFtdcInstrumentCommissionRateField) string {
+	name := map[byte]string{
+		'1': "所有",
+		'2': "投资者组",
+		'3': "单一投资者",
+	}[byte(r.InvestorRange)]
+	if name == "" {
+		// ⚠️ 认不得就原样报出**字节值**，不留空 ——
+		// 空白与「柜台给了一个我没见过的取值」在这一列上分不开。
+		name = fmt.Sprintf("未知取值 %q", string(rune(r.InvestorRange)))
+	}
+	who := "无投资者代码"
+	if ctp.Text(r.InvestorID[:]) != "" {
+		who = "带投资者代码"
+	}
+	return name + "/" + who
 }
 
 // sameTier 报告开仓 / 平昨 / 平今三档是不是同一组数。

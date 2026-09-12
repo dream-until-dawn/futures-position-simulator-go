@@ -3817,5 +3817,27 @@
 		"want": "没有一份夹具声明 Algorithm",
 		"expect": "green",
 		"why": "⚠️ **这一条如预期仍然绿，而它记的正是本守卫的半格盲区**：当前全部夹具的 Algorithm 都是 \"2\"，认不得的那一支**一次都没被走到** ⇒ 回落到 0 与报错在这批语料上给出同一个结果。⇒ 真要让它红，需要一份 Algorithm 取值在 1/2/3/4 之外的夹具，而那要换一个柜台。**在那之前「认不得就报错」这条只由代码保证，不由测试保证。**⚠️ 第一版的 `new` 直接删掉了 `fmt.Errorf`，于是 `fmt` 变成未使用、**红在编译上** —— 而按分层判定那不算一次破坏（零层都没成立）。现在的写法保留调用、只丢掉错误值。"
+	},
+	{
+		"name": "404 适用范围认不得的取值悄悄归到「所有」——一个没见过的取值会伪装成三档之一",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/rates.go",
+		"old": "\t\tname = fmt.Sprintf(\"未知取值 %q\", string(rune(r.InvestorRange)))",
+		"new": "\t\tname = \"所有\"",
+		"pkg": ".",
+		"test": "TestInvestorRangeNamesEveryValueAndRefusesToGuess",
+		"want": "它必须自报",
+		"expect": "red"
+	},
+	{
+		"name": "405 把投资者代码打进「适用范围」那一列——它会进日志、进留底文件",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/rates.go",
+		"old": "\t\twho = \"带投资者代码\"",
+		"new": "\t\twho = \"带投资者代码 \" + ctp.Text(r.InvestorID[:])",
+		"pkg": ".",
+		"test": "TestInvestorRangeNamesEveryValueAndRefusesToGuess",
+		"want": "被打进了这一列",
+		"expect": "red"
 	}
 ]

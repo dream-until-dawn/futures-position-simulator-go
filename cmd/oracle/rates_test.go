@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	def "gitee.com/haifengat/goctp/ctpdefine"
@@ -71,5 +72,53 @@ func TestSameTierComparesAllSixNumbers(t *testing.T) {
 		if sameTier(r) {
 			t.Errorf("第 %d 个位置被改了却仍报「三档相同」—— 那个位置没被比到", i)
 		}
+	}
+}
+
+// TestInvestorRangeNamesEveryValueAndRefusesToGuess 钉住那一列**不会留空**。
+//
+// ⚠️ 它守的是本批里我自己找出来的那个洞：§13 第 19 条断言「柜台声明的每手是 0，
+// 而行为是 0.005 ⇒ 声明不完整」，**而当时有一个没排除的替代解释** ——
+// 我读到的可能不是实际适用的那条费率记录（CTP 的记录带 `InvestorRange`）。
+//
+//	⚠️ 那一轮的原始数据里**根本没有能排除它的信息**：
+//	这个字段既没被打印、也没落盘。
+//
+// ⇒ 现在它必须出现在每一行上，而**认不得的取值要原样报出来** ——
+// 留空与「柜台给了一个我没见过的取值」在这一列上分不开。
+func TestInvestorRangeNamesEveryValueAndRefusesToGuess(t *testing.T) {
+	mk := func(rng byte, investor string) *def.CThostFtdcInstrumentCommissionRateField {
+		r := &def.CThostFtdcInstrumentCommissionRateField{
+			InvestorRange: def.TThostFtdcInvestorRangeType(rng),
+		}
+		copy(r.InvestorID[:], investor)
+		return r
+	}
+	for _, c := range []struct {
+		rng  byte
+		want string
+	}{
+		{'1', "所有/无投资者代码"},
+		{'2', "投资者组/无投资者代码"},
+		{'3', "单一投资者/无投资者代码"},
+	} {
+		if got := investorRange(mk(c.rng, "")); got != c.want {
+			t.Errorf("InvestorRange %q ⇒ %q，要的是 %q", string(rune(c.rng)), got, c.want)
+		}
+	}
+	// ⚠️ 认不得的取值：**不许留空，也不许悄悄归到某一档**。
+	got := investorRange(mk('9', ""))
+	if got == "" || !strings.Contains(got, "未知取值") {
+		t.Errorf("认不得的取值给出 %q —— 它必须自报「未知」，"+
+			"否则一个没见过的取值会伪装成三档之一", got)
+	}
+	// ⚠️ 「带没带投资者代码」这一个比特要真的被读到 ——
+	// 而**不能**把投资者代码本身打出来：那是凭据一类的值。
+	withID := investorRange(mk('3', "12345678"))
+	if !strings.Contains(withID, "带投资者代码") {
+		t.Errorf("带了投资者代码却报 %q", withID)
+	}
+	if strings.Contains(withID, "12345678") {
+		t.Fatalf("⚠️⚠️ **投资者代码被打进了这一列**：%q —— 它会进日志、进留底文件", withID)
 	}
 }
