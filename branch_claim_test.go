@@ -285,6 +285,10 @@ func TestTagConventionMatchesReality(t *testing.T) {
 		if err != nil {
 			t.Fatalf("⚠️ 合并数解析不出来（%q）：%v", strings.TrimSpace(string(out)), err)
 		}
+		// ⚠️ **`n` 数的是合并「提交」，而不是「集成次数」**（20260912 评审提）：
+		// 走 fast-forward 的那几次不产生合并提交、不计入 `n` ⇒ 这条判据**偏松**。
+		// 方向是安全的那一侧（少要求，不会逼人打多余的 tag），所以留着，
+		// 但**别把它读成「tag 数 ≥ 集成次数」**。
 		if len(tags) < n {
 			t.Errorf("⚠️ 文档写着 %q，而 main 上有 **%d** 次合并、本地只有 **%d** 个 tag —— "+
 				"那条约定此刻是一句没人执行的话", tagConventionEveryMerge, n, len(tags))
@@ -301,24 +305,91 @@ func TestTagConventionMatchesReality(t *testing.T) {
 	}
 	// 有 tag 了：那句「一个都没有」必须被删掉，否则是过期低报。
 	requireZeroTagDeclaration(t, body, false)
-	// ⚠️ 每个 tag 都该**早于** Version。
+	// ⚠️ 判据本身抽在 `checkTagsAgainstVersion` 里，这里只负责把它翻成 t.Errorf。
 	//
-	// 20260912 评审指出：roadmap 写「早于」，而代码只查了 `!= Version`。
-	// ⇒ 改强到「早于」——`v0.5.0` 这种**晚于**在开发中版本的 tag，
-	// 与等于它一样是在宣称一件没发生的事，而 `!=` 放它过去。
+	// ⚠️ 20260912 评审第二次指出：418/419 那个「如预期仍然绿」**不是结构性欠着**，
+	// 是**可测性**欠着 —— 它与 403/409/413 不同族：
+	//
+	//	403 / 409 / 413   判别力**在仓库之外**（要换柜台、要等夜盘）
+	//	418 / 419         判别力**在仓库之内**，只是与 `git tag` 的 I/O 缠在一起：
+	//	                  零 tag ⇒ 循环不执行 ⇒ 把判据改弱在当下语料上无从显形
+	//
+	// ⇒ 抽出来喂合成 tag，**一个 tag 都不用真打**，418/419 立刻能红。
+	// ⚠️ 他说得对，而我原先把它记进了「结构性欠着」那一栏 ——
+	// **那会让一条明天就能还的债，和那些真要换柜台的条目混在同一张表上。**
+	for _, p := range checkTagsAgainstVersion(tags, Version) {
+		if p.Kind == kindVersionUnparseable {
+			// ⚠️ 这一支要 Fatal：Version 认不得时，**没有一个 tag 判得了** ——
+			// 继续往下报每个 tag 只会产出 N 条指错地方的错误。
+			t.Fatal(p.Msg)
+		}
+		t.Error(p.Msg)
+	}
+}
+
+// tagVersionProblem 是一条「tag 与 Version 对不上」的判定。
+//
+// ⚠️ `Tag` 为空表示问题出在 **Version 自己**身上，与任何一个 tag 无关。
+type tagVersionProblem struct {
+	Tag  string
+	Kind string
+	Msg  string
+}
+
+const (
+	kindVersionUnparseable = "version-unparseable"
+	kindTagUnparseable     = "tag-unparseable"
+	kindNotEarlier         = "not-earlier"
+)
+
+// checkTagsAgainstVersion 判每个 tag 是不是**早于** version。
+//
+// # ⚠️ 它被抽出来有两个理由，而第二个是评审实测出来的缺陷
+//
+// 一、可测性：判据原先与 `git tag` 的 I/O 缠在一起，零 tag 时那个循环
+// 一次都不执行 ⇒ 把判据改弱（`>=` 改回 `==`、认不得的悄悄放过）
+// **在当下语料上无从显形**。抽出来喂合成 tag 就能直接测。
+//
+// 二、⚠️ **原先 Version 认不得时，报错指的是 tag。**
+// `semverCompare` 在**任一边**解析失败都返回 `false`，而调用处只点 `tg` ⇒
+//
+//	Version = "v0.4.0-rc.1" 时，**每一个完好的 tag 都被报成「认不得的 tag 形状」**，
+//	而没有一条提到 Version。
+//
+// ⚠️ 触发条件不是假想的：使用者 20260912 那次裁决的选项②就是 `v0.4.0-rc.1`。
+// 它是**响的**（红，不是静默放过），所以不挡事 —— 而该现在修的理由是本仓自己的教训：
+// **一个指错地方的判定，转述出去之后就与真的分不开了**
+// （同一天刚在 406 的 mojibake 上栽过一次，这是它的静态版本）。
+//
+// ⇒ 先判 version，认不得就**只报 version 这一条**并停手：
+// 那时候没有任何一个 tag 判得了，继续报只会产出 N 条指错地方的错误。
+func checkTagsAgainstVersion(tags []string, version string) []tagVersionProblem {
+	if _, ok := parseSemver(version); !ok {
+		return []tagVersionProblem{{
+			Kind: kindVersionUnparseable,
+			Msg: "⚠️ **Version 自己认不得**：" + version + "（要严格 `vX.Y.Z`）—— " +
+				"这时候**没有一个 tag 判得了**，本条停在这里。" +
+				"⚠️ 别把它读成「tag 有问题」：`semverCompare` 两边都会解析，" +
+				"而原先的报错只点 tag —— 那正是这一支存在的理由",
+		}}
+	}
+	var out []tagVersionProblem
 	for _, tg := range tags {
-		cmp, ok := semverCompare(tg, Version)
+		cmp, ok := semverCompare(tg, version)
 		if !ok {
-			t.Errorf("⚠️ 认不得的 tag 形状 %q（要 `vX.Y.Z`）—— **没有结论**，"+
-				"而悄悄放过它等于假设它合规", tg)
+			out = append(out, tagVersionProblem{Tag: tg, Kind: kindTagUnparseable,
+				Msg: "⚠️ 认不得的 tag 形状 " + tg + "（要严格 `vX.Y.Z`）—— **没有结论**，" +
+					"而悄悄放过它等于假设它合规"})
 			continue
 		}
 		if cmp >= 0 {
-			t.Errorf("⚠️ tag %s **不早于** Version %s —— Version 是「**当前开发中**」的版本，"+
-				"给它（或更晚的版本）打 tag 等于宣称一件没发生的事。"+
-				"⚠️ 那正是原约定「每次合并都打」逼出来的那句假话", tg, Version)
+			out = append(out, tagVersionProblem{Tag: tg, Kind: kindNotEarlier,
+				Msg: "⚠️ tag " + tg + " **不早于** Version " + version +
+					" —— Version 是「**当前开发中**」的版本，给它（或更晚的版本）打 tag " +
+					"等于宣称一件没发生的事。⚠️ 那正是原约定「每次合并都打」逼出来的那句假话"})
 		}
 	}
+	return out
 }
 
 // requireZeroTagDeclaration 双向核对 roadmap 里那句「本地一个 tag 都没有」。
@@ -416,4 +487,85 @@ func mainBranchRow(t *testing.T, body string) string {
 	t.Fatal("⚠️ roadmap 里找不到「分支与发布约定」表的 `main` 那一行 —— " +
 		"表格形状变了，本条守卫失效（**不回退到整篇文档**：那会让它守错东西）")
 	return ""
+}
+
+// TestCheckTagsAgainstVersion 喂**合成** tag 测那条判据 —— 一个 tag 都不用真打。
+//
+// # ⚠️ 它是 20260912 评审第二次指出的那件事的兑现
+//
+// 破坏 418（「早于」放回「不等于」）与 419（认不得的 tag 悄悄放过）当时都是
+// 「如预期仍然绿」，而我把它记成了与 403/409/413 同族的「结构性欠着」。
+// **评审核出它不同族**：
+//
+//	403 / 409 / 413   判别力**在仓库之外** —— 要换柜台、要等夜盘
+//	418 / 419         判别力**在仓库之内**，只是与 `git tag` 的 I/O 缠在一起
+//
+// ⚠️ 记错这一格的代价具体：**一条明天就能还的债，会和那些真要换柜台的条目
+// 混在同一张表上** —— 而那张表是用来决定「先还哪一条」的。
+//
+// ⇒ 抽成纯函数 + 本条表驱动。418/419 从此是真红搭档，不再是登记的盲区。
+func TestCheckTagsAgainstVersion(t *testing.T) {
+	cases := []struct {
+		name    string
+		tags    []string
+		version string
+		want    []string // 期望的 Kind，按顺序
+		// tagInMsg 断言那条信息里点的是**谁**。空串表示不查。
+		tagInMsg string
+	}{
+		{"早于 ⇒ 无话", []string{"v0.3.0"}, "v0.4.0", nil, ""},
+		{"空 tag 列表 ⇒ 无话", nil, "v0.4.0", nil, ""},
+		{"等于在开发中的版本", []string{"v0.4.0"}, "v0.4.0",
+			[]string{kindNotEarlier}, "v0.4.0"},
+		// ⚠️ 这一格正是破坏 418 要翻的：`==` 放它过去，`>=` 才拦得住。
+		{"晚于在开发中的版本", []string{"v0.5.0"}, "v0.4.0",
+			[]string{kindNotEarlier}, "v0.5.0"},
+		// ⚠️ 这一格是破坏 419 要翻的。
+		{"tag 形状认不得", []string{"0.4.0"}, "v0.4.0",
+			[]string{kindTagUnparseable}, "0.4.0"},
+		{"tag 段数不对", []string{"v0.4"}, "v0.4.0",
+			[]string{kindTagUnparseable}, "v0.4"},
+		// ⚠️⚠️ **这一格是评审实测出来的那个必修**：Version 认不得时，
+		// 原实现对着每一个**完好**的 tag 报「认不得的 tag 形状」，
+		// 而没有一条提到 Version。触发条件不是假想的 ——
+		// 使用者那次裁决的选项②就是 `v0.4.0-rc.1`。
+		{"⚠️ Version 自己认不得 ⇒ 只报 Version，且点的是 Version",
+			[]string{"v0.3.0", "v0.2.0"}, "v0.4.0-rc.1",
+			[]string{kindVersionUnparseable}, "v0.4.0-rc.1"},
+		{"多个 tag 各报各的", []string{"v0.3.0", "v0.9.0", "x"}, "v0.4.0",
+			[]string{kindNotEarlier, kindTagUnparseable}, ""},
+	}
+	seen := map[string]bool{}
+	for _, c := range cases {
+		got := checkTagsAgainstVersion(c.tags, c.version)
+		var kinds []string
+		for _, p := range got {
+			kinds = append(kinds, p.Kind)
+			seen[p.Kind] = true
+		}
+		if len(kinds) != len(c.want) {
+			t.Errorf("%s：得到 %d 条（%v），要 %d 条（%v）",
+				c.name, len(kinds), kinds, len(c.want), c.want)
+			continue
+		}
+		for i := range kinds {
+			if kinds[i] != c.want[i] {
+				t.Errorf("%s：第 %d 条是 %s，要 %s", c.name, i, kinds[i], c.want[i])
+			}
+		}
+		// ⚠️ **信息里点的是谁**，这一条才是那个必修的核心：
+		// 判定对了而指错了地方，转述出去之后与指对了分不开。
+		if c.tagInMsg != "" && len(got) > 0 &&
+			!strings.Contains(got[0].Msg, c.tagInMsg) {
+			t.Errorf("%s：信息里没有点到 %q —— 判定对了而**指错了地方**：\n    %s",
+				c.name, c.tagInMsg, got[0].Msg)
+		}
+	}
+	// ⚠️ 反空转：三种 Kind **每一种都要被上面这张表走到**。
+	// 一张只覆盖两种的表，与一张覆盖全的表，在全绿时长得一模一样。
+	for _, k := range []string{kindVersionUnparseable, kindTagUnparseable, kindNotEarlier} {
+		if !seen[k] {
+			t.Errorf("⚠️ %s 一条用例都没走到 —— 那一支从没被测过", k)
+		}
+	}
 }

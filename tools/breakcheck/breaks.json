@@ -3977,27 +3977,36 @@
 		"expect": "red"
 	},
 	{
-		"name": "418 tag 早于 Version 的判据放回「不等于」——一个比在开发中版本更晚的 tag 会被放过",
+		"name": "418 「早于」放回「不等于」——一个比在开发中版本更晚的 tag 会被放过",
 		"dir": ".",
 		"file": "branch_claim_test.go",
 		"old": "\t\tif cmp >= 0 {",
 		"new": "\t\tif cmp == 0 {",
 		"pkg": "./",
-		"test": "TestTagConventionMatchesReality",
-		"want": "没有以",
-		"expect": "green",
-		"why": "⚠️ **如预期仍然绿，而它登记的正是评审 20260912 指出的那半格**：本地一个 tag 都没有 ⇒ 那个循环**一次都不执行** ⇒ `>= 0` 与 `== 0` 在当下语料上同值。⇒ 真要让它红，需要一个 `vX.Y.Z` 不早于 Version 的 tag —— 而按新约定那种 tag 不该存在。**在那之前「早于」这条只由代码保证，不由测试保证。**⚠️ 它与 403 / 409 / 413 同族：**语料里没有那一侧的样本时，把判据改弱不会红。**"
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "晚于在开发中的版本",
+		"expect": "red"
 	},
 	{
 		"name": "419 认不得的 tag 形状悄悄放过——一个奇形怪状的 tag 会被当成合规",
 		"dir": ".",
 		"file": "branch_claim_test.go",
-		"old": "\t\tcmp, ok := semverCompare(tg, Version)\n\t\tif !ok {",
-		"new": "\t\tcmp, ok := semverCompare(tg, Version)\n\t\tif false && !ok {",
+		"old": "\t\tcmp, ok := semverCompare(tg, version)\n\t\tif !ok {",
+		"new": "\t\tcmp, ok := semverCompare(tg, version)\n\t\tif false && !ok {",
 		"pkg": "./",
-		"test": "TestTagConventionMatchesReality",
-		"want": "没有以",
-		"expect": "green",
-		"why": "⚠️ **同 418**：零 tag ⇒ 循环不执行 ⇒ 这一改在当下语料上无从显形。登记在此：**「认不得就报错」这条目前只由代码保证。**"
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "tag 形状认不得",
+		"expect": "red"
+	},
+	{
+		"name": "420 Version 认不得时改成逐个报 tag——每个完好的 tag 都被指成「形状认不得」",
+		"dir": ".",
+		"file": "branch_claim_test.go",
+		"old": "\tif _, ok := parseSemver(version); !ok {",
+		"new": "\tif _, ok := parseSemver(version); false && !ok {",
+		"pkg": "./",
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "Version 自己认不得",
+		"expect": "red"
 	}
 ]
