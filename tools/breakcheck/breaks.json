@@ -3841,15 +3841,16 @@
 		"expect": "red"
 	},
 	{
-		"name": "406 判别性平仓之后那一份落盘被拿掉——只剩当日累计，而累计对撮合顺序恒等",
+		"name": "406 把第二、三份落盘的注记对调——守卫只查位置，不查「哪份注记配哪个位置」",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol,\n\t\t\t\"ctp-slices：已平一手、尚余一片（判别性平仓之**后**）\", logf); err != nil {\n\t\t\treturn err\n\t\t}",
-		"new": "\t\t_ = dumpSlices",
+		"old": "\"ctp-slices：两片俱在、尚未平仓（判别性平仓之**前**）\"",
+		"new": "\"ctp-slices：已平一手、尚余一片（判别性平仓之**后**）\"",
 		"pkg": ".",
 		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
-		"want": "要恰好 2 次",
-		"expect": "red"
+		"want": "要恰好 3 次",
+		"expect": "green",
+		"why": "⚠️ **如预期仍然绿，而它登记的是本守卫的一处真盲区**：守卫按 AST **位置**判三份落盘的先后，**不查哪一份的注记配哪个位置**。⇒ 把 ② 与 ③ 的注记对调之后，位置全对、断言全过，而**落盘出来的夹具里 `note` 说反了** —— 读夹具的人会把平仓前那份当成平仓后。⚠️ 要治它得让注记与位置在代码里**绑成一体**（比如按枚举传，而不是传自由文本），而这一批没做。**登记在此：三份落盘的顺序有守卫，注记与顺序的对应没有。**"
 	},
 	{
 		"name": "407 两份落盘都挪到平仓之前——夹不住那次平仓，判别力当场归零",
@@ -3940,6 +3941,17 @@
 		"pkg": "./ctp/",
 		"test": "TestFieldDecisionsAreComplete",
 		"want": "没有决定",
+		"expect": "red"
+	},
+	{
+		"name": "415 第一份落盘挪到腿 1 之前——那时还没有片，「谁先开」就不在夹具里了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t// ——— 腿 1 ———\n\tvar p1 float64\n\tif *firstRest {\n\t\tp1, err = openOneLotResting(c, ex, inst, *mult, *tick, *fillWait, *timeout, logf)\n\t} else {\n\t\tp1, err = openOneLot(c, ex, inst, *mult, *timeout, logf)\n\t}\n\tif err != nil {\n\t\treturn err\n\t}\n\tlogf(\"[sl] 腿1 成交价 p1 = %.4f（由 OpenCost 增量 ÷ 乘数 反解）\", p1)\n\n\t// ⚠️⚠️ **腿 1 成交之后、腿 2 之前落一份 —— 20260912 评审第二次打回补的。**\n\t//\n\t// 上一版在判别性平仓的前后各落一份，我以为够了。**不够**：\n\t// 那两份给出的是\n\t//\n\t//\t(p1+p2) ← 前一份的 OpenCost      s ← 后一份的 OpenCost      c = (p1+p2) − s\n\t//\n\t// ⇒ 逐片 vs 均价**够了**，而 FIFO ⟺ `c = p1`，\n\t// 两份只给出**集合** `{c, s} = {p1, p2}` —— **次序不在里面**。\n\t//\n\t//\t⚠️ 而我差点靠 `-restfirst` 补这一半（它保证 p2 > p1，于是次序能从价推出来）。\n\t//\t那不成立：它是**默认 false 的开关**，而 20260911 那一轮实际是 p1 > p2、\n\t//\t方向恰好相反，两份夹具的 note 里也没记开关取值。\n\t//\t**那等于把判别性的事实放回运行配置里，而那正是 #13 栽过的地方。**\n\t//\n\t// ⇒ 这一份里 `Position=1`、`OpenCost = p1 × 乘数` ⇒ **先开的那片由夹具自己说出来**。\n\t// ⚠️ 而它仍然只是第二条腿带 —— 真正的证据是 `trades`\n\t// （逐笔价 + 时刻 + SequenceNo），两条都留着才互相核得动。\n\tif *dump != \"\" {\n\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol,\n\t\t\t\"ctp-slices：腿1 已成交、腿2 尚未开（**先开的那一片由本份定死**）\", logf); err != nil {\n\t\t\treturn err\n\t\t}\n\t}\n\n",
+		"new": "\t// ⚠️⚠️ **腿 1 成交之后、腿 2 之前落一份 —— 20260912 评审第二次打回补的。**\n\t//\n\t// 上一版在判别性平仓的前后各落一份，我以为够了。**不够**：\n\t// 那两份给出的是\n\t//\n\t//\t(p1+p2) ← 前一份的 OpenCost      s ← 后一份的 OpenCost      c = (p1+p2) − s\n\t//\n\t// ⇒ 逐片 vs 均价**够了**，而 FIFO ⟺ `c = p1`，\n\t// 两份只给出**集合** `{c, s} = {p1, p2}` —— **次序不在里面**。\n\t//\n\t//\t⚠️ 而我差点靠 `-restfirst` 补这一半（它保证 p2 > p1，于是次序能从价推出来）。\n\t//\t那不成立：它是**默认 false 的开关**，而 20260911 那一轮实际是 p1 > p2、\n\t//\t方向恰好相反，两份夹具的 note 里也没记开关取值。\n\t//\t**那等于把判别性的事实放回运行配置里，而那正是 #13 栽过的地方。**\n\t//\n\t// ⇒ 这一份里 `Position=1`、`OpenCost = p1 × 乘数` ⇒ **先开的那片由夹具自己说出来**。\n\t// ⚠️ 而它仍然只是第二条腿带 —— 真正的证据是 `trades`\n\t// （逐笔价 + 时刻 + SequenceNo），两条都留着才互相核得动。\n\tif *dump != \"\" {\n\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol,\n\t\t\t\"ctp-slices：腿1 已成交、腿2 尚未开（**先开的那一片由本份定死**）\", logf); err != nil {\n\t\t\treturn err\n\t\t}\n\t}\n\n\n\t// ——— 腿 1 ———\n\tvar p1 float64\n\tif *firstRest {\n\t\tp1, err = openOneLotResting(c, ex, inst, *mult, *tick, *fillWait, *timeout, logf)\n\t} else {\n\t\tp1, err = openOneLot(c, ex, inst, *mult, *timeout, logf)\n\t}\n\tif err != nil {\n\t\treturn err\n\t}\n\tlogf(\"[sl] 腿1 成交价 p1 = %.4f（由 OpenCost 增量 ÷ 乘数 反解）\", p1)\n",
+		"pkg": ".",
+		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
+		"want": "第一份落盘没有落在",
 		"expect": "red"
 	}
 ]
