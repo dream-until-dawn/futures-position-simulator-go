@@ -3894,7 +3894,7 @@
 		"new": "\t// ——— 腿 1 ———\n\tvar p1 float64\n\tif *firstRest {\n\t\tp1, err = openOneLotResting(c, ex, inst, *mult, *tick, *fillWait, *timeout, logf)\n\t} else {\n\t\tp1, err = openOneLot(c, ex, inst, *mult, *timeout, logf)\n\t}\n\tif err != nil {\n\t\treturn err\n\t}\n\tdefer func() {\n\t\tif err := flattenLongToday(c, ex, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[sl] ⚠️⚠️ **平不干净，仓留在账上了**：%v\", err)\n\t\t\tlogf(\"      去跑 oracle ctp-flatten。⚠️ 留仓与「实验就是要留仓」\" +\n\t\t\t\t\"在账户上长得一模一样，差别只在有没有人打算这么做\")\n\t\t}\n\t}()\n\n",
 		"pkg": ".",
 		"test": "TestFlattenDeferRegisteredBeforeAnyOrder",
-		"want": "找不到那条 defer flattenLongToday",
+		"want": "收尾平仓注册在第一笔委托之后",
 		"expect": "red"
 	},
 	{
