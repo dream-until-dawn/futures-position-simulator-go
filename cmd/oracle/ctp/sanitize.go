@@ -1,10 +1,10 @@
 package ctp
 
 import (
-	"path/filepath"
-	"os"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -41,6 +41,14 @@ type Fixture struct {
 	// Quotes 是行情快照，按 "SHFE.rb2701" 键。⚠️ **可以为空**：
 	// 多数截面不需要行情，而**要行情的那些必须显式要**（见 AttachQuote）。
 	Quotes map[string]map[string]any `json:"quotes,omitempty"`
+
+	// Trades 是**当日成交明细**，按柜台给的顺序。⚠️ **可以为空**：
+	// 只有需要「按片次序」的实验才附它（见 AttachTrades）。
+	//
+	// ⚠️ 它是 20260912 加的，补的是 #13 两次都栽的那个洞：
+	// 持仓记录里没有按片的开仓时刻，`OpenAmount` 只贡献那些片的**和** ⇒
+	// 从持仓截面**算不出哪一片先开**，FIFO 与 LIFO 分不开。
+	Trades []map[string]any `json:"trades,omitempty"`
 
 	// Dropped 逐个记下**被白名单去掉的键名**（不记值）。
 	//

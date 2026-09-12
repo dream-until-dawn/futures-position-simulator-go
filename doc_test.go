@@ -1198,6 +1198,66 @@ var (
 //
 // 这条恒等式在下面被断言 —— 它是三个数**互相咬住**的地方，
 // 单独钉住任何一个都挡不住「三个数各自漂开」。
+// TestCountBreaksStillViolateTheirBound 是**守卫的守卫**：
+// 那些「把某个计数偷偷抬高」的破坏，其判别力取决于**当下的计数**，
+// 而计数会随项目进展变大 —— 于是一条破坏可以**被进展静默解除**。
+//
+// ⚠️ 它来自 20260912 送审前跑全量时撞到的一次：破坏 218
+// （「分子被单独抬高：`rules_measured` 不该被算进分母」）把 `rules_measured`
+// 改成 **7**，而判据是「不得超过已收敛数」。那天已收敛从 9 涨到 **12**
+// ⇒ `7 ≤ 12`，**这条破坏当场变成一次空转**，判定报「仍然绿」。
+//
+//	⚠️ 而它失效的原因不是有人改坏了守卫，是**我干的活让阈值长过了它** ——
+//	一条破坏的判别力，可以被**正常的、正确的进展**抹掉，而抹掉是静默的。
+//
+// ⚠️ 这与「守卫在空集上跑」不同形：那一类的判别力从一开始就是零，
+// 这一类**曾经有过**，是后来没了。⇒ 只查「有没有反空转断言」查不出它。
+//
+// 本条的做法：从 `breaks.json` 里找出每一条把 `rules_measured` 改成字面量的破坏，
+// 断言那个字面量**此刻仍然违反上界**。哪天它不再违反，本条就红，而不是那条破坏悄悄空转。
+func TestCountBreaksStillViolateTheirBound(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("tools", "breakcheck", "breaks.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reg []struct {
+		Name   string `json:"name"`
+		New    string `json:"new"`
+		Expect string `json:"expect"`
+	}
+	if err := json.Unmarshal(b, &reg); err != nil {
+		t.Fatal(err)
+	}
+	_, struck := allNumberedTableRows(t, filepath.Join("docs", "cn-futures-rules.md"), "## 13.")
+	re := regexp.MustCompile(`rules_measured` + "`" + `\s*\|\s*\*\*(\d+)\*\*`)
+	checked := 0
+	for _, e := range reg {
+		if e.Expect != "red" {
+			continue
+		}
+		m := re.FindStringSubmatch(e.New)
+		if m == nil {
+			continue
+		}
+		checked++
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			t.Fatalf("⚠️ %s：解析不出 %q", e.Name, m[1])
+		}
+		if n <= len(struck) {
+			t.Errorf("⚠️ 破坏「%s」把 rules_measured 改成 %d，而当下已收敛 %d 条 —— "+
+				"**它不再违反上界，这条破坏已经变成一次空转**。"+
+				"⚠️ 不是守卫坏了，是项目进展让阈值长过了它。⇒ 把那个数改大",
+				e.Name, n, len(struck))
+		}
+	}
+	// ⚠️ 反空转：一条都没匹配到，说明破坏的写法变了而本条在空集上跑。
+	if checked == 0 {
+		t.Fatal("⚠️ breaks.json 里一条「抬高 rules_measured」的破坏都没匹配到 —— " +
+			"要么它被退役了（那要从本条里说明），要么写法变了而本条在空集上跑")
+	}
+}
+
 func TestRulesListedMatchesTable(t *testing.T) {
 	path := filepath.Join("docs", "cn-futures-rules.md")
 	all, struck := allNumberedTableRows(t, path, "## 13.")
@@ -1573,4 +1633,67 @@ func uniq(ss []string) []string {
 		}
 	}
 	return out
+}
+
+// TestRateFileColumnDebtIsDeclared 让「费率留底还缺一列」这个缺口
+// **有一处可见的对应物**。
+//
+// # ⚠️ 它是 20260912 自查出来的那个洞的守卫
+//
+// §13 #19 断言「柜台声明的每手是 0，而行为是 0.005 ⇒ **声明不完整**」。
+// 而那句话有一个**没排除的替代解释**：CTP 的费率记录带 `InvestorRange`
+// （所有 / 投资者组 / 单一投资者），我读到的可能**不是实际适用的那一条** ——
+// 若是那样，结论**方向相反**。
+//
+//	⚠️ 而拍它的那一版 `ctp-rates` 既没打印也没落盘 ⇒
+//	**已经拍下来的那一份永久缺这一列**，靠重跑补不回那一天。
+//
+// ⇒ 双向断言，与 `TestRejectCorpusIsProbeWrittenOnly` 同形：
+// 留底里没有那一列时，§13 必须自己说「按未排除处理」；
+// 有了那一列之后，那句话必须被删掉（否则是一句**过期的低报**，
+// 而低报正是评审卡的第一件事）。
+//
+// ⚠️ 这里**不用 `t.Skip`**：一条 skip 在 `go test ./...` 的汇总里看不见。
+func TestRateFileColumnDebtIsDeclared(t *testing.T) {
+	const debtPhrase = "按未排除处理"
+	const column = "适用范围"
+	rules, err := os.ReadFile(filepath.Join("docs", "cn-futures-rules.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := strings.Contains(string(rules), debtPhrase)
+
+	files, err := filepath.Glob(filepath.Join("testdata", "refdata", "ctp-commission-rates-*.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) == 0 {
+		t.Fatal("⚠️ 一份费率留底都没有 —— 目录或命名变了？本条在空集上跑")
+	}
+	withColumn := 0
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), column) {
+			withColumn++
+		}
+	}
+	switch {
+	case withColumn == 0 && !declared:
+		t.Fatalf("⚠️⚠️ %d 份费率留底**一份都没有「%s」那一列**，"+
+			"而 §13 里也没写 %q —— 两头都不说，这个缺口就没有任何可见的对应物了",
+			len(files), column, debtPhrase)
+	case withColumn == 0:
+		t.Logf("ⓘ %d 份费率留底都缺「%s」那一列，而 §13 已声明 %q —— "+
+			"本条此刻只在核对那个声明。工具已补那一列，等下一次开盘重扫",
+			len(files), column, debtPhrase)
+	case withColumn == len(files) && declared:
+		t.Errorf("⚠️ %d 份留底都带上「%s」了，而 §13 里仍写着 %q —— "+
+			"**过期陈述**，把那句话改掉", len(files), column, debtPhrase)
+	default:
+		t.Logf("ⓘ %d/%d 份留底带「%s」—— 混着，所以 §13 那句话还得留着",
+			withColumn, len(files), column)
+	}
 }

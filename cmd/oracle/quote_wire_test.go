@@ -36,49 +36,123 @@ import (
 // ⚠️ 技术与 `TestSendIsTheOnlyPathToInsert` 同源：读源码断言**顺序**，
 // 而不是断言某次运行的结果 —— 结构守卫在「有人写出第二条路径」那一刻就红，
 // 不必等那条路径被走到。
+// ⚠️ **20260911 改指了一次**：这条不变式原先只在 `runCTPParams` 里实现，
+// 于是这条守卫读的也是 `runCTPParams`。写第二个会落盘的命令（`ctp-slices`）时
+// 我把那段**又抄了一遍** —— `TestAttachQuoteHasOneCallSite` 当场红了。
+// ⇒ 抽成 `captureWithQuote`，两个命令都从那里过，本条随之改指到它。
+//
+//	⚠️ 而「顺序」那一条断言在改指之后**变了形状**：拍与落盘被拆到两个函数里，
+//	于是不再有「谁在谁前面」可查 —— 取而代之的是更强的一条：
+//	**拍失败时根本没有东西可落**（`return nil, …`）。
+//	⚠️ 一条断言消失而没有等价替代，与它被换成更强的一条，
+//	在这个文件的行数上长得一模一样。
 func TestQuoteFailureBlocksTheWrite(t *testing.T) {
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "main.go", nil, 0)
+	f, err := parser.ParseFile(fset, "capture.go", nil, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fn := findFunc(f, "runCTPParams")
+	fn := findFunc(f, "captureWithQuote")
 	if fn == nil {
-		t.Fatal("⚠️ main.go 里找不到 runCTPParams —— 改名了？本条会在空集上跑（那是全绿）")
+		t.Fatal("⚠️ capture.go 里找不到 captureWithQuote —— 改名了？本条会在空集上跑（那是全绿）")
 	}
 
 	var quoteIf *ast.IfStmt
-	var writePos token.Pos
-	calls := 0
+	calls, writes := 0, 0
 	ast.Inspect(fn, func(n ast.Node) bool {
 		if ifs, ok := n.(*ast.IfStmt); ok && mentions(ifs.Init, "AttachQuote") {
 			quoteIf, calls = ifs, calls+1
 		}
-		if c, ok := n.(*ast.CallExpr); ok && selName(c.Fun) == "Write" && writePos == token.NoPos {
-			writePos = c.Pos()
+		if c, ok := n.(*ast.CallExpr); ok && selName(c.Fun) == "Write" {
+			writes++
 		}
 		return true
 	})
 	if calls != 1 {
-		t.Fatalf("⚠️ runCTPParams 里 `if err := …AttachQuote(…); err != nil` 出现 %d 次（要恰好 1 次）"+
+		t.Fatalf("⚠️ captureWithQuote 里 `if err := …AttachQuote(…); err != nil` 出现 %d 次（要恰好 1 次）"+
 			" —— 形状变了，下面的断言查不到它要查的东西", calls)
 	}
-	if writePos == token.NoPos {
-		t.Fatal("⚠️ runCTPParams 里找不到 `.Write(` —— 落盘那一步改名了？本条不再有意义")
-	}
 
-	// ⚠️ 一、顺序：补行情必须在落盘**之前**。
-	if quoteIf.Pos() > writePos {
-		t.Errorf("⚠️ `AttachQuote` 出现在 `.Write` **之后**（%d > %d）—— "+
-			"于是补行情失败时**半份截面已经落盘了**，而它与一份本来就不带 quotes 的分不开",
-			quoteIf.Pos(), writePos)
+	// ⚠️ 一、落盘**不得发生在这个函数里**。它一旦进来，
+	//    「补不上就一份都不落」就又退回成一条靠语句顺序的约定。
+	if writes != 0 {
+		t.Errorf("⚠️ captureWithQuote 里出现了 %d 次 `.Write(` —— 落盘不该在这里发生", writes)
 	}
-	// ⚠️ 二、失败必须 return，不许降级成日志。
-	//    ⚠️ 这一条不能省：顺序对了而错误被吞掉，落盘照样发生，
-	//    而**只查顺序的守卫在那种改法下一个字都不会说**。
-	if !hasReturn(quoteIf.Body) {
-		t.Errorf("⚠️ 补行情失败那一支里**没有 return** —— 错误被吞掉，" +
-			"落盘照样发生。⚠️ 一句日志与一次拦截在磁盘上的区别是：前者留下半份证据")
+	// ⚠️ 二、失败那一支必须 `return nil, …`。
+	//    ⚠️ 不是「有 return 就行」：`return fx, err` 也是一条 return，
+	//    而它把**一份半截的截面交到调用方手上** —— 调用方只看 err 不看 fx 是常事，
+	//    反过来也是。原来那版查的正是「有没有 return」，**它挡不住这一改**。
+	ret := firstReturn(quoteIf.Body)
+	if ret == nil {
+		t.Fatal("⚠️ 补行情失败那一支里**没有 return** —— 错误被吞掉，半份截面照样交出去")
+	}
+	if len(ret.Results) != 2 {
+		t.Fatalf("⚠️ 失败那一支 return 了 %d 个值（要 2 个）", len(ret.Results))
+	}
+	if id, ok := ret.Results[0].(*ast.Ident); !ok || id.Name != "nil" {
+		t.Errorf("⚠️ 失败那一支的第一个返回值不是 `nil` —— 一份半截的截面被交给了调用方，" +
+			"而它与一份完整的截面在类型上一模一样")
+	}
+}
+
+// firstReturn 取一个块里的第一条 return。
+func firstReturn(b *ast.BlockStmt) *ast.ReturnStmt {
+	if b == nil {
+		return nil
+	}
+	var out *ast.ReturnStmt
+	ast.Inspect(b, func(n ast.Node) bool {
+		if r, ok := n.(*ast.ReturnStmt); ok && out == nil {
+			out = r
+		}
+		return out == nil
+	})
+	return out
+}
+
+// TestEveryCaptureWithQuoteCallChecksItsError 管的是另一半。
+//
+// ⚠️ 上面那条保证了「失败时交出的是 nil」，而它管不着调用方看不看。
+// 一个把 err 丢掉的调用方会拿着 nil 去调 `fx.Write` —— 那是一次 panic，
+// 不是一份半截的夹具，**但它发生在盘中、账上有仓的时候**。
+func TestEveryCaptureWithQuoteCallChecksItsError(t *testing.T) {
+	fset := token.NewFileSet()
+	sites := 0
+	for _, name := range goFilesHere(t) {
+		f, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			blk, ok := n.(*ast.BlockStmt)
+			if !ok {
+				return true
+			}
+			for i, stmt := range blk.List {
+				as, ok := stmt.(*ast.AssignStmt)
+				if !ok || !mentions(as, "captureWithQuote") {
+					continue
+				}
+				sites++
+				if i+1 >= len(blk.List) {
+					t.Errorf("%s: captureWithQuote 的返回值后面没有任何语句",
+						fset.Position(stmt.Pos()))
+					continue
+				}
+				next, ok := blk.List[i+1].(*ast.IfStmt)
+				if !ok || !mentions(next.Cond, "err") || firstReturn(next.Body) == nil {
+					t.Errorf("%s: ⚠️ captureWithQuote 的下一句不是 `if err != nil { return … }` —— "+
+						"拍失败时拿到的是 nil，而它会被继续用下去",
+						fset.Position(stmt.Pos()))
+				}
+			}
+			return true
+		})
+	}
+	// ⚠️ 反空转：两个命令都该走这里，一个都扫不到就是判据坏了。
+	if sites < 2 {
+		t.Fatalf("⚠️ 只扫到 %d 处 captureWithQuote 调用（至少该有 2 处："+
+			"ctp-params 与 ctp-slices）—— 本条在空集上跑", sites)
 	}
 }
 
@@ -155,7 +229,7 @@ func hasReturn(b *ast.BlockStmt) bool {
 // 防的是同一件事：**不给第二条到达路径**。
 func TestAttachQuoteHasOneCallSite(t *testing.T) {
 	fset := token.NewFileSet()
-	n := 0
+	n, inHelper := 0, 0
 	files := goFilesHere(t)
 	for _, name := range files {
 		f, err := parser.ParseFile(fset, name, nil, 0)
@@ -168,6 +242,14 @@ func TestAttachQuoteHasOneCallSite(t *testing.T) {
 			}
 			return true
 		})
+		if fn := findFunc(f, "captureWithQuote"); fn != nil {
+			ast.Inspect(fn, func(x ast.Node) bool {
+				if c, ok := x.(*ast.CallExpr); ok && selName(c.Fun) == "AttachQuote" {
+					inHelper++
+				}
+				return true
+			})
+		}
 	}
 	if len(files) < 2 {
 		t.Fatalf("⚠️ 只扫到 %d 个源文件 —— 本条在空转", len(files))
@@ -175,6 +257,13 @@ func TestAttachQuoteHasOneCallSite(t *testing.T) {
 	if n != 1 {
 		t.Errorf("⚠️ `AttachQuote` 在本包被调用 %d 次（要恰好 1 次）—— "+
 			"第二条调用路径会绕开「失败则不落盘」那两条断言", n)
+	}
+	// ⚠️ 光数「一次」不够：把唯一那次**挪出** captureWithQuote，计数照样是 1，
+	// 而 TestQuoteFailureBlocksTheWrite（它只读 captureWithQuote）
+	// 会当场变成在空集上跑。**两条加起来才堵满。**
+	if inHelper != 1 {
+		t.Errorf("⚠️ `AttachQuote` 在 captureWithQuote 里出现 %d 次（要 1 次）—— "+
+			"它被挪到别处了，而 TestQuoteFailureBlocksTheWrite 会因此在空集上跑", inHelper)
 	}
 }
 

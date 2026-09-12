@@ -39,6 +39,15 @@ func usage() {
 用法:
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
+  oracle ctp-reject -symbol INE.bc2611 -tick 10 [-out testdata/refdata]
+                                   ⚠️ **CTP/SimNow 侧**：逐条发非法报单，记拒因的**数值码**。
+                                   ⚠️ -tick 无默认值；-out 落机器可读语料（**只收码不收原话**）
+  oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
+                                   ⚠️ **CTP/SimNow 侧**：查柜台**声明**的手续费率（三档各两项）。
+                                   只读，不下单。⚠️ 声明与行为同源，对得上**不升证据等级**
+  oracle ctp-slices -symbol SHFE.rb2701 -multiplier 10 -tick 1
+                                   ⚠️ **CTP/SimNow 侧**：分两笔各开一手造两片（片价不同），
+                                   只平一手 ⇒ 逐片 FIFO / LIFO / 按均价 三个候选分得开（rules_pending #13）
   oracle ctp-params [-env 路径]    ⚠️ **CTP/SimNow 侧**：查经纪商交易参数
                                    （simnow_pending#9）。只读，不下单。
                                    ⚠️ 查到的是**声明**不是**行为**，见 docs/ctp-oracle.md 第 3 节
@@ -125,6 +134,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
+	case "ctp-cancel":
+		if err := runCTPCancel(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
 	case "ctp-profit":
 		if err := runCTPProfit(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
@@ -142,6 +156,16 @@ func main() {
 		}
 	case "ctp-dup":
 		if err := runCTPDup(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-slices":
+		if err := runCTPSlices(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-rates":
+		if err := runCTPRates(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -427,18 +451,11 @@ func runCTPParams(args []string) error {
 		if *quote != "" {
 			note += " + 行情"
 		}
-		fx, err := c.Capture(*timeout, note)
+		// ⚠️ 补行情**失败就整份不落盘**那条不变式
+		// 现在只有一个实现，在 captureWithQuote 里。
+		fx, err := captureWithQuote(c, *timeout, note, *quote)
 		if err != nil {
 			return err
-		}
-		if *quote != "" {
-			// ⚠️ 补行情**失败就整份不落盘**，不是「少一段照落」：
-			// 一份少了 quotes 的截面与一份没要过 quotes 的截面
-			// **在磁盘上长得一模一样**，而后者是正常的、前者是事故。
-			if err := c.AttachQuote(fx, *quote, *timeout); err != nil {
-				return fmt.Errorf("⚠️ 行情没补上，**整份截面不落盘**："+
-					"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w", err)
-			}
 		}
 		secrets := map[string]string{
 			"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,
@@ -822,6 +839,11 @@ func runCTPRoundTrip(args []string) error {
 func runCTPFlatten(args []string) error {
 	fs := flag.NewFlagSet("ctp-flatten", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
+	only := fs.String("symbol", "", "只平这一个合约（形如 SHFE.ag2702）。"+
+		"留空 = **全平**，那是原来的行为。"+
+		"⚠️ 20260911 夜盘补的：当晚账上有一手**刻意**留的过夜种子（#4/#7 要等它变昨仓），"+
+		"而本命令没有作用域⇒ 想平掉别的腿就会把它一起平掉。"+
+		"**「平干净」与「平掉别人故意留的仓」在账户上长得一模一样**")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
@@ -844,7 +866,7 @@ func runCTPFlatten(args []string) error {
 	if err != nil {
 		return err
 	}
-	n := 0
+	n, skipped := 0, 0
 	for key, p := range pos {
 		// ⚠️ **今仓与昨仓都要平**，而开平标志必须按它是哪一种来选。
 		//
@@ -864,8 +886,13 @@ func runCTPFlatten(args []string) error {
 		if today == 0 && yd == 0 {
 			continue
 		}
-		n++
 		symbol := ctp.Text(p.ExchangeID[:]) + "." + ctp.Text(p.InstrumentID[:])
+		if *only != "" && symbol != *only {
+			logf("[flat] 跳过 %s（-symbol 只要 %s）", symbol, *only)
+			skipped++
+			continue
+		}
+		n++
 		// 平多发卖、平空发买。⚠️ 方向取反在这里做一次，不散在调用处。
 		var dir def.TThostFtdcDirectionType = def.THOST_FTDC_D_Sell
 		if p.PosiDirection == def.THOST_FTDC_PD_Short {
@@ -922,6 +949,18 @@ func runCTPFlatten(args []string) error {
 	}
 	logf("[flat] 之后  balance=%.4f 占用保证金=%.4f 手续费累计=%.4f",
 		float64(after.Balance), float64(after.CurrMargin), float64(after.Commission))
+	// ⚠️ 「占用保证金归零」只在**全平**时才是正确的收尾断言。
+	// 限定了合约时账上本就该还有仓 ——
+	// ⚠️ 这一条若不分岳，一次**成功的**局部平仓会以错误退出，
+	// 而调用方会去收拾一个不存在的事故。
+	if *only != "" {
+		logf("[flat] ⚠️ 仅平 %s，跳过 %d 个合约 —— 占用保证金不归零是预期的",
+			*only, skipped)
+		if n == 0 {
+			return fmt.Errorf("⚠️ -symbol %s 上**没有仓** —— 写错合约名与真的无仓可平在输出上长得一样，所以这里报错", *only)
+		}
+		return nil
+	}
 	if float64(after.CurrMargin) != 0 {
 		return fmt.Errorf("⚠️⚠️ 占用保证金仍为 %.4f —— **账上还有仓**", float64(after.CurrMargin))
 	}
@@ -949,6 +988,9 @@ func runCTPHold(args []string) error {
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约（⚠️ 无默认值）")
 	rounds := fs.Int("rounds", 6, "轮询次数")
+	short := fs.Bool("short", false, "开**空**而不是开多。"+
+		"⚠️ 20260911 夜盘加的，为的是判别实验 #3（单向大边按品种还是按合约）—— "+
+		"那要求**同品种两个月份一多一空**，而本命令此前只会开多")
 	keep := fs.Bool("keep", false, "⚠️ **不平仓，把这手仓留过夜**。"+
 		"只有一件事需要它：昨仓的保证金基准要等结算，而结算要有隔夜持仓")
 	every := fs.Duration("every", 20*time.Second, "轮询间隔")
@@ -978,17 +1020,38 @@ func runCTPHold(args []string) error {
 		return err
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// ⚠️ 开仓挂**对自己不利**的那一端 ⇒ 保证成交（本命令要的是真持仓）：
+	// 开多挂涨停、开空挂跌停。写成元组，让「方向与挂价端成对」在语法上成立。
+	openDir, openPx := def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy), float64(md.UpperLimitPrice)
+	if *short {
+		openDir, openPx = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell), float64(md.LowerLimitPrice)
+	}
 	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
-		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
-		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, *timeout)
+		Direction: openDir, Offset: def.THOST_FTDC_OF_Open,
+		Volume: 1, LimitPrice: openPx}, *timeout)
 	if err != nil || st.VolumeTraded == 0 {
 		return fmt.Errorf("建仓没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
-	logf("[hold] 建仓成交 %d 手", st.VolumeTraded)
+	logf("[hold] 建%s成交 %d 手", map[bool]string{false: "多", true: "空"}[*short], st.VolumeTraded)
 
 	logf("")
 	logf("%-8s %10s %10s %10s %12s %12s", "时刻", "最新价", "今结算", "昨结", "占用保证金", "持仓盈亏")
-	var first, last float64
+	// ⚠️ **只跟本命令自己建的那一条腿**，而且只在账上恰好只有它时才下判断。
+	//
+	// 20260911 夜盘这段给过一个**自信的假结论**：账上当时有 ag2701 多与 ag2702 空
+	// 两条腿，它打印「占用保证金变了 ⇒ 基准是某个动态价，开仓价被否」——
+	// 而那个变化来自**账上多了一条反向腿**，不是行情走动。
+	//
+	//	⚠️ 而细看之下它比「前提被违反」还糟一格：`first`/`last` 是在
+	//	**遍历 map 的循环体里**赋的，多条腿时它们可能取自**不同的合约** ——
+	//	于是那个「变了」的差额，是两个不相干的数相减。
+	//	⚠️ Go 的 map 遍历顺序是随机的 ⇒ **同一份账户跑两次可能给出不同结论**。
+	//
+	// ⇒ 两半改法：一、按 `symbol` 只认自己那条腿；
+	// 二、**账上不止一条今仓时根本不下判断** —— 说「我的前提不成立了」，
+	// 而不是照常打印。判据的前提要由判据自己检查，见 silent-risks 方法论 85 那一节。
+	var first, last, firstPx, lastPx float64
+	var legs int
 	for i := 0; i < *rounds; i++ {
 		if i > 0 {
 			time.Sleep(*every)
@@ -1003,8 +1066,13 @@ func runCTPHold(args []string) error {
 			logf("  持仓读不到：%v", err)
 			continue
 		}
+		legs = 0
 		for _, p := range pos {
 			if int(p.TodayPosition) == 0 {
+				continue
+			}
+			legs++
+			if ctp.Text(p.InstrumentID[:]) != inst {
 				continue
 			}
 			um := float64(p.UseMargin)
@@ -1012,6 +1080,10 @@ func runCTPHold(args []string) error {
 				first = um
 			}
 			last = um
+			if firstPx == 0 {
+				firstPx = float64(m.LastPrice)
+			}
+			lastPx = float64(m.LastPrice)
 			logf("%-8s %10.2f %10.2f %10.2f %12.2f %12.2f",
 				time.Now().Format("15:04:05"), float64(m.LastPrice),
 				float64(p.SettlementPrice), float64(p.PreSettlementPrice),
@@ -1019,13 +1091,28 @@ func runCTPHold(args []string) error {
 		}
 	}
 	logf("")
-	switch {
-	case first != 0 && first == last:
-		logf("⇒ ⚠️ 占用保证金**全程不变**（%.2f）", first)
-		logf("   若期间行情有过变动 ⇒ 基准是**建仓时定死的价**（开仓价），今结算价被否")
-		logf("   ⚠️ 若行情也没动 ⇒ **这一轮什么都没分开**，别当结论")
-	default:
-		logf("⇒ ⚠️ 占用保证金**变了**：%.2f → %.2f ⇒ 基准是某个**动态价**，开仓价被否", first, last)
+	// ⚠️ 判定本身在 `holdVerdict` 里，这里只负责把它翻成人话。
+	// 分开的理由见 holdverdict.go：**一个只能在盘中检验的判据等于没被检验过。**
+	switch holdVerdict(legs, first, last, firstPx, lastPx) {
+	case holdNoPremise:
+		// ⚠️ 这一支存在的全部理由，就是**不让它说出那句结论**。
+		logf("⇒ ⚠️⚠️ **前提不成立，本轮不下判断**：账上有 %d 条今仓。", legs)
+		logf("   本判据默认「只有这一条腿，只有价格在动」—— 多一条腿，")
+		logf("   占用保证金的变动就有了第二个来源，而**两个来源在这张表里长得一模一样**。")
+		logf("   ⇒ 先 `ctp-flatten` 平干净再跑。")
+	case holdNoData:
+		logf("⇒ ⚠️ 一轮都没读到 %s 的今仓 —— **没有观测，不是结论**", *symbol)
+	case holdNoMove:
+		logf("⇒ ⚠️ **这一轮什么都没分开**：期间最新价始终是 %.2f，", firstPx)
+		logf("   开仓价与今结算价在不动的行情上给出同一个数。别当结论。")
+	case holdStatic:
+		logf("⇒ 占用保证金**全程不变**（%.2f），而行情从 %.2f 走到 %.2f",
+			first, firstPx, lastPx)
+		logf("   ⇒ 基准是**建仓时定死的价**（开仓价），今结算价被否")
+	case holdDynamic:
+		logf("⇒ ⚠️ 占用保证金**变了**：%.2f → %.2f（行情 %.2f → %.2f）",
+			first, last, firstPx, lastPx)
+		logf("   ⇒ 基准是某个**动态价**，开仓价被否")
 	}
 	logf("")
 	if *keep {

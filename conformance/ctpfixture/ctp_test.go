@@ -8,6 +8,7 @@ package ctpfixture
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,12 +19,18 @@ import (
 )
 
 type ctpFixture struct {
-	Source     string                    `json:"source"`
-	TradingDay string                    `json:"trading_day"`
-	CapturedAt string                    `json:"captured_at"`
-	Account    map[string]any            `json:"account"`
-	Positions  map[string]map[string]any `json:"positions"`
-	Quotes     map[string]map[string]any `json:"quotes"`
+	Source     string `json:"source"`
+	TradingDay string `json:"trading_day"`
+	CapturedAt string `json:"captured_at"`
+	// BrokerParams 是柜台的**声明**（经纪商交易参数）。
+	//
+	// ⚠️ 它 20260909 起就落在每一份夹具里，而加载器此前**根本没读它** ——
+	// 于是 20260910 写下的那条可用资金恒等式与它矛盾了整整一天，
+	// 而没有任何东西负责把两者对上。见 TestIdentityAgreesWithDeclaredAlgorithm。
+	BrokerParams map[string]any            `json:"broker_params"`
+	Account      map[string]any            `json:"account"`
+	Positions    map[string]map[string]any `json:"positions"`
+	Quotes       map[string]map[string]any `json:"quotes"`
 }
 
 func loadCTP(t *testing.T) map[string]ctpFixture {
@@ -273,7 +280,7 @@ func TestMarginAgainstCTP(t *testing.T) {
 // 拿去与本库比毫无意义（同 `kq_facts` 41 那次的教训）。
 func TestAccountIdentityAgainstCTP(t *testing.T) {
 	fx := loadCTP(t)
-	n := 0
+	n, positives := 0, 0
 	for name, f := range fx {
 		if len(f.Account) == 0 {
 			continue
@@ -290,16 +297,52 @@ func TestAccountIdentityAgainstCTP(t *testing.T) {
 		// **本库是 decimal、柜台是 float64，凡是拿本库的算式去核柜台的数，
 		// 判据都必须带一个由 float64 精度决定的容差** —— 而那个容差要算出来，不能拍脑袋。
 		// （本条不需要容差，因为它复现的是柜台**自己的**那次 float64 运算。）
+		// ⚠️⚠️ **减项里那个 `max(浮盈, 0)` 是 20260911 夜盘被一份夹具逼出来的，
+		// 而它推翻的是这条断言此前的形状。**
+		//
+		// 原式是 `Balance − 占用 − 冻结 == Available`，它在**十八份夹具上分毫不差** ——
+		// 而那十八份的 `PositionProfit` 无一为正。第十九份（`ctp-slices-20260914-2`，
+		// 两片白银今仓）浮盈 +150，原式当场差 150。
+		//
+		//	⚠️ 柜台的规则是**浮盈不计入可用、浮亏立即扣** ——
+		//	而这条不对称**只在赢着的那一侧显形**。
+		//	十八份夹具不是「十八次验证」，是**同一侧的十八个样本**。
+		//
+		// ⚠️ 而这条断言当时的错误信息写的是「**这份截面自己就不自洽**」——
+		// 那句话把「我的模型错了」说成了「数据坏了」。
+		// 它差一点让我去查那次落盘出了什么毛病，而截面是对的。
+		// ⇒ 措辞已改：先说是哪一边不符，再说两种可能。
 		bal := flt(t, f.Account, "Balance")
+		pp := flt(t, f.Account, "PositionProfit")
+		unreal := math.Max(pp, 0)
 		calc := bal - flt(t, f.Account, "CurrMargin") -
-			flt(t, f.Account, "FrozenMargin") - flt(t, f.Account, "FrozenCommission")
+			flt(t, f.Account, "FrozenMargin") - flt(t, f.Account, "FrozenCommission") - unreal
 		if want := flt(t, f.Account, "Available"); calc != want {
-			t.Errorf("⚠️ %s：Balance−占用−冻结 = %v，而 Available = %v（差 %v）—— "+
-				"**这份截面自己就不自洽**，拿去与本库比毫无意义", name, calc, want, want-calc)
+			t.Errorf("⚠️ %s：Balance−占用−冻结−max(浮盈,0) = %v，而柜台给的 Available = %v"+
+				"（差 %v；PositionProfit=%v）—— 要么**本式还缺一项**，"+
+				"要么这份截面真的不自洽。⚠️ 别默认是后者：20260911 夜盘正是本式缺了"+
+				"`max(浮盈,0)`，而当时的措辞让人去查落盘",
+				name, calc, want, want-calc, pp)
+		}
+		if pp > 0 {
+			positives++
 		}
 		n++
 	}
 	if n < 5 {
 		t.Fatalf("⚠️ 只核了 %d 份（下界 5）—— 本条在空转", n)
+	}
+	// ⚠️ **判别力**：`max(浮盈, 0)` 这一项只在浮盈为正时才不等于 0。
+	// 一批全是浮亏/零的夹具上，本条与**去掉那一项的旧式**给出完全一样的结果 ——
+	// 而旧式正是被推翻的那个。
+	//
+	//	⚠️ 于是「全绿」在这里有两种读法：**式子对了**，或者**这一项从没被求值过**。
+	//	十八份夹具就这样把一条错的恒等式供着，直到第十九份出现。
+	//
+	// ⇒ 没有一份正浮盈的夹具时，本条**必须报出来**：它此刻守不住它自称在守的东西。
+	if positives == 0 {
+		t.Fatalf("⚠️ %d 份夹具里**没有一份 PositionProfit > 0** —— "+
+			"`max(浮盈,0)` 这一项一次都没被求值，本条与被推翻的旧式等价。"+
+			"⇒ 去拍一份赢着的截面（`oracle ctp-slices` 造两片今仓即可），别删这条", n)
 	}
 }

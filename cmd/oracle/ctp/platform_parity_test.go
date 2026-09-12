@@ -111,3 +111,71 @@ func contains(xs []string, s string) bool {
 	}
 	return false
 }
+
+// exportedFieldsOn 用 AST 取指定文件里**导出结构上的导出字段**，记成 `类型.字段`。
+func exportedFieldsOn(t *testing.T, files []string) []string {
+	t.Helper()
+	var out []string
+	fset := token.NewFileSet()
+	for _, f := range files {
+		af, err := parser.ParseFile(fset, f, nil, 0)
+		if err != nil {
+			t.Fatalf("解析 %s：%v", f, err)
+		}
+		ast.Inspect(af, func(n ast.Node) bool {
+			ts, ok := n.(*ast.TypeSpec)
+			if !ok || !ts.Name.IsExported() {
+				return true
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok || st.Fields == nil {
+				return true
+			}
+			for _, fl := range st.Fields.List {
+				for _, id := range fl.Names {
+					if id.IsExported() {
+						out = append(out, ts.Name.Name+"."+id.Name)
+					}
+				}
+			}
+			return true
+		})
+	}
+	sort.Strings(out)
+	return out
+}
+
+// TestPlatformParityCoversFieldsToo 钉住两个平台变体的**导出字段**也一致。
+//
+// ⚠️ 20260911 评审查另一件事时撞到的：`TestNonWindowsStubsCoverEveryMethod`
+// **只比方法，不比字段** —— 于是 `Client` / `Credentials` 在两侧的字段若分叉，
+// **没有任何东西会说**。
+//
+// ⚠️ 而它与同一天刚修的那个洞是**同一个**：导出面守卫也只数函数/类型/变量常量，
+// 不数字段。⇒ **一个判据漏掉的那一类，往往在第二处也漏掉** ——
+// 因为两处是照着同一个「导出面 = 函数与类型」的印象写的。
+//
+// ⚠️ **当时两侧确实一致**（评审比过，差集都空）——
+// 而这正是本条存在的理由：**一致是状态，不是守卫。**
+// 与「推送让横幅那条盲区暂时无害」同形。
+func TestPlatformParityCoversFieldsToo(t *testing.T) {
+	w := exportedFieldsOn(t, windowsFiles(t))
+	o := exportedFieldsOn(t, []string{"client_other.go"})
+	// ⚠️ 判别力：两侧都空时下面两个循环一条都不跑，而它照样绿。
+	if len(w) == 0 && len(o) == 0 {
+		t.Fatal("⚠️ 两侧都没认出导出字段 —— 形状变了，本条在空转")
+	}
+	for _, f := range w {
+		if !contains(o, f) {
+			t.Errorf("⚠️ Windows 侧有导出字段 %s，非 Windows 侧没有 —— "+
+				"**两个平台变体的导出面必须一致**。调用方按字段名写的代码，"+
+				"在缺的那一侧连编译都过不了，而本包在那一侧照样构建得出来", f)
+		}
+	}
+	for _, f := range o {
+		if !contains(w, f) {
+			t.Errorf("⚠️ 非 Windows 侧有导出字段 %s，Windows 侧没有 —— 同上，方向相反", f)
+		}
+	}
+	t.Logf("ⓘ 两侧导出字段各 %d / %d 个，双向比对通过", len(w), len(o))
+}

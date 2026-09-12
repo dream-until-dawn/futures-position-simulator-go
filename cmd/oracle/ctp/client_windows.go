@@ -11,8 +11,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 	def "gitee.com/haifengat/goctp/ctpdefine"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety"
 )
 
 // Credentials 是连上 SimNow 要的那几样。⚠️ 一律来自 .env，不进代码、不进夹具。
@@ -35,7 +35,7 @@ type Client struct {
 	// Valve 是下单安全阀。⚠️ 它是 Client 的字段而不是 Insert 的参数：
 	// 参数可以在某一次调用里忘了传，字段不会。
 	Valve safety.Valve
-	logf func(string, ...any)
+	logf  func(string, ...any)
 
 	h        *syscall.DLL
 	api, spi uintptr
@@ -51,12 +51,15 @@ type Client struct {
 
 	tradingDay string
 	loggedIn   chan error
-	q        queryer
-	account  chan *def.CThostFtdcTradingAccountField
-	posMu    sync.Mutex
-	pos      map[string]*def.CThostFtdcInvestorPositionField
-	posDone  chan struct{}
-	book     orderBook
+	q          queryer
+	account    chan *def.CThostFtdcTradingAccountField
+	posMu      sync.Mutex
+	pos        map[string]*def.CThostFtdcInvestorPositionField
+	posDone    chan struct{}
+	ordMu      sync.Mutex
+	ord        []*def.CThostFtdcOrderField
+	ordDone    chan struct{}
+	book       orderBook
 	// orderSeq 是本次会话的委托序号，**单调递增**。⚠️ 见 send 里的理由：
 	// 不递增的 OrderRef 会被 CTP 拒（ErrorID=22），而它只在第二笔单上暴露。
 	orderSeq int64
@@ -70,7 +73,14 @@ type Client struct {
 	// 而那与「这笔单已经不在了」长得一模一样。
 	frontID   int
 	sessionID int
-	params     chan *def.CThostFtdcBrokerTradingParamsField
+	params    chan *def.CThostFtdcBrokerTradingParamsField
+	// comm 是手续费率查询的应答。⚠️ 深度 1 且**只收一条** ——
+	// 这个查询按合约问、按合约答，不像持仓那样一问多条。
+	comm chan *def.CThostFtdcInstrumentCommissionRateField
+	// trd 是成交查询的应答累积。⚠️ 深度靠 isLast 收尾，与持仓同形。
+	trdMu   sync.Mutex
+	trd     []*def.CThostFtdcTradeField
+	trdDone chan struct{}
 }
 
 // New 建一个尚未连接的客户端。
@@ -83,7 +93,10 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 		params:   make(chan *def.CThostFtdcBrokerTradingParamsField, 1),
 		account:  make(chan *def.CThostFtdcTradingAccountField, 1),
 		posDone:  make(chan struct{}, 1),
+		ordDone:  make(chan struct{}, 1),
 		md:       make(chan *def.CThostFtdcDepthMarketDataField, 1),
+		comm:     make(chan *def.CThostFtdcInstrumentCommissionRateField, 1),
+		trdDone:  make(chan struct{}, 1),
 		pos:      map[string]*def.CThostFtdcInvestorPositionField{}}
 }
 
