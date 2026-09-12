@@ -39,6 +39,9 @@ func usage() {
 用法:
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
+  oracle ctp-flatten (-symbol SHFE.ag2702 | -all)
+                                   ⚠️ **会真的平仓**。不给 -symbol 就必须给 -all ——
+                                   账上可能有**刻意**留着的仓（#4/#7 的过夜种子）
   oracle ctp-reject -symbol INE.bc2611 -tick 10 [-out testdata/refdata]
                                    ⚠️ **CTP/SimNow 侧**：逐条发非法报单，记拒因的**数值码**。
                                    ⚠️ -tick 无默认值；-out 落机器可读语料（**只收码不收原话**）
@@ -844,8 +847,26 @@ func runCTPFlatten(args []string) error {
 		"⚠️ 20260911 夜盘补的：当晚账上有一手**刻意**留的过夜种子（#4/#7 要等它变昨仓），"+
 		"而本命令没有作用域⇒ 想平掉别的腿就会把它一起平掉。"+
 		"**「平干净」与「平掉别人故意留的仓」在账户上长得一模一样**")
+	all := fs.Bool("all", false, "平**全部**合约。"+
+		"⚠️ 20260912 由评审的一句提醒变成的结构：本命令原先**不带参数就全平**，"+
+		"而账上有一手**刻意**留的过夜种子（#4/#7 唯一的昨仓来源）。"+
+		"⇒ 「平掉所有东西」改成一个**要显式说出口**的动作")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
+		return err
+	}
+	// ⚠️ **「全平」必须显式说出口。**
+	//
+	// 20260912 评审收尾提醒了一句：那手 `DCE.m2701` 种子别被本命令顺手清掉 ——
+	// 它是 #4/#7 **唯一**的昨仓来源，而重建它要再等一个结算。
+	//
+	//	⚠️ 而**一句提醒挡不住它**：提醒在消息里，命令在手上。
+	//	下一次想「清一下账」的人不会先去翻那条消息。
+	//
+	// ⇒ 把它变成结构：不给 `-symbol` 就必须给 `-all`。
+	// ⚠️ 这不是「多一道确认」，是把**默认行为**从「平掉所有东西」换成「什么都不做」——
+	// 前者不可逆，后者可逆。
+	if err := flattenScope(*only, *all); err != nil {
 		return err
 	}
 	env, err := probe.LoadEnv(*envPath)
@@ -1138,5 +1159,36 @@ func runCTPHold(args []string) error {
 			"status=%q %s err=%v。跑 `ctp-flatten` 收拾", *symbol, string(cs.Status), cs.StatusMsg, err)
 	}
 	logf("[hold] 已平 %d 手", cs.VolumeTraded)
+	return nil
+}
+
+// flattenScope 判「这次要平的范围说清了没有」。
+//
+// # ⚠️ 它被抽成纯函数的理由是一次我自己的险情
+//
+// 20260912 加上 `-all` 那道门之后，我为了**验证那道门**，
+// 真的跑了一次 `oracle ctp-flatten -all` —— **那正是会清掉过夜种子的命令**。
+//
+//	⚠️ 当时是周六、柜台不可达（`OnSessionDisconnected`、登录超时），
+//	所以它几乎肯定连都没连上。**而「几乎肯定」不是「核过了」** ——
+//	要核得等下一个交易时段，而那时若种子没了，#4/#7 要再等一个结算。
+//
+// ⇒ 根因不是我手快，是**那道门只能靠跑真命令来验**：
+// 它长在 `runCTPFlatten` 里，而那个函数要凭据、要连柜台。
+//
+//	⚠️ **一道安全门，若只能靠触发它守着的那个危险动作来验证，它就会被那样验证。**
+//
+// ⇒ 抽出来。现在 `TestFlattenScopeRefusesAmbiguity` 离线把四种组合跑完，
+// **谁都不必再为了看门开不开而去平一次仓**。
+func flattenScope(only string, all bool) error {
+	if only == "" && !all {
+		return fmt.Errorf("⚠️ **不给 -symbol 就必须给 -all**：本命令会真的平掉账上全部持仓，" +
+			"而账上可能有**刻意**留着的仓（如 #4/#7 等的过夜种子）。" +
+			"⚠️ 「平干净」与「平掉别人故意留的仓」在账户上长得一模一样，" +
+			"差别只在有没有人打算这么做 —— 而那件事只能由命令行说出来")
+	}
+	if only != "" && all {
+		return fmt.Errorf("⚠️ -symbol %q 与 -all 同时给了 —— 两者意思相反，不猜", only)
+	}
 	return nil
 }
