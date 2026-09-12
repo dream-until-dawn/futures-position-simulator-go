@@ -1634,3 +1634,66 @@ func uniq(ss []string) []string {
 	}
 	return out
 }
+
+// TestRateFileColumnDebtIsDeclared 让「费率留底还缺一列」这个缺口
+// **有一处可见的对应物**。
+//
+// # ⚠️ 它是 20260912 自查出来的那个洞的守卫
+//
+// §13 #19 断言「柜台声明的每手是 0，而行为是 0.005 ⇒ **声明不完整**」。
+// 而那句话有一个**没排除的替代解释**：CTP 的费率记录带 `InvestorRange`
+// （所有 / 投资者组 / 单一投资者），我读到的可能**不是实际适用的那一条** ——
+// 若是那样，结论**方向相反**。
+//
+//	⚠️ 而拍它的那一版 `ctp-rates` 既没打印也没落盘 ⇒
+//	**已经拍下来的那一份永久缺这一列**，靠重跑补不回那一天。
+//
+// ⇒ 双向断言，与 `TestRejectCorpusIsProbeWrittenOnly` 同形：
+// 留底里没有那一列时，§13 必须自己说「按未排除处理」；
+// 有了那一列之后，那句话必须被删掉（否则是一句**过期的低报**，
+// 而低报正是评审卡的第一件事）。
+//
+// ⚠️ 这里**不用 `t.Skip`**：一条 skip 在 `go test ./...` 的汇总里看不见。
+func TestRateFileColumnDebtIsDeclared(t *testing.T) {
+	const debtPhrase = "按未排除处理"
+	const column = "适用范围"
+	rules, err := os.ReadFile(filepath.Join("docs", "cn-futures-rules.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := strings.Contains(string(rules), debtPhrase)
+
+	files, err := filepath.Glob(filepath.Join("testdata", "refdata", "ctp-commission-rates-*.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) == 0 {
+		t.Fatal("⚠️ 一份费率留底都没有 —— 目录或命名变了？本条在空集上跑")
+	}
+	withColumn := 0
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), column) {
+			withColumn++
+		}
+	}
+	switch {
+	case withColumn == 0 && !declared:
+		t.Fatalf("⚠️⚠️ %d 份费率留底**一份都没有「%s」那一列**，"+
+			"而 §13 里也没写 %q —— 两头都不说，这个缺口就没有任何可见的对应物了",
+			len(files), column, debtPhrase)
+	case withColumn == 0:
+		t.Logf("ⓘ %d 份费率留底都缺「%s」那一列，而 §13 已声明 %q —— "+
+			"本条此刻只在核对那个声明。工具已补那一列，等下一次开盘重扫",
+			len(files), column, debtPhrase)
+	case withColumn == len(files) && declared:
+		t.Errorf("⚠️ %d 份留底都带上「%s」了，而 §13 里仍写着 %q —— "+
+			"**过期陈述**，把那句话改掉", len(files), column, debtPhrase)
+	default:
+		t.Logf("ⓘ %d/%d 份留底带「%s」—— 混着，所以 §13 那句话还得留着",
+			withColumn, len(files), column)
+	}
+}

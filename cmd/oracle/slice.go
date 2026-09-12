@@ -112,6 +112,30 @@ func runCTPSlices(args []string) error {
 			"先跑 ctp-flatten", *symbol, int(p.Position))
 	}
 
+	// ⚠️⚠️ **收尾平仓必须注册在第一笔委托之前，而不是「开完腿 1 之后」。**
+	//
+	// 20260912 评审让我专门去找一条能留仓的路径，找到了，而它就在这里：
+	// `openOneLot` / `openOneLotResting` **在成交之后还会失败** ——
+	// `filledPrice` 查不到持仓就报「开完之后查不到今仓 —— 不猜价，直接停」。
+	//
+	//	⚠️ 那一刻**仓已经在账上**，而 `defer` 原先注册在这几行**之后**
+	//	⇒ 直接 `return err`，**腿 1 留仓**，且命令以错误退出 ——
+	//	看起来像「没开成」，实际是「开成了但没平」。
+	//
+	// ⚠️ 同一条路在 `-restfirst` 上更宽：那条路径先挂单、轮询、成交，
+	// 中间每一次 `c.Order` / 持仓查询都可能超时。
+	//
+	// ⇒ 提前注册。`flattenLongToday` 在无仓时是空操作（它先查再平），
+	// 所以「还没开仓就注册」不会误平任何东西。
+	// 守卫 `TestFlattenDeferRegisteredBeforeAnyOrder`。
+	defer func() {
+		if err := flattenLongToday(c, ex, inst, *timeout, logf); err != nil {
+			logf("[sl] ⚠️⚠️ **平不干净，仓留在账上了**：%v", err)
+			logf("      去跑 oracle ctp-flatten。⚠️ 留仓与「实验就是要留仓」" +
+				"在账户上长得一模一样，差别只在有没有人打算这么做")
+		}
+	}()
+
 	// ——— 腿 1 ———
 	var p1 float64
 	if *firstRest {
@@ -123,15 +147,6 @@ func runCTPSlices(args []string) error {
 		return err
 	}
 	logf("[sl] 腿1 成交价 p1 = %.4f（由 OpenCost 增量 ÷ 乘数 反解）", p1)
-
-	// ⚠️ 从这里起账上有仓，**任何一条返回路径都要先平干净**。
-	defer func() {
-		if err := flattenLongToday(c, ex, inst, *timeout, logf); err != nil {
-			logf("[sl] ⚠️⚠️ **平不干净，仓留在账上了**：%v", err)
-			logf("      去跑 oracle ctp-flatten。⚠️ 留仓与「实验就是要留仓」" +
-				"在账户上长得一模一样，差别只在有没有人打算这么做")
-		}
-	}()
 
 	// ——— 等第二腿能成交在别的价上 ———
 	//

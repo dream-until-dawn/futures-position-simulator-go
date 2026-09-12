@@ -271,3 +271,66 @@ func sourceOf(fset *token.FileSet, n ast.Node) string {
 	}
 	return string(b[lo:hi])
 }
+
+// TestFlattenDeferRegisteredBeforeAnyOrder 断言**收尾平仓注册在第一笔委托之前**。
+//
+// # ⚠️ 它来自 20260912 评审让我去找「一条能留仓的路径」—— 找到了
+//
+// `openOneLot` / `openOneLotResting` **在成交之后还会失败**：
+// `filledPrice` 查不到持仓就报错。那一刻仓已经在账上，而 `defer` 原先
+// 注册在开腿 1 **之后** ⇒ 直接 `return err`，**腿 1 留仓**，
+// 且命令以错误退出 —— **看起来像「没开成」，实际是「开成了但没平」**。
+//
+//	⚠️ 这两件事对人的要求完全相反：前者重跑就行，后者要先去收拾。
+//
+// ⚠️ `-restfirst` 那条路更宽：先挂单、轮询、成交，中间每一次查询都可能超时。
+//
+// ⇒ 提前注册。`flattenLongToday` 在无仓时是空操作，所以提前不会误平。
+func TestFlattenDeferRegisteredBeforeAnyOrder(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "slice.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fn *ast.FuncDecl
+	for _, d := range f.Decls {
+		if fd, ok := d.(*ast.FuncDecl); ok && fd.Name.Name == "runCTPSlices" {
+			fn = fd
+		}
+	}
+	if fn == nil {
+		t.Fatal("⚠️ 找不到 runCTPSlices —— 改名了，本条守卫失效")
+	}
+	deferPos, orderPos := token.NoPos, token.NoPos
+	ast.Inspect(fn, func(n ast.Node) bool {
+		if ds, ok := n.(*ast.DeferStmt); ok && deferPos == token.NoPos &&
+			containsAll(sourceOf(fset, ds), "flattenLongToday") {
+			deferPos = ds.Pos()
+		}
+		if c, ok := n.(*ast.CallExpr); ok && orderPos == token.NoPos {
+			switch v := c.Fun.(type) {
+			case *ast.SelectorExpr:
+				if v.Sel.Name == "Insert" {
+					orderPos = c.Pos()
+				}
+			case *ast.Ident:
+				if v.Name == "openOneLot" || v.Name == "openOneLotResting" {
+					orderPos = c.Pos()
+				}
+			}
+		}
+		return true
+	})
+	if deferPos == token.NoPos {
+		t.Fatal("⚠️ runCTPSlices 里找不到那条 defer flattenLongToday —— " +
+			"要么它被删了，要么改名了而本条守卫在空转")
+	}
+	if orderPos == token.NoPos {
+		t.Fatal("⚠️ 一笔委托都找不到 —— 本条在空集上跑")
+	}
+	if deferPos > orderPos {
+		t.Fatalf("⚠️⚠️ **收尾平仓注册在第一笔委托之后**（defer %s，下单 %s）—— "+
+			"成交之后才失败的那条路会**留仓**，而它以错误退出，"+
+			"看起来像「没开成」", fset.Position(deferPos), fset.Position(orderPos))
+	}
+}

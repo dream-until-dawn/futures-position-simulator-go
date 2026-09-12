@@ -3885,5 +3885,27 @@
 		"want": "语料尚未拍",
 		"expect": "green",
 		"why": "⚠️ **如预期仍然绿，而它记的是一个此刻无法被验证的性质**：语料文件还没拍（`testdata/refdata/ctp-reject-codes.json` 不存在），于是守卫走的是「核对 §13 的声明」那一支，**根本读不到 source**。⇒ 等 20260915 拍出语料之后，本条才会真的红。**在那之前『只许 probe』这条只由代码保证，不由测试保证** —— 同 403 那一格。"
+	},
+	{
+		"name": "410 收尾平仓的 defer 挪回开腿之后——成交后才失败的那条路会留仓",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\tdefer func() {\n\t\tif err := flattenLongToday(c, ex, inst, *timeout, logf); err != nil {",
+		"new": "\tdeferLater := func() {\n\t\tif err := flattenLongToday(c, ex, inst, *timeout, logf); err != nil {",
+		"pkg": ".",
+		"test": "TestFlattenDeferRegisteredBeforeAnyOrder",
+		"want": "找不到那条 defer flattenLongToday",
+		"expect": "red"
+	},
+	{
+		"name": "411 §13 里那句「按未排除处理」被删掉——而留底仍缺适用范围那一列",
+		"dir": ".",
+		"file": "docs/cn-futures-rules.md",
+		"old": "**在那之前第 19 条的「声明不完整」这半句按未排除处理。**",
+		"new": "**第 19 条已定论。**",
+		"pkg": "./",
+		"test": "TestRateFileColumnDebtIsDeclared",
+		"want": "两头都不说",
+		"expect": "red"
 	}
 ]

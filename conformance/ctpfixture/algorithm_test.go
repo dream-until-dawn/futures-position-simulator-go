@@ -30,15 +30,29 @@ import (
 // **「柜台的声明能不能预测它的行为」**，而不是「我量到的那个数对不对」。
 // 哪天换一个 `Algorithm` 配置的账户，这条会自己跟上；而认不得的取值一律**报错**。
 func excludedUnrealized(algorithm string, positionProfit float64) (float64, error) {
+	// ⚠️⚠️ **四支里只有 "2" 是实测的，另外三支是从枚举名推的。**
+	//
+	// 25 份夹具的 `Algorithm` **全是 "2"**，于是 1/3/4 三支**一次都没被走到过**，
+	// 而它们的语义我是从 `THOST_FTDC_AG_All` / `OnlyGain` / `None` 这几个
+	// **标识符名字**读出来的 —— 不是从行为上量的。
+	//
+	//	⚠️ 而这份代码里，实测的那一支与推得的那三支**写法完全一样** ——
+	//	一个 `case` 加一行 `return`，看不出哪条有证据。
+	//
+	// ⇒ 所以这段注释必须存在：它是这四支之间**唯一**的证据等级标记。
+	// 破坏 403 登记了配套的盲区（认不得的取值回落到 0 ⇒ 如预期仍然绿）。
+	// 要把 1/3/4 升成实测，需要一个 `Algorithm` 配成别的值的账户。
 	switch algorithm {
-	case "1": // THOST_FTDC_AG_All 全部计算
-		return 0, nil
 	case "2": // THOST_FTDC_AG_OnlyLost 只计浮动亏损 ⇒ 浮盈被排除
+		// ✅ **实测**（20260911 夜盘）：正浮盈 +150 时可用恰好少 150；
+		// 而 rb 那份浮亏 −40 的夹具上恒等式分毫不差 ⇒ 两侧都有样本。
 		return math.Max(positionProfit, 0), nil
+	case "1": // THOST_FTDC_AG_All 全部计算
+		return 0, nil // ⚠️ 推得，未实测
 	case "3": // THOST_FTDC_AG_OnlyGain 只计浮动盈利 ⇒ 浮亏被排除
-		return math.Min(positionProfit, 0), nil
+		return math.Min(positionProfit, 0), nil // ⚠️ 推得，未实测
 	case "4": // THOST_FTDC_AG_None 都不计
-		return positionProfit, nil
+		return positionProfit, nil // ⚠️ 推得，未实测
 	}
 	// ⚠️ 认不得的取值**不回落到 0**：那等于悄悄假设「全部计算」，
 	// 而那正是被推翻的那个模型。没有结论就说没有结论。
