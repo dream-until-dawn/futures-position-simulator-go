@@ -1198,6 +1198,66 @@ var (
 //
 // 这条恒等式在下面被断言 —— 它是三个数**互相咬住**的地方，
 // 单独钉住任何一个都挡不住「三个数各自漂开」。
+// TestCountBreaksStillViolateTheirBound 是**守卫的守卫**：
+// 那些「把某个计数偷偷抬高」的破坏，其判别力取决于**当下的计数**，
+// 而计数会随项目进展变大 —— 于是一条破坏可以**被进展静默解除**。
+//
+// ⚠️ 它来自 20260912 送审前跑全量时撞到的一次：破坏 218
+// （「分子被单独抬高：`rules_measured` 不该被算进分母」）把 `rules_measured`
+// 改成 **7**，而判据是「不得超过已收敛数」。那天已收敛从 9 涨到 **12**
+// ⇒ `7 ≤ 12`，**这条破坏当场变成一次空转**，判定报「仍然绿」。
+//
+//	⚠️ 而它失效的原因不是有人改坏了守卫，是**我干的活让阈值长过了它** ——
+//	一条破坏的判别力，可以被**正常的、正确的进展**抹掉，而抹掉是静默的。
+//
+// ⚠️ 这与「守卫在空集上跑」不同形：那一类的判别力从一开始就是零，
+// 这一类**曾经有过**，是后来没了。⇒ 只查「有没有反空转断言」查不出它。
+//
+// 本条的做法：从 `breaks.json` 里找出每一条把 `rules_measured` 改成字面量的破坏，
+// 断言那个字面量**此刻仍然违反上界**。哪天它不再违反，本条就红，而不是那条破坏悄悄空转。
+func TestCountBreaksStillViolateTheirBound(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("tools", "breakcheck", "breaks.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reg []struct {
+		Name   string `json:"name"`
+		New    string `json:"new"`
+		Expect string `json:"expect"`
+	}
+	if err := json.Unmarshal(b, &reg); err != nil {
+		t.Fatal(err)
+	}
+	_, struck := allNumberedTableRows(t, filepath.Join("docs", "cn-futures-rules.md"), "## 13.")
+	re := regexp.MustCompile(`rules_measured` + "`" + `\s*\|\s*\*\*(\d+)\*\*`)
+	checked := 0
+	for _, e := range reg {
+		if e.Expect != "red" {
+			continue
+		}
+		m := re.FindStringSubmatch(e.New)
+		if m == nil {
+			continue
+		}
+		checked++
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			t.Fatalf("⚠️ %s：解析不出 %q", e.Name, m[1])
+		}
+		if n <= len(struck) {
+			t.Errorf("⚠️ 破坏「%s」把 rules_measured 改成 %d，而当下已收敛 %d 条 —— "+
+				"**它不再违反上界，这条破坏已经变成一次空转**。"+
+				"⚠️ 不是守卫坏了，是项目进展让阈值长过了它。⇒ 把那个数改大",
+				e.Name, n, len(struck))
+		}
+	}
+	// ⚠️ 反空转：一条都没匹配到，说明破坏的写法变了而本条在空集上跑。
+	if checked == 0 {
+		t.Fatal("⚠️ breaks.json 里一条「抬高 rules_measured」的破坏都没匹配到 —— " +
+			"要么它被退役了（那要从本条里说明），要么写法变了而本条在空集上跑")
+	}
+}
+
 func TestRulesListedMatchesTable(t *testing.T) {
 	path := filepath.Join("docs", "cn-futures-rules.md")
 	all, struck := allNumberedTableRows(t, path, "## 13.")
