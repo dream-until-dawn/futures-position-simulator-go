@@ -245,3 +245,63 @@ func init() {
 		}
 	}
 }
+
+// tradeFields 是**成交记录**的脱敏白名单。
+//
+// # ⚠️ 它为什么在 20260912 才出现
+//
+// `rules_pending` #13（一次平仓消耗哪一片）栽了两次，而两次的根因是同一个：
+// **持仓记录里没有「按片」的开仓时刻**。`OpenAmount` 是当日累计，
+// 它只贡献那些片的**和** ⇒ 从持仓截面能算出「被消耗的那片值多少」，
+// 却算不出**哪一片先开** ⇒ FIFO 与 LIFO 分不开。
+//
+//	⚠️ 20260912 评审打回的正是这一点：我那次「修好了」的落盘（平仓前后各一份）
+//	只给出集合 `{被消耗的, 存活的} = {p1, p2}`，**次序不在里面**。
+//
+// ⇒ 成交记录直接给出 `Price` + `TradeTime` + `SequenceNo`：
+// **逐笔价与次序由柜台自己说出来**，不用从持仓反解、也不依赖任何运行开关
+// （`-restfirst` 那条路把判别性的事实放回了运行配置里，而那正是栽过的地方）。
+//
+// ⚠️ 成交记录**标识性字段特别多** —— 它带着报单来源的一整条链
+// （`UserID` / `ClientID` / `TraderID` / `ParticipantID` / `BusinessUnit` …）。
+// 白名单逐个决定，漏一个的后果是**夹具缺字段而当场报错**，不是静默泄漏。
+var tradeFields = map[string]decision{
+	"BrokerID":       drop(whyIdent),
+	"InvestorID":     drop(whyIdent),
+	"UserID":         drop(whyIdent),
+	"ClientID":       drop(whyIdent),
+	"ParticipantID":  drop(whyIdent),
+	"TraderID":       drop(whyIdent),
+	"ClearingPartID": drop(whyIdent),
+	"BusinessUnit":   drop(whyIdent),
+	"InvestUnitID":   drop(whyIdent),
+	"reserve1":       drop("CTP 保留字段 —— 不导出、无语义"),
+	"reserve2":       drop("CTP 保留字段 —— 同上"),
+
+	// ⚠️ 委托号与成交号**留着**：它们是柜台内部序号，不指向人，
+	// 而 #13 要的「哪一笔对哪一片」正需要能把成交与委托对起来。
+	"OrderRef":     keep("本地委托引用 —— 会话内序号，不指向人；成交与委托的连接键"),
+	"OrderSysID":   keep("交易所委托号 —— 同上"),
+	"OrderLocalID": keep("柜台本地委托号 —— 同上"),
+	"TradeID":      keep("成交号 —— 交易所给的，用来去重"),
+	"SequenceNo":   keep("⚠️ **次序**：#13 要的就是它，柜台自己给出的先后"),
+	"BrokerOrderSeq": keep("经纪商报单序号 —— 次序的第二个来源，" +
+		"⚠️ 两个序号对不上时那本身是结论"),
+
+	"ExchangeID":     keep("交易所 —— 规则按交易所分岔（UseHistory / 码空间）"),
+	"InstrumentID":   keep("合约"),
+	"ExchangeInstID": keep("交易所合约代码 —— 与 InstrumentID 可能不同（郑商所）"),
+	"Direction":      keep("买卖方向"),
+	"OffsetFlag":     keep("⚠️ **开平标志**：开仓/平今/平昨，#4 与 #13 都要它"),
+	"HedgeFlag":      keep("投机/套保 —— 本账户恒为投机，而恒定值也要留着才看得出它恒定"),
+	"Price":          keep(whyPrice),
+	"Volume":         keep(whyVolume),
+	"TradeDate":      keep("成交日期"),
+	"TradeTime":      keep("⚠️ **成交时刻**：次序的直接证据"),
+	"TradingDay":     keep("交易日 —— ⚠️ 与 TradeDate 不同，夜盘那一段差一天"),
+	"SettlementID":   keep("结算编号"),
+	"TradeType":      keep("成交类型 —— 普通成交 / 组合衍生 等，枚举取值待实测"),
+	"PriceSource":    keep("成交价来源 —— 前成交价/买委托价/卖委托价，枚举取值待实测"),
+	"TradingRole":    keep("交易角色 —— 枚举取值待实测"),
+	"TradeSource":    keep("成交来源 —— 本方/非本方，枚举取值待实测"),
+}

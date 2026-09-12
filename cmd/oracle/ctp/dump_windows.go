@@ -111,3 +111,46 @@ func (c *Client) Capture(timeout time.Duration, note string) (*Fixture, error) {
 
 // 让编译器确认 def 被用到（BrokerParams 的字段类型）。
 var _ = def.CThostFtdcBrokerTradingParamsField{}
+
+// AttachTrades 把**当日成交明细**附进一份截面。
+//
+// # ⚠️ 它与 AttachQuote 同一条纪律：补不上就让整份不落盘
+//
+// 调用方拿到 error 必须**不写盘** —— 一份缺了 `trades` 的截面与一份
+// 本来就不要 trades 的截面**在磁盘上长得一模一样**，而后者正常、前者是事故。
+// 守卫 `TestAttachTradesHasOneCallSite`。
+//
+// ⚠️ `symbol` 用来**筛**，而筛掉的那些**只记数不记内容**：
+// 「今天这个合约成交了 N 笔、账上另有 M 笔别的合约」这件事本身要看得见 ——
+// 一份只剩本合约的 trades，与一个只在本合约上交易过的账户，在夹具里同形。
+func (c *Client) AttachTrades(f *Fixture, symbol string, timeout time.Duration) error {
+	all, err := c.Trades(timeout)
+	if err != nil {
+		return fmt.Errorf("查成交明细：%w", err)
+	}
+	_, want := SplitSymbol(symbol)
+	other := 0
+	for _, t := range all {
+		if want != "" && text(t.InstrumentID[:]) != want {
+			other++
+			continue
+		}
+		m, dropped, err := sanitizeStruct(*t, tradeFields)
+		if err != nil {
+			return fmt.Errorf("脱敏成交明细：%w", err)
+		}
+		f.Trades = append(f.Trades, m)
+		f.Dropped = append(f.Dropped, dropped...)
+	}
+	if len(f.Trades) == 0 {
+		// ⚠️ 一笔都没筛出来时**报错**，不是默默附一个空数组：
+		// 本函数只在「要按片次序」的实验里被调用，而那种实验
+		// 一定已经成交过 —— 空数组意味着查询或筛选出了问题。
+		return fmt.Errorf("⚠️ %s 上一笔成交都没筛出来（当日共 %d 笔，别的合约 %d 笔）—— "+
+			"要按片次序的实验不该看到这个，多半是查询或筛选出了问题",
+			symbol, len(all), other)
+	}
+	c.logf("[ctp] 成交明细 %s %d 笔（当日共 %d 笔，别的合约 %d 笔）",
+		symbol, len(f.Trades), len(all), other)
+	return nil
+}

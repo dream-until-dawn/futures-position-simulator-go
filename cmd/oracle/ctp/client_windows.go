@@ -77,6 +77,10 @@ type Client struct {
 	// comm 是手续费率查询的应答。⚠️ 深度 1 且**只收一条** ——
 	// 这个查询按合约问、按合约答，不像持仓那样一问多条。
 	comm chan *def.CThostFtdcInstrumentCommissionRateField
+	// trd 是成交查询的应答累积。⚠️ 深度靠 isLast 收尾，与持仓同形。
+	trdMu   sync.Mutex
+	trd     []*def.CThostFtdcTradeField
+	trdDone chan struct{}
 }
 
 // New 建一个尚未连接的客户端。
@@ -92,6 +96,7 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 		ordDone:  make(chan struct{}, 1),
 		md:       make(chan *def.CThostFtdcDepthMarketDataField, 1),
 		comm:     make(chan *def.CThostFtdcInstrumentCommissionRateField, 1),
+		trdDone:  make(chan struct{}, 1),
 		pos:      map[string]*def.CThostFtdcInvestorPositionField{}}
 }
 

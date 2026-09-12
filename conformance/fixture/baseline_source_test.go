@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
@@ -279,7 +280,34 @@ func TestCloseReducesCostAtAverage(t *testing.T) {
 		snaps = append(snaps, snap{f.Path, v, pp, pc})
 	}
 	if len(snaps) == 0 {
-		t.Skip("还没有「多头平过仓且仍有持仓」的截面 —— 本条待样本")
+		// ⚠️⚠️ **这里原来是 `t.Skip`，20260912 评审提出来的。**
+		//
+		// 它与同一批刚改成双向断言的那个情形（INE 拒单语料「待拍」）**同形** ——
+		// 都是「等样本」，而同一批里给了两种处置。
+		//
+		//	⚠️ 而 skip 的问题不是不一致，是**它看不见**：
+		//	`go test ./...` 对有 skip 的包照样打 `ok`
+		//	（评审 20260909 因此把一次「17 个包全绿」报少了一条没跑的测试）。
+		//
+		// ⇒ 改成与那边同一条处置：**没样本时，要求清单里写着它在等**。
+		// 于是「这条在等样本」有一处可见的对应物，而不是一条沉默的绿。
+		//
+		// ⚠️ 而它等的样本**恰好是 `rules_pending` #13 要的形状**
+		//（多头平过仓且仍有持仓），且它断言的是
+		// `position_cost = position_price × 手数 × 乘数` —— **均价形状**，
+		// 而这是**快期**那一侧。⇒ 样本到了之后它可能与 CTP 侧的结论相关，
+		// **甚至相反**：一边按均价冲减、一边逐片，两个柜台各自成立是完全可能的。
+		// ⚠️ 那时要改的是**本库能不能只有一种实现**，不是把两个观测凑成一个。
+		if !declaresPendingSample(t) {
+			t.Fatalf("⚠️ 没有「多头平过仓且仍有持仓」的截面，"+
+				"**而 state.md 的清单里也没写它在等** —— 两头都不说，"+
+				"这条待办就没有任何可见的对应物了。⇒ 在 `simnow_pending` 里写上 %q",
+				pendingSampleMarker)
+		}
+		t.Logf("ⓘ 无样本（本条此刻只在核对清单里那句声明，**没有在守那条恒等式**）；" +
+			"⚠️ 它等的样本正是 #13 要的形状，而本条断言的是**均价**形状、" +
+			"且在**快期**那一侧 —— 到时要防的是把两个柜台的观测凑成一个")
+		return
 	}
 
 	mult := decimal.NewFromInt(10) // SHFE.rb 的乘数
@@ -324,4 +352,24 @@ func TestCloseReducesCostAtAverage(t *testing.T) {
 	t.Logf("平仓前 %s：%s 手 @ %s；平仓后 %s：%s 手 @ %s —— 均价不变，"+
 		"成本按均价冲减", before.path, before.vol, before.price,
 		snaps[0].path, snaps[0].vol, snaps[0].price)
+}
+
+// pendingSampleMarker 是 `state.md` 里那句声明的锚。
+//
+// ⚠️ 用**一句话**当锚而不是一个小节标题：标题会被重排，
+// 而这句话的**措辞本身**就是那条待办的内容。
+const pendingSampleMarker = "多头平过仓且仍有持仓"
+
+// declaresPendingSample 报告清单里有没有写着「这条在等样本」。
+//
+// ⚠️ 它读的是 `docs/state.md` —— 与 `TestRejectCorpusIsProbeWrittenOnly`
+// 读 `cn-futures-rules.md` 同一条路子：**一个「在等」的状态，
+// 必须在某一份人会读的清单里有对应物**，否则它只活在一条 skip 里。
+func declaresPendingSample(t *testing.T) bool {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "..", "docs", "state.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Contains(string(b), pendingSampleMarker)
 }

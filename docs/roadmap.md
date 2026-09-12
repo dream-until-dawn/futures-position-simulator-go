@@ -525,7 +525,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
     类型   Client / Credentials / Fixture / OrderReq / OrderState
     字段   Client.Valve
            Credentials.Front / BrokerID / UserID / Password / AppID / AuthCode
-           Fixture.Source / TradingDay / CapturedAt / Note / BrokerParams /
+           Fixture.Source / TradingDay / CapturedAt / Note / BrokerParams / **Trades**（20260912 新增） /
                    Account / Positions / Quotes / Dropped
            OrderReq.Exchange / Instrument / Direction / Offset / Volume / LimitPrice
            OrderState.OrderRef / Status / StatusMsg / VolumeTraded / VolumeTotal / ErrorID
@@ -543,6 +543,13 @@ D+1 日 baseline-full / close-order / yd-vs-his
            **天然同值** ⇒ 要换一个更细的费率，而找它得先看得见费率。
            ⚠️ **它不是第二个独立来源**：声明与行为同一个柜台，
            对得上只涨可读性，**对不上才是新东西**）/
+           **Trades**（20260912 新增：查当日成交明细。⚠️ 它补的是 #13 **两次都栈**的那个洞：
+           持仓记录里没有按片的开仓时刻，`OpenAmount` 是当日累计、
+           只贡献那些片的**和** ⇒ 从持仓截面**算不出哪一片先开**，
+           FIFO 与 LIFO 分不开。而成交明细的 `Price` + `TradeTime` + `SequenceNo`
+           由柜台直接给出次序，不依赖任何运行开关）/
+           **AttachTrades**（20260912 新增：把成交明细附进截面。
+           ⚠️ 与 AttachQuote 同一条纪律：**补不上就让整份不落盘**）/
            MarketData / Capture / AttachQuote / Check / Insert / Cancel / Order / Close；
            Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
 

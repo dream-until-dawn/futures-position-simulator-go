@@ -185,6 +185,50 @@ func (c *Client) CommissionRate(symbol string, timeout time.Duration) (
 	}
 }
 
+// Trades 查**当日成交明细**。
+//
+// # ⚠️ 它补的是 #13 两次都栽在的那个洞
+//
+// 持仓记录里**没有按片的开仓时刻**：`OpenAmount` 是当日累计，
+// 它只贡献那些片的**和** ⇒ 从持仓截面能算出「被消耗的那片值多少」，
+// 却算不出**哪一片先开** ⇒ FIFO 与 LIFO 分不开。
+//
+//	⚠️ 20260912 评审打回的正是这一点：那次「修好了」的落盘（平仓前后各一份）
+//	只给出集合 `{被消耗的, 存活的} = {p1, p2}`，**次序不在里面**。
+//
+// ⇒ 成交明细直接给出 `Price` + `TradeTime` + `SequenceNo`：
+// **逐笔价与次序由柜台自己说出来**，不用从持仓反解，
+// 也不依赖任何运行开关 —— `-restfirst` 那条路把判别性的事实放回了运行配置里，
+// 而那正是 #13 栽过的地方。
+//
+// ⚠️ 返回**全部**当日成交，不按合约过滤：过滤要用 `InstrumentID`，
+// 而漏掉同品种别月份的成交会让「这一片是哪来的」少一条线索。调用方自己筛。
+func (c *Client) Trades(timeout time.Duration) ([]*def.CThostFtdcTradeField, error) {
+	c.q.wait()
+	defer c.q.done()
+	c.trdMu.Lock()
+	c.trd = nil
+	c.trdMu.Unlock()
+
+	f := def.CThostFtdcQryTradeField{}
+	copy(f.BrokerID[:], c.cred.BrokerID)
+	copy(f.InvestorID[:], c.cred.UserID)
+	c.req("ReqQryTrade", unsafe.Pointer(&f))
+	select {
+	case <-c.trdDone:
+		c.trdMu.Lock()
+		defer c.trdMu.Unlock()
+		out := make([]*def.CThostFtdcTradeField, len(c.trd))
+		copy(out, c.trd)
+		return out, nil
+	case <-time.After(timeout):
+		// ⚠️ 与查持仓同一条纪律：超时是**没有结论**，不是「今天没有成交」。
+		// 空成交时柜台回一条**空的** isLast，两者在数据上分得开。
+		return nil, fmt.Errorf("%v 内没有等到成交查询的最后一条 —— "+
+			"⚠️ **没有结论**，不是「今天没成交」", timeout)
+	}
+}
+
 func (c *Client) registerQueryCallbacks() {
 	c.on("SetOnRspQryInstrumentCommissionRate", func(r *def.CThostFtdcInstrumentCommissionRateField,
 		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
@@ -199,6 +243,25 @@ func (c *Client) registerQueryCallbacks() {
 		}
 		cp := *r
 		c.comm <- &cp
+		return 0
+	})
+	c.on("SetOnRspQryTrade", func(t *def.CThostFtdcTradeField,
+		info *def.CThostFtdcRspInfoField, _ int, isLast bool) uintptr {
+		if err := errOf(info); err != nil {
+			c.logf("[ctp] ⚠️ 查成交失败 %v", err)
+		}
+		if t != nil && text(t.TradeID[:]) != "" {
+			ct := *t
+			c.trdMu.Lock()
+			c.trd = append(c.trd, &ct)
+			c.trdMu.Unlock()
+		}
+		if isLast {
+			select {
+			case c.trdDone <- struct{}{}:
+			default:
+			}
+		}
 		return 0
 	})
 	c.on("SetOnRspQryTradingAccount", func(a *def.CThostFtdcTradingAccountField,

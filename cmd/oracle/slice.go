@@ -148,6 +148,31 @@ func runCTPSlices(args []string) error {
 	}
 	logf("[sl] 腿1 成交价 p1 = %.4f（由 OpenCost 增量 ÷ 乘数 反解）", p1)
 
+	// ⚠️⚠️ **腿 1 成交之后、腿 2 之前落一份 —— 20260912 评审第二次打回补的。**
+	//
+	// 上一版在判别性平仓的前后各落一份，我以为够了。**不够**：
+	// 那两份给出的是
+	//
+	//	(p1+p2) ← 前一份的 OpenCost      s ← 后一份的 OpenCost      c = (p1+p2) − s
+	//
+	// ⇒ 逐片 vs 均价**够了**，而 FIFO ⟺ `c = p1`，
+	// 两份只给出**集合** `{c, s} = {p1, p2}` —— **次序不在里面**。
+	//
+	//	⚠️ 而我差点靠 `-restfirst` 补这一半（它保证 p2 > p1，于是次序能从价推出来）。
+	//	那不成立：它是**默认 false 的开关**，而 20260911 那一轮实际是 p1 > p2、
+	//	方向恰好相反，两份夹具的 note 里也没记开关取值。
+	//	**那等于把判别性的事实放回运行配置里，而那正是 #13 栽过的地方。**
+	//
+	// ⇒ 这一份里 `Position=1`、`OpenCost = p1 × 乘数` ⇒ **先开的那片由夹具自己说出来**。
+	// ⚠️ 而它仍然只是第二条腿带 —— 真正的证据是 `trades`
+	// （逐笔价 + 时刻 + SequenceNo），两条都留着才互相核得动。
+	if *dump != "" {
+		if err := dumpSlices(c, env, *dump, *timeout, *symbol,
+			"ctp-slices：腿1 已成交、腿2 尚未开（**先开的那一片由本份定死**）", logf); err != nil {
+			return err
+		}
+	}
+
 	// ——— 等第二腿能成交在别的价上 ———
 	//
 	// ⚠️ **等的判据是卖一价，不是最新价。**第一版等的是
@@ -341,6 +366,14 @@ func dumpSlices(c *ctp.Client, env probe.Env, dir string, timeout time.Duration,
 	fx, err := captureWithQuote(c, timeout, note, symbol)
 	if err != nil {
 		return err
+	}
+	// ⚠️ **成交明细是这一批的判别力所在**，不是附赠：
+	// 持仓截面给不出「哪一片先开」（`OpenAmount` 是当日累计，只贡献那些片的和），
+	// 而成交明细的 `Price` + `TradeTime` + `SequenceNo` 由柜台直接给出次序。
+	// ⇒ 补不上就**整份不落盘**，同 AttachQuote 那一条。
+	if err := c.AttachTrades(fx, symbol, timeout); err != nil {
+		return fmt.Errorf("⚠️ 成交明细没补上，**整份截面不落盘**："+
+			"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w", err)
 	}
 	secrets := map[string]string{
 		"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,

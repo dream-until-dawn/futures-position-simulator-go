@@ -193,26 +193,34 @@ func TestSideWantedRefusesUnknownAndActuallySeparates(t *testing.T) {
 	}
 }
 
-// TestDiscriminatingCloseIsBracketedByTwoDumps 钉住**判别性平仓被两份落盘夹住**。
+// TestSliceDumpsPinDownBothOrderAndConsumption 钉住**三份落盘**各自定死的那一半。
 //
-// # ⚠️ 它来自 20260912 评审把 #13 整条打回
+// # ⚠️ 它改过一次名，而改名的理由就是这条守卫自己漏掉的那一半
 //
-// 20260911 夜盘那一轮**只落了「平仓之前」这一份**，平完那一份只进了 console。
-// 于是 §13 #13 的六个数里有三个**在整个工作树里一处都不存在**，
-// 评审把 23 份快照逐对做差，`ΔCloseProfit ∈ {+15, −20}` **命中 0 处**。
+// 原名 `TestDiscriminatingCloseIsBracketedByTwoDumps`，只钉「两份夹住那次平仓」。
+// 20260912 评审**第二次打回**，理由是：那两份给出的是
 //
-// ⚠️ 而理由比「少一份夹具」深一层：`OpenVolume` / `OpenAmount` /
-// `CloseAmount` / `CloseProfit` 都是**当日累计**。
+//	(p1+p2) ← 前一份的 OpenCost      s ← 后一份的 OpenCost      c = (p1+p2) − s
 //
-//	⇒ **一份截面推不出「某次平仓发生时账上有哪几片」** ——
-//	它算出来的「均价」分母里，可能混着那次平仓**之后**才开的片。
+// ⇒ 逐片 vs 均价**够了**；而 FIFO ⟺ `c = p1`，
+// 两份只给出**集合** `{c, s} = {p1, p2}` —— **次序不在里面**。
 //
-// ⚠️ 那一轮两份夹具里被消耗的那一片，在平仓当时**都是账上唯一的一片**，
-// 而一片的时候逐片与均价**必然同值** ⇒ **两份夹具的判别力都是零**，
-// 而它们看起来像证据：数字自洽、算式对得上。
+//	⚠️ **「夹住那一次平仓」是必要条件，不是充分条件。**
+//	而原来那个名字听起来像充分 —— 名字替断言把话说满了。
 //
-// ⇒ 判别力只能来自**两份夹具之间恰好夹着一次平仓**。本条钉住这个顺序。
-func TestDiscriminatingCloseIsBracketedByTwoDumps(t *testing.T) {
+// ⚠️ 而「靠 `-restfirst` 保证 p2 > p1、于是次序能从价推出来」不成立：
+// 它是**默认 false 的开关**，20260911 那一轮实际是 p1 > p2、方向恰好相反。
+// **那等于把判别性的事实放回运行配置里，而那正是 #13 栽过的地方。**
+//
+// ⇒ 三份，各定死一半：
+//
+//	① 腿1 成交后、腿2 之前   Position=1、OpenCost = p1×乘数 ⇒ **谁先开**
+//	② 判别性平仓之前         OpenCost = (p1+p2)×乘数
+//	③ 判别性平仓之后         ⇒ ②③ 之差给出**消耗了哪一片**
+//
+// ⚠️ 而三份都带 `trades`（逐笔价 + 时刻 + SequenceNo）—— 那是次序的**直接**证据，
+// 与 ① 的反解互相核得动。两条都留着才有交叉。
+func TestSliceDumpsPinDownBothOrderAndConsumption(t *testing.T) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "slice.go", nil, 0)
 	if err != nil {
@@ -227,35 +235,102 @@ func TestDiscriminatingCloseIsBracketedByTwoDumps(t *testing.T) {
 	if fn == nil {
 		t.Fatal("⚠️ 找不到 runCTPSlices —— 改名了，本条守卫失效")
 	}
-	var dumps []token.Pos
+	var dumps, opens []token.Pos
 	var closePos token.Pos
 	ast.Inspect(fn, func(n ast.Node) bool {
 		c, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
 		}
-		if id, ok := c.Fun.(*ast.Ident); ok && id.Name == "dumpSlices" {
-			dumps = append(dumps, c.Pos())
-		}
-		// 判别性平仓：带 OF_CloseToday 的那一笔 Insert。
-		if sel, ok := c.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Insert" {
-			if containsAll(sourceOf(fset, c), "OF_CloseToday") && closePos == token.NoPos {
+		switch v := c.Fun.(type) {
+		case *ast.Ident:
+			switch v.Name {
+			case "dumpSlices":
+				dumps = append(dumps, c.Pos())
+			case "openOneLot", "openOneLotResting":
+				opens = append(opens, c.Pos())
+			}
+		case *ast.SelectorExpr:
+			if v.Sel.Name == "Insert" && closePos == token.NoPos &&
+				containsAll(sourceOf(fset, c), "OF_CloseToday") {
 				closePos = c.Pos()
 			}
 		}
 		return true
 	})
-	if len(dumps) != 2 {
-		t.Fatalf("⚠️ runCTPSlices 里 dumpSlices 被调用 %d 次（要恰好 2 次：平仓前与平仓后）—— "+
-			"**只落一份的那一轮，整条结论被评审打回**", len(dumps))
+	if len(dumps) != 3 {
+		t.Fatalf("⚠️ dumpSlices 被调用 %d 次（要恰好 3 次）—— "+
+			"少了「腿1 之后、腿2 之前」那一份，**次序就只能从运行开关推**，"+
+			"而 #13 正是栽在那上面", len(dumps))
+	}
+	// 腿 1 的两个分支 + 腿 2，恰好三处开仓调用。
+	if len(opens) != 3 {
+		t.Fatalf("⚠️ 开仓调用 %d 处（要恰好 3 处：腿1 的两个分支 + 腿2）—— "+
+			"形状变了，下面按位置分腿的判据就不成立了", len(opens))
+	}
+	leg1End, leg2 := opens[1], opens[2]
+	if opens[0] > leg1End {
+		leg1End = opens[0]
 	}
 	if closePos == token.NoPos {
 		t.Fatal("⚠️ 找不到那笔平今委托 —— 本条在空集上跑")
 	}
-	if !(dumps[0] < closePos && closePos < dumps[1]) {
-		t.Fatalf("⚠️ **两份落盘没有夹住那次平仓**（前 %v，平仓 %v，后 %v）—— "+
-			"夹不住就只有当日累计值，而当日累计对任何撮合顺序都相等",
-			fset.Position(dumps[0]), fset.Position(closePos), fset.Position(dumps[1]))
+	pos := func(p token.Pos) string { return fset.Position(p).String() }
+	if !(dumps[0] > leg1End && dumps[0] < leg2) {
+		t.Errorf("⚠️ 第一份落盘没有落在**腿1 之后、腿2 之前**（落盘 %s，腿1 %s，腿2 %s）—— "+
+			"它是「谁先开」的唯一夹具来源", pos(dumps[0]), pos(leg1End), pos(leg2))
+	}
+	if !(dumps[1] > leg2 && dumps[1] < closePos) {
+		t.Errorf("⚠️ 第二份落盘没有落在**腿2 之后、平仓之前**（%s）", pos(dumps[1]))
+	}
+	if !(dumps[2] > closePos) {
+		t.Errorf("⚠️ 第三份落盘没有落在**平仓之后**（%s）—— "+
+			"夹不住那次平仓就只剩当日累计，而累计对撮合顺序恒等", pos(dumps[2]))
+	}
+}
+
+// TestAttachTradesHasOneCallSite 与 `TestAttachQuoteHasOneCallSite` 同理：
+// 「补不上成交明细就整份不落盘」这条不变式只能有一个实现。
+//
+// ⚠️ 而它比行情那条更要紧：成交明细是这一批**判别力的来源** ——
+// 没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO。
+// 一条绕开它的落盘路径会产出**看起来齐全、而少了次序证据**的夹具。
+func TestAttachTradesHasOneCallSite(t *testing.T) {
+	fset := token.NewFileSet()
+	n, inDump := 0, 0
+	files := goFilesHere(t)
+	for _, name := range files {
+		f, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ast.Inspect(f, func(x ast.Node) bool {
+			if c, ok := x.(*ast.CallExpr); ok && selName(c.Fun) == "AttachTrades" {
+				n++
+			}
+			return true
+		})
+		if fd := findFunc(f, "dumpSlices"); fd != nil {
+			ast.Inspect(fd, func(x ast.Node) bool {
+				if c, ok := x.(*ast.CallExpr); ok && selName(c.Fun) == "AttachTrades" {
+					inDump++
+				}
+				return true
+			})
+		}
+	}
+	if len(files) < 2 {
+		t.Fatalf("⚠️ 只扫到 %d 个源文件 —— 本条在空转", len(files))
+	}
+	if n != 1 {
+		t.Errorf("⚠️ `AttachTrades` 在本包被调用 %d 次（要恰好 1 次）—— "+
+			"第二条路径会绕开「补不上就整份不落盘」", n)
+	}
+	// ⚠️ 光数「一次」不够：挪出 dumpSlices 之后计数照样是 1，
+	// 而三份落盘里就会有几份不带成交明细。
+	if inDump != 1 {
+		t.Errorf("⚠️ `AttachTrades` 在 dumpSlices 里出现 %d 次（要 1 次）—— "+
+			"它被挪出去了，于是不是每一份落盘都带成交明细", inDump)
 	}
 }
 

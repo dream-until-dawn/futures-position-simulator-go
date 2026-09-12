@@ -3847,7 +3847,7 @@
 		"old": "\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol,\n\t\t\t\"ctp-slices：已平一手、尚余一片（判别性平仓之**后**）\", logf); err != nil {\n\t\t\treturn err\n\t\t}",
 		"new": "\t\t_ = dumpSlices",
 		"pkg": ".",
-		"test": "TestDiscriminatingCloseIsBracketedByTwoDumps",
+		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
 		"want": "要恰好 2 次",
 		"expect": "red"
 	},
@@ -3858,7 +3858,7 @@
 		"old": "\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol,\n\t\t\t\"ctp-slices：已平一手、尚余一片（判别性平仓之**后**）\", logf); err != nil {\n\t\t\treturn err\n\t\t}\n\t}\n\toc3, ca3, cp3",
 		"new": "\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol,\n\t\t\t\"x\", logf); err != nil {\n\t\t\treturn err\n\t\t}\n\t}\n\t_ = 0\n\toc3, ca3, cp3",
 		"pkg": ".",
-		"test": "TestDiscriminatingCloseIsBracketedByTwoDumps",
+		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
 		"want": "两份落盘没有夹住那次平仓",
 		"expect": "green",
 		"why": "⚠️ **这一条如预期仍然绿，它登记的是本守卫的半格盲区**：守卫按 AST 位置判先后，而这一改只换了注记文本、没挪位置 ⇒ 位置仍然夹得住。⇒ 真要让它红得把那两个调用挪到平仓语句同一侧，而那是个多行块搬迁，不是 breakcheck 的单点替换能表达的。**在那之前「夹住」只由位置保证，而『位置对了』与『真的夹住了那一次平仓』是两件事**（后者还要求中间恰好只有一次平仓）。"
@@ -3906,6 +3906,40 @@
 		"pkg": "./",
 		"test": "TestRateFileColumnDebtIsDeclared",
 		"want": "两头都不说",
+		"expect": "red"
+	},
+	{
+		"name": "412 腿1 与腿2 之间那一份落盘被拿掉——次序就只能从运行开关推，而 #13 正栽在那",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol,\n\t\t\t\"ctp-slices：腿1 已成交、腿2 尚未开（**先开的那一片由本份定死**）\", logf); err != nil {\n\t\t\treturn err\n\t\t}",
+		"new": "\t\t_ = *dump",
+		"pkg": ".",
+		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
+		"want": "要恰好 3 次",
+		"expect": "red"
+	},
+	{
+		"name": "413 成交明细补不上时只记日志——夹具看起来齐全而少了次序证据",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+",
+		"new": "\tif err := c.AttachTrades(fx, symbol, timeout); err == nil && false {\n\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+",
+		"pkg": "./ctp/",
+		"test": "TestPlatformParityCoversFieldsToo",
+		"want": "Windows",
+		"expect": "green",
+		"why": "⚠️ **如预期仍然绿，而它登记的是一处真盲区**：「补不上成交明细就整份不落盘」这条**没有**离线守卫 —— `TestAttachTradesHasOneCallSite` 只数调用点在不在 `dumpSlices` 里，**不查那个 error 有没有被 return**。⇒ 要治它得照 `captureWithQuote` 那条的样子写一条按 AST 查 return 的守卫，而这一批没写。**登记在此，别以为它有守卫。**"
+	},
+	{
+		"name": "414 成交明细的白名单漏掉 UserID——报单来源的标识性字段会进夹具",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/whitelist.go",
+		"old": "\t\"UserID\":         drop(whyIdent),\n\t\"ClientID\":       drop(whyIdent),",
+		"new": "\t\"ClientID\":       drop(whyIdent),",
+		"pkg": "./ctp/",
+		"test": "TestFieldDecisionsAreComplete",
+		"want": "没有决定",
 		"expect": "red"
 	}
 ]
