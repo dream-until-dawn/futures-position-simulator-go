@@ -464,6 +464,25 @@ func parseSemver(s string) ([3]int, bool) {
 		return out, false
 	}
 	for i, p := range parts {
+		// ⚠️ **`strconv.Atoi` 比「严格」宽**，20260912 评审实测出来的：
+		//
+		//	v01.02.03  => ok=true   （前导零）
+		//	v+1.0.0    => ok=true   （前导 +）
+		//	v1.0.+0    => ok=true   （后面那段也一样）
+		//
+		// 而「要严格 `vX.Y.Z`」这句话出现在**报给人看的错误信息里**，不只是注释。
+		//
+		//	⚠️ 方法论 92 的处置（「读到不符信代码」）在这里**不适用** ——
+		//	那句话不是复述，它**就是判据本身**，而读它的人没有代码可回去看。
+		//
+		// ⇒ 收紧解析，让「严格」这个词与行为对齐（而不是把那句话改弱）。
+		// ⚠️ 「不猜预发布次序」那个决定**不动** —— 那是另一件事，评审两次都赞成。
+		if p == "" || !isASCIIDigits(p) {
+			return out, false
+		}
+		if len(p) > 1 && p[0] == '0' {
+			return out, false // 前导零
+		}
 		n, err := strconv.Atoi(p)
 		if err != nil || n < 0 {
 			return out, false
@@ -471,6 +490,22 @@ func parseSemver(s string) ([3]int, bool) {
 		out[i] = n
 	}
 	return out, true
+}
+
+// isASCIIDigits 报告 s 是不是**只**由 ASCII 数字组成（且非空）。
+//
+// ⚠️ 它的存在是因为 `strconv.Atoi` 接受前导 `+` / `-`，
+// 而「严格 `vX.Y.Z`」这句话在错误信息里 —— 说了就要做到。
+func isASCIIDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // mainBranchRow 取「分支与发布约定」那张表里 `main` 那一行。
@@ -510,30 +545,44 @@ func TestCheckTagsAgainstVersion(t *testing.T) {
 		tags    []string
 		version string
 		want    []string // 期望的 Kind，按顺序
-		// tagInMsg 断言那条信息里点的是**谁**。空串表示不查。
-		tagInMsg string
+		// msgHas 按条断言**那一条信息里点的是谁**。
+		//
+		// ⚠️ 20260912 评审 nit：上一版是单个串、只查 `got[0].Msg`，
+		// 于是「多个 tag 各报各的」那一格**第二条指错了谁也看不见**。
+		// ⇒ 改成逐条给，长度必须与 want 一致（下面有断言，写漏了就 Fatal）。
+		msgHas []string
 	}{
-		{"早于 ⇒ 无话", []string{"v0.3.0"}, "v0.4.0", nil, ""},
-		{"空 tag 列表 ⇒ 无话", nil, "v0.4.0", nil, ""},
+		{"早于 ⇒ 无话", []string{"v0.3.0"}, "v0.4.0", nil, nil},
+		{"空 tag 列表 ⇒ 无话", nil, "v0.4.0", nil, nil},
 		{"等于在开发中的版本", []string{"v0.4.0"}, "v0.4.0",
-			[]string{kindNotEarlier}, "v0.4.0"},
+			[]string{kindNotEarlier}, []string{"v0.4.0"}},
 		// ⚠️ 这一格正是破坏 418 要翻的：`==` 放它过去，`>=` 才拦得住。
 		{"晚于在开发中的版本", []string{"v0.5.0"}, "v0.4.0",
-			[]string{kindNotEarlier}, "v0.5.0"},
+			[]string{kindNotEarlier}, []string{"v0.5.0"}},
 		// ⚠️ 这一格是破坏 419 要翻的。
 		{"tag 形状认不得", []string{"0.4.0"}, "v0.4.0",
-			[]string{kindTagUnparseable}, "0.4.0"},
+			[]string{kindTagUnparseable}, []string{"0.4.0"}},
 		{"tag 段数不对", []string{"v0.4"}, "v0.4.0",
-			[]string{kindTagUnparseable}, "v0.4"},
+			[]string{kindTagUnparseable}, []string{"v0.4"}},
+		// ⚠️ 以下三格是 20260912 评审**实测**出的「`strconv.Atoi` 比『严格』宽」那一批。
+		// 它们此前**全都会被放过** —— 而「要严格 `vX.Y.Z`」那句话就印在错误信息里。
+		{"前导零", []string{"v01.02.03"}, "v0.4.0",
+			[]string{kindTagUnparseable}, []string{"v01.02.03"}},
+		{"前导 +", []string{"v+1.0.0"}, "v0.4.0",
+			[]string{kindTagUnparseable}, []string{"v+1.0.0"}},
+		// ⚠️ 这一格是我自验时比评审又多找出的一个：**后面那段的前导 `+`**。
+		{"后面那段的前导 +", []string{"v1.0.+0"}, "v0.4.0",
+			[]string{kindTagUnparseable}, []string{"v1.0.+0"}},
 		// ⚠️⚠️ **这一格是评审实测出来的那个必修**：Version 认不得时，
 		// 原实现对着每一个**完好**的 tag 报「认不得的 tag 形状」，
 		// 而没有一条提到 Version。触发条件不是假想的 ——
 		// 使用者那次裁决的选项②就是 `v0.4.0-rc.1`。
 		{"⚠️ Version 自己认不得 ⇒ 只报 Version，且点的是 Version",
 			[]string{"v0.3.0", "v0.2.0"}, "v0.4.0-rc.1",
-			[]string{kindVersionUnparseable}, "v0.4.0-rc.1"},
+			[]string{kindVersionUnparseable}, []string{"v0.4.0-rc.1"}},
+		// ⚠️ 这一格上一版的期望串是**空的** ⇒ 第二条指错了谁也看不见（评审 nit）。
 		{"多个 tag 各报各的", []string{"v0.3.0", "v0.9.0", "x"}, "v0.4.0",
-			[]string{kindNotEarlier, kindTagUnparseable}, ""},
+			[]string{kindNotEarlier, kindTagUnparseable}, []string{"v0.9.0", "x"}},
 	}
 	seen := map[string]bool{}
 	for _, c := range cases {
@@ -553,12 +602,21 @@ func TestCheckTagsAgainstVersion(t *testing.T) {
 				t.Errorf("%s：第 %d 条是 %s，要 %s", c.name, i, kinds[i], c.want[i])
 			}
 		}
-		// ⚠️ **信息里点的是谁**，这一条才是那个必修的核心：
+		// ⚠️ **每一条信息里点的是谁** —— 这才是那个必修的核心：
 		// 判定对了而指错了地方，转述出去之后与指对了分不开。
-		if c.tagInMsg != "" && len(got) > 0 &&
-			!strings.Contains(got[0].Msg, c.tagInMsg) {
-			t.Errorf("%s：信息里没有点到 %q —— 判定对了而**指错了地方**：\n    %s",
-				c.name, c.tagInMsg, got[0].Msg)
+		//
+		// ⚠️ 用例自己写漏了也要喊：期望串少一条，就有一条信息没人查，
+		// **而「没查」与「查过了」在全绿时长得一模一样**。
+		if len(c.msgHas) != len(c.want) {
+			t.Fatalf("%s：**用例自己写坏了** —— msgHas %d 条、want %d 条。"+
+				"期望串必须逐条给，否则漏查的那几条谁也看不见",
+				c.name, len(c.msgHas), len(c.want))
+		}
+		for i, want := range c.msgHas {
+			if !strings.Contains(got[i].Msg, want) {
+				t.Errorf("%s：第 %d 条信息里没有点到 %q —— 判定对了而**指错了地方**：\n    %s",
+					c.name, i, want, got[i].Msg)
+			}
 		}
 	}
 	// ⚠️ 反空转：三种 Kind **每一种都要被上面这张表走到**。
