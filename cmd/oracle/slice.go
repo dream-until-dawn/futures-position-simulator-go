@@ -243,19 +243,24 @@ func runCTPSlices(args []string) error {
 	logf("      ⚠️ p1 ≠ p2（差 %.4f）⇒ 三者两两不等 ⇒ **这个样本分得开**", math.Abs(p2-p1))
 	logf("")
 
+	// ⚠️⚠️ **判别性平仓的前后两份截面必须都落盘，否则这次实验白跑。**
+	//
+	// 20260911 夜盘那一轮**只落了「平仓之前」这一份**，平完那一份只进了 console。
+	// 20260912 评审据此把 #13 整条打回，而他说得对 —— 理由比「少一份夹具」深：
+	//
+	//	`OpenVolume` / `OpenAmount` / `CloseAmount` / `CloseProfit` 都是**当日累计**。
+	//	⇒ 一份截面**推不出**「某次平仓发生时账上有哪几片」：
+	//	  它算出来的「均价」分母里，可能混着那次平仓**之后**才开的片。
+	//
+	// ⚠️ 那一轮的两份夹具里，被消耗的那一片在平仓当时**都是账上唯一的一片** ——
+	// 而一片的时候逐片与均价**必然同值**。⇒ 两份夹具的判别力都是零，
+	// 而它们看起来像证据（数字自洽、算式对得上）。
+	//
+	// ⇒ 判别力只能来自**两份夹具之间恰好夹着一次平仓**：那时 Δ 是真的增量，
+	// 与当日累计无关，也与「后来又开了几片」无关。
 	if *dump != "" {
-		// ⚠️ 走共用的 captureWithQuote：「补不上行情就一份都不落」
-		// 这条不变式只能有一个实现。
-		fx, err := captureWithQuote(c, *timeout, "ctp-slices：两片俱在、尚未平仓", *symbol)
-		if err != nil {
-			return err
-		}
-		secrets := map[string]string{
-			"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,
-			"CTP_BROKER_ID": env.CTPBrokerID, "CTP_APP_ID": env.CTPAppID,
-			"CTP_AUTH_CODE": env.CTPAuthCode,
-		}
-		if _, err := fx.Write(*dump, "ctp-slices", secrets, logf); err != nil {
+		if err := dumpSlices(c, env, *dump, *timeout, *symbol,
+			"ctp-slices：两片俱在、尚未平仓（判别性平仓之**前**）", logf); err != nil {
 			return err
 		}
 	}
@@ -274,6 +279,15 @@ func runCTPSlices(args []string) error {
 	pos3 := longToday(mustPositions(c, *timeout, logf), inst)
 	if pos3 == nil || int(pos3.Position) != 1 {
 		return fmt.Errorf("⚠️ 平完之后今仓不是 1 手 —— 前提塌了，不判")
+	}
+	// ⚠️ **立刻落第二份**，在任何别的动作之前 —— 收尾的 `defer` 会把剩下那手平掉，
+	// 而那一平之后持仓归零，当日累计的 `CloseProfit` 就退化成 `Σ平仓价 − Σ开仓价`，
+	// **对任何撮合顺序都相等** ⇒ 判别力当场消失。
+	if *dump != "" {
+		if err := dumpSlices(c, env, *dump, *timeout, *symbol,
+			"ctp-slices：已平一手、尚余一片（判别性平仓之**后**）", logf); err != nil {
+			return err
+		}
 	}
 	oc3, ca3, cp3 := float64(pos3.OpenCost), float64(pos3.CloseAmount), float64(pos3.CloseProfit)
 	q := (ca3 - ca2) / *mult
@@ -299,6 +313,27 @@ func runCTPSlices(args []string) error {
 	logf("⚠️ 两个读数答的是同一个问题。**不一致本身就是结论** ——")
 	logf("   那说明「盈亏按哪一片算」与「成本按哪一片冲」在这个柜台上不是同一件事")
 	return nil
+}
+
+// dumpSlices 落一份 `ctp-slices` 截面。
+//
+// ⚠️ 抽出来是因为它**必须被调用两次**（判别性平仓的前与后），
+// 而两处若各写一遍，只有一处带上凭据复查或只有一处 `return err`
+// 的那一天，**在输出上与两处都对长得一模一样**
+// —— 同 `captureWithQuote` 那一条的理由。
+func dumpSlices(c *ctp.Client, env probe.Env, dir string, timeout time.Duration,
+	symbol, note string, logf func(string, ...any)) error {
+	fx, err := captureWithQuote(c, timeout, note, symbol)
+	if err != nil {
+		return err
+	}
+	secrets := map[string]string{
+		"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,
+		"CTP_BROKER_ID": env.CTPBrokerID, "CTP_APP_ID": env.CTPAppID,
+		"CTP_AUTH_CODE": env.CTPAuthCode,
+	}
+	_, err = fx.Write(dir, "ctp-slices", secrets, logf)
+	return err
 }
 
 // sideWanted 把 -second 翻成一个「第二腿的价可不可以」的判据。

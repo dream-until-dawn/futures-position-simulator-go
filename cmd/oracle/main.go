@@ -39,6 +39,9 @@ func usage() {
 用法:
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
+  oracle ctp-reject -symbol INE.bc2611 -tick 10 [-out testdata/refdata]
+                                   ⚠️ **CTP/SimNow 侧**：逐条发非法报单，记拒因的**数值码**。
+                                   ⚠️ -tick 无默认值；-out 落机器可读语料（**只收码不收原话**）
   oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
                                    ⚠️ **CTP/SimNow 侧**：查柜台**声明**的手续费率（三档各两项）。
                                    只读，不下单。⚠️ 声明与行为同源，对得上**不升证据等级**

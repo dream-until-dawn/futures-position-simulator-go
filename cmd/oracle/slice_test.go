@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"math"
+	"os"
 	"testing"
 )
 
@@ -190,4 +191,83 @@ func TestSideWantedRefusesUnknownAndActuallySeparates(t *testing.T) {
 	if !any(3103, 3104) || !any(3105, 3104) {
 		t.Error("any 应该两侧都放行")
 	}
+}
+
+// TestDiscriminatingCloseIsBracketedByTwoDumps 钉住**判别性平仓被两份落盘夹住**。
+//
+// # ⚠️ 它来自 20260912 评审把 #13 整条打回
+//
+// 20260911 夜盘那一轮**只落了「平仓之前」这一份**，平完那一份只进了 console。
+// 于是 §13 #13 的六个数里有三个**在整个工作树里一处都不存在**，
+// 评审把 23 份快照逐对做差，`ΔCloseProfit ∈ {+15, −20}` **命中 0 处**。
+//
+// ⚠️ 而理由比「少一份夹具」深一层：`OpenVolume` / `OpenAmount` /
+// `CloseAmount` / `CloseProfit` 都是**当日累计**。
+//
+//	⇒ **一份截面推不出「某次平仓发生时账上有哪几片」** ——
+//	它算出来的「均价」分母里，可能混着那次平仓**之后**才开的片。
+//
+// ⚠️ 那一轮两份夹具里被消耗的那一片，在平仓当时**都是账上唯一的一片**，
+// 而一片的时候逐片与均价**必然同值** ⇒ **两份夹具的判别力都是零**，
+// 而它们看起来像证据：数字自洽、算式对得上。
+//
+// ⇒ 判别力只能来自**两份夹具之间恰好夹着一次平仓**。本条钉住这个顺序。
+func TestDiscriminatingCloseIsBracketedByTwoDumps(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "slice.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fn *ast.FuncDecl
+	for _, d := range f.Decls {
+		if fd, ok := d.(*ast.FuncDecl); ok && fd.Name.Name == "runCTPSlices" {
+			fn = fd
+		}
+	}
+	if fn == nil {
+		t.Fatal("⚠️ 找不到 runCTPSlices —— 改名了，本条守卫失效")
+	}
+	var dumps []token.Pos
+	var closePos token.Pos
+	ast.Inspect(fn, func(n ast.Node) bool {
+		c, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if id, ok := c.Fun.(*ast.Ident); ok && id.Name == "dumpSlices" {
+			dumps = append(dumps, c.Pos())
+		}
+		// 判别性平仓：带 OF_CloseToday 的那一笔 Insert。
+		if sel, ok := c.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Insert" {
+			if containsAll(sourceOf(fset, c), "OF_CloseToday") && closePos == token.NoPos {
+				closePos = c.Pos()
+			}
+		}
+		return true
+	})
+	if len(dumps) != 2 {
+		t.Fatalf("⚠️ runCTPSlices 里 dumpSlices 被调用 %d 次（要恰好 2 次：平仓前与平仓后）—— "+
+			"**只落一份的那一轮，整条结论被评审打回**", len(dumps))
+	}
+	if closePos == token.NoPos {
+		t.Fatal("⚠️ 找不到那笔平今委托 —— 本条在空集上跑")
+	}
+	if !(dumps[0] < closePos && closePos < dumps[1]) {
+		t.Fatalf("⚠️ **两份落盘没有夹住那次平仓**（前 %v，平仓 %v，后 %v）—— "+
+			"夹不住就只有当日累计值，而当日累计对任何撮合顺序都相等",
+			fset.Position(dumps[0]), fset.Position(closePos), fset.Position(dumps[1]))
+	}
+}
+
+// sourceOf 取一个节点的源码文本（用于在 AST 上按内容匹配）。
+func sourceOf(fset *token.FileSet, n ast.Node) string {
+	b, err := os.ReadFile(fset.Position(n.Pos()).Filename)
+	if err != nil {
+		return ""
+	}
+	lo, hi := fset.Position(n.Pos()).Offset, fset.Position(n.End()).Offset
+	if lo < 0 || hi > len(b) || lo >= hi {
+		return ""
+	}
+	return string(b[lo:hi])
 }
