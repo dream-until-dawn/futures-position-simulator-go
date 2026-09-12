@@ -195,3 +195,117 @@ func packagesOnlyOn(t *testing.T, ref, base string) []string {
 	sort.Strings(only)
 	return only
 }
+
+// tagConventionEveryMerge / tagConventionOnAcceptance 是 roadmap 里那条约定的两种写法。
+//
+// ⚠️ 用**措辞**当锚，而不是小节标题：标题会被重排，而这两句话的**内容**就是约定本身。
+const (
+	tagConventionEveryMerge   = "每次合并打"
+	tagConventionOnAcceptance = "**某个版本的验收达成时**打"
+	zeroTagDeclaration        = "目前仓库里一个 tag 都没有"
+)
+
+// TestTagConventionMatchesReality 查**「文档说的」与「仓库里的」有没有对上**。
+//
+// # ⚠️ 它来自一条执行不了的约定，而那条约定是以「被忽略」消失的
+//
+// roadmap 原先写「每次合并打 `vX.Y.Z` tag」。2026-09-12 合并前核 `git tag`：
+// **空的**，远端也空 ⇒ 上一次合并（`97d7845`）就漏了，**两次都没有任何信号**。
+//
+//	⚠️ 而它漏掉的原因不是忘了，是那条约定与语义版本**冲突**：
+//	`Version = "v0.4.0"` 明写它是「当前开发中」，而 v0.4.0 的验收未达成
+//	⇒ 打 v0.4.0 等于宣称它发布了，**那是一句假话**。
+//
+// ⇒ **一条执行不了的约定，不会以「被违反」的形式暴露，它以「被忽略」的形式消失** ——
+// 而「被忽略」在仓库里没有任何痕迹，除了那个空的 `git tag`，而没人会去看它。
+//
+// 本条把它变成有痕迹的：三支各对一种状态，而**「零 tag」那一支要求文档自己说出来**。
+func TestTagConventionMatchesReality(t *testing.T) {
+	touchGitState(t)
+	body := strings.Join(readLines(t, filepath.Join("docs", "roadmap.md")), "\n")
+	// ⚠️ **约定在「分支与发布约定」那张表的 `main` 那一行里，不在正文里。**
+	//
+	// 第一版拿整篇文档当锛，当场红了 —— 因为讲这条历史的那一格**引用了旧措辞**
+	// （「每次合并打 tag」），于是两句同时命中，守卫报「约定说不清」。
+	//
+	//	⚠️ 那一红是**对的**：它说的正是「我分不清哪句是约定、哪句是注解」。
+	//	⇒ 缩小到那一行，让**约定**与**关于约定的叙述**分开。
+	row := mainBranchRow(t, body)
+	everyMerge := strings.Contains(row, tagConventionEveryMerge)
+	onAcceptance := strings.Contains(row, tagConventionOnAcceptance)
+	if everyMerge == onAcceptance {
+		t.Fatalf("⚠️ roadmap 里那条 tag 约定既不是「每次合并」也不是「验收达成时」，"+
+			"或者两句同时在（每次合并=%v，验收达成=%v）—— "+
+			"**约定说不清的时候，本条守不住任何东西**", everyMerge, onAcceptance)
+	}
+
+	out, err := exec.Command("git", "tag", "--list", "v*").Output()
+	if err != nil {
+		t.Fatalf("⚠️ 读不到 tag 列表：%v —— **没有结论**，不是「没有 tag」", err)
+	}
+	var tags []string
+	for _, l := range strings.Split(string(out), "\n") {
+		if l = strings.TrimSpace(l); l != "" {
+			tags = append(tags, l)
+		}
+	}
+	t.Logf("ⓘ 约定=%s；仓库里的 tag %v（共 %d 个）；Version=%s",
+		map[bool]string{true: "每次合并都打", false: "验收达成时打"}[everyMerge],
+		tags, len(tags), Version)
+
+	if everyMerge {
+		// ⚠️ 这一支现在走不到（约定已改），但**留着**：
+		// 哪天有人把那句话改回去，它必须立刻开始要求 tag。
+		merges, err := exec.Command("git", "rev-list", "--merges", "--count", "main").Output()
+		if err != nil {
+			t.Fatalf("⚠️ 数不出 main 上的合并数：%v", err)
+		}
+		n := strings.TrimSpace(string(merges))
+		if len(tags) == 0 {
+			t.Errorf("⚠️ 文档写着 %q，而仓库里**一个 tag 都没有**（main 上有 %s 次合并）"+
+				" —— 那条约定此刻是一句没人执行的话", tagConventionEveryMerge, n)
+		}
+		return
+	}
+
+	// —— 约定是「验收达成时才打」——
+	if len(tags) == 0 {
+		// ⚠️ **零 tag 必须在文档里被说出来**，否则它是一个沉默的状态。
+		// 同本项目「语料待拍」「留底缺一列」那一条处置。
+		if !strings.Contains(body, zeroTagDeclaration) {
+			t.Errorf("⚠️ 仓库里一个 tag 都没有，**而 roadmap 里也没写 %q** —— "+
+				"两头都不说，这件事就没有任何可见的对应物了", zeroTagDeclaration)
+		}
+		return
+	}
+	// 有 tag 了：那句「一个都没有」必须被删掉，否则是过期低报。
+	if strings.Contains(body, zeroTagDeclaration) {
+		t.Errorf("⚠️ 已经有 %d 个 tag（%v），而 roadmap 里仍写着 %q —— "+
+			"**过期陈述**，门禁①明写「低报也算」", len(tags), tags, zeroTagDeclaration)
+	}
+	// ⚠️ 每个 tag 都该是**过去**的版本：等于 Version 就意味着
+	// 「当前开发中的那个」被当成发布了 —— 而那正是原约定逼人去做的假话。
+	for _, tg := range tags {
+		if tg == Version {
+			t.Errorf("⚠️ tag %s 与 Version 相同 —— Version 是「**当前开发中**」的版本，"+
+				"给它打 tag 等于宣称它发布了。⚠️ 那正是原约定「每次合并都打」"+
+				"逼出来的那句假话", tg)
+		}
+	}
+}
+
+// mainBranchRow 取「分支与发布约定」那张表里 `main` 那一行。
+//
+// ⚠️ 找不到就 Fatal，**不回退到整篇文档** —— 回退会让守卫在一个更宽的锚上
+// 看起来还在跑，而它守的已经不是同一样东西了。
+func mainBranchRow(t *testing.T, body string) string {
+	t.Helper()
+	for _, l := range strings.Split(body, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(l), "| `main` |") {
+			return l
+		}
+	}
+	t.Fatal("⚠️ roadmap 里找不到「分支与发布约定」表的 `main` 那一行 —— " +
+		"表格形状变了，本条守卫失效（**不回退到整篇文档**：那会让它守错东西）")
+	return ""
+}

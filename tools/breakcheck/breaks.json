@@ -3953,5 +3953,27 @@
 		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
 		"want": "第一份落盘没有落在",
 		"expect": "red"
+	},
+	{
+		"name": "416 roadmap 里「一个 tag 都没有」那句被删掉——零 tag 变回一个沉默的状态",
+		"dir": ".",
+		"file": "docs/roadmap.md",
+		"old": "> ⓘ **当下的状态：目前仓库里一个 tag 都没有。**",
+		"new": "> ⓘ **当下的状态：见 git tag。**",
+		"pkg": "./",
+		"test": "TestTagConventionMatchesReality",
+		"want": "两头都不说",
+		"expect": "red"
+	},
+	{
+		"name": "417 约定改回「每次合并都打」——而仓库里一个 tag 都没有，那条约定是句没人执行的话",
+		"dir": ".",
+		"file": "docs/roadmap.md",
+		"old": "| `main` | 只接受来自 `dev` 的合并；**某个版本的验收达成时**打 `vX.Y.Z` tag。",
+		"new": "| `main` | 只接受来自 `dev` 的合并，每次合并打 `vX.Y.Z` tag。",
+		"pkg": "./",
+		"test": "TestTagConventionMatchesReality",
+		"want": "一个 tag 都没有",
+		"expect": "red"
 	}
 ]

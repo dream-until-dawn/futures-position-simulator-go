@@ -1644,7 +1644,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 127 |
-| `docs/roadmap.md` | 32 |
+| `docs/roadmap.md` | 33 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 89 |
