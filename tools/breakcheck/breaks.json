@@ -4008,5 +4008,28 @@
 		"test": "TestCheckTagsAgainstVersion",
 		"want": "Version 自己认不得",
 		"expect": "red"
+	},
+	{
+		"name": "421 parseSemver 放回 strconv.Atoi——而错误信息里印着「要严格 vX.Y.Z」",
+		"dir": ".",
+		"file": "branch_claim_test.go",
+		"old": "\t\tif p == \"\" || !isASCIIDigits(p) {\n\t\t\treturn out, false\n\t\t}\n\t\tif len(p) > 1 && p[0] == '0' {\n\t\t\treturn out, false // 前导零\n\t\t}",
+		"new": "\t\t_ = isASCIIDigits",
+		"pkg": "./",
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "前导",
+		"expect": "red"
+	},
+	{
+		"name": "422 msgHas 与 want 的长度不一致时不喊——漏查的那几条谁也看不见",
+		"dir": ".",
+		"file": "branch_claim_test.go",
+		"old": "\t\tif len(c.msgHas) != len(c.want) {",
+		"new": "\t\tif false && len(c.msgHas) != len(c.want) {",
+		"pkg": "./",
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "用例自己写坏了",
+		"expect": "green",
+		"why": "⚠️ **如预期仍然绿**：这一改只拆掉「用例自己写漏了要喊」这道自检，而当下每一格的 msgHas 与 want 长度**都是对的** ⇒ 那个 if 本来就不触发。⇒ 它登记的是一处**自检的自检**的空白：要让它红，得同时改坏一格用例，而那是两处改动，breakcheck 的单点替换表达不了。**在那之前「用例写漏了会被喊」这条只由代码保证。**"
 	}
 ]
