@@ -3953,5 +3953,60 @@
 		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
 		"want": "第一份落盘没有落在",
 		"expect": "red"
+	},
+	{
+		"name": "416 roadmap 里「一个 tag 都没有」那句被删掉——零 tag 变回一个沉默的状态",
+		"dir": ".",
+		"file": "docs/roadmap.md",
+		"old": "> ⓘ **当下的状态：本地一个 tag 都没有。**",
+		"new": "> ⓘ **当下的状态：见 git tag。**",
+		"pkg": "./",
+		"test": "TestTagConventionMatchesReality",
+		"want": "也没有以",
+		"expect": "red"
+	},
+	{
+		"name": "417 约定改回「每次合并都打」——而仓库里一个 tag 都没有，那条约定是句没人执行的话",
+		"dir": ".",
+		"file": "docs/roadmap.md",
+		"old": "| `main` | 只接受来自 `dev` 的合并；**某个版本的验收达成时**打 `vX.Y.Z` tag |",
+		"new": "| `main` | 只接受来自 `dev` 的合并，每次合并打 `vX.Y.Z` tag |",
+		"pkg": "./",
+		"test": "TestTagConventionMatchesReality",
+		"want": "本地只有",
+		"expect": "red"
+	},
+	{
+		"name": "418 「早于」放回「不等于」——一个比在开发中版本更晚的 tag 会被放过",
+		"dir": ".",
+		"file": "branch_claim_test.go",
+		"old": "\t\tif cmp >= 0 {",
+		"new": "\t\tif cmp == 0 {",
+		"pkg": "./",
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "晚于在开发中的版本",
+		"expect": "red"
+	},
+	{
+		"name": "419 认不得的 tag 形状悄悄放过——一个奇形怪状的 tag 会被当成合规",
+		"dir": ".",
+		"file": "branch_claim_test.go",
+		"old": "\t\tcmp, ok := semverCompare(tg, version)\n\t\tif !ok {",
+		"new": "\t\tcmp, ok := semverCompare(tg, version)\n\t\tif false && !ok {",
+		"pkg": "./",
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "tag 形状认不得",
+		"expect": "red"
+	},
+	{
+		"name": "420 Version 认不得时改成逐个报 tag——每个完好的 tag 都被指成「形状认不得」",
+		"dir": ".",
+		"file": "branch_claim_test.go",
+		"old": "\tif _, ok := parseSemver(version); !ok {",
+		"new": "\tif _, ok := parseSemver(version); false && !ok {",
+		"pkg": "./",
+		"test": "TestCheckTagsAgainstVersion",
+		"want": "Version 自己认不得",
+		"expect": "red"
 	}
 ]
