@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -202,7 +203,10 @@ func packagesOnlyOn(t *testing.T, ref, base string) []string {
 const (
 	tagConventionEveryMerge   = "每次合并打"
 	tagConventionOnAcceptance = "**某个版本的验收达成时**打"
-	zeroTagDeclaration        = "目前仓库里一个 tag 都没有"
+	// zeroTagDeclPrefix 是那句声明的**行首前缀**，不是整句。
+	// ⚠️ 用前缀 + 行首：整句放在 body 里 Contains 会被**关于它的叙述**顶替，
+	// 而那正是 tagConvention* 已经踩过一次的坑（20260912 评审指出同一个函数里只填了一半）。
+	zeroTagDeclPrefix = "> ⓘ **当下的状态：本地一个 tag 都没有"
 )
 
 // TestTagConventionMatchesReality 查**「文档说的」与「仓库里的」有没有对上**。
@@ -225,23 +229,33 @@ func TestTagConventionMatchesReality(t *testing.T) {
 	body := strings.Join(readLines(t, filepath.Join("docs", "roadmap.md")), "\n")
 	// ⚠️ **约定在「分支与发布约定」那张表的 `main` 那一行里，不在正文里。**
 	//
-	// 第一版拿整篇文档当锛，当场红了 —— 因为讲这条历史的那一格**引用了旧措辞**
+	// 第一版拿整篇文档当锚，当场红了 —— 因为讲这条历史的那一格**引用了旧措辞**
 	// （「每次合并打 tag」），于是两句同时命中，守卫报「约定说不清」。
 	//
 	//	⚠️ 那一红是**对的**：它说的正是「我分不清哪句是约定、哪句是注解」。
 	//	⇒ 缩小到那一行，让**约定**与**关于约定的叙述**分开。
+	//
+	// ⚠️ 20260912 评审补的第二半：那一行里**不许出现关于约定的否定句**。
+	// 当时写着「⚠️ 不是「每次合并都打」—— 见下方那一格」，而常量是
+	// 「每次合并打」（没有「都」）—— **只差一个字就会两句同时命中**。
+	// 约定与「关于约定的否定句」挤在同一行，正是第一版那一红的成因，换了个地方又长了出来。
 	row := mainBranchRow(t, body)
 	everyMerge := strings.Contains(row, tagConventionEveryMerge)
 	onAcceptance := strings.Contains(row, tagConventionOnAcceptance)
 	if everyMerge == onAcceptance {
-		t.Fatalf("⚠️ roadmap 里那条 tag 约定既不是「每次合并」也不是「验收达成时」，"+
+		t.Fatalf("⚠️ roadmap 那张表的 `main` 行里，tag 约定既不是「每次合并」也不是「验收达成时」，"+
 			"或者两句同时在（每次合并=%v，验收达成=%v）—— "+
-			"**约定说不清的时候，本条守不住任何东西**", everyMerge, onAcceptance)
+			"**约定说不清的时候，本条守不住任何东西**。"+
+			"⚠️ 关于约定的叙述（含否定句）请写到正文里，别留在这一行：\n    %s",
+			everyMerge, onAcceptance, row)
 	}
 
+	// ⚠️ 读的是**本地** tag。「我们没发布过版本」是一句关于**远端**的话，
+	// 而本条查不了远端（走网络会脆）。⇒ 声明那一句必须自己说清是哪一个，
+	// 见 `zeroTagDeclaration` —— 同你们自己那条「副本的 `origin/*` 不是发布状态」。
 	out, err := exec.Command("git", "tag", "--list", "v*").Output()
 	if err != nil {
-		t.Fatalf("⚠️ 读不到 tag 列表：%v —— **没有结论**，不是「没有 tag」", err)
+		t.Fatalf("⚠️ 读不到本地 tag 列表：%v —— **没有结论**，不是「没有 tag」", err)
 	}
 	var tags []string
 	for _, l := range strings.Split(string(out), "\n") {
@@ -249,21 +263,31 @@ func TestTagConventionMatchesReality(t *testing.T) {
 			tags = append(tags, l)
 		}
 	}
-	t.Logf("ⓘ 约定=%s；仓库里的 tag %v（共 %d 个）；Version=%s",
+	t.Logf("ⓘ 约定=%s；**本地** tag %v（共 %d 个）；Version=%s",
 		map[bool]string{true: "每次合并都打", false: "验收达成时打"}[everyMerge],
 		tags, len(tags), Version)
 
 	if everyMerge {
-		// ⚠️ 这一支现在走不到（约定已改），但**留着**：
-		// 哪天有人把那句话改回去，它必须立刻开始要求 tag。
-		merges, err := exec.Command("git", "rev-list", "--merges", "--count", "main").Output()
+		// ⚠️ 这一支平时走不到（约定已改），而 20260912 评审指出它**说强了**：
+		// roadmap 写「断言 tag 数 ≥ main 上的合并数」，而代码只查了 `len(tags) == 0`，
+		// 合并数**只进了报错信息、没进断言**。
+		//
+		//	⚠️ 在一个专门治「文档与现实对不上」的提交里，
+		//	**文档与它自己的守卫对不上** —— 而这一处没有任何东西会发现它：
+		//	本条查的是「约定 ↔ tag 现实」，不查「roadmap 对本条的描述 ↔ 本条」。
+		//
+		// ⇒ 按文档那句**改强**（`≥` 比「不为零」对：每次合并都打，就该数得上）。
+		out, err := exec.Command("git", "rev-list", "--merges", "--count", "main").Output()
 		if err != nil {
-			t.Fatalf("⚠️ 数不出 main 上的合并数：%v", err)
+			t.Fatalf("⚠️ 数不出 main 上的合并数：%v —— **没有结论**", err)
 		}
-		n := strings.TrimSpace(string(merges))
-		if len(tags) == 0 {
-			t.Errorf("⚠️ 文档写着 %q，而仓库里**一个 tag 都没有**（main 上有 %s 次合并）"+
-				" —— 那条约定此刻是一句没人执行的话", tagConventionEveryMerge, n)
+		n, err := strconv.Atoi(strings.TrimSpace(string(out)))
+		if err != nil {
+			t.Fatalf("⚠️ 合并数解析不出来（%q）：%v", strings.TrimSpace(string(out)), err)
+		}
+		if len(tags) < n {
+			t.Errorf("⚠️ 文档写着 %q，而 main 上有 **%d** 次合并、本地只有 **%d** 个 tag —— "+
+				"那条约定此刻是一句没人执行的话", tagConventionEveryMerge, n, len(tags))
 		}
 		return
 	}
@@ -272,26 +296,110 @@ func TestTagConventionMatchesReality(t *testing.T) {
 	if len(tags) == 0 {
 		// ⚠️ **零 tag 必须在文档里被说出来**，否则它是一个沉默的状态。
 		// 同本项目「语料待拍」「留底缺一列」那一条处置。
-		if !strings.Contains(body, zeroTagDeclaration) {
-			t.Errorf("⚠️ 仓库里一个 tag 都没有，**而 roadmap 里也没写 %q** —— "+
-				"两头都不说，这件事就没有任何可见的对应物了", zeroTagDeclaration)
-		}
+		requireZeroTagDeclaration(t, body, true)
 		return
 	}
 	// 有 tag 了：那句「一个都没有」必须被删掉，否则是过期低报。
-	if strings.Contains(body, zeroTagDeclaration) {
-		t.Errorf("⚠️ 已经有 %d 个 tag（%v），而 roadmap 里仍写着 %q —— "+
-			"**过期陈述**，门禁①明写「低报也算」", len(tags), tags, zeroTagDeclaration)
-	}
-	// ⚠️ 每个 tag 都该是**过去**的版本：等于 Version 就意味着
-	// 「当前开发中的那个」被当成发布了 —— 而那正是原约定逼人去做的假话。
+	requireZeroTagDeclaration(t, body, false)
+	// ⚠️ 每个 tag 都该**早于** Version。
+	//
+	// 20260912 评审指出：roadmap 写「早于」，而代码只查了 `!= Version`。
+	// ⇒ 改强到「早于」——`v0.5.0` 这种**晚于**在开发中版本的 tag，
+	// 与等于它一样是在宣称一件没发生的事，而 `!=` 放它过去。
 	for _, tg := range tags {
-		if tg == Version {
-			t.Errorf("⚠️ tag %s 与 Version 相同 —— Version 是「**当前开发中**」的版本，"+
-				"给它打 tag 等于宣称它发布了。⚠️ 那正是原约定「每次合并都打」"+
-				"逼出来的那句假话", tg)
+		cmp, ok := semverCompare(tg, Version)
+		if !ok {
+			t.Errorf("⚠️ 认不得的 tag 形状 %q（要 `vX.Y.Z`）—— **没有结论**，"+
+				"而悄悄放过它等于假设它合规", tg)
+			continue
+		}
+		if cmp >= 0 {
+			t.Errorf("⚠️ tag %s **不早于** Version %s —— Version 是「**当前开发中**」的版本，"+
+				"给它（或更晚的版本）打 tag 等于宣称一件没发生的事。"+
+				"⚠️ 那正是原约定「每次合并都打」逼出来的那句假话", tg, Version)
 		}
 	}
+}
+
+// requireZeroTagDeclaration 双向核对 roadmap 里那句「本地一个 tag 都没有」。
+//
+// # ⚠️ 它为什么要自己找行，而不是在整篇里 strings.Contains
+//
+// 20260912 评审指出：`tagConvention*` 已经缩到 `main` 那一行了，理由是
+// **「叙述会引用措辞」**，而这句声明当时仍在**整篇** `body` 里找 ——
+// **同一个坑在同一个函数里只填了一半**。
+//
+//	将来一句「当时一个 tag 都没有」的历史叙述，就能在真声明被删之后顶替它；
+//	反方向也一样：真打了 tag 之后，那句历史叙述会让「过期低报」那条**误红**，
+//	而它改不掉 —— 历史就是那么写的。
+//
+// ⇒ 只认**行首**是那个前缀的行，并且要求**恰好一行**：
+// 多于一行说明有人复制了它，那时「删掉哪一句」就没有唯一答案。
+func requireZeroTagDeclaration(t *testing.T, body string, want bool) {
+	t.Helper()
+	n := 0
+	for _, l := range strings.Split(body, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(l), zeroTagDeclPrefix) {
+			n++
+		}
+	}
+	switch {
+	case want && n == 0:
+		t.Errorf("⚠️ 本地一个 tag 都没有，**而 roadmap 里也没有以 %q 开头的那一行** —— "+
+			"两头都不说，这件事就没有任何可见的对应物了", zeroTagDeclPrefix)
+	case !want && n > 0:
+		t.Errorf("⚠️ 已经有 tag 了，而 roadmap 里仍有 %d 行以 %q 开头 —— "+
+			"**过期陈述**，门禁①明写「低报也算」", n, zeroTagDeclPrefix)
+	case n > 1:
+		t.Errorf("⚠️ roadmap 里有 %d 行以 %q 开头（要恰好一行）—— "+
+			"复制之后「该删哪一句」就没有唯一答案了", n, zeroTagDeclPrefix)
+	}
+}
+
+// semverCompare 比两个 `vX.Y.Z`。第二个返回值为 false 表示**认不得**，
+// 而认不得要由调用方报出来 —— ⚠️ 悄悄当成 0（相等）会让一个奇形怪状的 tag 通过。
+func semverCompare(a, b string) (int, bool) {
+	pa, ok := parseSemver(a)
+	if !ok {
+		return 0, false
+	}
+	pb, ok := parseSemver(b)
+	if !ok {
+		return 0, false
+	}
+	for i := 0; i < 3; i++ {
+		if pa[i] != pb[i] {
+			if pa[i] < pb[i] {
+				return -1, true
+			}
+			return 1, true
+		}
+	}
+	return 0, true
+}
+
+// parseSemver 只认**严格**的 `vX.Y.Z`。
+//
+// ⚠️ 带预发布后缀（`v0.4.0-rc.1`）一律判为认不得，而**不是**猜一个次序 ——
+// 本项目此刻没有预发布约定，编一个出来等于替将来的自己做决定。
+// 真要用预发布，先把约定写进 roadmap，再来改这里。
+func parseSemver(s string) ([3]int, bool) {
+	var out [3]int
+	if !strings.HasPrefix(s, "v") {
+		return out, false
+	}
+	parts := strings.Split(s[1:], ".")
+	if len(parts) != 3 {
+		return out, false
+	}
+	for i, p := range parts {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 0 {
+			return out, false
+		}
+		out[i] = n
+	}
+	return out, true
 }
 
 // mainBranchRow 取「分支与发布约定」那张表里 `main` 那一行。
