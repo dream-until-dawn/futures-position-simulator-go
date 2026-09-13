@@ -554,6 +554,11 @@ func includeCloseProfitName(v def.TThostFtdcIncludeCloseProfitType) string {
 // 20260915 才变成昨仓。只写 20260915 的话，周一白天任何命令都能平掉它。
 // ⚠️ 过期即失效（ProtectedLeg.blocks 按交易日比），不必担心它拦住以后正当的收尾；
 // 而若 #4 推迟到再往后的交易日，**要在这里加一条**，否则那天种子没有保护。
+//
+// ⚠️ 手数的写法：**同一天、同一「合约 + 方向」只写一行，Volume 写那天要保护的总手数**。
+// protectedVolume 对同一天的多行取最大、不相加（防重复行把 1 手当成 2 手）——
+// 所以某天真有两手要保护时，写成两行各 1 手会**少覆盖一手**（ctp-flatten 收尾多报，不会漏平），
+// 要写成一行 `Volume: 2`。
 var ctpProtectedLegs = []safety.ProtectedLeg{
 	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260914", Volume: 1,
 		Why: "#4/#7 唯一的过夜种子（周五夜盘开，交易日 20260914 仍是今仓）"},
