@@ -217,6 +217,26 @@ func TestFlattenLoopFinishesAndChecksFirst(t *testing.T) {
 	if !isProtected {
 		t.Error("⚠️ 循环里没有 errors.Is(…, safety.ErrProtectedLeg) —— 分不出「按保护跳过」与「真没平掉」")
 	}
+	// ⚠️ 收尾的 allowed 必须按**柜台报的当天交易日**取（评审第三轮）：传空串会退化成「日期未知取最小」，
+	// 传写死的日期则在种子表换日之后悄悄失效。
+	dayWired := false
+	ast.Inspect(fn, func(n ast.Node) bool {
+		c, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if id, ok := c.Fun.(*ast.Ident); ok && id.Name == "protectedVolume" && len(c.Args) == 2 {
+			if call, ok := c.Args[1].(*ast.CallExpr); ok {
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "TradingDay" {
+					dayWired = true
+				}
+			}
+		}
+		return true
+	})
+	if !dayWired {
+		t.Error("⚠️ runCTPFlatten 没有把 c.TradingDay() 传给 protectedVolume —— 保护手数不按当天取")
+	}
 }
 
 // TestFlattenPlanMeetsProductionValve 把计划里的每一笔过一遍**生产的** ctpValve：
@@ -247,36 +267,33 @@ func TestFlattenPlanMeetsProductionValve(t *testing.T) {
 	}
 }
 
-// TestProtectedVolumeTakesMaxNotSum 钉住同一手种子在两天各挂一条保护时，覆盖手数是 1 不是 2。
-func TestProtectedVolumeTakesMaxNotSum(t *testing.T) {
+// TestProtectedVolumeIsPerTradingDay 钉住保护覆盖手数**按当天那一条**取：不相加、不跨日取最大、日期未知取最小。
+func TestProtectedVolumeIsPerTradingDay(t *testing.T) {
 	legs := []safety.ProtectedLeg{
 		{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260914", Volume: 1},
 		{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260915", Volume: 1},
+		// ⚠️ 同一天重复挂了一条（例如重种时忘了删旧行）：覆盖手数仍是 1，不相加
+		{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260915", Volume: 1, Why: "重复行"},
+		{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260916", Volume: 2},
 		{Symbol: "DCE.m2701", Side: safety.Short, TradingDay: "20260915", Volume: 3},
 	}
-	f := protectedVolume(legs)
-	if got := f("DCE.m2701", safety.Long); got != 1 {
-		t.Errorf("⚠️ 同一手种子两天各一条，覆盖手数得到 %d，要 1 —— 相加会让「种子 + 1 手遗留今仓」判平干净", got)
-	}
-	if got := f("DCE.m2701", safety.Short); got != 3 {
-		t.Errorf("方向要分开：空头得到 %d，要 3", got)
-	}
-	if got := f("SHFE.rb2701", safety.Long); got != 0 {
-		t.Errorf("表里没有的合约得到 %d，要 0", got)
-	}
-	// ⚠️ 生产那张表：同一「合约 + 方向」有多条时，覆盖手数必须**小于**各条之和（否则上面这条在生产上没咬住）。
-	sum := map[string]int{}
-	n := map[string]int{}
-	for _, l := range ctpProtectedLegs {
-		k := l.Symbol + "|" + l.Side.String()
-		sum[k] += l.Volume
-		n[k]++
-	}
-	prod := protectedVolume(ctpProtectedLegs)
-	for _, l := range ctpProtectedLegs {
-		k := l.Symbol + "|" + l.Side.String()
-		if n[k] > 1 && prod(l.Symbol, l.Side) >= sum[k] {
-			t.Errorf("⚠️ 生产表里 %s 有 %d 条，覆盖手数 %d 不小于各条之和 %d", k, n[k], prod(l.Symbol, l.Side), sum[k])
+	for _, c := range []struct {
+		name, day string
+		side      safety.Side
+		want      int
+	}{
+		{"同一天两条（重复行）⇒ 当天 1，不是相加的 2", "20260915", safety.Long, 1},
+		{"⚠️ 14 日：表里别的日子有 2 手，也只看 14 日那条（评审第三轮实测）", "20260914", safety.Long, 1},
+		{"16 日那条自己是 2", "20260916", safety.Long, 2},
+		{"表里没有这一天 ⇒ 0（阀门也不会拦，走不到这里；走到了就一手都不当预期）", "20260917", safety.Long, 0},
+		{"日期未知 ⇒ 取最小，与阀门「不知道就照拦」同方向", "", safety.Long, 1},
+		{"方向分开", "20260915", safety.Short, 3},
+	} {
+		if got := protectedVolume(legs, c.day)("DCE.m2701", c.side); got != c.want {
+			t.Errorf("%s：得到 %d，要 %d", c.name, got, c.want)
 		}
+	}
+	if got := protectedVolume(legs, "20260915")("SHFE.rb2701", safety.Long); got != 0 {
+		t.Errorf("表里没有的合约得到 %d，要 0", got)
 	}
 }

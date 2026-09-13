@@ -1003,7 +1003,7 @@ func runCTPFlatten(args []string) error {
 	remaining, _ := flattenPlan(posAfter, *only)
 	logf("[flat] 已平 %d 笔，按保护跳过 %d 笔，没平掉 %d 笔；重查仍在 %d 笔",
 		len(tally.Closed), len(tally.Protected), len(tally.Failed), len(remaining))
-	if err := flattenVerdict(tally, remaining, protectedVolume(ctpProtectedLegs)); err != nil {
+	if err := flattenVerdict(tally, remaining, protectedVolume(ctpProtectedLegs, c.TradingDay())); err != nil {
 		return err
 	}
 	if *only != "" {

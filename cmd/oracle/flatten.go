@@ -164,18 +164,32 @@ func flattenVerdict(t flattenTally, remaining []flattenLeg, allowed func(symbol 
 	return fmt.Errorf("%s", b.String())
 }
 
-// protectedVolume 造 flattenVerdict 用的 allowed：某个「合约 + 方向」上一张保护表覆盖的手数。
+// protectedVolume 造 flattenVerdict 用的 allowed：某个「合约 + 方向」在交易日 day 上一张保护表覆盖的手数。
 //
-// ⚠️ 按日期**不过滤**、取各条里的**最大值**，不相加：走到这里的腿已经被安全阀按交易日拦过一次
-// （它在 tally.Protected 里），日期已经核过；而同一手种子在 20260914/15 两天各挂一条 ——
-// 相加会把 1 手种子当成 2 手，于是「种子 + 1 手遗留今仓」被判平干净。
-func protectedVolume(legs []safety.ProtectedLeg) func(symbol string, side safety.Side) int {
+// ⚠️ 两条规则，都朝「多报」那一侧：
+//
+//	day 已知   只看 TradingDay == day 的那几条，取最大值（**不相加**：同一手种子不该因为挂了两条而变成 2 手）
+//	day 未知   看全部匹配的条，取**最小值** —— 与安全阀「不知道今天是哪天就照拦」同一个失败方向
+//
+// ⚠️ 上一版按整张表取最大值、不看日期（20260913 评审第三轮实测）：表里 14 日 1 手、16 日 2 手，
+// 在 14 日「种子 + 1 手遗留今仓」⇒ allowed=2 ⇒ 判平干净。两天都写 1 手时碰不到，
+// **而重种或加仓之后改表，恰好是各天手数变得不同的时候**。
+func protectedVolume(legs []safety.ProtectedLeg, day string) func(symbol string, side safety.Side) int {
 	return func(symbol string, side safety.Side) int {
-		v := 0
+		v, seen := 0, false
 		for _, l := range legs {
-			if l.Symbol == symbol && l.Side == side && l.Volume > v {
+			if l.Symbol != symbol || l.Side != side {
+				continue
+			}
+			switch {
+			case day != "":
+				if l.TradingDay == day && l.Volume > v {
+					v = l.Volume
+				}
+			case !seen || l.Volume < v:
 				v = l.Volume
 			}
+			seen = true
 		}
 		return v
 	}

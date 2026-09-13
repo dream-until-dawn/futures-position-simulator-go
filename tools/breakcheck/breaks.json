@@ -4419,14 +4419,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "459 保护覆盖手数按两天相加——1 手种子被当成 2 手，「种子 + 1 手遗留」判平干净",
+		"name": "459 保护覆盖手数把同一天的多条相加——重复行让 1 手种子变成 2 手，「种子 + 1 手遗留」判平干净",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/flatten.go",
-		"old": "\t\t\tif l.Symbol == symbol && l.Side == side && l.Volume > v {\n\t\t\t\tv = l.Volume\n",
-		"new": "\t\t\tif l.Symbol == symbol && l.Side == side {\n\t\t\t\tv += l.Volume\n",
+		"old": "\t\t\t\tif l.TradingDay == day && l.Volume > v {\n\t\t\t\t\tv = l.Volume\n",
+		"new": "\t\t\t\tif l.TradingDay == day {\n\t\t\t\t\tv += l.Volume\n",
 		"pkg": ".",
-		"test": "TestProtectedVolumeTakesMaxNotSum",
-		"want": "要 1",
+		"test": "TestProtectedVolumeIsPerTradingDay",
+		"want": "不是相加的 2",
 		"expect": "red"
 	},
 	{
@@ -4471,6 +4471,39 @@
 		"pkg": ".",
 		"test": "TestCleanupChecksBeforeClosing",
 		"want": "开关是空的",
+		"expect": "red"
+	},
+	{
+		"name": "464 保护覆盖手数不看交易日——表里别的日子手数更大时，当天多出的遗留今仓被判平干净（评审第三轮实测）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\t\t\t\tif l.TradingDay == day && l.Volume > v {",
+		"new": "\t\t\t\tif l.Volume > v {",
+		"pkg": ".",
+		"test": "TestProtectedVolumeIsPerTradingDay",
+		"want": "只看 14 日那条",
+		"expect": "red"
+	},
+	{
+		"name": "465 日期未知时取最大而不是最小——与阀门「不知道就照拦」方向相反",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\t\t\tcase !seen || l.Volume < v:",
+		"new": "\t\t\tcase !seen || l.Volume > v:",
+		"pkg": ".",
+		"test": "TestProtectedVolumeIsPerTradingDay",
+		"want": "日期未知",
+		"expect": "red"
+	},
+	{
+		"name": "466 ctp-flatten 收尾传空串当交易日——保护手数不按当天取",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "protectedVolume(ctpProtectedLegs, c.TradingDay())",
+		"new": "protectedVolume(ctpProtectedLegs, \"\")",
+		"pkg": ".",
+		"test": "TestFlattenLoopFinishesAndChecksFirst",
+		"want": "没有把 c.TradingDay() 传给",
 		"expect": "red"
 	}
 ]
