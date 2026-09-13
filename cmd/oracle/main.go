@@ -39,6 +39,9 @@ func usage() {
 用法:
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
+  oracle ctp-closeorder -symbol DCE.m2701 -dump testdata/ctp
+                                   ⚠️ **会真的开一手、平一手**（rules_pending #4）：今昨都在时发**通用**平仓，
+                                   看消耗哪一边。前提：今 0、昨 ≥1；收尾只平今仓，昨仓不碰
   oracle ctp-flatten (-symbol SHFE.ag2702 | -all)
                                    ⚠️ **会真的平仓**。不给 -symbol 就必须给 -all ——
                                    账上可能有**刻意**留着的仓（#4/#7 的过夜种子）
@@ -164,6 +167,11 @@ func main() {
 		}
 	case "ctp-slices":
 		if err := runCTPSlices(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-closeorder":
+		if err := runCTPCloseOrder(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}

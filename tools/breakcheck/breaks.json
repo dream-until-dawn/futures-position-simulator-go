@@ -3744,8 +3744,8 @@
 		"name": "397 dumpSlices 里 captureWithQuote 的错误检查被降成日志——拍失败时拿着 nil 往下走（重定锚）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\tfx, err := captureWithQuote(c, timeout, note, symbol)\n\tif err != nil {\n\t\treturn err\n\t}",
-		"new": "\tfx, err := captureWithQuote(c, timeout, note, symbol)\n\tif err != nil {\n\t\tlogf(\"拍截面失败：%v\", err)\n\t}",
+		"old": "\tfx, err := captureWithQuote(c, timeout, stage.note(), symbol)\n\tif err != nil {\n\t\treturn err\n\t}",
+		"new": "\tfx, err := captureWithQuote(c, timeout, stage.note(), symbol)\n\tif err != nil {\n\t\tlogf(\"拍截面失败：%v\", err)\n\t}",
 		"pkg": ".",
 		"test": "TestEveryCaptureWithQuoteCallChecksItsError",
 		"want": "不是 `if err != nil { return",
@@ -3841,16 +3841,15 @@
 		"expect": "red"
 	},
 	{
-		"name": "406 把第二、三份落盘的注记对调——守卫只查位置，不查「哪份注记配哪个位置」",
+		"name": "406 平仓前那份落盘的阶段常量标成「平仓后」——位置对了而注记会说反",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\"ctp-slices：两片俱在、尚未平仓（判别性平仓之**前**）\"",
-		"new": "\"ctp-slices：已平一手、尚余一片（判别性平仓之**后**）\"",
+		"old": "dumpSlices(c, env, *dump, *timeout, *symbol, stageBeforeClose, logf)",
+		"new": "dumpSlices(c, env, *dump, *timeout, *symbol, stageAfterClose, logf)",
 		"pkg": ".",
 		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
-		"want": "要恰好 3 次",
-		"expect": "green",
-		"why": "⚠️ **如预期仍然绿，而它登记的是本守卫的一处真盲区**：守卫按 AST **位置**判三份落盘的先后，**不查哪一份的注记配哪个位置**。⇒ 把 ② 与 ③ 的注记对调之后，位置全对、断言全过，而**落盘出来的夹具里 `note` 说反了** —— 读夹具的人会把平仓前那份当成平仓后。⚠️ 要治它得让注记与位置在代码里**绑成一体**（比如按枚举传，而不是传自由文本），而这一批没做。**登记在此：三份落盘的顺序有守卫，注记与顺序的对应没有。**"
+		"want": "位置对了而阶段标错了",
+		"expect": "red"
 	},
 	{
 		"name": "407 两份落盘都挪到平仓之前——夹不住那次平仓，判别力当场归零",
@@ -3924,13 +3923,12 @@
 		"name": "413 成交明细补不上时只记日志——夹具看起来齐全而少了次序证据",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+",
-		"new": "\tif err := c.AttachTrades(fx, symbol, timeout); err == nil && false {\n\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+",
-		"pkg": "./ctp/",
-		"test": "TestPlatformParityCoversFieldsToo",
-		"want": "Windows",
-		"expect": "green",
-		"why": "⚠️ **如预期仍然绿，而它登记的是一处真盲区**：「补不上成交明细就整份不落盘」这条**没有**离线守卫 —— `TestAttachTradesHasOneCallSite` 只数调用点在不在 `dumpSlices` 里，**不查那个 error 有没有被 return**。⇒ 要治它得照 `captureWithQuote` 那条的样子写一条按 AST 查 return 的守卫，而这一批没写。**登记在此，别以为它有守卫。**"
+		"old": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+\n\t\t\t\"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w\", err)\n\t}",
+		"new": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\tlogf(\"成交明细没补上：%v\", err)\n\t}",
+		"pkg": ".",
+		"test": "TestAttachTradesFailureStopsTheDump",
+		"want": "没有 return",
+		"expect": "red"
 	},
 	{
 		"name": "414 成交明细的白名单漏掉 UserID——报单来源的标识性字段会进夹具",
@@ -4040,6 +4038,62 @@
 		"pkg": ".",
 		"test": "TestFlattenScopeRefusesAmbiguity",
 		"want": "该拦却放行了",
+		"expect": "red"
+	},
+	{
+		"name": "425 note 探测器不再认 switch 的 tag——合成样本只抓到 3 处，扫仓库的零命中不再可信",
+		"dir": ".",
+		"file": "note_parse_test.go",
+		"old": "\t\tcase *ast.SwitchStmt:\n\t\t\tif v.Tag != nil && isNote(v.Tag) {",
+		"new": "\t\tcase *ast.SwitchStmt:\n\t\t\tif false && v.Tag != nil && isNote(v.Tag) {",
+		"pkg": "./",
+		"test": "TestNobodyParsesFixtureNotes",
+		"want": "探测器坏了",
+		"expect": "red"
+	},
+	{
+		"name": "426 阶段枚举里 ② 的注记文本写成 ③ 的——守卫查标识符，不查枚举到文本的映射",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\treturn \"ctp-slices ②：两片俱在、尚未平仓（判别性平仓之**前**）\"",
+		"new": "\t\treturn \"ctp-slices ③：已平一手、尚余一片（判别性平仓之**后**）\"",
+		"pkg": ".",
+		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
+		"want": "位置对了而阶段标错了",
+		"expect": "green",
+		"why": "⚠️ **如预期仍然绿，登记的是换成枚举之后剩下的那一格**：守卫读的是调用点的**标识符**，不读 `sliceStage.note()` 里枚举到中文的映射。⇒ 把 ② 的文本写成 ③ 的，守卫不响。⚠️ 而这一格比 406 原先那处**窄得多**：映射只写在一个 switch 里、三行、一眼可核；原先是三个分散的调用点各写一句中文。**把错误的藏身处从三处收成一处，是这次改动的实际收益**，而不是「彻底消灭」。⚠️ 另：读夹具的代码按约束**不读 note**（TestNobodyParsesFixtureNotes），阶段从 Position/OpenVolume/CloseVolume 判 —— 所以这一格错了，坏的是给人看的注释，不是判定。"
+	},
+	{
+		"name": "427 #4 的判别性委托改用「平今」——替柜台指定了答案，整轮实验无效而输出完全正常",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\t\tDirection: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_Close,\n\t\tVolume: 1, LimitPrice: lowerLimit}",
+		"new": "\t\tDirection: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,\n\t\tVolume: 1, LimitPrice: lowerLimit}",
+		"pkg": ".",
+		"test": "TestGenericCloseUsesTheGenericFlag",
+		"want": "替柜台指定了答案",
+		"expect": "red"
+	},
+	{
+		"name": "428 #4 判定把「没有昨仓」排到「前提不成立」之后——一条结论被当成失败吞掉",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\tif before.Yd == 0 {\n\t\treturn coNoYesterday\n\t}\n\tif before.Today != 1 {\n\t\treturn coNoPremise\n\t}",
+		"new": "\tif before.Today != 1 {\n\t\treturn coNoPremise\n\t}\n\tif before.Yd == 0 {\n\t\treturn coNoYesterday\n\t}",
+		"pkg": ".",
+		"test": "TestCloseOrderVerdictRefusesBeforeItConcludes",
+		"want": "没有昨仓",
+		"expect": "red"
+	},
+	{
+		"name": "429 昨仓改读柜台的 YdPosition 字段——平昨之后它可能不减，#4 要分的正是这件事",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\ts.Yd = total - s.Today",
+		"new": "\ts.Yd = s.YdField\n\t_ = total",
+		"pkg": ".",
+		"test": "TestLongSidesReadsBothRepresentations",
+		"want": "YdPosition 仍是日初值",
 		"expect": "red"
 	}
 ]

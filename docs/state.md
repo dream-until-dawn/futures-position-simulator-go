@@ -1523,6 +1523,33 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 ✅ 根因已治：那道门抽成了纯函数 `flattenScope`，四种组合离线可测
 （方法论 93）—— **从此不必为了看门开不开而去平一次仓。**
 
+#### 操作单（20260913 写，**每条命令都对着当时的代码核过 flag**）
+
+⚠️ 写它的理由是周六那次险情：**事故出在临场发挥**。而写的过程本身撞出一个缺口 ——
+**#4 原先根本跑不了**：它要一笔**通用** `OF_Close`，而没有任何 CTP 命令发得出它
+（`ctp-order` 只有显式平今/平昨，那等于替柜台指定答案）。⇒ 当天补了 `ctp-closeorder`。
+若没写这张单，这件事要到周一 21:00 才发现。
+
+在 `cmd/oracle` 下执行，`-env ../../.env`。**大商所夜盘 23:00 收**，所以前三步要在那之前做完：
+
+| # | 命令 | 答什么 | ⚠️ 陷阱 |
+|---|---|---|---|
+| 0 | `ctp-params -dump ../../testdata/ctp` | **核种子**；顺带是 #7 在 CTP 侧的读数 | **只读**。看 `DCE.m2701` 多头：记录几条、`TodayPosition`、`Position−Today`、`YdPosition` |
+| 1 | `ctp-closeorder -symbol DCE.m2701 -dump ../../testdata/ctp` | #4 | 若报「账上没有昨仓」—— **那就是 #4 的结论**，它自己落盘后停；**别当失败重跑** |
+| 2 | `ctp-reject -symbol DCE.i2701 -tick 0.5 -out ../../testdata/refdata` | #6 大商所 | ⚠️ **不许用 `DCE.m2701`**：它的「平昨」用例会碰种子 |
+| 3 | `ctp-reject -symbol SHFE.rb2701 -tick 1 -out ../../testdata/refdata` | #6 上期所 | |
+| 4 | `ctp-reject -symbol INE.bc2611 -tick 10 -out ../../testdata/refdata` | #6 能源中心 | tick 10 已由 20260911 那次拒因实测佐证 |
+| 5 | `ctp-rates -symbols "$(grep -v '^#' ../../testdata/refdata/ctp-rates-symbols.txt \| paste -sd, -)" -timeout 12s` | #19 重扫（带「适用范围」） | **只读**；输出存进新留底，**旧那份不改** |
+| 6 | `ctp-slices -symbol SHFE.ag2702 -multiplier 15 -tick 1 -restfirst -second higher -dump ../../testdata/ctp` | #13 三份重拍 | 白银夜盘到 02:30，放最后；前提要 `ag2702` 多头无今仓 |
+
+⚠️ **不在单上的**：郑商所 / 广期所的 `ctp-reject` —— 仓库里**没有它们 tick 的出处**
+（`specs-20260908.json` 只有 i / m / ag / cu / rb 五个品种），而猜错 tick 的表现
+不是报错，是**用例拿到另一种拒因的码、输出上仍标着原来的名字**（方法论 88）。
+⇒ 先补 tick 的来源，再上单。
+
+⚠️ **全程不许出现的命令**：`ctp-flatten -all`（种子）；`ctp-flatten -symbol DCE.m2701`
+（同上，它会连昨仓一起平）。第 1 步的收尾只用平今单平**今**仓，昨仓不碰。
+
 ### ⓘ 评审给的一条判断规则，比它当时判的那件事有用
 
 他上一轮推我把 418/419 抽出去测，这一轮对 422 说**不推**：

@@ -236,6 +236,7 @@ func TestSliceDumpsPinDownBothOrderAndConsumption(t *testing.T) {
 		t.Fatal("⚠️ 找不到 runCTPSlices —— 改名了，本条守卫失效")
 	}
 	var dumps, opens []token.Pos
+	var stages []string
 	var closePos token.Pos
 	ast.Inspect(fn, func(n ast.Node) bool {
 		c, ok := n.(*ast.CallExpr)
@@ -247,6 +248,15 @@ func TestSliceDumpsPinDownBothOrderAndConsumption(t *testing.T) {
 			switch v.Name {
 			case "dumpSlices":
 				dumps = append(dumps, c.Pos())
+				// ⚠️ 阶段是第 6 个实参（c, env, dir, timeout, symbol, **stage**, logf）。
+				// 读不出标识符就记空串 —— 下面会因「顺序对不上」而红，不会静默放过。
+				stage := ""
+				if len(c.Args) >= 6 {
+					if id, ok := c.Args[5].(*ast.Ident); ok {
+						stage = id.Name
+					}
+				}
+				stages = append(stages, stage)
 			case "openOneLot", "openOneLotResting":
 				opens = append(opens, c.Pos())
 			}
@@ -286,6 +296,20 @@ func TestSliceDumpsPinDownBothOrderAndConsumption(t *testing.T) {
 	if !(dumps[2] > closePos) {
 		t.Errorf("⚠️ 第三份落盘没有落在**平仓之后**（%s）—— "+
 			"夹不住那次平仓就只剩当日累计，而累计对撮合顺序恒等", pos(dumps[2]))
+	}
+	// ⚠️⚠️ **阶段常量要与位置一一对上** —— 这一条是 20260913 补的，它关掉破坏 406 那处盲区。
+	//
+	// 原先 `dumpSlices` 收自由文本注记，本条只查位置 ⇒ 把 ② ③ 的注记对调，
+	// 位置全对、断言全过，而夹具里的 `note` 说反了。
+	// 现在注记由 `sliceStage` 派生，于是剩下能错的只有「阶段常量放错位置」——
+	// 而那是一个**标识符**，本条读得出来。
+	want := []string{"stageAfterLeg1", "stageBeforeClose", "stageAfterClose"}
+	for i := range want {
+		if stages[i] != want[i] {
+			t.Errorf("⚠️ 第 %d 份落盘（%s）的阶段是 %q，要 %q —— "+
+				"**位置对了而阶段标错了**，夹具的注记会说反",
+				i+1, pos(dumps[i]), stages[i], want[i])
+		}
 	}
 }
 
@@ -407,5 +431,47 @@ func TestFlattenDeferRegisteredBeforeAnyOrder(t *testing.T) {
 		t.Fatalf("⚠️⚠️ **收尾平仓注册在第一笔委托之后**（defer %s，下单 %s）—— "+
 			"成交之后才失败的那条路会**留仓**，而它以错误退出，"+
 			"看起来像「没开成」", fset.Position(deferPos), fset.Position(orderPos))
+	}
+}
+
+// TestAttachTradesFailureStopsTheDump 断言：**成交明细补不上时，`dumpSlices` 必须 return**。
+//
+// # ⚠️ 它替掉的是一条登记了的盲区（破坏 413）
+//
+// `TestAttachTradesHasOneCallSite` 只数调用点在不在 `dumpSlices` 里，
+// **不查那个 error 有没有被 return** ⇒ 把 return 降成一句日志，它一个字都不会说，
+// 而落盘照样发生 —— 产出**看起来齐全、而少了次序证据**的夹具。
+//
+//	⚠️ 与 `TestQuoteFailureBlocksTheWrite` 是同一个形状，而当初只给行情那一条写了守卫。
+//	**同一条不变式的两个实例，只守了一个** —— 另一个靠「照着那边的样子写」，
+//	而「照着写」不会让任何东西变红。
+//
+// 20260913 无盘的这一天把它补上：成交明细恰恰是 #13 这一批**判别力的来源**，
+// 缺它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO。
+func TestAttachTradesFailureStopsTheDump(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "slice.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := findFunc(f, "dumpSlices")
+	if fn == nil {
+		t.Fatal("⚠️ slice.go 里找不到 dumpSlices —— 改名了？本条会在空集上跑")
+	}
+	var branch *ast.IfStmt
+	n := 0
+	ast.Inspect(fn, func(x ast.Node) bool {
+		if ifs, ok := x.(*ast.IfStmt); ok && mentions(ifs.Init, "AttachTrades") {
+			branch, n = ifs, n+1
+		}
+		return true
+	})
+	if n != 1 {
+		t.Fatalf("⚠️ dumpSlices 里 `if err := …AttachTrades(…); err != nil` 出现 %d 次（要恰好 1 次）"+
+			" —— 形状变了，下面的断言查不到它要查的东西", n)
+	}
+	if firstReturn(branch.Body) == nil {
+		t.Errorf("⚠️ 成交明细补不上那一支里**没有 return** —— 错误被吞掉，" +
+			"落盘照样发生，产出一份**看起来齐全、而少了次序证据**的夹具")
 	}
 }

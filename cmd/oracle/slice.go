@@ -167,8 +167,7 @@ func runCTPSlices(args []string) error {
 	// ⚠️ 而它仍然只是第二条腿带 —— 真正的证据是 `trades`
 	// （逐笔价 + 时刻 + SequenceNo），两条都留着才互相核得动。
 	if *dump != "" {
-		if err := dumpSlices(c, env, *dump, *timeout, *symbol,
-			"ctp-slices：腿1 已成交、腿2 尚未开（**先开的那一片由本份定死**）", logf); err != nil {
+		if err := dumpSlices(c, env, *dump, *timeout, *symbol, stageAfterLeg1, logf); err != nil {
 			return err
 		}
 	}
@@ -205,18 +204,26 @@ func runCTPSlices(args []string) error {
 			}
 			// ⚠️ **优先看卖一**（腿 2 挂涨停，成交在卖一上），读不到才退回最新价。
 			//
-			// ⚠️ 20260911 夜盘栽在这里，而栽的方式值得写全：第一版**只看卖一**，
-			// 读不到就 `continue` —— 而 CTP 的**行情查询**（`ReqQryDepthMarketData`，
-			// 不是订阅）应答里盘口档位并不可靠，`AskVolume1` 常是 0。
-			// 于是那个 `continue` **每一轮都命中**，整整两个窗口（12 分 + 20 分）
-			// 一次都没触发过。
+			// ⚠️⚠️ **这里原先写着一个已被否的假说，而且写得像事实**（20260913 自查更正）：
 			//
-			//	⚠️ 而日志里它长得和「行情就是没往那边走」一模一样 ——
-			//	我差一点把它当成「白银今晚一路下行」写进结论。
+			//	原文：「CTP 行情查询应答里盘口档位并不可靠，`AskVolume1` 常是 0，
+			//	于是那个 `continue` 每一轮都命中……我差一点把它当成
+			//	『白银今晚一路下行』写进结论。」
 			//
-			// ⇒ 两半改法：读不到就退回最新价并**说出来**；
-			// 而「最新价不是成交价」这个顾虑由下面的**事后核对**兜底 ——
-			// 触发只管把我们叫醒，**方向对不对以成交价为准**。
+			// **那个机制是错的，而被它说成「差点犯的错」的那个解释才是对的**：
+			// 改完的下一轮日志第一行就是 `卖一 走到了 15882`（卖一读得到）；
+			// ag 在那 20 分钟里从 **15939 跌到 15872**，而 p1=15944 在整个区间之上
+			// ⇒ **行情确实一路下行**，两个窗口零触发是因为卖一真的没往上走。
+			//
+			//	⚠️ 假说被否写进了 state.md 与提交正文，**却没回到这段注释** ——
+			//	于是代码里留着一句把被否的机制当事实、把真解释当错误的话。
+			//	它不会让任何测试红，而读代码的下一个人会照着它去怀疑一个没毛病的字段。
+			//
+			// ⇒ 这一段现在只记**做了什么、为什么仍然合理**：
+			// 读不到卖一就退回最新价并**说出来**（「用的是哪个源」进日志，
+			// 这正是当初分开两个假说的那个读数）；而「最新价不是成交价」这个顾虑
+			// 由下面的**事后核对**兜底 —— 触发只管把我们叫醒，**方向对不对以成交价为准**。
+			// ⚠️ 真正让两个窗口不再空等的是 `-restfirst`（靠价差，不赌方向）。
 			px, src := float64(m.AskPrice1), "卖一"
 			if px <= 0 || px > 1e300 || int(m.AskVolume1) <= 0 {
 				px, src = float64(m.LastPrice), "最新价"
@@ -299,8 +306,7 @@ func runCTPSlices(args []string) error {
 	// ⇒ 判别力只能来自**两份夹具之间恰好夹着一次平仓**：那时 Δ 是真的增量，
 	// 与当日累计无关，也与「后来又开了几片」无关。
 	if *dump != "" {
-		if err := dumpSlices(c, env, *dump, *timeout, *symbol,
-			"ctp-slices：两片俱在、尚未平仓（判别性平仓之**前**）", logf); err != nil {
+		if err := dumpSlices(c, env, *dump, *timeout, *symbol, stageBeforeClose, logf); err != nil {
 			return err
 		}
 	}
@@ -324,8 +330,7 @@ func runCTPSlices(args []string) error {
 	// 而那一平之后持仓归零，当日累计的 `CloseProfit` 就退化成 `Σ平仓价 − Σ开仓价`，
 	// **对任何撮合顺序都相等** ⇒ 判别力当场消失。
 	if *dump != "" {
-		if err := dumpSlices(c, env, *dump, *timeout, *symbol,
-			"ctp-slices：已平一手、尚余一片（判别性平仓之**后**）", logf); err != nil {
+		if err := dumpSlices(c, env, *dump, *timeout, *symbol, stageAfterClose, logf); err != nil {
 			return err
 		}
 	}
@@ -355,15 +360,66 @@ func runCTPSlices(args []string) error {
 	return nil
 }
 
+// sliceStage 是 `ctp-slices` 三份落盘各自所处的阶段。
+//
+// # ⚠️ 它替掉的是三段自由文本，而理由是评审 20260912 登记的一处盲区（破坏 406）
+//
+// 原先 `dumpSlices` 收一个 `note string`，三个调用点各写一句中文。
+// 守卫 `TestSliceDumpsPinDownBothOrderAndConsumption` 按 AST **位置**判三份的先后 ——
+// **却不查「哪一份的注记配哪个位置」**：把 ② ③ 的注记对调，位置全对、断言全过，
+// 而落盘夹具里的 `note` 说反了，读夹具的人会把平仓前那份当成平仓后。
+//
+//	⚠️ 当时的处置是登记盲区（`expect: green` + `why`），并写「要治得让注记与位置
+//	在代码里**绑成一体**，按枚举传而不是传自由文本」。
+//
+// ⇒ 这就是那个枚举。注记由阶段**派生**，调用点不再写中文 ——
+// 「注记对调」这件事**在语法上说不出口**了；剩下能错的只有「阶段常量放错位置」，
+// 而那是一个守卫读得出来的**标识符**，不是一段要人比对的中文。
+//
+// ⚠️ 与 422 那次同一条原则：**把错误变成不可能，胜过多一条守卫去防它。**
+// ⚠️ 而阶段**不进夹具的字段**：评审另提过「读夹具的代码不该 parse `note`」，
+// 而三份在数据上本就两两分得开（Position / OpenVolume / CloseVolume 三元组，
+// 含当日累计与重试轮数的一般式已验过）⇒ 读的人从数据判阶段，不从注记判。
+type sliceStage int
+
+const (
+	stageAfterLeg1   sliceStage = iota + 1 // ① 腿1 已成交、腿2 尚未开：定死「谁先开」
+	stageBeforeClose                       // ② 两片俱在、尚未平仓
+	stageAfterClose                        // ③ 已平一手、尚余一片：②③ 之差给出「消耗了哪一片」
+)
+
+// note 给出这一阶段写进夹具的注记。
+//
+// ⚠️ 认不得的阶段**不给默认文本**：一份注记为空的夹具与一份注记正确的夹具
+// 在下游都「有注记」，而前者是个 bug。
+func (s sliceStage) note() string {
+	switch s {
+	case stageAfterLeg1:
+		return "ctp-slices ①：腿1 已成交、腿2 尚未开（**先开的那一片由本份定死**）"
+	case stageBeforeClose:
+		return "ctp-slices ②：两片俱在、尚未平仓（判别性平仓之**前**）"
+	case stageAfterClose:
+		return "ctp-slices ③：已平一手、尚余一片（判别性平仓之**后**）"
+	}
+	return fmt.Sprintf("⚠️ ctp-slices：认不得的阶段 %d —— 这份夹具的阶段没有结论", int(s))
+}
+
 // dumpSlices 落一份 `ctp-slices` 截面。
 //
 // ⚠️ 抽出来是因为它**必须被调用两次**（判别性平仓的前与后），
 // 而两处若各写一遍，只有一处带上凭据复查或只有一处 `return err`
 // 的那一天，**在输出上与两处都对长得一模一样**
 // —— 同 `captureWithQuote` 那一条的理由。
+// stageNoter 是「一份落盘处于哪个阶段」的抽象：`sliceStage`（#13）与 `closeOrderStage`（#4）都实现它。
+//
+// ⚠️ 它存在是为了让 #4 **复用** `dumpSlices`，而不是另写一份「截面 + 行情 + 成交明细 + 落盘」——
+// 另写一份就有第二处 `AttachTrades` 调用，而「补不上成交明细就整份不落盘」这条不变式
+// 只能有一个实现（`TestAttachTradesHasOneCallSite`）。
+type stageNoter interface{ note() string }
+
 func dumpSlices(c *ctp.Client, env probe.Env, dir string, timeout time.Duration,
-	symbol, note string, logf func(string, ...any)) error {
-	fx, err := captureWithQuote(c, timeout, note, symbol)
+	symbol string, stage stageNoter, logf func(string, ...any)) error {
+	fx, err := captureWithQuote(c, timeout, stage.note(), symbol)
 	if err != nil {
 		return err
 	}
