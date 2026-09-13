@@ -16,6 +16,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -930,41 +931,26 @@ func runCTPFlatten(args []string) error {
 	if err != nil {
 		return err
 	}
-	n, skipped := 0, 0
-	for key, p := range pos {
-		// ⚠️ **今仓与昨仓都要平**，而开平标志必须按它是哪一种来选。
-		//
-		// 20260910 夜盘撞上的：本函数原先只看 `TodayPosition`，
-		// 昨仓被 `continue` 整个跳过，然后打印「没有今仓可平」**并报成功退出** ——
-		// 而账上那一手还在。⚠️ 这是最坏的形状：
-		//
-		//	一个报「无事可做」的平仓命令，比一个报错的更坏 ——
-		//	报错会有人去看，「无事可做」只会让人放心。
-		//
-		// ⚠️ 而它同时让一句文档变成假话：`-keep` 的提示里写着
-		// 「平仓用 ctp-flatten（它会自己挑平今/平昨）」—— 它当时并不会挑。
-		//
-		// 上期所是 `UseHistory`：拿平今去平昨仓，交易所直接
-		// `ErrorID=50 平仓位不足`（同一晚在 `ctp-order -close` 上先撞到的）。
-		today, yd := int(p.TodayPosition), int(p.YdPosition)
-		if today == 0 && yd == 0 {
-			continue
-		}
-		symbol := ctp.Text(p.ExchangeID[:]) + "." + ctp.Text(p.InstrumentID[:])
-		if *only != "" && symbol != *only {
-			logf("[flat] 跳过 %s（-symbol 只要 %s）", symbol, *only)
-			skipped++
-			continue
-		}
-		n++
-		// 平多发卖、平空发买。⚠️ 方向取反在这里做一次，不散在调用处。
-		var dir def.TThostFtdcDirectionType = def.THOST_FTDC_D_Sell
-		if p.PosiDirection == def.THOST_FTDC_PD_Short {
-			dir = def.THOST_FTDC_D_Buy
-		}
-		md, err := c.MarketData(symbol, *timeout)
+	// ⚠️⚠️ **循环不提前返回，被保护拦下的腿跳过并计数** —— 20260913 评审第一节。
+	//
+	// 原先是 `for key, p := range pos`（map，顺序随机）+ 任何一笔没平掉就当场 return。
+	// 接上种子保护之后，`-all` 在受保护的交易日里会**随机平掉一部分就退出**：
+	// 排在种子后面的仓不平也不报，而报错只点了种子。
+	// ⚠️ 而 `-all` 最会被敲的场景恰恰是「多条腿同时有敞口、要一次清掉」。
+	//
+	// ⇒ 计划排序（flattenPlan）；发单前先过 `c.Check`，`ErrProtectedLeg` 跳过；
+	// 真没平掉的**记下来、接着平别的**；最后重查持仓，按腿判（flattenVerdict）。
+	// ⚠️ 真没平掉时不停下，理由是：本命令是**缩小**敞口的，停下只会让后面的敞口也留着。
+	plan, skipped := flattenPlan(pos, *only)
+	for _, s := range skipped {
+		logf("[flat] 跳过 %s（-symbol 只要 %s）", s, *only)
+	}
+	var tally flattenTally
+	for _, lg := range plan {
+		md, err := c.MarketData(lg.Symbol, *timeout)
 		if err != nil {
-			return fmt.Errorf("⚠️ 拿不到 %s 的行情，**仓还在**：%w", symbol, err)
+			tally.Failed = append(tally.Failed, fmt.Sprintf("%s：拿不到行情：%v", lg, err))
+			continue
 		}
 		// 平仓挂对自己不利的那一端（涨跌停价），保证成交。
 		//
@@ -974,38 +960,32 @@ func runCTPFlatten(args []string) error {
 		// **它保证落在合法区间内**，而「最新价 ± 20」在行情急动时会冲出涨跌停，
 		// 于是平仓被拒 —— 而平仓被拒的后果是**敞口留在账上**。
 		px := float64(md.LowerLimitPrice)
-		if dir == def.THOST_FTDC_D_Buy {
+		if lg.Dir == def.THOST_FTDC_D_Buy {
 			px = float64(md.UpperLimitPrice)
 		}
-		ex, inst := ctp.SplitSymbol(symbol)
-		// ⚠️ 两腿分开发：平今与平昨在 UseHistory 交易所上是**两笔不同的委托**，
-		// 合成一笔发过去会被拒，而拒了之后仓还在。
-		for _, leg := range []struct {
-			vol  int
-			off  def.TThostFtdcOffsetFlagType
-			name string
-		}{
-			{today, def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseToday), "今仓"},
-			{yd, def.TThostFtdcOffsetFlagType(def.THOST_FTDC_OF_CloseYesterday), "昨仓"},
-		} {
-			if leg.vol == 0 {
-				continue
-			}
-			logf("[flat] %s %s %d 手（%s）→ 平%s @%.2f",
-				key, leg.name, leg.vol, string(p.PosiDirection),
-				map[string]string{"今仓": "今", "昨仓": "昨"}[leg.name], px)
-			st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
-				Direction: dir, Offset: leg.off,
-				Volume: leg.vol, LimitPrice: px}, *timeout)
-			if err != nil || st.VolumeTraded == 0 {
-				return fmt.Errorf("⚠️⚠️ **%s 的%s没平掉，仓还在** —— status=%q %s err=%v",
-					symbol, leg.name, string(st.Status), st.StatusMsg, err)
-			}
-			logf("[flat] 已平%s %d 手", leg.name, st.VolumeTraded)
+		ex, inst := ctp.SplitSymbol(lg.Symbol)
+		// ⚠️ 今昨两腿分开发（flattenPlan 已拆好）：平今与平昨在 UseHistory 交易所上是
+		// **两笔不同的委托**，合成一笔发过去会被拒，而拒了之后仓还在。
+		req := ctp.OrderReq{Exchange: ex, Instrument: inst,
+			Direction: lg.Dir, Offset: lg.Offset, Volume: lg.Volume, LimitPrice: px}
+		if err := c.Check(req); errors.Is(err, safety.ErrProtectedLeg) {
+			logf("[flat] ⓘ 跳过 %s —— **受保护的持仓腿，留着是预期**：%v", lg, err)
+			tally.Protected = append(tally.Protected, lg)
+			continue
 		}
+		logf("[flat] %s → @%.2f", lg, px)
+		st, err := c.Insert(req, *timeout)
+		if err != nil || st.VolumeTraded == 0 {
+			msg := fmt.Sprintf("%s：status=%q %s err=%v", lg, string(st.Status), st.StatusMsg, err)
+			logf("[flat] ⚠️⚠️ 没平掉，**接着平别的**：%s", msg)
+			tally.Failed = append(tally.Failed, msg)
+			continue
+		}
+		logf("[flat] 已平%s %d 手", lg.Name, st.VolumeTraded)
+		tally.Closed = append(tally.Closed, lg)
 	}
-	if n == 0 {
-		logf("[flat] 没有可平的仓（今仓与昨仓都为零）")
+	if len(plan) == 0 {
+		logf("[flat] 没有可平的仓")
 	}
 	after, err := c.Account(*timeout)
 	if err != nil {
@@ -1013,20 +993,23 @@ func runCTPFlatten(args []string) error {
 	}
 	logf("[flat] 之后  balance=%.4f 占用保证金=%.4f 手续费累计=%.4f",
 		float64(after.Balance), float64(after.CurrMargin), float64(after.Commission))
-	// ⚠️ 「占用保证金归零」只在**全平**时才是正确的收尾断言。
-	// 限定了合约时账上本就该还有仓 ——
-	// ⚠️ 这一条若不分岳，一次**成功的**局部平仓会以错误退出，
-	// 而调用方会去收拾一个不存在的事故。
+	// ⚠️ 收尾按**腿**判，不再按「占用保证金归零」判：受保护的交易日里种子本就该留着，
+	// 那一条会**永远**触发。重查一次持仓，平完仍在的腿必须都是被保护跳过的那几条。
+	posAfter, err := c.Positions(*timeout)
+	if err != nil {
+		return fmt.Errorf("⚠️ 平完之后重查持仓失败，**不知道平干净没有**：%w", err)
+	}
+	remaining, _ := flattenPlan(posAfter, *only)
+	logf("[flat] 已平 %d 笔，按保护跳过 %d 笔，没平掉 %d 笔；重查仍在 %d 笔",
+		len(tally.Closed), len(tally.Protected), len(tally.Failed), len(remaining))
+	if err := flattenVerdict(tally, remaining); err != nil {
+		return err
+	}
 	if *only != "" {
-		logf("[flat] ⚠️ 仅平 %s，跳过 %d 个合约 —— 占用保证金不归零是预期的",
-			*only, skipped)
-		if n == 0 {
+		logf("[flat] ⚠️ 仅平 %s，跳过 %d 个合约 —— 占用保证金不归零是预期的", *only, len(skipped))
+		if len(plan) == 0 {
 			return fmt.Errorf("⚠️ -symbol %s 上**没有仓** —— 写错合约名与真的无仓可平在输出上长得一样，所以这里报错", *only)
 		}
-		return nil
-	}
-	if float64(after.CurrMargin) != 0 {
-		return fmt.Errorf("⚠️⚠️ 占用保证金仍为 %.4f —— **账上还有仓**", float64(after.CurrMargin))
 	}
 	return nil
 }

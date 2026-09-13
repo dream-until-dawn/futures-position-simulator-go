@@ -564,6 +564,8 @@ D+1 日 baseline-full / close-order / yd-vs-his
     字段   Intent.Symbol / Closing / ClosesSide / Volume / LimitPrice / Desc
            ProtectedLeg.Symbol / Side / TradingDay / Why
            Valve.AllowOrder / MaxVolume / Protected / TradingDay
+    变量   ErrProtectedLeg —— Valve.Check 拦下受保护腿时用 %w 包着它（20260913 新增，
+           供 ctp-flatten 用 errors.Is 分开「按保护跳过」与「真没平掉」）
 
 **枚举 `safety.Side`（`uint8`）—— 取值与零值都是导出面的一部分**：
 

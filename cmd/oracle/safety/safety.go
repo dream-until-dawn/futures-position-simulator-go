@@ -21,7 +21,18 @@
 // 后续实验没法做（过夜种子那一类是**当天不可再生**的）。
 package safety
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrProtectedLeg 是「这一笔被受保护腿拦下」的哨兵值，Check 的错误用 %w 包着它。
+//
+// ⚠️ 20260913 评审指出：`ctp-flatten -all` 在受保护的交易日里撞到种子时，
+// 分不清「被保护拦了」与「真没平掉」—— 两者都是一个普通的 error。
+// 于是它照「真没平掉」处理：当场返回，map 里排在种子后面的仓**不平、也不报**。
+// ⇒ 调用方用 `errors.Is(err, ErrProtectedLeg)` 分开这两种，前者是预期、后者是事故。
+var ErrProtectedLeg = errors.New("受保护的持仓腿")
 
 // Side 是**持仓**方向，不是委托方向。
 //
@@ -142,10 +153,10 @@ func (v Valve) Check(in Intent) error {
 	// 而后面几条拦的是重发一笔就能修好的参数错。
 	for _, l := range v.Protected {
 		if l.blocks(in, v.TradingDay) {
-			return fmt.Errorf("下单被安全阀拦下：这一笔会平掉**受保护的持仓腿** %s %s —— %s"+
+			return fmt.Errorf("下单被安全阀拦下：这一笔会平掉**%w** %s %s —— %s"+
 				"（保护在交易日 %q 生效，当前 %q）。"+
 				"⚠️ 确实要平就把它从清单里划掉并说明理由，不要绕过安全阀（%s）",
-				l.Symbol, l.Side, l.Why, l.TradingDay, v.TradingDay, in.Desc)
+				ErrProtectedLeg, l.Symbol, l.Side, l.Why, l.TradingDay, v.TradingDay, in.Desc)
 		}
 	}
 	if in.Volume <= 0 {

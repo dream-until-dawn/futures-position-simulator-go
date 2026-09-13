@@ -28,7 +28,8 @@ import (
 //
 //	透传进结构体字面量   `Note: raw.Note`
 //	写                   `x.Note = …`
-//	打印                 作 fmt.* / logf / t.Log* / t.Error* / t.Fatal* 的实参
+//	打印（打出去）       作 fmt.Print* / Fprint*、log.Print*、t.Log* / Error* / Fatal*、logf 的实参
+//	                     ⚠️ fmt.Sprint* / Sscan* / Errorf **不算**：它们把内容还回程序里
 //
 // 其余**任何**读法都算违规，另加一条：`m["note"]` 按键取值（从通用 map 里把注记当数据读出来）。
 //
@@ -39,9 +40,14 @@ import (
 // ⇒ 换成白名单：**在读的那一刻就判**，间接走不走得通与本条无关。
 // 这正是本仓库脱敏那条规矩的同一个道理：黑名单漏一个 → 静默；白名单漏一个 → 报错。
 //
-// ⚠️ 仍然抓不到的（按根写，不按例子写）：**不经 `.Note` 选择子**拿到注记内容的路径 ——
-// 整个结构体被序列化再解析、反射、`m[k]` 用变量键从通用 map 里取。本仓库此刻没有这几种，
-// 而本条不假装守住了它们。
+// ⚠️ 仍然抓不到的（按根写，不按例子写），两个根：
+//
+//	① **不经 `.Note` 选择子**拿到注记内容 —— 整个结构体序列化再解析、反射、`m[k]` 用变量键取
+//	② 「打印」是**按名字**认的 —— 一个叫 `logf` 的局部闭包、一个叫 `t` 的变量，谁都能定义，
+//	   而本条不看它们的实现。把注记交给一个自写的、恰好叫 logf 的解析函数，本条放行
+//
+// ⚠️ 20260913 评审之前我登记的只有 ①，而 `fmt.Sscanf(f.Note, …)` **经过**选择子、却被当成打印放过 ——
+// 那句「按根登记」当时不准。本仓库此刻两种都没有，而本条不假装守住了它们。
 func TestNobodyParsesFixtureNotes(t *testing.T) {
 	// ⚠️ **先证明探测器抓得住**，再去扫仓库。
 	// 否则「整个仓库零命中」有两种读法 —— 没人 parse，或者探测器从来不会响 ——
@@ -60,11 +66,19 @@ func a(f F, m map[string]any) bool {
 	_ = F{Note: f.Note}
 	f.Note = "w"
 	fmt.Println(f.Note)
+	logf("%s", f.Note)
+	t.Logf("%s", f.Note)
+	var stage int
+	_ = strings.Contains(fmt.Sprintf("%s", f.Note), "后")
+	_ = fmt.Sprint(f.Note) == "x"
+	_ = strings.HasSuffix(fmt.Errorf("%s", f.Note).Error(), "后")
+	_, _ = fmt.Sscanf(f.Note, "ctp-slices 阶段%d", &stage)
 	return strings.Contains(f.Note, "①") || f.Note == "y" || n == ""
 }`
-	if got := noteParses(t, "synthetic.go", synthetic); len(got) != 6 {
-		t.Fatalf("⚠️ 探测器在合成代码上应抓到 6 处（m[\"note\"] / switch / 局部变量 / 自写解析函数 / "+
-			"strings.Contains / ==），且放过透传、写、打印三处；实际 %d 处：%v —— "+
+	if got := noteParses(t, "synthetic.go", synthetic); len(got) != 10 {
+		t.Fatalf("⚠️ 探测器在合成代码上应抓到 10 处（m[\"note\"] / switch / 局部变量 / 自写解析函数 / "+
+			"fmt.Sprintf / fmt.Sprint / fmt.Errorf / fmt.Sscanf / strings.Contains / ==），"+
+			"且放过透传、写、fmt.Println、logf、t.Logf 五处；实际 %d 处：%v —— "+
 			"**探测器坏了，下面扫仓库的结果不可信**", len(got), got)
 	}
 
@@ -125,17 +139,31 @@ func noteParses(t *testing.T, name, src string) []string {
 		t.Logf("ⓘ 解析不了 %s，跳过：%v", name, err)
 		return nil
 	}
-	printers := map[string]bool{"logf": true, "Log": true, "Logf": true, "Error": true, "Errorf": true,
+	// ⚠️ 「打印」= 把内容**打出去**，不再回到程序里。20260913 评审第二节：上一版把整个 `fmt` 包当打印，
+	// 于是 `fmt.Sscanf(f.Note, "阶段%d", &stage)` —— 字面意义上的解析注记 —— 被放行。
+	// ⇒ 分开**打出去**与**还回来**：
+	//
+	//	打出去   fmt.Print* / Fprint*、log.Print*、t|b|tb 的 Log* / Error* / Fatal*、logf
+	//	还回来   fmt.Sprint* / Sscan* / Fscan* / Append*、**fmt.Errorf**（错误往上传之后 `.Error()` 拿得回内容）
+	outward := map[string]bool{"Print": true, "Printf": true, "Println": true,
+		"Fprint": true, "Fprintf": true, "Fprintln": true}
+	testOut := map[string]bool{"Log": true, "Logf": true, "Error": true, "Errorf": true,
 		"Fatal": true, "Fatalf": true}
 	isPrinter := func(fun ast.Expr) bool {
 		switch f := fun.(type) {
 		case *ast.Ident:
-			return printers[f.Name]
+			return f.Name == "logf"
 		case *ast.SelectorExpr:
-			if pkg, ok := f.X.(*ast.Ident); ok && pkg.Name == "fmt" {
-				return true
+			pkg, ok := f.X.(*ast.Ident)
+			if !ok {
+				return false
 			}
-			return printers[f.Sel.Name]
+			switch pkg.Name {
+			case "fmt", "log":
+				return outward[f.Sel.Name]
+			case "t", "b", "tb":
+				return testOut[f.Sel.Name]
+			}
 		}
 		return false
 	}

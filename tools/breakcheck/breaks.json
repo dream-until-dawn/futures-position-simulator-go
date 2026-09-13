@@ -4273,5 +4273,138 @@
 		"test": "TestNobodyParsesFixtureNotes",
 		"want": "探测器坏了",
 		"expect": "red"
+	},
+	{
+		"name": "446 ctp-flatten 一笔没平掉就当场返回——排在后面的仓不平也不报（评审 20260913 第一节的原样）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t\t\ttally.Failed = append(tally.Failed, msg)\n\t\t\tcontinue\n",
+		"new": "\t\t\treturn fmt.Errorf(\"%s\", msg)\n",
+		"pkg": ".",
+		"test": "TestFlattenLoopFinishesAndChecksFirst",
+		"want": "个 return",
+		"expect": "red"
+	},
+	{
+		"name": "447 ctp-flatten 发单前不再 Check——按保护跳过的腿会被当成没平掉",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "if err := c.Check(req); errors.Is(err, safety.ErrProtectedLeg) {",
+		"new": "if err := error(nil); errors.Is(err, safety.ErrProtectedLeg) {",
+		"pkg": ".",
+		"test": "TestFlattenLoopFinishesAndChecksFirst",
+		"want": "要**先 Check**",
+		"expect": "red"
+	},
+	{
+		"name": "448 安全阀的受保护腿拒绝不再用 %w 包哨兵——调用方分不出「按保护跳过」与「真没平掉」",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/safety/safety.go",
+		"old": "\"下单被安全阀拦下：这一笔会平掉**%w** %s %s —— %s\"",
+		"new": "\"下单被安全阀拦下：这一笔会平掉**%v** %s %s —— %s\"",
+		"pkg": "./safety/",
+		"test": "TestProtectedErrorIsDistinguishable",
+		"want": "不是 ErrProtectedLeg",
+		"expect": "red"
+	},
+	{
+		"name": "449 flattenPlan 的排序变成空操作——发单顺序又随 map 遍历",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\tsort.Slice(legs, func(i, j int) bool {",
+		"new": "\tsort.Slice(legs[:0], func(i, j int) bool {",
+		"pkg": ".",
+		"test": "TestFlattenPlanIsSortedAndSplit",
+		"want": "计划不对",
+		"expect": "red"
+	},
+	{
+		"name": "450 今昨两腿按字符串比——「今」U+4ECA 小于「昨」，昨仓排到前面",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\t\treturn a.Name == \"今仓\" && b.Name != \"今仓\"\n",
+		"new": "\t\treturn a.Name > b.Name\n",
+		"pkg": ".",
+		"test": "TestFlattenPlanIsSortedAndSplit",
+		"want": "计划不对",
+		"expect": "red"
+	},
+	{
+		"name": "451 flattenPlan 的昨仓退回读 YdPosition——昨仓已平而日初值仍在，会去平一手不存在的昨仓",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\t\tif yd := position - today; yd > 0 {",
+		"new": "\t\tif yd := int(p.YdPosition); yd > 0 {",
+		"pkg": ".",
+		"test": "TestFlattenPlanIsSortedAndSplit",
+		"want": "计划不对",
+		"expect": "red"
+	},
+	{
+		"name": "452 收尾判定不认受保护腿——种子留着被报成「没平干净」，受保护的两天里每次都报",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\t\tif !protected[l.Symbol+\"|\"+l.Side.String()] {",
+		"new": "\t\tif true {",
+		"pkg": ".",
+		"test": "TestFlattenVerdictNamesEverything",
+		"want": "种子被保护跳过",
+		"expect": "red"
+	},
+	{
+		"name": "453 收尾判定只看重查结果、不看真没平掉的——失败被保护腿「掩护」过去",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\tif len(t.Failed) == 0 && len(unexpected) == 0 {",
+		"new": "\tif len(unexpected) == 0 {",
+		"pkg": ".",
+		"test": "TestFlattenVerdictNamesEverything",
+		"want": "真没平掉 + 被保护跳过",
+		"expect": "red"
+	},
+	{
+		"name": "454 收尾判定按合约认保护、不分方向——空头被保护，同合约的多头也被兜底",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/flatten.go",
+		"old": "\t\tprotected[l.Symbol+\"|\"+l.Side.String()] = true\n",
+		"new": "\t\tprotected[l.Symbol+\"|\"+safety.Long.String()] = true\n\t\tprotected[l.Symbol+\"|\"+safety.Short.String()] = true\n",
+		"pkg": ".",
+		"test": "TestFlattenVerdictNamesEverything",
+		"want": "不替同合约的多头兜底",
+		"expect": "red"
+	},
+	{
+		"name": "455 note 白名单退回「整个 fmt 包都算打印」——fmt.Sscanf(f.Note, …) 解析注记被放行",
+		"dir": ".",
+		"file": "note_parse_test.go",
+		"old": "\t\t\tcase \"fmt\", \"log\":\n\t\t\t\treturn outward[f.Sel.Name]\n",
+		"new": "\t\t\tcase \"fmt\", \"log\":\n\t\t\t\treturn true\n",
+		"pkg": "./",
+		"test": "TestNobodyParsesFixtureNotes",
+		"want": "探测器坏了",
+		"expect": "red"
+	},
+	{
+		"name": "456 note 白名单把 fmt.Errorf 算成打印——错误往上传之后 .Error() 拿得回注记",
+		"dir": ".",
+		"file": "note_parse_test.go",
+		"old": "\"Fprint\": true, \"Fprintf\": true, \"Fprintln\": true}",
+		"new": "\"Fprint\": true, \"Fprintf\": true, \"Fprintln\": true, \"Errorf\": true}",
+		"pkg": "./",
+		"test": "TestNobodyParsesFixtureNotes",
+		"want": "探测器坏了",
+		"expect": "red"
+	},
+	{
+		"name": "457 夹具包里定义一个叫 logf 的函数去解析注记——「打印」按名字认，守卫放行",
+		"dir": ".",
+		"file": "conformance/fixture/fixture.go",
+		"old": "type Fixture struct {",
+		"new": "func logf(_ string, a ...any) bool {\n\ts, _ := a[0].(string)\n\treturn len(s) > 0 && s[0] == 'c'\n}\n\nvar _ = logf(\"%s\", Fixture{}.Note)\n\ntype Fixture struct {",
+		"pkg": "./",
+		"test": "TestNobodyParsesFixtureNotes",
+		"want": "",
+		"expect": "green",
+		"why": "⚠️ **如预期仍然绿，登记的是 note 守卫的第二个根**：「打印」是按**名字**认的（logf、名为 t/b/tb 的接收者的 Log*/Error*/Fatal*），不看实现。一个叫 logf、实际在解析注记的函数被当成打印放行。⚠️ 要堵它得做类型检查（go/types）并认准 *testing.T 与本仓库 logf 的签名，而签名同样挡不住「形状对、实现在解析」的函数 ⇒ 这一格不假装守住，按根登记在 TestNobodyParsesFixtureNotes 的注释里。"
 	}
 ]

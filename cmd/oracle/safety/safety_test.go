@@ -1,6 +1,7 @@
 package safety
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -106,6 +107,28 @@ func TestUnknownSideMatchesNothing(t *testing.T) {
 		if err := v.Check(closing("SHFE.rb2701", side)); err != nil {
 			t.Errorf("⚠️ 那条声明没填 Side（零值），却拦下了平 %s —— "+
 				"零值应当谁也不匹配，否则它保护的是随机的一边：%v", side, err)
+		}
+	}
+}
+
+// TestProtectedErrorIsDistinguishable 钉住「被保护拦下」**能被调用方分出来**，而别的拒绝**分不出来**。
+//
+// ⚠️ 两个方向都要断言：只断言前一半的话，一个把所有拒绝都包成 ErrProtectedLeg 的实现也能过 ——
+// 而那会让 ctp-flatten 把「手数错」「限价错」也当成预期跳过，**敞口留在账上、命令报成功**。
+func TestProtectedErrorIsDistinguishable(t *testing.T) {
+	if err := valve("20260909").Check(closing("SHFE.rb2701", Short)); !errors.Is(err, ErrProtectedLeg) {
+		t.Errorf("⚠️ 受保护腿的拒绝不是 ErrProtectedLeg：%v —— 调用方分不出「预期跳过」与「真没平掉」", err)
+	}
+	others := map[string]error{
+		"总闸关着": Valve{AllowOrder: false}.Check(closing("SHFE.rb2701", Short)),
+		"手数为零": valve("20260909").Check(Intent{Symbol: "SHFE.rb2705", Closing: true, ClosesSide: Long, Volume: 0, LimitPrice: 3000}),
+		"限价为零": valve("20260909").Check(Intent{Symbol: "SHFE.rb2705", Closing: true, ClosesSide: Long, Volume: 1}),
+	}
+	for name, err := range others {
+		if err == nil {
+			t.Errorf("⚠️ %s 竟然放行了 —— 本条后半在空集上跑", name)
+		} else if errors.Is(err, ErrProtectedLeg) {
+			t.Errorf("⚠️ %s 的拒绝被包成了 ErrProtectedLeg：%v —— 调用方会把它当成预期跳过", name, err)
 		}
 	}
 }
