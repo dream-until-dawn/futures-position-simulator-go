@@ -382,14 +382,8 @@ func run(b Break) (verdict, detail string) {
 		// CRLF 文件上的每一条多行锚点都匹配不上 —— 而那报出来是「零层未成立」，
 		// 看起来像锚点写错了。实测踩过一次，查了很久才想到是换行。
 		old, broken := adaptEOL(string(orig), e.Old), adaptEOL(string(orig), e.New)
-		if n := strings.Count(string(orig), old); n != 1 {
-			hint := ""
-			if old != e.Old {
-				hint = "（该文件通篇 CRLF，锚点已按它转换过再找）"
-			}
-			return "零层未成立", fmt.Sprintf(
-				"锚点在 %s 里出现 %d 次（要恰好 1 次）%s—— **破坏本身没发生**，"+
-					"下面无论红绿都不说明任何事", e.File, n, hint)
+		if p := anchorProblem(string(orig), e); p != "" {
+			return "零层未成立", p + "—— **破坏本身没发生**，下面无论红绿都不说明任何事"
 		}
 		plan = append(plan, staged{e.File, orig,
 			[]byte(strings.Replace(string(orig), old, broken, 1))})
@@ -536,6 +530,24 @@ func hasTrackedChanges(porcelain string) bool {
 		}
 	}
 	return false
+}
+
+// anchorProblem 判一处改动的锚点在文件内容里是否**恰好出现一次**；成立返回空串。
+//
+// ⚠️ 它从 run() 里抽出来，是为了让 `go test` 在**不跑破坏**的情况下也能查同一件事
+// （TestEveryBreakAnchorStillExists）。两处共用这一个函数 —— 各写一份的话，
+// 离线那道与运行期那道会在 CRLF 之类的细节上各说各话。
+func anchorProblem(content string, e AlsoEdit) string {
+	old := adaptEOL(content, e.Old)
+	n := strings.Count(content, old)
+	if n == 1 {
+		return ""
+	}
+	hint := ""
+	if old != e.Old {
+		hint = "（该文件通篇 CRLF，锚点已按它转换过再找）"
+	}
+	return fmt.Sprintf("锚点在 %s 里出现 %d 次（要恰好 1 次）%s", e.File, n, hint)
 }
 
 // adaptEOL 把锚点的换行改成**目标文件实际用的**那种。
