@@ -4126,19 +4126,19 @@
 		"new": "dumpSlices(c, env, *dump, *timeout, *symbol, sliceStage(1), logf)",
 		"pkg": "./tools/breakcheck/",
 		"test": "TestEveryBreakAnchorStillExists",
-		"want": "已经不在守任何东西",
+		"want": "412 腿1 与腿2 之间那一份落盘被拿掉",
 		"expect": "red"
 	},
 	{
-		"name": "433 平仓前那份落盘被 if false 包成死代码——锚点仍恰好一次，离线守卫不响",
+		"name": "433 平仓前那份落盘之前插一句 return nil——锚点一字未动而已是死代码，离线守卫不响",
 		"dir": "",
 		"file": "cmd/oracle/slice.go",
 		"old": "\tif *dump != \"\" {\n\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol, stageBeforeClose, logf)",
-		"new": "\tif false {\n\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol, stageBeforeClose, logf)",
+		"new": "\treturn nil\n\tif *dump != \"\" {\n\t\tif err := dumpSlices(c, env, *dump, *timeout, *symbol, stageBeforeClose, logf)",
 		"pkg": "./tools/breakcheck/",
 		"test": "TestEveryBreakAnchorStillExists",
 		"want": "",
 		"expect": "green",
-		"why": "⚠️ **如预期仍然绿，登记的是离线锚点守卫的那一格**：它只数锚点文本出现几次，不看锚点所在的代码还执不执行。这里 406 的锚点仍恰好出现一次，而它已经在一个永不进入的分支里 ⇒ 406 在全量里会表现为「期望红而仍然绿」，本条不响。⇒ **TestEveryBreakAnchorStillExists 不替代方法论 89**，只把「锚点文本被重构掉」这一种最常见的孤儿提前到 go test；「锚点还在而代码死了」仍然只有全量看得出。"
+		"why": "⚠️ **如预期仍然绿，登记的是离线锚点守卫的那一格**：它只数锚点文本出现几次，不看锚点所在的代码还执不执行。这里 406（与本条自己）的锚点一字未动、仍恰好出现一次，而它们已经在一句 return 之后 ⇒ 406 在全量里会表现为「期望红而仍然绿」，本条不响。⇒ **TestEveryBreakAnchorStillExists 不替代方法论 89**，只把「锚点文本被重构掉」这一种最常见的孤儿提前到 go test；「锚点还在而代码死了」仍然只有全量看得出。⚠️ 本条第一版写的是把 `if *dump != \"\"` 改成 `if false` —— **结果红了**：那一改删掉了**本条自己的锚点**，守卫点名的是 433 自己。⇒ 任何点名本守卫的破坏，只要替换掉自己的锚点文本就必然红；演示盲区的破坏必须**只插入、不改锚点**。"
 	}
 ]
