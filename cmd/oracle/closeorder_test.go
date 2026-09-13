@@ -166,3 +166,75 @@ func TestGenericCloseUsesTheGenericFlag(t *testing.T) {
 			"判别性委托必须只经 genericCloseReq 构造，收尾只许 CloseToday", explicit)
 	}
 }
+
+// TestCleanupVerdictRefusesWhenSeedMayBeToday 钉住 `-cleanup` 只在今仓里确定没有种子时才动手。
+func TestCleanupVerdictRefusesWhenSeedMayBeToday(t *testing.T) {
+	so := func(today, yd, opened int) longSides { return longSides{Today: today, Yd: yd, OpenedToday: opened} }
+	cases := []struct {
+		name string
+		s    longSides
+		want string // "go" / "nothing" / "refuse"
+	}{
+		{"今 0 ⇒ 没有要收的", so(0, 1, 1), "nothing"},
+		{"#4 收尾失败：种子作为昨仓可见、今 1 ⇒ 可以", so(1, 1, 1), "go"},
+		{"#4 消耗了昨仓、收尾失败：今 1 昨 0、今天开过 1 ⇒ 可以", so(1, 0, 1), "go"},
+		{"⚠️ 种子被记作今仓：今 1 昨 0、今天没开过 ⇒ 拒绝", so(1, 0, 0), "refuse"},
+		{"⚠️ 种子被记作今仓 + 今天开过 1：今 2 昨 0 ⇒ 拒绝", so(2, 0, 1), "refuse"},
+	}
+	seen := map[string]bool{}
+	for _, c := range cases {
+		err := cleanupVerdict(c.s)
+		got := "refuse"
+		switch {
+		case err == nil:
+			got = "go"
+		case err == errNothingToClean:
+			got = "nothing"
+		}
+		seen[got] = true
+		if got != c.want {
+			t.Errorf("%s：得到 %s，要 %s（%v）", c.name, got, c.want, err)
+		}
+	}
+	if len(seen) != 3 {
+		t.Errorf("⚠️ 三种结果只走到了 %v —— 判定没有判别力", seen)
+	}
+}
+
+// TestCleanupChecksBeforeClosing 钉住 closeOrderCleanup **先判再平**，且 runCTPCloseOrder 的 -cleanup 分支真的调用它。
+func TestCleanupChecksBeforeClosing(t *testing.T) {
+	_, files := parsePkgMain(t)
+	fn := findFunc(files["closeorder.go"], "closeOrderCleanup")
+	run := findFunc(files["closeorder.go"], "runCTPCloseOrder")
+	if fn == nil || run == nil {
+		t.Fatal("⚠️ 找不到 closeOrderCleanup / runCTPCloseOrder")
+	}
+	pos := map[string]int{}
+	ast.Inspect(fn, func(n ast.Node) bool {
+		if c, ok := n.(*ast.CallExpr); ok {
+			if id, ok := c.Fun.(*ast.Ident); ok {
+				if _, dup := pos[id.Name]; !dup {
+					pos[id.Name] = int(c.Pos())
+				}
+			}
+		}
+		return true
+	})
+	v, okV := pos["cleanupVerdict"]
+	cl, okC := pos["closeTodayOnly"]
+	if !okV || !okC || v > cl {
+		t.Errorf("⚠️ closeOrderCleanup 里 cleanupVerdict@%d（有=%v）、closeTodayOnly@%d（有=%v）—— 要先判再平", v, okV, cl, okC)
+	}
+	called := false
+	ast.Inspect(run, func(n ast.Node) bool {
+		if c, ok := n.(*ast.CallExpr); ok {
+			if id, ok := c.Fun.(*ast.Ident); ok && id.Name == "closeOrderCleanup" {
+				called = true
+			}
+		}
+		return true
+	})
+	if !called {
+		t.Error("⚠️ runCTPCloseOrder 没有调用 closeOrderCleanup —— -cleanup 这个开关是空的")
+	}
+}

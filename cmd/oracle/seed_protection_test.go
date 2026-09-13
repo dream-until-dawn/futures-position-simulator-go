@@ -174,6 +174,9 @@ func TestCTPProtectedLegsBlockTheSeed(t *testing.T) {
 				"空串是永久保护，写错格式则**永远不生效**", i, l.Symbol, l.TradingDay)
 		case len(l.Why) < 20:
 			t.Errorf("⚠️ 第 %d 条（%s）的 Why 太短 %q", i, l.Symbol, l.Why)
+		case l.Volume < 1:
+			t.Errorf("⚠️ 第 %d 条（%s）没有声明 Volume —— ctp-flatten 的收尾判定会把那条腿上的**每一手**都报成多出，"+
+				"而真正遗留的今仓与种子就分不开了", i, l.Symbol)
 		}
 
 		v := ctpValve(env)

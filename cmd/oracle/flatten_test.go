@@ -100,6 +100,9 @@ func TestFlattenVerdictNamesEverything(t *testing.T) {
 	rb := flattenLeg{Symbol: "SHFE.rb2701", Side: safety.Long, Name: "今仓", Volume: 1}
 	agShort := flattenLeg{Symbol: "SHFE.ag2702", Side: safety.Short, Name: "今仓", Volume: 1}
 	agLong := flattenLeg{Symbol: "SHFE.ag2702", Side: safety.Long, Name: "今仓", Volume: 1}
+	seedToday2 := flattenLeg{Symbol: "DCE.m2701", Side: safety.Long, Name: "今仓", Volume: 2}
+	seedToday5 := flattenLeg{Symbol: "DCE.m2701", Side: safety.Long, Name: "今仓", Volume: 5}
+	bcUndeclared := flattenLeg{Symbol: "INE.bc2611", Side: safety.Long, Name: "今仓", Volume: 1}
 	cases := []struct {
 		name      string
 		tally     flattenTally
@@ -120,9 +123,30 @@ func TestFlattenVerdictNamesEverything(t *testing.T) {
 			[]string{"SHFE.ag2702 多头"}},
 		{"真没平掉 + 被保护跳过 ⇒ 报错里两样都说", flattenTally{Failed: []string{"INE.bc2611 今仓：拒"}, Protected: []flattenLeg{seedYd}},
 			[]flattenLeg{seedYd}, false, []string{"INE.bc2611", "按保护跳过 1 条", "DCE.m2701"}},
+		// ⚠️ 下面三格是 20260913 评审第二轮实测出来的：上一版全部判「平干净了」、正常退出。
+		{"⚠️ 种子 + #4 收尾失败遗留的今仓 2 手 ⇒ 多出 2 手，报错",
+			flattenTally{Protected: []flattenLeg{seedToday2, seedYd}}, []flattenLeg{seedToday2, seedYd}, false,
+			[]string{"共 3 手，保护只覆盖 1 手", "多出 2 手", "ctp-closeorder -cleanup"}},
+		{"⚠️ 种子不在、账上 5 手今天开的 ⇒ 多出 4 手，报错",
+			flattenTally{Protected: []flattenLeg{seedToday5}}, []flattenLeg{seedToday5}, false,
+			[]string{"共 5 手", "多出 4 手"}},
+		{"保护未声明手数（0）⇒ 一手都不当预期",
+			flattenTally{Protected: []flattenLeg{bcUndeclared}}, []flattenLeg{bcUndeclared}, false,
+			[]string{"保护只覆盖 0 手", "多出 1 手"}},
+		{"恰好等于保护手数 ⇒ 预期",
+			flattenTally{Protected: []flattenLeg{agShort}}, []flattenLeg{agShort}, true, nil},
+	}
+	allowed := func(symbol string, side safety.Side) int {
+		switch {
+		case symbol == "DCE.m2701" && side == safety.Long:
+			return 1
+		case symbol == "SHFE.ag2702" && side == safety.Short:
+			return 1
+		}
+		return 0
 	}
 	for _, c := range cases {
-		err := flattenVerdict(c.tally, c.remaining)
+		err := flattenVerdict(c.tally, c.remaining, allowed)
 		if (err == nil) != c.ok {
 			t.Errorf("%s：ok=%v，要 %v（%v）", c.name, err == nil, c.ok, err)
 			continue
@@ -196,7 +220,11 @@ func TestFlattenLoopFinishesAndChecksFirst(t *testing.T) {
 }
 
 // TestFlattenPlanMeetsProductionValve 把计划里的每一笔过一遍**生产的** ctpValve：
-// 恰好种子那两条（今、昨 —— 受保护腿不分今昨）被判成 ErrProtectedLeg，其余一笔都不是。
+// 恰好**种子所在的「合约 + 方向」上**那两条被判成 ErrProtectedLeg，其余一笔都不是。
+//
+// ⚠️ 两条里**至多一条是种子**（种子只有 1 手）：受保护腿不分今昨，同一合约方向上的今仓也一起被拦。
+// 上一版这里写的是「恰好种子那两条」—— 评审指出种子只有 1 手。
+// 被拦下的今仓在收尾时由 flattenVerdict 按 Volume 判「多出」，见 TestFlattenVerdictNamesEverything。
 //
 // ⚠️ 未连接的客户端 TradingDay() 是空串 ⇒ 按「还不知道今天是哪天」照拦，与柜台截面到达之前一致。
 func TestFlattenPlanMeetsProductionValve(t *testing.T) {
@@ -215,6 +243,40 @@ func TestFlattenPlanMeetsProductionValve(t *testing.T) {
 		}
 	}
 	if got := strings.Join(protected, "；"); got != "DCE.m2701 多头 今仓 1 手；DCE.m2701 多头 昨仓 1 手" {
-		t.Errorf("⚠️ 按保护判出的腿是 [%s]，要恰好种子那两条 —— 保护表或 ErrProtectedLeg 的接线不对", got)
+		t.Errorf("⚠️ 按保护判出的腿是 [%s]，要恰好 DCE.m2701 多头那两条 —— 保护表或 ErrProtectedLeg 的接线不对", got)
+	}
+}
+
+// TestProtectedVolumeTakesMaxNotSum 钉住同一手种子在两天各挂一条保护时，覆盖手数是 1 不是 2。
+func TestProtectedVolumeTakesMaxNotSum(t *testing.T) {
+	legs := []safety.ProtectedLeg{
+		{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260914", Volume: 1},
+		{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260915", Volume: 1},
+		{Symbol: "DCE.m2701", Side: safety.Short, TradingDay: "20260915", Volume: 3},
+	}
+	f := protectedVolume(legs)
+	if got := f("DCE.m2701", safety.Long); got != 1 {
+		t.Errorf("⚠️ 同一手种子两天各一条，覆盖手数得到 %d，要 1 —— 相加会让「种子 + 1 手遗留今仓」判平干净", got)
+	}
+	if got := f("DCE.m2701", safety.Short); got != 3 {
+		t.Errorf("方向要分开：空头得到 %d，要 3", got)
+	}
+	if got := f("SHFE.rb2701", safety.Long); got != 0 {
+		t.Errorf("表里没有的合约得到 %d，要 0", got)
+	}
+	// ⚠️ 生产那张表：同一「合约 + 方向」有多条时，覆盖手数必须**小于**各条之和（否则上面这条在生产上没咬住）。
+	sum := map[string]int{}
+	n := map[string]int{}
+	for _, l := range ctpProtectedLegs {
+		k := l.Symbol + "|" + l.Side.String()
+		sum[k] += l.Volume
+		n[k]++
+	}
+	prod := protectedVolume(ctpProtectedLegs)
+	for _, l := range ctpProtectedLegs {
+		k := l.Symbol + "|" + l.Side.String()
+		if n[k] > 1 && prod(l.Symbol, l.Side) >= sum[k] {
+			t.Errorf("⚠️ 生产表里 %s 有 %d 条，覆盖手数 %d 不小于各条之和 %d", k, n[k], prod(l.Symbol, l.Side), sum[k])
+		}
 	}
 }

@@ -208,13 +208,17 @@ func runCTPCloseOrder(args []string) error {
 	symbol := fs.String("symbol", "", "合约，形如 DCE.m2701（⚠️ 无默认值：会真的开一手、平一手）")
 	dump := fs.String("dump", "", "三份截面落盘目录（⚠️ CTP 夹具只能落 testdata/ctp/）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
+	cleanup := fs.Bool("cleanup", false, "**只收尾**：只用平今单平掉该合约多头的今仓，不开仓、不做实验。"+
+		"⚠️ 20260913 评审第二轮补的：保护期内（20260914/15）第 1 步的收尾若失败，遗留的今仓"+
+		"`ctp-flatten -symbol <合约>` 平不掉（按保护跳过），而本命令是唯一豁免保护的 —— 没有这个模式就只能把整个实验重跑一遍。"+
+		"⚠️ 分不清今仓里有没有种子时**拒绝动手**（见 cleanupVerdict）")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：本命令会真的开一手、平一手")
 	}
-	if *dump == "" {
+	if *dump == "" && !*cleanup {
 		// ⚠️ 不落盘就不跑：#13 那次的教训是「判别力躺在一个没拍下来的瞬间里」。
 		return fmt.Errorf("⚠️ -dump 没有给 —— 本命令**不许只打 console**：" +
 			"#13 被整条打回，正是因为判别性的读数只进了日志、没进夹具")
@@ -235,6 +239,9 @@ func runCTPCloseOrder(args []string) error {
 		return err
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
+	if *cleanup {
+		return closeOrderCleanup(c, ex, inst, *timeout, logf)
+	}
 
 	// ——— 0 前提（排在任何委托之前）———
 	pos0, err := c.Positions(*timeout)
@@ -350,4 +357,51 @@ func closeTodayOnly(c *ctp.Client, ex, inst string, timeout time.Duration,
 		}
 	}
 	return fmt.Errorf("⚠️ 平了 5 次今仓还没清空 —— 停手，去看账户")
+}
+
+// cleanupVerdict 判 `ctp-closeorder -cleanup` 能不能动手；nil = 可以。
+//
+// ⚠️ 收尾用的是平今单（closeTodayOnly 按「今」手数发 CloseToday）。它只在**今仓里确定没有种子**时才安全：
+//
+//	今 0                              没有要收的，不动手（返回 errNothingToClean）
+//	昨 ≥1                             种子作为昨仓单独可见 ⇒ 今仓全是新开的，可以
+//	昨 0 且 今 ≤ 本交易日开过的         今仓都是今天开的（#4 消耗了昨仓之后就是这样）⇒ 可以
+//	昨 0 且 今 > 本交易日开过的         有一手**不是今天开的**却记作今仓 —— 种子可能就在里面 ⇒ **拒绝**
+//
+// ⚠️ 与第 1 步收尾同一个前提：第 1 步只在「昨 ≥1」时才开仓，所以它的 defer 本来就只在第二行的情形下跑。
+// ⚠️ 仍有一格分不开（登记，不假装守住）：种子被记作今仓 **且** 今天另开过又平掉过 ——
+// `OpenVolume` 是当日累计，会把「开过又平掉的」也算进去，于是第三行误判为可以。
+func cleanupVerdict(s longSides) error {
+	switch {
+	case s.Today == 0:
+		return errNothingToClean
+	case s.Yd >= 1:
+		return nil
+	case s.Today <= s.OpenedToday:
+		return nil
+	}
+	return fmt.Errorf("⚠️⚠️ **拒绝收尾**：今 %d、昨 0、本交易日开过 %d —— 有 %d 手**不是今天开的**却记作今仓，"+
+		"种子可能就在里面，而平今单会不会吃到它正是 #4 要答的问题。去看账户，手工决定",
+		s.Today, s.OpenedToday, s.Today-s.OpenedToday)
+}
+
+// errNothingToClean 是「今仓为 0，没有要收的」。它不是事故，调用方据此正常退出。
+var errNothingToClean = fmt.Errorf("今仓为 0，没有要收的")
+
+// closeOrderCleanup 是 `ctp-closeorder -cleanup` 的全部动作：查持仓 → cleanupVerdict → closeTodayOnly。
+func closeOrderCleanup(c *ctp.Client, ex, inst string, timeout time.Duration, logf func(string, ...any)) error {
+	pos, err := c.Positions(timeout)
+	if err != nil {
+		return err
+	}
+	s := longSidesOf(pos, inst)
+	logf("[co] -cleanup：今 %d / 昨 %d / 本交易日开过 %d（记录 %d 条）", s.Today, s.Yd, s.OpenedToday, s.Records)
+	if err := cleanupVerdict(s); err != nil {
+		if err == errNothingToClean {
+			logf("[co] -cleanup：%v", err)
+			return nil
+		}
+		return err
+	}
+	return closeTodayOnly(c, ex, inst, timeout, logf)
 }

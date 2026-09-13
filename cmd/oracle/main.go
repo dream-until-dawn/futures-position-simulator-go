@@ -41,6 +41,7 @@ func usage() {
   oracle probe -exp <名称> [-symbols a,b] [-env 路径]
   oracle whitelist                 打印脱敏白名单，供评审逐键核对
   oracle ctp-closeorder -symbol DCE.m2701 -dump testdata/ctp
+  oracle ctp-closeorder -symbol DCE.m2701 -cleanup     （只收尾：平掉遗留今仓，分不清今仓里有无种子时拒绝）
                                    ⚠️ **会真的开一手、平一手**（rules_pending #4）：今昨都在时发**通用**平仓，
                                    看消耗哪一边。前提：今 0、昨 ≥1；收尾只平今仓，昨仓不碰
   oracle ctp-flatten (-symbol SHFE.ag2702 | -all)
@@ -554,9 +555,9 @@ func includeCloseProfitName(v def.TThostFtdcIncludeCloseProfitType) string {
 // ⚠️ 过期即失效（ProtectedLeg.blocks 按交易日比），不必担心它拦住以后正当的收尾；
 // 而若 #4 推迟到再往后的交易日，**要在这里加一条**，否则那天种子没有保护。
 var ctpProtectedLegs = []safety.ProtectedLeg{
-	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260914",
+	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260914", Volume: 1,
 		Why: "#4/#7 唯一的过夜种子（周五夜盘开，交易日 20260914 仍是今仓）"},
-	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260915",
+	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260915", Volume: 1,
 		Why: "#4/#7 唯一的昨仓来源（交易日 20260915 跨过结算）—— 只有 ctp-closeorder 可以动它"},
 }
 
@@ -1002,7 +1003,7 @@ func runCTPFlatten(args []string) error {
 	remaining, _ := flattenPlan(posAfter, *only)
 	logf("[flat] 已平 %d 笔，按保护跳过 %d 笔，没平掉 %d 笔；重查仍在 %d 笔",
 		len(tally.Closed), len(tally.Protected), len(tally.Failed), len(remaining))
-	if err := flattenVerdict(tally, remaining); err != nil {
+	if err := flattenVerdict(tally, remaining, protectedVolume(ctpProtectedLegs)); err != nil {
 		return err
 	}
 	if *only != "" {

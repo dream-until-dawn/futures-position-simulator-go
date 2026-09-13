@@ -79,7 +79,9 @@ func flattenPlan(pos map[string]*def.CThostFtdcInvestorPositionField, only strin
 		if a.Side != b.Side {
 			return a.Side < b.Side
 		}
-		// ⚠️ 今仓排在昨仓前。不按字符串比：「今」U+4ECA <「昨」U+6628，字典序会把昨仓排前面。
+		// ⚠️ 今仓排在昨仓前，显式写出来、不靠字符串序。
+		// （「今」U+4ECA <「昨」U+6628，升序恰好也是今在前 —— 20260913 我先写反过一次，
+		// 评审实跑纠正。⇒ 次序是**设计**，不该取决于两个汉字的码位碰巧怎么排。）
 		return a.Name == "今仓" && b.Name != "今仓"
 	})
 	sort.Strings(skipped)
@@ -95,24 +97,50 @@ type flattenTally struct {
 
 // flattenVerdict 判一轮 ctp-flatten 算不算平干净了。
 //
-// remaining 是**平完之后重新查**的持仓（同一个作用域）。判据：
+// remaining 是**平完之后重新查**的持仓（同一个作用域）；allowed 给出某个「合约 + 方向」上
+// 保护**覆盖几手**（ProtectedLeg.Volume）。判据：
 //
-//	有任何一笔真没平掉                   ⇒ 报错，**全部列出**（不是只点第一条）
-//	平完仍在、且不是被保护跳过的那条腿   ⇒ 报错，列出
-//	否则                                 ⇒ 平干净了；被保护跳过的腿在账上是**预期**
+//	有任何一笔真没平掉                                 ⇒ 报错，**全部列出**（不是只点第一条）
+//	平完仍在、且不是被保护跳过的那个「合约 + 方向」     ⇒ 报错，列出
+//	被保护跳过的「合约 + 方向」上，仍在的手数超过保护覆盖 ⇒ 报错，列出多出几手（**不自动平**）
+//	否则                                               ⇒ 平干净了；保护覆盖的那几手留着是**预期**
 //
 // ⚠️ 原先的收尾是「占用保证金必须归零」。在受保护的交易日里种子本就该留着，
 // 那一条**永远**会触发 —— 于是它要么被人习惯性忽略，要么每次都去收拾一个不存在的事故。
-// ⇒ 换成按腿比：它知道哪条腿是该留的。
-func flattenVerdict(t flattenTally, remaining []flattenLeg) error {
+//
+// ⚠️⚠️ 第三条是 20260913 评审第二轮补的：上一版只按「合约 + 方向」认，于是
+// 「种子 + #4 收尾失败遗留的 2 手今仓」「种子不在、5 手今天开的仓」**都判平干净、正常退出** ——
+// 那是本命令自己记过的最坏形状：报「无事可做」的平仓命令比报错的更坏。
+// ⚠️ 多出的部分**只报不平**：分不出哪一手是种子，而大商所上一笔平今会不会吃到种子，正是 #4 要答的问题。
+// 遗留今仓的恢复路径是 `ctp-closeorder -cleanup`。
+func flattenVerdict(t flattenTally, remaining []flattenLeg, allowed func(symbol string, side safety.Side) int) error {
+	key := func(l flattenLeg) string { return l.Symbol + "|" + l.Side.String() }
 	protected := map[string]bool{}
 	for _, l := range t.Protected {
-		protected[l.Symbol+"|"+l.Side.String()] = true
+		protected[key(l)] = true
 	}
-	var unexpected []string
+	held := map[string]int{}
+	first := map[string]flattenLeg{}
+	var order, unexpected []string
 	for _, l := range remaining {
-		if !protected[l.Symbol+"|"+l.Side.String()] {
+		k := key(l)
+		if !protected[k] {
 			unexpected = append(unexpected, l.String())
+			continue
+		}
+		if _, ok := first[k]; !ok {
+			first[k] = l
+			order = append(order, k)
+		}
+		held[k] += l.Volume
+	}
+	for _, k := range order {
+		l := first[k]
+		if a := allowed(l.Symbol, l.Side); held[k] > a {
+			unexpected = append(unexpected, fmt.Sprintf(
+				"%s %s 共 %d 手，保护只覆盖 %d 手 —— **多出 %d 手**（不自动平：分不出哪一手是种子；"+
+					"遗留今仓用 `ctp-closeorder -cleanup -symbol %s`）",
+				l.Symbol, l.Side, held[k], a, held[k]-a, l.Symbol))
 		}
 	}
 	if len(t.Failed) == 0 && len(unexpected) == 0 {
@@ -124,14 +152,31 @@ func flattenVerdict(t flattenTally, remaining []flattenLeg) error {
 		fmt.Fprintf(&b, "；没平掉 %d 笔：%s", len(t.Failed), strings.Join(t.Failed, "；"))
 	}
 	if len(unexpected) > 0 {
-		fmt.Fprintf(&b, "；平完重查仍在、且不受保护：%s", strings.Join(unexpected, "；"))
+		fmt.Fprintf(&b, "；平完重查仍在、且不在保护覆盖内：%s", strings.Join(unexpected, "；"))
 	}
 	if len(t.Protected) > 0 {
 		names := make([]string, len(t.Protected))
 		for i, l := range t.Protected {
 			names[i] = l.String()
 		}
-		fmt.Fprintf(&b, "（另按保护跳过 %d 条，那几条留着是预期：%s）", len(t.Protected), strings.Join(names, "；"))
+		fmt.Fprintf(&b, "（另按保护跳过 %d 条：%s）", len(t.Protected), strings.Join(names, "；"))
 	}
 	return fmt.Errorf("%s", b.String())
+}
+
+// protectedVolume 造 flattenVerdict 用的 allowed：某个「合约 + 方向」上一张保护表覆盖的手数。
+//
+// ⚠️ 按日期**不过滤**、取各条里的**最大值**，不相加：走到这里的腿已经被安全阀按交易日拦过一次
+// （它在 tally.Protected 里），日期已经核过；而同一手种子在 20260914/15 两天各挂一条 ——
+// 相加会把 1 手种子当成 2 手，于是「种子 + 1 手遗留今仓」被判平干净。
+func protectedVolume(legs []safety.ProtectedLeg) func(symbol string, side safety.Side) int {
+	return func(symbol string, side safety.Side) int {
+		v := 0
+		for _, l := range legs {
+			if l.Symbol == symbol && l.Side == side && l.Volume > v {
+				v = l.Volume
+			}
+		}
+		return v
+	}
 }
