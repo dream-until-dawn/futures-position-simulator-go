@@ -539,15 +539,50 @@ func includeCloseProfitName(v def.TThostFtdcIncludeCloseProfitType) string {
 	return "⚠️ 没见过的取值"
 }
 
-// ctpValve 从 .env 造 CTP 侧的下单安全阀。
+// ctpProtectedLegs 是 SimNow 账户上**今天不许平**的持仓腿。
 //
-// ⚠️ **它是 CTP 侧唯一构造 Valve 的地方**，理由与 kq 那侧的 guard() 相同：
+// # ⚠️ 20260913 评审指出：保护早就有，而 CTP 侧 11 个调用点全部传的是 nil
+//
+// 种子 `DCE.m2701` 多 1 手是 #4 唯一的昨仓来源，而此前保护它的只有操作单上的两句提醒
+// （「不许用 DCE.m2701 跑 ctp-reject」「不许出现 ctp-flatten -all」）。
+// c30eadb 我自己写下的根因是「**提醒在消息里，命令在手上**」—— 治了 ctp-flatten 一处，
+// 别的命令仍然只靠提醒。
+//
+// ⚠️ 两个交易日各一条：种子是周五夜盘开的，属于交易日 **20260914** —— 周一白天它还是今仓，
+// 20260915 才变成昨仓。只写 20260915 的话，周一白天任何命令都能平掉它。
+// ⚠️ 过期即失效（ProtectedLeg.blocks 按交易日比），不必担心它拦住以后正当的收尾；
+// 而若 #4 推迟到再往后的交易日，**要在这里加一条**，否则那天种子没有保护。
+var ctpProtectedLegs = []safety.ProtectedLeg{
+	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260914",
+		Why: "#4/#7 唯一的过夜种子（周五夜盘开，交易日 20260914 仍是今仓）"},
+	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260915",
+		Why: "#4/#7 唯一的昨仓来源（交易日 20260915 跨过结算）—— 只有 ctp-closeorder 可以动它"},
+}
+
+// ctpValve 从 .env 造 CTP 侧的下单安全阀，**带上 ctpProtectedLegs**。
+//
+// ⚠️ 默认就是受保护的：调用方**不能**选择传 nil。上一版签名是 `ctpValve(env, legs)`，
+// 11 个调用点全部写 nil —— 「接不接保护」是每个调用点各自的选择，而选择的默认值是不接。
+// ⇒ 要不带保护，只能显式调 ctpValveExempt 并写下理由（守卫 TestCTPValveCallSitesCarryProtection）。
+func ctpValve(env probe.Env) safety.Valve {
+	return ctpValveWith(env, ctpProtectedLegs)
+}
+
+// ctpValveExempt 造一个**不带受保护腿**的安全阀。**只许 ctp-closeorder 用。**
+//
+// ⚠️ 理由：ProtectedLeg **不分今昨** —— 接上它，#4 那一笔通用平仓与 closeTodayOnly 收尾
+// 会一起被拦掉，而 #4 恰恰要在种子所在的合约上开一手、平一手。
+// ⚠️ 代价：ctp-closeorder 上保护种子的只剩它自己的收尾（只按今手数发 CloseToday）。
+// why 会打印出来，免得「这一次没有保护」只存在于源码里。
+func ctpValveExempt(env probe.Env, why string, logf func(string, ...any)) safety.Valve {
+	logf("⚠️ 本命令的安全阀**不带受保护腿**：%s", why)
+	return ctpValveWith(env, nil)
+}
+
+// ctpValveWith 是 CTP 侧**唯一构造 Valve 的地方**，理由与 kq 那侧的 guard() 相同：
 // 这个模块栽过「抽了纯函数、配了测试、忘了接线」的跟头，而**接线那一步
 // 在被省略时是不可见的**。守卫 TestCTPValveCarriesEnv 从这里出发验到拒绝。
-//
-// ⚠️ Protected 目前为空：过夜种子在快期那侧，SimNow 账户是空的。
-// 空着不等于不接 —— 接线本身要被验着，见那条守卫。
-func ctpValve(env probe.Env, legs []safety.ProtectedLeg) safety.Valve {
+func ctpValveWith(env probe.Env, legs []safety.ProtectedLeg) safety.Valve {
 	return safety.Valve{
 		AllowOrder: env.AllowOrder,
 		MaxVolume:  env.MaxVolume,
@@ -591,7 +626,7 @@ func runCTPOrder(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 
 	if err := c.Connect(*timeout); err != nil {
@@ -744,7 +779,7 @@ func runCTPRoundTrip(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err
@@ -886,7 +921,7 @@ func runCTPFlatten(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err
@@ -1039,7 +1074,7 @@ func runCTPHold(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err
@@ -1128,7 +1163,7 @@ func runCTPHold(args []string) error {
 		logf("⇒ ⚠️⚠️ **前提不成立，本轮不下判断**：账上有 %d 条今仓。", legs)
 		logf("   本判据默认「只有这一条腿，只有价格在动」—— 多一条腿，")
 		logf("   占用保证金的变动就有了第二个来源，而**两个来源在这张表里长得一模一样**。")
-		logf("   ⇒ 先 `ctp-flatten` 平干净再跑。")
+		logf("   ⇒ 先对那几条今仓各自跑 `ctp-flatten -symbol <合约>` 平干净再跑。")
 	case holdNoData:
 		logf("⇒ ⚠️ 一轮都没读到 %s 的今仓 —— **没有观测，不是结论**", *symbol)
 	case holdNoMove:
@@ -1155,7 +1190,7 @@ func runCTPHold(args []string) error {
 		logf("       今仓的保证金基准已量到是**开仓价**，而结算之后这手仓变成昨仓，")
 		logf("       开仓价这个概念还在不在、基准换不换，**只有跨过一次结算才看得见**。")
 		logf("       明日复盘：跑 `ctp-hold -rounds 1` 看昨仓的占用保证金，")
-		logf("       与 昨结算价×乘数×16%% 比；平仓用 `ctp-flatten`（它会自己挑平今/平昨）。")
+		logf("       与 昨结算价×乘数×16%% 比；平仓用 `ctp-flatten -symbol %s`（它会自己挑平今/平昨）。", *symbol)
 		return nil
 	}
 	logf("[hold] 平仓 ——")
@@ -1164,7 +1199,7 @@ func runCTPHold(args []string) error {
 		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
 	if err != nil || cs.VolumeTraded == 0 {
 		return fmt.Errorf("⚠️⚠️ **平仓没成交，账上还留着 1 手 %s 多头今仓** —— "+
-			"status=%q %s err=%v。跑 `ctp-flatten` 收拾", *symbol, string(cs.Status), cs.StatusMsg, err)
+			"status=%q %s err=%v。跑 `ctp-flatten -symbol %s` 收拾", *symbol, string(cs.Status), cs.StatusMsg, err, *symbol)
 	}
 	logf("[hold] 已平 %d 手", cs.VolumeTraded)
 	return nil

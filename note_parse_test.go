@@ -24,32 +24,48 @@ import (
 //
 // 我当时登记为「可以有守卫，而这一批没写」。20260913 无盘这一天补上。
 //
-// # ⚠️ 判据：什么算「拿它做判断」
+// # ⚠️ 判据：白名单 —— 读 `.Note` 只许三种形状
 //
-// 允许：声明字段、透传赋值（`Note: raw.Note`）、打印（fmt / t.Log / logf）。
-// 不允许，因为那是在**用自由文本的内容决定行为**：
+//	透传进结构体字面量   `Note: raw.Note`
+//	写                   `x.Note = …`
+//	打印                 作 fmt.* / logf / t.Log* / t.Error* / t.Fatal* 的实参
 //
-//	`.Note` 作 `==` / `!=` 的操作数，或作 switch 的 tag
-//	`.Note` 作 strings / regexp / strconv / bytes / json 包里函数的实参
-//	`m["note"]` 这种按键取值（从通用 map 里把注记当数据读出来）
+// 其余**任何**读法都算违规，另加一条：`m["note"]` 按键取值（从通用 map 里把注记当数据读出来）。
 //
-// ⚠️ 它是**近似**判据：把 `.Note` 先赋给一个局部变量再去比，本条抓不到。
-// 那一格登记在此，不假装守住了。
+// ⚠️ 上一版是**黑名单**（`==`/`!=`、switch tag、strings/regexp/… 的实参），登记的盲区是
+// 「先赋给局部变量再比」。20260913 评审用四个探针指出盲区比登记的宽：
+// `zzStage(f.Note)`（自写一个解析函数）同样逃掉，**而那是写解析器最自然的形状**。
+// 两者同根 ——「任何去掉 `.Note` 选择子的间接都逃得掉」，而黑名单只能按例子补。
+// ⇒ 换成白名单：**在读的那一刻就判**，间接走不走得通与本条无关。
+// 这正是本仓库脱敏那条规矩的同一个道理：黑名单漏一个 → 静默；白名单漏一个 → 报错。
+//
+// ⚠️ 仍然抓不到的（按根写，不按例子写）：**不经 `.Note` 选择子**拿到注记内容的路径 ——
+// 整个结构体被序列化再解析、反射、`m[k]` 用变量键从通用 map 里取。本仓库此刻没有这几种，
+// 而本条不假装守住了它们。
 func TestNobodyParsesFixtureNotes(t *testing.T) {
 	// ⚠️ **先证明探测器抓得住**，再去扫仓库。
 	// 否则「整个仓库零命中」有两种读法 —— 没人 parse，或者探测器从来不会响 ——
 	// 而两者在全绿时长得一模一样。
+	// ⚠️ 合成样本**两侧都有**：6 处违规（含评审的 P2 局部变量、P3 自写解析函数），
+	// 3 处允许的读法（透传、写、打印）。只放违规样本的话，一个「见 `.Note` 就报」的探测器也能过。
 	const synthetic = `package x
-import "strings"
+import ("fmt"; "strings")
 type F struct{ Note string }
+func zzStage(s string) int { return strings.Index(s, "①") }
 func a(f F, m map[string]any) bool {
 	_ = m["note"]
 	switch f.Note { case "x": }
-	return strings.Contains(f.Note, "①") || f.Note == "y"
+	n := f.Note
+	_ = zzStage(f.Note)
+	_ = F{Note: f.Note}
+	f.Note = "w"
+	fmt.Println(f.Note)
+	return strings.Contains(f.Note, "①") || f.Note == "y" || n == ""
 }`
-	if got := noteParses(t, "synthetic.go", synthetic); len(got) != 4 {
-		t.Fatalf("⚠️ 探测器在合成代码上应抓到 4 处（m[\"note\"] / switch / strings.Contains / ==），"+
-			"实际 %d 处：%v —— **探测器坏了，下面扫仓库的结果不可信**", len(got), got)
+	if got := noteParses(t, "synthetic.go", synthetic); len(got) != 6 {
+		t.Fatalf("⚠️ 探测器在合成代码上应抓到 6 处（m[\"note\"] / switch / 局部变量 / 自写解析函数 / "+
+			"strings.Contains / ==），且放过透传、写、打印三处；实际 %d 处：%v —— "+
+			"**探测器坏了，下面扫仓库的结果不可信**", len(got), got)
 	}
 
 	scanned, selectors := 0, 0
@@ -109,39 +125,68 @@ func noteParses(t *testing.T, name, src string) []string {
 		t.Logf("ⓘ 解析不了 %s，跳过：%v", name, err)
 		return nil
 	}
-	isNote := func(e ast.Expr) bool {
-		sel, ok := e.(*ast.SelectorExpr)
-		return ok && sel.Sel.Name == "Note"
+	printers := map[string]bool{"logf": true, "Log": true, "Logf": true, "Error": true, "Errorf": true,
+		"Fatal": true, "Fatalf": true}
+	isPrinter := func(fun ast.Expr) bool {
+		switch f := fun.(type) {
+		case *ast.Ident:
+			return printers[f.Name]
+		case *ast.SelectorExpr:
+			if pkg, ok := f.X.(*ast.Ident); ok && pkg.Name == "fmt" {
+				return true
+			}
+			return printers[f.Sel.Name]
+		}
+		return false
 	}
-	parsePkgs := map[string]bool{"strings": true, "regexp": true, "strconv": true, "bytes": true, "json": true}
 	var out []string
 	at := func(n ast.Node, what string) {
 		out = append(out, fset.Position(n.Pos()).String()+"："+what)
 	}
+	// ⚠️ 白名单要看**父节点**，而 ast.Inspect 不给父节点 —— 自己维护一个栈。
+	var stack []ast.Node
 	ast.Inspect(f, func(n ast.Node) bool {
+		if n == nil {
+			stack = stack[:len(stack)-1]
+			return false
+		}
+		var parent ast.Node
+		if len(stack) > 0 {
+			parent = stack[len(stack)-1]
+		}
+		stack = append(stack, n)
 		switch v := n.(type) {
-		case *ast.BinaryExpr:
-			if (v.Op == token.EQL || v.Op == token.NEQ) && (isNote(v.X) || isNote(v.Y)) {
-				at(v, "`.Note` 作比较操作数")
-			}
-		case *ast.SwitchStmt:
-			if v.Tag != nil && isNote(v.Tag) {
-				at(v, "`.Note` 作 switch 的 tag")
-			}
-		case *ast.CallExpr:
-			sel, ok := v.Fun.(*ast.SelectorExpr)
-			if !ok {
+		case *ast.SelectorExpr:
+			if v.Sel.Name != "Note" {
 				return true
 			}
-			pkg, ok := sel.X.(*ast.Ident)
-			if !ok || !parsePkgs[pkg.Name] {
-				return true
-			}
-			for _, a := range v.Args {
-				if isNote(a) {
-					at(v, "`.Note` 作 "+pkg.Name+"."+sel.Sel.Name+" 的实参")
+			switch p := parent.(type) {
+			case *ast.KeyValueExpr:
+				if p.Value == v {
+					return true // 透传进结构体字面量
 				}
+			case *ast.AssignStmt:
+				for _, l := range p.Lhs {
+					if l == v {
+						return true // 写
+					}
+				}
+				at(v, "`.Note` 被读出来赋给别的东西（间接之后本条就看不见了，所以在读的这一刻判）")
+				return true
+			case *ast.CallExpr:
+				if isPrinter(p.Fun) {
+					return true // 打印
+				}
+				at(v, "`.Note` 作一个非打印函数的实参（自写的解析函数也算）")
+				return true
+			case *ast.SwitchStmt:
+				at(v, "`.Note` 作 switch 的 tag")
+				return true
+			case *ast.BinaryExpr:
+				at(v, "`.Note` 作运算的操作数")
+				return true
 			}
+			at(v, "`.Note` 以白名单之外的形状被读")
 		case *ast.IndexExpr:
 			if lit, ok := v.Index.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 				if s, err := strconv.Unquote(lit.Value); err == nil && s == "note" {

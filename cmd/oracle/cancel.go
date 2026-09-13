@@ -41,7 +41,7 @@ func runCTPCancel(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err

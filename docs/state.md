@@ -1534,9 +1534,9 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 
 | # | 命令 | 答什么 | ⚠️ 陷阱 |
 |---|---|---|---|
-| 0 | `ctp-params -dump ../../testdata/ctp` | **核种子**；顺带是 #7 在 CTP 侧的读数 | **只读**。看 `DCE.m2701` 多头：记录几条、`TodayPosition`、`Position−Today`、`YdPosition` |
-| 1 | `ctp-closeorder -symbol DCE.m2701 -dump ../../testdata/ctp` | #4 | 若报「账上没有昨仓」—— **那就是 #4 的结论**，它自己落盘后停；**别当失败重跑** |
-| 2 | `ctp-reject -symbol DCE.i2701 -tick 0.5 -out ../../testdata/refdata` | #6 大商所 | ⚠️ **不许用 `DCE.m2701`**：它的「平昨」用例会碰种子 |
+| 0 | `ctp-params -dump ../../testdata/ctp` | **核种子**；顺带是 #7 在 CTP 侧的读数 | **只读**。看 `DCE.m2701` 多头：记录几条、`TodayPosition`、`Position−Today`、`YdPosition`、**`OpenVolume`**、**持仓方向是多**（破坏 441：表里方向写反，守卫不响） |
+| 1 | `ctp-closeorder -symbol DCE.m2701 -dump ../../testdata/ctp` | #4 | 若报「**账上没有昨仓** …… 有 N 手不是今天开的多头被记作今仓」—— **那才是 #4 的结论**，它自己落盘后停，别重跑。⚠️ 若报「**种子不在，不判**」—— 那**不是**结论（种子没了，或还没跨过结算），按上面「若种子没了」处理。⚠️ 本命令是**唯一不带受保护腿**的 CTP 命令（它自己要平这个合约），开跑时会打印这一句 |
+| 2 | `ctp-reject -symbol DCE.i2701 -tick 0.5 -out ../../testdata/refdata` | #6 大商所 | ⚠️ **不许用 `DCE.m2701`**：它的「平昨」用例会碰种子（安全阀此刻也会拦，但单子上不该出现这一条） |
 | 3 | `ctp-reject -symbol SHFE.rb2701 -tick 1 -out ../../testdata/refdata` | #6 上期所 | |
 | 4 | `ctp-reject -symbol INE.bc2611 -tick 10 -out ../../testdata/refdata` | #6 能源中心 | tick 10 已由 20260911 那次拒因实测佐证 |
 | 5 | `ctp-rates -symbols "$(grep -v '^#' ../../testdata/refdata/ctp-rates-symbols.txt \| paste -sd, -)" -timeout 12s` | #19 重扫（带「适用范围」） | **只读**；输出存进新留底，**旧那份不改** |
@@ -1549,6 +1549,13 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 
 ⚠️ **全程不许出现的命令**：`ctp-flatten -all`（种子）；`ctp-flatten -symbol DCE.m2701`
 （同上，它会连昨仓一起平）。第 1 步的收尾只用平今单平**今**仓，昨仓不碰。
+
+✅ **20260913 评审第一节之后，上面这几句不再只是提醒**：`ctpProtectedLegs`（`cmd/oracle/main.go`）
+给 `DCE.m2701` 多头在交易日 **20260914 与 20260915** 各挂一条保护，除 `ctp-closeorder` 外的
+全部 CTP 命令默认带着它（守卫 `TestCTPValveCallSitesCarryProtection` / `TestCTPProtectedLegsBlockTheSeed`）。
+⚠️ 两个交易日是因为种子是周五夜盘开的、属于交易日 20260914，**周一白天它还是今仓**。
+⚠️ **它会过期**：#4 若推迟到 20260916 或更晚，或者种子没了要重种，**先往表里加那一天的腿，再跑任何命令**。
+⚠️ 各命令出事时的补救提示也都改成了 `ctp-flatten -symbol <本命令的合约>`（守卫 `TestFlattenHintsNameASymbol`）。
 
 ### ⓘ 评审给的一条判断规则，比它当时判的那件事有用
 

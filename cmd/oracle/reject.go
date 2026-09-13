@@ -123,7 +123,7 @@ func runCTPReject(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err
@@ -174,7 +174,7 @@ func runCTPReject(args []string) error {
 			// ⚠️ 一条只想被拒的探针**成交了** —— 那是账上多了敞口，必须喊。
 			traded++
 			logf("[rej]   ⚠️⚠️ **成交了 %d 手** —— 这条用例的「成不了交」判据不成立，"+
-				"账上现在有敞口，**跑 ctp-flatten**", st.VolumeTraded)
+				"账上现在有敞口，**跑 `ctp-flatten -symbol %s`**", st.VolumeTraded, *symbol)
 			record(rc, st, "traded")
 		case st.Alive():
 			// 挂上了 = 没被拒。撤掉，并说清这条用例没验到它要验的东西。
@@ -200,7 +200,7 @@ func runCTPReject(args []string) error {
 		}
 	}
 	if traded > 0 {
-		return fmt.Errorf("⚠️⚠️ **有 %d 条用例成交了**，账上有敞口 —— 立刻跑 `ctp-flatten`", traded)
+		return fmt.Errorf("⚠️⚠️ **有 %d 条用例成交了**，账上有敞口 —— 立刻跑 `ctp-flatten -symbol %s`", traded, *symbol)
 	}
 	if corpusErr != nil {
 		return corpusErr

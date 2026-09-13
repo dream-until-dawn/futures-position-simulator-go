@@ -85,7 +85,7 @@ func runCTPSlices(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err
@@ -109,7 +109,7 @@ func runCTPSlices(args []string) error {
 	if p := longToday(pos0, inst); p != nil && int(p.Position) != 0 {
 		return fmt.Errorf("⚠️ **前提不成立，不跑**：%s 上已有 %d 手多头今仓。"+
 			"本命令靠 OpenCost 的增量反解片价，账上已有的片会混进来 —— "+
-			"先跑 ctp-flatten", *symbol, int(p.Position))
+			"先跑 `ctp-flatten -symbol %s`", *symbol, int(p.Position), *symbol)
 	}
 
 	// ⚠️⚠️ **收尾平仓必须注册在第一笔委托之前，而不是「开完腿 1 之后」。**
@@ -131,8 +131,8 @@ func runCTPSlices(args []string) error {
 	defer func() {
 		if err := flattenLongToday(c, ex, inst, *timeout, logf); err != nil {
 			logf("[sl] ⚠️⚠️ **平不干净，仓留在账上了**：%v", err)
-			logf("      去跑 oracle ctp-flatten。⚠️ 留仓与「实验就是要留仓」" +
-				"在账户上长得一模一样，差别只在有没有人打算这么做")
+			logf("      去跑 `oracle ctp-flatten -symbol %s`。⚠️ 留仓与「实验就是要留仓」"+
+				"在账户上长得一模一样，差别只在有没有人打算这么做", *symbol)
 		}
 	}()
 

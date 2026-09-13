@@ -34,6 +34,17 @@ type longSides struct {
 	// ⚠️ 它是 #4 的**第一个答案**：若大商所在 CTP 上也从不出现昨仓，
 	// 那 #4 在第二个口子上也结构性地测不出来。
 	Records int
+	// OpenedToday 是柜台 `OpenVolume` 之和：**本交易日**开过几手（当日累计，平掉了也算）。
+	//
+	// ⚠️ 20260913 评审第二节回复时加的，它分开的是「昨 0」的三种读法：
+	//
+	//	今 0 昨 0                     种子**不在**（例如被平掉了）       ⇒ 前提，不是结论
+	//	今 N 昨 0 且 N ≤ 今天开过的    账上的今仓**都是今天开的**         ⇒ 种子还没跨过结算，前提
+	//	今 N 昨 0 且 N > 今天开过的    有一手**不是今天开的**却记作今仓   ⇒ 这才是「柜台不显示昨仓」
+	//
+	// 此前三种一律报「没有昨仓 ⇒ 结论」，而操作单写着「那就是 #4 的结论，别当失败重跑」——
+	// **种子周六若真被平掉了，周一会记下一条假结论。**
+	OpenedToday int
 }
 
 // longSidesOf 从一次持仓查询里取某合约多头的今/昨。
@@ -49,6 +60,7 @@ func longSidesOf(pos map[string]*def.CThostFtdcInvestorPositionField, inst strin
 		}
 		s.Records++
 		total += int(p.Position)
+		s.OpenedToday += int(p.OpenVolume)
 		s.YdField += int(p.YdPosition)
 		if p.PositionDate == def.THOST_FTDC_PSD_Today {
 			s.Today += int(p.TodayPosition)
@@ -64,7 +76,7 @@ type closeOrderKind int
 const (
 	// coNoPremise 平仓之前不是「今 1、昨 ≥1」⇒ 不判。
 	coNoPremise closeOrderKind = iota
-	// coNoYesterday 昨仓一手都没有 ⇒ ⚠️ 这是一条**结论**，不是失败：
+	// coNoYesterday 昨仓为 0，而账上有**不是今天开的**多头被记作今仓 ⇒ ⚠️ 这是一条**结论**：
 	// 大商所在 CTP 上同样不出现昨仓 ⇒ #4 在第二个口子上也结构性地测不出来。
 	coNoYesterday
 	// coNotOneLot 平完之后总手数没有恰好少 1 ⇒ 平仓没成、或成了不止一手，不判。
@@ -73,17 +85,24 @@ const (
 	coConsumedToday
 	// coConsumedYesterday 通用平仓消耗了**昨**仓。
 	coConsumedYesterday
+	// coNoSeed 昨仓为 0，而账上的多头**全是今天开的**（或根本没有）⇒ 种子不在或还没跨过结算，
+	// **不是结论**。⚠️ 排在 iota 末尾是为了不改前五个取值（破坏清单与测试按取值读）。
+	coNoSeed
 )
 
 // closeOrderVerdict 按**优先级**判一轮 #4。顺序与 holdVerdict 同一条纪律：
 //
-//	没有昨仓（本身是结论）> 前提不成立 > 没平成一手 > 真结论
+//	昨 0 且种子不在/没跨结算（前提）> 昨 0 而有非今天开的今仓（结论）> 前提不成立 > 没平成一手 > 真结论
 //
 // ⚠️ 它被抽成纯函数是方法论 93 那条的直接应用：
 // 20260912 我为了验证一道「防误平」的门，真的跑了一次会误平的命令 ——
 // 根因是判据长在要下真单的函数里。**这一轮的判据一开始就不许那样长。**
 func closeOrderVerdict(before, after longSides) closeOrderKind {
 	if before.Yd == 0 {
+		// ⚠️ 「没有昨仓」只有在账上确有一手**不是今天开的**多头时才是结论。
+		if before.Today <= before.OpenedToday {
+			return coNoSeed
+		}
 		return coNoYesterday
 	}
 	if before.Today != 1 {
@@ -107,10 +126,15 @@ func closeOrderVerdict(before, after longSides) closeOrderKind {
 func closeOrderDescribe(k closeOrderKind, before, after longSides) string {
 	switch k {
 	case coNoYesterday:
-		return fmt.Sprintf("⚠️⚠️ **账上没有昨仓**（今 %d、昨 0、记录 %d 条）—— "+
-			"若这是一手**跨过结算**的多头，那说明大商所在 CTP 上**同样不显示昨仓** ⇒ "+
+		return fmt.Sprintf("⚠️⚠️ **账上没有昨仓**（今 %d、昨 0、本交易日开过 %d、记录 %d 条）—— "+
+			"有 %d 手**不是今天开的**多头被记作今仓 ⇒ 大商所在 CTP 上**同样不显示昨仓** ⇒ "+
 			"#4 在第二个口子上也结构性地测不出来。⚠️ 这是一条结论，不是失败",
-			before.Today, before.Records)
+			before.Today, before.OpenedToday, before.Records, before.Today-before.OpenedToday)
+	case coNoSeed:
+		return fmt.Sprintf("⚠️⚠️ **种子不在，不判**：今 %d、昨 0、本交易日开过 %d —— "+
+			"账上的多头**全是今天开的**（或根本没有）。要么种子已经没了，要么它还没跨过结算。"+
+			"⚠️ **这不是 #4 的结论**，别记成「柜台不显示昨仓」",
+			before.Today, before.OpenedToday)
 	case coNoPremise:
 		return fmt.Sprintf("⚠️ **前提不成立**：平仓之前是 今 %d / 昨 %d，要 今 1 / 昨 ≥1 —— 不判",
 			before.Today, before.Yd)
@@ -144,7 +168,7 @@ func genericCloseReq(ex, inst string, lowerLimit float64) ctp.OrderReq {
 type closeOrderStage int
 
 const (
-	coStageSeedOnly   closeOrderStage = iota + 1 // ① 只有昨仓（跨过结算的种子）
+	coStageSeedOnly   closeOrderStage = iota + 1 // ① 尚未开今仓：种子所在的那一刻
 	coStageBothSides                             // ② 今 1 + 昨 ≥1，通用平仓之前
 	coStageAfterClose                            // ③ 通用平仓之后
 )
@@ -152,7 +176,7 @@ const (
 func (s closeOrderStage) note() string {
 	switch s {
 	case coStageSeedOnly:
-		return "ctp-closeorder ①：只有昨仓（跨过结算的种子），尚未开今仓"
+		return "ctp-closeorder ①：尚未开今仓，只有跨过结算的种子（柜台可能记作昨仓，也可能记作今仓）"
 	case coStageBothSides:
 		return "ctp-closeorder ②：今 1 + 昨 ≥1，**通用平仓之前**"
 	case coStageAfterClose:
@@ -173,7 +197,8 @@ func (s closeOrderStage) note() string {
 // # 流程
 //
 //	0 前提：该合约多头**今 0、昨 ≥1**（跨过结算的种子）
-//	         ⚠️ 若昨仓为 0 —— 那本身是结论（大商所在 CTP 上也不显示昨仓），落一份就停
+//	         ⚠️ 若昨仓为 0 —— 有非今天开的今仓 ⇒ 结论（柜台不显示昨仓），落一份就停；
+//	         账上多头全是今天开的（或没有）⇒ 种子不在，**报错不判**
 //	1 落 ①   2 买开一手 ⇒ 今 1 + 昨 ≥1   3 落 ②
 //	4 **通用平仓**一手（`genericCloseReq`）   5 落 ③   6 判定
 //	收尾：只用 `CloseToday` 平掉**今**仓，昨仓（种子的剩余）不碰
@@ -203,7 +228,8 @@ func runCTPCloseOrder(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	// ⚠️ 唯一的豁免：理由见 ctpValveExempt。
+	c.Valve = ctpValveExempt(env, "#4 要在种子所在的合约上开一手、通用平一手，而受保护腿不分今昨", logf)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err
@@ -216,19 +242,27 @@ func runCTPCloseOrder(args []string) error {
 		return err
 	}
 	s0 := longSidesOf(pos0, inst)
-	logf("[co] 开始：今 %d / 昨 %d（YdPosition 字段 %d，记录 %d 条）", s0.Today, s0.Yd, s0.YdField, s0.Records)
+	logf("[co] 开始：今 %d / 昨 %d / 本交易日开过 %d（YdPosition 字段 %d，记录 %d 条）",
+		s0.Today, s0.Yd, s0.OpenedToday, s0.YdField, s0.Records)
 	if s0.Yd == 0 {
-		// ⚠️ 这一支**先落盘再返回**：「没有昨仓」本身是 #4 的一条结论，要有夹具。
+		// ⚠️ 判定**必须经 closeOrderVerdict**，不在这里自己下结论 ——
+		// 上一版在这里直接报 coNoYesterday，种子不在时也照报（见 longSides.OpenedToday）。
+		k := closeOrderVerdict(s0, s0)
+		if k != coNoYesterday {
+			return fmt.Errorf("%s", closeOrderDescribe(k, s0, s0))
+		}
+		// ⚠️ 这一支**先落盘再返回**：「柜台不显示昨仓」是 #4 的一条结论，要有夹具。
 		if err := dumpSlices(c, env, *dump, *timeout, *symbol, coStageSeedOnly, logf); err != nil {
 			return err
 		}
-		logf("%s", closeOrderDescribe(coNoYesterday, s0, s0))
+		logf("%s", closeOrderDescribe(k, s0, s0))
 		return nil
 	}
 	if s0.Today != 0 {
 		return fmt.Errorf("⚠️ **前提不成立，不跑**：%s 上已有 %d 手多头今仓 —— "+
 			"本命令要自己开那一手今仓，账上已有的会让「消耗了哪一边」读不清。"+
-			"⚠️ **别用 `ctp-flatten -symbol %s`** —— 它会连昨仓（种子）一起平掉。"+
+			"⚠️ **别用 `ctp-flatten -symbol %s`** —— 它会去平昨仓（种子）：受保护的交易日里安全阀会拦下，"+
+			"过了那几天就真的平掉。"+
 			"要么用平今单只平今仓，要么等明天", *symbol, s0.Today, *symbol)
 	}
 

@@ -41,6 +41,14 @@ func TestLongSidesReadsBothRepresentations(t *testing.T) {
 				"a": rec("m2701", def.THOST_FTDC_PSD_Today, 1, 1, 0),
 				"b": rec("m2701", def.THOST_FTDC_PSD_History, 1, 0, 1)},
 			longSides{Today: 1, Yd: 1, YdField: 1, Records: 2}},
+		{"OpenVolume 按和读（种子 1 手合成记作今仓 + 今天开过 1）",
+			map[string]*def.CThostFtdcInvestorPositionField{
+				"a": func() *def.CThostFtdcInvestorPositionField {
+					p := rec("m2701", def.THOST_FTDC_PSD_Today, 2, 2, 0)
+					p.OpenVolume = 1
+					return p
+				}()},
+			longSides{Today: 2, Yd: 0, YdField: 0, Records: 1, OpenedToday: 1}},
 		// ⚠️ 这一格是「不信 YdPosition」的判别样本：昨仓已被平掉，
 		// 而日初的 YdPosition 仍报 1。若按字段读，会误判「昨还在」。
 		{"⚠️ 昨仓已平而 YdPosition 仍是日初值 1",
@@ -63,7 +71,7 @@ func TestLongSidesReadsBothRepresentations(t *testing.T) {
 	}
 }
 
-// TestCloseOrderVerdictRefusesBeforeItConcludes 钉住 #4 判定的**五种**取值与优先级。
+// TestCloseOrderVerdictRefusesBeforeItConcludes 钉住 #4 判定的**六种**取值与优先级。
 //
 // ⚠️ 与 holdVerdict 同一条纪律：「不该下结论」的几种情形要排在真结论之前，
 // 否则它们会各自得到一个看起来完全正常的结论。
@@ -71,13 +79,19 @@ func TestLongSidesReadsBothRepresentations(t *testing.T) {
 // 也不显示昨仓 ⇒ #4 结构性测不出），不该被「前提不成立」吞掉。
 func TestCloseOrderVerdictRefusesBeforeItConcludes(t *testing.T) {
 	s := func(today, yd int) longSides { return longSides{Today: today, Yd: yd} }
+	// so 带上「本交易日开过几手」。
+	so := func(today, yd, opened int) longSides { return longSides{Today: today, Yd: yd, OpenedToday: opened} }
 	cases := []struct {
 		name          string
 		before, after longSides
 		want          closeOrderKind
 	}{
-		{"没有昨仓 ⇒ 结论：结构性测不出（排最前）", s(1, 0), s(0, 0), coNoYesterday},
-		{"没有昨仓、今仓也不是 1 ⇒ 仍然先报没有昨仓", s(3, 0), s(3, 0), coNoYesterday},
+		{"没有昨仓、今仓不是今天开的 ⇒ 结论：结构性测不出（排最前）", s(1, 0), s(0, 0), coNoYesterday},
+		{"没有昨仓、今仓也不是 1、都不是今天开的 ⇒ 仍然先报没有昨仓", s(3, 0), s(3, 0), coNoYesterday},
+		// ⚠️ 下面三格是 20260913 补的：上一版把前两格也判成 coNoYesterday（一条结论）。
+		{"⚠️ 今 0 昨 0：种子不在 ⇒ 不是结论", s(0, 0), s(0, 0), coNoSeed},
+		{"⚠️ 今 1 昨 0 而今天开过 1：种子还没跨过结算 ⇒ 不是结论", so(1, 0, 1), so(1, 0, 1), coNoSeed},
+		{"今 2 昨 0 而今天只开过 1：有一手不是今天开的 ⇒ 结论", so(2, 0, 1), so(2, 0, 1), coNoYesterday},
 		{"今仓不是 1 ⇒ 前提不成立", s(2, 1), s(1, 1), coNoPremise},
 		{"今仓是 0 ⇒ 前提不成立", s(0, 1), s(0, 0), coNoPremise},
 		{"没平掉 ⇒ 不判", s(1, 1), s(1, 1), coNotOneLot},
@@ -94,8 +108,8 @@ func TestCloseOrderVerdictRefusesBeforeItConcludes(t *testing.T) {
 			t.Errorf("%s：得到 %d，要 %d", c.name, got, c.want)
 		}
 	}
-	// ⚠️ 反空转：五种取值每一种都要被走到。
-	for _, k := range []closeOrderKind{coNoPremise, coNoYesterday, coNotOneLot, coConsumedToday, coConsumedYesterday} {
+	// ⚠️ 反空转：六种取值每一种都要被走到。
+	for _, k := range []closeOrderKind{coNoPremise, coNoYesterday, coNotOneLot, coConsumedToday, coConsumedYesterday, coNoSeed} {
 		if !seen[k] {
 			t.Errorf("⚠️ 判定 %d 一条用例都没走到 —— 那一支从没被测过", k)
 		}
