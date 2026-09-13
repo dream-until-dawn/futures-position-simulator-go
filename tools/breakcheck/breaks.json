@@ -4378,7 +4378,7 @@
 		"dir": ".",
 		"file": "note_parse_test.go",
 		"old": "\t\t\tcase \"fmt\", \"log\":\n\t\t\t\treturn outward[f.Sel.Name]\n",
-		"new": "\t\t\tcase \"fmt\", \"log\":\n\t\t\t\treturn true\n",
+		"new": "\t\t\tcase \"fmt\", \"log\":\n\t\t\t\treturn outward[f.Sel.Name] || true\n",
 		"pkg": "./",
 		"test": "TestNobodyParsesFixtureNotes",
 		"want": "探测器坏了",
