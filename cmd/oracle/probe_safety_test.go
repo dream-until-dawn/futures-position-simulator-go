@@ -180,3 +180,49 @@ func TestPositionKeyCarriesBothDimensions(t *testing.T) {
 		}
 	}
 }
+
+// TestFlattenScopeRefusesAmbiguity 离线把 `ctp-flatten` 的范围门跑完。
+//
+// # ⚠️ 它来自一次我自己的险情，而那次险情的根因是「这道门只能靠跑真命令来验」
+//
+// 20260912 给 `ctp-flatten` 加上「不给 `-symbol` 就必须给 `-all`」之后，
+// 我为了**验证那道门**真的跑了一次 `ctp-flatten -all` ——
+// **那正是会清掉过夜种子的命令**（`DCE.m2701`，#4/#7 唯一的昨仓来源）。
+//
+//	⚠️ 当时是周六、柜台不可达，所以它几乎肯定连都没连上。
+//	**而「几乎肯定」不是「核过了」。**
+//
+// ⇒ 根因不是手快：那道门长在 `runCTPFlatten` 里，要凭据、要连柜台。
+//
+//	⚠️ **一道安全门，若只能靠触发它守着的那个危险动作来验证，它就会被那样验证。**
+//
+// ⇒ 四种组合离线跑完，从此**谁都不必为了看门开不开而去平一次仓**。
+func TestFlattenScopeRefusesAmbiguity(t *testing.T) {
+	for _, c := range []struct {
+		name    string
+		only    string
+		all     bool
+		wantErr string // 空串 = 该放行
+	}{
+		{"都不给 ⇒ 拦（默认行为是「什么都不做」）", "", false, "必须给 -all"},
+		{"只给 -symbol ⇒ 放行", "SHFE.ag2702", false, ""},
+		{"只给 -all ⇒ 放行", "", true, ""},
+		{"两个都给 ⇒ 拦（意思相反，不猜）", "SHFE.ag2702", true, "意思相反"},
+	} {
+		err := flattenScope(c.only, c.all)
+		switch {
+		case c.wantErr == "" && err != nil:
+			t.Errorf("%s：该放行却报错：%v", c.name, err)
+		case c.wantErr != "" && err == nil:
+			t.Errorf("%s：该拦却放行了 —— ⚠️ 而放行的后果是**真的平仓**", c.name)
+		case c.wantErr != "" && !strings.Contains(err.Error(), c.wantErr):
+			t.Errorf("%s：拦住了，但理由里没有 %q —— 判定对了而指错地方：%v",
+				c.name, c.wantErr, err)
+		}
+	}
+	// ⚠️ 反空转：上面四格必须**既有放行也有拦**。
+	// 一张全是「该拦」的表，让一个恒返回 error 的实现也能全绿。
+	if flattenScope("", true) != nil || flattenScope("", false) == nil {
+		t.Fatal("⚠️ 放行与拦这两侧没有同时被走到 —— 本条在单侧样本上跑")
+	}
+}

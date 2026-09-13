@@ -20,13 +20,13 @@ import (
 // 忘了接线就变成**一切都发得出去**，而那不会有任何动静。
 //
 // ⚠️ 这个模块栽过一模一样的跟头：`probe.decideFallback` 抽成纯函数、
-// 7 条用例全绿、**忘了接线**。所以这里从 `ctpValve` 出发，一路走到拒绝。
+// 7 条用例全绿、**忘了接线**。所以这里从 `ctpValveWith` 出发，一路走到拒绝。
 //
 // ⚠️ 它**注入**受保护腿，不依赖 `protectedLegs` 当下是不是空的 ——
 // 今天已经三次栽在「一条依赖数据非空的测试，在数据变空那天安静失效」上。
 func TestCTPValveCarriesEnv(t *testing.T) {
 	env := probe.Env{AllowOrder: true, MaxVolume: 1}
-	v := ctpValve(env, []safety.ProtectedLeg{{
+	v := ctpValveWith(env, []safety.ProtectedLeg{{
 		Symbol: "SHFE.rb2701", Side: safety.Short,
 		TradingDay: "", Why: "接线测试注入的腿"}})
 
@@ -52,7 +52,7 @@ func TestCTPValveCarriesEnv(t *testing.T) {
 
 	// ③ ⚠️ 总闸：AllowOrder=false 时**一切**都要被拦
 	c2 := ctp.New(ctp.Credentials{}, nil)
-	c2.Valve = ctpValve(probe.Env{AllowOrder: false, MaxVolume: 1}, nil)
+	c2.Valve = ctpValveWith(probe.Env{AllowOrder: false, MaxVolume: 1}, nil)
 	if err := c2.Check(ctp.OrderReq{Exchange: "SHFE", Instrument: "rb2705",
 		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
 		Volume: 1, LimitPrice: 3000}); err == nil {

@@ -65,7 +65,7 @@ func runCTPFee(args []string) error {
 		Front: env.CTPTdFront, BrokerID: env.CTPBrokerID, UserID: env.CTPUserID,
 		Password: env.CTPPassword, AppID: env.CTPAppID, AuthCode: env.CTPAuthCode,
 	}, logf)
-	c.Valve = ctpValve(env, nil)
+	c.Valve = ctpValve(env)
 	defer c.Close()
 	if err := c.Connect(*timeout); err != nil {
 		return err
@@ -122,8 +122,8 @@ func runCTPFee(args []string) error {
 			// ⚠️ 一笔本该挂着的单成交了 —— 账上多了敞口，立刻停下并喊。
 			traded++
 			return fmt.Errorf("⚠️⚠️ **@%.2f 成交了 %d 手** —— "+
-				"「挂得上、成不了」的判据在这一档上不成立，账上有敞口，**立刻跑 ctp-flatten**",
-				px, st.VolumeTraded)
+				"「挂得上、成不了」的判据在这一档上不成立，账上有敞口，**立刻跑 `ctp-flatten -symbol %s`**",
+				px, st.VolumeTraded, *symbol)
 		}
 		if !st.Alive() {
 			logf("[fee] @%.2f **没挂上**（status=%q %s）—— 这一档没有数",
@@ -147,7 +147,7 @@ func runCTPFee(args []string) error {
 	}
 	logf("")
 	if traded > 0 {
-		return fmt.Errorf("⚠️⚠️ 有成交，账上有敞口 —— 立刻 ctp-flatten")
+		return fmt.Errorf("⚠️⚠️ 有成交，账上有敞口 —— 立刻 `ctp-flatten -symbol %s`", *symbol)
 	}
 	if len(pts) < 3 {
 		return fmt.Errorf("⚠️ 只拿到 %d 个点（要 3 个以上）—— **两点定两参数是拟合不是验证**",
