@@ -173,6 +173,9 @@ const (
 	coStageAfterClose                            // ③ 通用平仓之后
 )
 
+// tradesExpected：① 落在开今仓之前，当日本合约还没有成交；②③ 都在开仓之后。
+func (s closeOrderStage) tradesExpected() bool { return s != coStageSeedOnly }
+
 func (s closeOrderStage) note() string {
 	switch s {
 	case coStageSeedOnly:

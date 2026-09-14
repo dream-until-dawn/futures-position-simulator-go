@@ -392,6 +392,9 @@ const (
 //
 // ⚠️ 认不得的阶段**不给默认文本**：一份注记为空的夹具与一份注记正确的夹具
 // 在下游都「有注记」，而前者是个 bug。
+// tradesExpected：ctp-slices 的三份都落在腿 1 成交之后。
+func (s sliceStage) tradesExpected() bool { return true }
+
 func (s sliceStage) note() string {
 	switch s {
 	case stageAfterLeg1:
@@ -415,7 +418,16 @@ func (s sliceStage) note() string {
 // ⚠️ 它存在是为了让 #4 **复用** `dumpSlices`，而不是另写一份「截面 + 行情 + 成交明细 + 落盘」——
 // 另写一份就有第二处 `AttachTrades` 调用，而「补不上成交明细就整份不落盘」这条不变式
 // 只能有一个实现（`TestAttachTradesHasOneCallSite`）。
-type stageNoter interface{ note() string }
+type stageNoter interface {
+	note() string
+	// tradesExpected 报告这一份落盘时，本合约**当日应当已经有成交**。
+	//
+	// ⚠️ 20260914 夜盘第一次实跑 ctp-closeorder 撞到的：它的第 ① 份落在**开仓之前**，
+	// 本合约当日一笔成交都没有 —— 那是设计上的正常状态；而 AttachTrades 对「零笔」报错
+	// （对 ctp-slices 是对的：那三份都在成交之后），于是 ① 整份不落盘、命令退出。
+	// ⇒ 由阶段自己声明，不在 dumpSlices 里猜。
+	tradesExpected() bool
+}
 
 func dumpSlices(c *ctp.Client, env probe.Env, dir string, timeout time.Duration,
 	symbol string, stage stageNoter, logf func(string, ...any)) error {
@@ -427,9 +439,13 @@ func dumpSlices(c *ctp.Client, env probe.Env, dir string, timeout time.Duration,
 	// 持仓截面给不出「哪一片先开」（`OpenAmount` 是当日累计，只贡献那些片的和），
 	// 而成交明细的 `Price` + `TradeTime` + `SequenceNo` 由柜台直接给出次序。
 	// ⇒ 补不上就**整份不落盘**，同 AttachQuote 那一条。
-	if err := c.AttachTrades(fx, symbol, timeout); err != nil {
-		return fmt.Errorf("⚠️ 成交明细没补上，**整份截面不落盘**："+
-			"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w", err)
+	if stage.tradesExpected() {
+		if err := c.AttachTrades(fx, symbol, timeout); err != nil {
+			return fmt.Errorf("⚠️ 成交明细没补上，**整份截面不落盘**："+
+				"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w", err)
+		}
+	} else {
+		logf("ⓘ 这一份落在本合约当日第一笔成交之前 —— 不附成交明细（它必然为空，而 AttachTrades 对空报错是对的）")
 	}
 	secrets := map[string]string{
 		"CTP_USER_ID": env.CTPUserID, "CTP_PASSWORD": env.CTPPassword,

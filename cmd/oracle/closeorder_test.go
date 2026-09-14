@@ -282,3 +282,36 @@ func TestCloseTodayStepStopsWhenYesterdayShrinks(t *testing.T) {
 		t.Error("⚠️ closeTodayOnly 没有调用 closeTodayStep —— 昨仓变少时不会停手")
 	}
 }
+
+// TestOnlyThePreOpenStageSkipsTrades 钉住「哪一份不附成交明细」由阶段声明，且只有 closeorder ① 不附。
+//
+// ⚠️ 20260914 夜盘第一次实跑撞到：① 落在开仓之前，当日零成交，AttachTrades 报错 ⇒ 整份不落盘、#4 没跑成。
+// 离线测试当时只验了「补不上就不落盘」，没验「这一份本来就不该有成交」。
+func TestOnlyThePreOpenStageSkipsTrades(t *testing.T) {
+	for _, s := range []sliceStage{stageAfterLeg1, stageBeforeClose, stageAfterClose} {
+		if !s.tradesExpected() {
+			t.Errorf("⚠️ ctp-slices 阶段 %d 不附成交明细 —— 那三份都在成交之后，次序证据就丢了", s)
+		}
+	}
+	if coStageSeedOnly.tradesExpected() {
+		t.Error("⚠️ closeorder ① 要求成交明细 —— 它落在开仓之前，当日零成交，整份会不落盘（20260914 夜盘原样）")
+	}
+	for _, s := range []closeOrderStage{coStageBothSides, coStageAfterClose} {
+		if !s.tradesExpected() {
+			t.Errorf("⚠️ closeorder 阶段 %d 不附成交明细 —— 它在开仓之后", s)
+		}
+	}
+	// ⚠️ 接线：dumpSlices 真的按 tradesExpected 分岔。
+	_, files := parsePkgMain(t)
+	fn := findFunc(files["slice.go"], "dumpSlices")
+	used := false
+	ast.Inspect(fn, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == "tradesExpected" {
+			used = true
+		}
+		return true
+	})
+	if !used {
+		t.Error("⚠️ dumpSlices 没有看 tradesExpected —— 声明了也没人用")
+	}
+}

@@ -3923,8 +3923,8 @@
 		"name": "413 成交明细补不上时只记日志——夹具看起来齐全而少了次序证据",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+\n\t\t\t\"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w\", err)\n\t}",
-		"new": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\tlogf(\"成交明细没补上：%v\", err)\n\t}",
+		"old": "\t\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+\n\t\t\t\t\"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w\", err)\n\t\t}",
+		"new": "\t\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\t\tlogf(\"成交明细没补上：%v\", err)\n\t\t}",
 		"pkg": ".",
 		"test": "TestAttachTradesFailureStopsTheDump",
 		"want": "没有 return",
@@ -4603,6 +4603,17 @@
 		"pkg": "./tools/breakcheck/",
 		"test": "TestValidateRefusesSameFileTwice",
 		"want": "没有被拦",
+		"expect": "red"
+	},
+	{
+		"name": "476 closeorder ① 也要求成交明细——开仓前当日零成交，整份不落盘、#4 跑不成（20260914 夜盘原样）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "func (s closeOrderStage) tradesExpected() bool { return s != coStageSeedOnly }",
+		"new": "func (s closeOrderStage) tradesExpected() bool { return s != coStageSeedOnly || true }",
+		"pkg": ".",
+		"test": "TestOnlyThePreOpenStageSkipsTrades",
+		"want": "20260914 夜盘原样",
 		"expect": "red"
 	}
 ]
