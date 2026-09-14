@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
@@ -31,6 +32,8 @@ type ctpFixture struct {
 	Account      map[string]any            `json:"account"`
 	Positions    map[string]map[string]any `json:"positions"`
 	Quotes       map[string]map[string]any `json:"quotes"`
+	// Trades 是当日成交明细（ctp-slices / ctp-closeorder 的夹具才有）。
+	Trades []map[string]any `json:"trades"`
 }
 
 func loadCTP(t *testing.T) map[string]ctpFixture {
@@ -216,7 +219,59 @@ func TestMarginAgainstCTP(t *testing.T) {
 					ShortByMoney: bm, ShortByVolume: bv,
 				},
 			}
-			got, err := margin.Compute([]margin.Leg{leg}, margin.OpenTodayPreSettleHistory, margin.NoNetting)
+			legs := []margin.Leg{leg}
+			// ⚠️⚠️ **大商所的今昨合成记录要拆成两条腿**（20260914 夜盘 ctp-closeorder 的 ② 第一次撞到）。
+			//
+			// 上期所今昨分两条记录（PositionDate 1 / 2），上面「一条记录一条腿」对它成立。
+			// 大商所是**一条** PositionDate=1 的记录，里面 `Position − TodayPosition` 是昨仓。
+			// 按一条今仓腿算，昨仓也用了开仓价：本库 9462.6、柜台 9441.6，差 21 —— 那是**读法错**，不是库错。
+			//
+			// ⚠️ 拆的时候两条腿的价**必须各有独立来源**，不能从 `PositionCost` 反推：
+			// 反推出来的今仓价会把「柜台对昨仓也用开仓价」这一候选同样对上，判别力归零。
+			//
+			//	昨仓腿  昨结算价 ← 夹具里的行情快照 `PreSettlementPrice`
+			//	今仓腿  开仓价   ← 当日成交明细里本合约、本方向的开仓成交（价格须唯一，否则不猜）
+			//
+			// 缺任何一样 ⇒ **大声跳过**。
+			if d, _ := p["PositionDate"].(string); d == "1" {
+				today := num(t, p, "TodayPosition")
+				yd := vol.Sub(today)
+				if yd.IsPositive() {
+					base := sym
+					if i := strings.Index(base, "/"); i >= 0 {
+						base = base[:i]
+					}
+					pre, okPre := decimal.Zero, false
+					if q, ok := f.Quotes[base]; ok {
+						if v, ok := q["PreSettlementPrice"].(float64); ok && v > 0 && v < 1e300 {
+							pre, okPre = decimal.NewFromFloat(v), true
+						}
+					}
+					openPx, okOpen := todayOpenPrice(f.Trades, id.NativeInstrument(), dir)
+					if today.IsZero() {
+						okOpen = true // 没有今仓腿，不需要开仓价
+					}
+					// ⚠️ 乘数同样要独立来源：上面那条腿把乘数折进了价（OpenCost / Position），
+					// 拆出来的两条腿用的是行情价与成交价，得乘回去 —— 第一版漏了，算出 944.16。
+					mult, okMult := specMultiplier(t, base, id)
+					if !okPre || !okOpen || !okMult {
+						t.Logf("⚠️ %s / %s：今昨合成记录（今 %s / 昨 %s），缺独立来源（行情昨结算价 %v、今仓开仓成交价唯一 %v、规格乘数 %v）—— **跳过**，不从 PositionCost 反推",
+							name, sym, today, yd, okPre, okOpen, okMult)
+						continue
+					}
+					pre, openPx = pre.Mul(mult), openPx.Mul(mult)
+					legs = legs[:0]
+					if today.IsPositive() {
+						tl := leg
+						tl.Volume, tl.IsHistory, tl.OpenPrice = int(today.IntPart()), false, openPx
+						legs = append(legs, tl)
+					}
+					hl := leg
+					hl.Volume, hl.IsHistory, hl.PreSettlement = int(yd.IntPart()), true, pre
+					legs = append(legs, hl)
+				}
+			}
+			got, err := margin.Compute(legs, margin.OpenTodayPreSettleHistory, margin.NoNetting)
 			if err != nil {
 				t.Fatalf("⚠️ %s / %s：Compute 报错：%v", name, sym, err)
 			}
@@ -245,8 +300,11 @@ func TestMarginAgainstCTP(t *testing.T) {
 				t.Logf("ⓘ %s / %s：残差 %s（≤1e-6，判为 CTP double 的表示噪声；"+
 					"最小要分开的口径差是 1.60）", name, sym, resid)
 			}
-			if leg.IsHistory {
-				history++
+			for _, l := range legs {
+				if l.IsHistory {
+					history++
+					break
+				}
 			}
 			checked++
 		}
@@ -345,4 +403,69 @@ func TestAccountIdentityAgainstCTP(t *testing.T) {
 			"`max(浮盈,0)` 这一项一次都没被求值，本条与被推翻的旧式等价。"+
 			"⇒ 去拍一份赢着的截面（`oracle ctp-slices` 造两片今仓即可），别删这条", n)
 	}
+}
+
+// todayOpenPrice 从当日成交明细里取某合约某持仓方向的开仓成交价；价格须唯一，否则报告取不到。
+func todayOpenPrice(trades []map[string]any, inst string, posDir types.Direction) (decimal.Decimal, bool) {
+	want := "0" // 多头持仓由买开建立
+	if posDir == types.Sell {
+		want = "1"
+	}
+	var px *float64
+	for _, tr := range trades {
+		if s, _ := tr["InstrumentID"].(string); s != inst {
+			continue
+		}
+		if d, _ := tr["Direction"].(string); d != want {
+			continue
+		}
+		if o, _ := tr["OffsetFlag"].(string); o != "0" {
+			continue
+		}
+		v, ok := tr["Price"].(float64)
+		if !ok {
+			return decimal.Zero, false
+		}
+		if px != nil && *px != v {
+			return decimal.Zero, false
+		}
+		px = &v
+	}
+	if px == nil {
+		return decimal.Zero, false
+	}
+	return decimal.NewFromFloat(*px), true
+}
+
+// specMultiplier 从 refdata 的合约规格快照（天勤，与柜台持仓记录独立）取乘数：先按合约，再按「交易所.品种」。
+func specMultiplier(t *testing.T, symbol string, id types.InstrumentID) (decimal.Decimal, bool) {
+	t.Helper()
+	b, err := os.ReadFile(filepath.FromSlash("../../testdata/refdata/specs-20260908.json"))
+	if err != nil {
+		return decimal.Zero, false
+	}
+	var doc struct {
+		Specs []struct {
+			Instrument     string  `json:"instrument"`
+			Exchange       string  `json:"exchange"`
+			Product        string  `json:"product"`
+			VolumeMultiple float64 `json:"volume_multiple"`
+		} `json:"specs"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatalf("规格快照解析失败：%v", err)
+	}
+	byProduct := decimal.Zero
+	for _, sp := range doc.Specs {
+		if sp.VolumeMultiple <= 0 {
+			continue
+		}
+		if sp.Instrument == symbol {
+			return decimal.NewFromFloat(sp.VolumeMultiple), true
+		}
+		if sp.Exchange == string(id.Exchange) && sp.Product == id.Product {
+			byProduct = decimal.NewFromFloat(sp.VolumeMultiple)
+		}
+	}
+	return byProduct, byProduct.IsPositive()
 }
