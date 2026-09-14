@@ -319,6 +319,18 @@ func validate(bs []Break) error {
 		if seen[b.Name] {
 			return fmt.Errorf("破坏名 %q 重复 —— 报告里会分不清哪条是哪条", b.Name)
 		}
+		// ⚠️ 同一次破坏里**同一个文件不许出现两次**（20260914 写破坏 474 时撞到）：
+		// run() 对每一处改动**各自**读原文件、各自算出改后内容，再逐个写回 ——
+		// 同一文件的第二处会拿「没含第一处」的内容覆盖掉第一处。
+		// ⇒ 破坏只发生了一半，而报告上看不出来。要在一个文件里改两处，就写成一处更大的锚点。
+		files := map[string]bool{b.File: true}
+		for _, a := range b.Also {
+			if files[a.File] {
+				return fmt.Errorf("%q 在同一次破坏里对 %s 改了不止一处 —— "+
+					"各处独立读写，后写的会覆盖先写的，破坏只发生一半。合成一处更大的锚点", b.Name, a.File)
+			}
+			files[a.File] = true
+		}
 		seen[b.Name] = true
 		switch b.Expect {
 		case "red":

@@ -173,6 +173,9 @@ const (
 	coStageAfterClose                            // ③ 通用平仓之后
 )
 
+// tradesExpected：① 落在开今仓之前，当日本合约还没有成交；②③ 都在开仓之后。
+func (s closeOrderStage) tradesExpected() bool { return s != coStageSeedOnly }
+
 func (s closeOrderStage) note() string {
 	switch s {
 	case coStageSeedOnly:
@@ -335,13 +338,21 @@ func runCTPCloseOrder(args []string) error {
 // 这里只按 `longSidesOf` 算出的**今**手数下单。
 func closeTodayOnly(c *ctp.Client, ex, inst string, timeout time.Duration,
 	logf func(string, ...any)) error {
+	yd0 := -1
 	for i := 0; i < 5; i++ {
 		pos, err := c.Positions(timeout)
 		if err != nil {
 			return err
 		}
 		s := longSidesOf(pos, inst)
-		if s.Today == 0 {
+		if yd0 < 0 {
+			yd0 = s.Yd
+		}
+		done, err := closeTodayStep(yd0, s)
+		if err != nil {
+			return err
+		}
+		if done {
 			logf("[co] 收尾：今仓已清空（昨 %d 手保留）", s.Yd)
 			return nil
 		}
@@ -357,6 +368,26 @@ func closeTodayOnly(c *ctp.Client, ex, inst string, timeout time.Duration,
 		}
 	}
 	return fmt.Errorf("⚠️ 平了 5 次今仓还没清空 —— 停手，去看账户")
+}
+
+// closeTodayStep 是 closeTodayOnly 每一轮发单前的判定：done = 今仓已清空；err = 必须停手。
+//
+// ⚠️⚠️ **昨仓一旦少了，立刻停手** —— 20260914 日盘开跑前对着真实账户形状重读收尾时补的。
+//
+// 收尾在「昨仓还在」时也会发平今单（例如通用平仓没成交、提前返回，defer 照跑）。
+// 而**大商所上一笔平今单会不会吃到合成记录里的昨仓，没有实测过**。若它吃了：
+//
+//	平今一手之后   今仍是 1（新开的那手还在）、昨 1 → 0（种子没了）
+//	上一版         「今 ≠ 0」⇒ 再发一笔平今 ⇒ 新开的那手也平掉 ⇒ 打印「今仓已清空」，**正常返回**
+//
+// ⇒ 种子没了，而输出上一个字都不提。这里在每一轮开头比一次：昨仓比进入收尾时少 ⇒ 报错停手，
+// 而且这件事**本身是 #4 的一条观测**（平今标志在大商所消耗了昨仓），要记下来。
+func closeTodayStep(yd0 int, s longSides) (done bool, err error) {
+	if s.Yd < yd0 {
+		return false, fmt.Errorf("⚠️⚠️ **收尾平今之后昨仓从 %d 变成 %d —— 平今单吃掉了昨仓（种子）**。停手，去看账户。"+
+			"⚠️ 这一条本身是 #4 的观测：大商所上 CloseToday 标志消耗了昨仓，**记进 §13，别当成收尾故障重跑**", yd0, s.Yd)
+	}
+	return s.Today == 0, nil
 }
 
 // cleanupVerdict 判 `ctp-closeorder -cleanup` 能不能动手；nil = 可以。

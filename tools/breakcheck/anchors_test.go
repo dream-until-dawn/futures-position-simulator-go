@@ -117,3 +117,19 @@ func orphanAnchors(breaks []Break, read func(file string) (string, error)) (prob
 	}
 	return probs, checked
 }
+
+// TestValidateRefusesSameFileTwice 钉住「同一次破坏里同一文件改两处」在清单校验时就报错。
+func TestValidateRefusesSameFileTwice(t *testing.T) {
+	base := Break{Name: "x", File: "a.go", Old: "o", New: "n", Pkg: "./", Test: "T", Want: "w", Expect: "red"}
+	green := Break{Name: "g", File: "b.go", Old: "o", New: "n", Pkg: "./", Test: "T", Expect: "green", Why: "盲区演示"}
+	dup := base
+	dup.Also = []AlsoEdit{{File: "a.go", Old: "o2", New: "n2"}}
+	if err := validate([]Break{dup, green}); err == nil || !strings.Contains(err.Error(), "不止一处") {
+		t.Errorf("⚠️ 同一文件改两处没有被拦：%v —— 第二处会覆盖第一处，破坏只发生一半", err)
+	}
+	ok := base
+	ok.Also = []AlsoEdit{{File: "c.go", Old: "o2", New: "n2"}}
+	if err := validate([]Break{ok, green}); err != nil {
+		t.Errorf("跨文件的 also 被误拦：%v", err)
+	}
+}

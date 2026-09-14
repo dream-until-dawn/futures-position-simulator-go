@@ -1774,14 +1774,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "160 包差集算成「全都只在 dev 上」：横幅没那句区分，高报那一支该红",
+		"name": "160 包差集算成「全都只在 dev 上」：横幅只点了 match 的名，其余包没点——该红（20260914 起标记合法存在，改成按点名判）",
 		"dir": "",
 		"file": "branch_claim_test.go",
 		"old": "\t\tif !b[k] {",
 		"new": "\t\tif true {\n",
 		"pkg": "./",
 		"test": "TestDevOnlyClaimIsAccurate",
-		"want": "横幅把只在 dev 上的东西说成了已实现",
+		"want": "标记在不等于说全了",
 		"expect": "red"
 	},
 	{
@@ -3898,14 +3898,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "411 §13 里那句「按未排除处理」被删掉——而留底仍缺适用范围那一列",
+		"name": "411 新留底已带适用范围列，§13 仍写着「按未排除处理」——过期低报（20260914 起判据改为「有一份带了」）",
 		"dir": ".",
 		"file": "docs/cn-futures-rules.md",
-		"old": "**在那之前第 19 条的「声明不完整」这半句按未排除处理。**",
-		"new": "**第 19 条已定论。**",
+		"old": "**在那之前第 19 条的「声明不完整」这半句当时按「未排除」处理。**",
+		"new": "**在那之前第 19 条的「声明不完整」这半句按未排除处理。**",
 		"pkg": "./",
 		"test": "TestRateFileColumnDebtIsDeclared",
-		"want": "两头都不说",
+		"want": "过期陈述",
 		"expect": "red"
 	},
 	{
@@ -3923,8 +3923,8 @@
 		"name": "413 成交明细补不上时只记日志——夹具看起来齐全而少了次序证据",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+\n\t\t\t\"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w\", err)\n\t}",
-		"new": "\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\tlogf(\"成交明细没补上：%v\", err)\n\t}",
+		"old": "\t\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\t\treturn fmt.Errorf(\"⚠️ 成交明细没补上，**整份截面不落盘**：\"+\n\t\t\t\t\"没有它这一轮只答得出「逐片还是均价」，答不出 FIFO 还是 LIFO：%w\", err)\n\t\t}",
+		"new": "\t\tif err := c.AttachTrades(fx, symbol, timeout); err != nil {\n\t\t\tlogf(\"成交明细没补上：%v\", err)\n\t\t}",
 		"pkg": ".",
 		"test": "TestAttachTradesFailureStopsTheDump",
 		"want": "没有 return",
@@ -4504,6 +4504,149 @@
 		"pkg": ".",
 		"test": "TestFlattenLoopFinishesAndChecksFirst",
 		"want": "没有把 c.TradingDay() 传给",
+		"expect": "red"
+	},
+	{
+		"name": "467 收尾不再比昨仓——平今吃掉种子后接着平，打印「今仓已清空」正常返回",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\tif s.Yd < yd0 {",
+		"new": "\tif false && s.Yd < yd0 {",
+		"pkg": ".",
+		"test": "TestCloseTodayStepStopsWhenYesterdayShrinks",
+		"want": "平今单吃掉了昨仓",
+		"expect": "red"
+	},
+	{
+		"name": "468 closeTodayOnly 不经 closeTodayStep 判——昨仓变少的停手判定没接上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\t\tdone, err := closeTodayStep(yd0, s)\n",
+		"new": "\t\tdone, err := s.Today == 0, error(nil)\n",
+		"pkg": ".",
+		"test": "TestCloseTodayStepStopsWhenYesterdayShrinks",
+		"want": "没有调用 closeTodayStep",
+		"expect": "red"
+	},
+	{
+		"name": "469 match 的成交价偏离报价——裁决是「按自己的报价」",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\t\tPrice:      req.Price,\n",
+		"new": "\t\tPrice:      req.Price.Add(decimal.NewFromInt(1)),\n",
+		"pkg": "./match/",
+		"test": "TestFillTradesAtOwnPriceFullVolume",
+		"want": "按报价",
+		"expect": "red"
+	},
+	{
+		"name": "470 match 只成交 1 手——裁决是 100% 全量",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\t\tVolume:     req.Volume,\n",
+		"new": "\t\tVolume:     1,\n",
+		"pkg": "./match/",
+		"test": "TestFillTradesAtOwnPriceFullVolume",
+		"want": "全部手数",
+		"expect": "red"
+	},
+	{
+		"name": "471 match 把「没查成」当成通过——回测会开出实际开不出的仓",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\tif !res.FullyChecked() {",
+		"new": "\tif false && !res.FullyChecked() {",
+		"pkg": "./match/",
+		"test": "TestFillRefusesRejectedAndUncheckedDifferently",
+		"want": "查不了",
+		"expect": "red"
+	},
+	{
+		"name": "472 match 不核对报单与合约规格、持仓是同一合约——拿别的合约的规格查过就成交",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\tif err := sameInstrument(req, facts); err != nil {",
+		"new": "\tif err := error(nil); err != nil {",
+		"pkg": "./match/",
+		"test": "TestFillRefusesMismatchedInstrument",
+		"want": "合约规格",
+		"expect": "red"
+	},
+	{
+		"name": "473 被拒的单报成「没查成」——调用方分不出该改单还是该补事实",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\t\treturn Trade{}, &RejectedError{Rejection: *res.Rejected}\n",
+		"new": "\t\treturn Trade{}, &UncheckedError{}\n",
+		"pkg": "./match/",
+		"test": "TestFillRefusesRejectedAndUncheckedDifferently",
+		"want": "RejectedError",
+		"expect": "red"
+	},
+	{
+		"name": "474 包文档把两个偏离的方向写反——价格写成乐观、成交与否写成保守",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "//\t              本库按自己的报价成交 ⇒ 买贵了、卖便宜了 ⇒ **保守**\n//\t成交与否维度  本库假定立刻全量成交；而挂在远离市场的限价单实盘上**可能永远不成交**\n//\t              ⇒ **乐观** —— 这是危险的那一头",
+		"new": "//\t              本库按自己的报价成交 ⇒ 买贵了、卖便宜了 ⇒ **乐观**\n//\t成交与否维度  本库假定立刻全量成交；而挂在远离市场的限价单实盘上**可能永远不成交**\n//\t              ⇒ **保守** —— 这是危险的那一头",
+		"pkg": "./match/",
+		"test": "TestPackageDocStatesBothDeviations",
+		"want": "方向配对不对",
+		"expect": "red"
+	},
+	{
+		"name": "475 清单校验放过「同一次破坏对同一文件改两处」——后写覆盖先写，破坏只发生一半",
+		"dir": "",
+		"file": "tools/breakcheck/breakcheck.go",
+		"old": "\t\t\tif files[a.File] {\n",
+		"new": "\t\t\tif false && files[a.File] {\n",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestValidateRefusesSameFileTwice",
+		"want": "没有被拦",
+		"expect": "red"
+	},
+	{
+		"name": "476 closeorder ① 也要求成交明细——开仓前当日零成交，整份不落盘、#4 跑不成（20260914 夜盘原样）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "func (s closeOrderStage) tradesExpected() bool { return s != coStageSeedOnly }",
+		"new": "func (s closeOrderStage) tradesExpected() bool { return s != coStageSeedOnly || true }",
+		"pkg": ".",
+		"test": "TestOnlyThePreOpenStageSkipsTrades",
+		"want": "20260914 夜盘原样",
+		"expect": "red"
+	},
+	{
+		"name": "477 保证金对拍不拆大商所今昨合成记录——昨仓也按开仓价算，差 21（20260914 夜盘原样）",
+		"dir": "",
+		"file": "conformance/ctpfixture/ctp_test.go",
+		"old": "\t\t\t\tif yd.IsPositive() {",
+		"new": "\t\t\t\tif false && yd.IsPositive() {",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "ctp-slices-20260915-2.json",
+		"expect": "red"
+	},
+	{
+		"name": "478 拆出来的两条腿不乘合约乘数——算出 944.16（拆腿第一版原样）",
+		"dir": "",
+		"file": "conformance/ctpfixture/ctp_test.go",
+		"old": "\t\t\t\t\tpre, openPx = pre.Mul(mult), openPx.Mul(mult)\n",
+		"new": "\t\t\t\t\t_ = mult\n",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "944.16",
+		"expect": "red"
+	},
+	{
+		"name": "479 新留底表头里没有适用范围列、只在注释里提到——守卫按表头判，两头都不说要红",
+		"dir": ".",
+		"file": "testdata/refdata/ctp-commission-rates-20260915.txt",
+		"old": "平今/每手  适用范围",
+		"new": "平今/每手  范围",
+		"pkg": "./",
+		"test": "TestRateFileColumnDebtIsDeclared",
+		"want": "两头都不说",
 		"expect": "red"
 	}
 ]

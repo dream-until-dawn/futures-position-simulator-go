@@ -1,0 +1,170 @@
+[
+	{
+		"trading_day": "20260915",
+		"exchange": "DCE",
+		"instrument": "i2701",
+		"case": "低于跌停",
+		"violates": [
+			"涨跌停"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 50,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "DCE",
+		"instrument": "i2701",
+		"case": "平仓位不足（账上无仓时平昨）",
+		"violates": [
+			"可平量"
+		],
+		"offset": "4",
+		"error_id": 30,
+		"exchange_code": null,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "DCE",
+		"instrument": "i2701",
+		"case": "非最小变动价位整倍数",
+		"violates": [
+			"最小变动价位"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 48,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "DCE",
+		"instrument": "i2701",
+		"case": "高于涨停",
+		"violates": [
+			"涨跌停"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 49,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "INE",
+		"instrument": "bc2611",
+		"case": "低于跌停",
+		"violates": [
+			"涨跌停"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 50,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "INE",
+		"instrument": "bc2611",
+		"case": "平仓位不足（账上无仓时平昨）",
+		"violates": [
+			"可平量"
+		],
+		"offset": "4",
+		"error_id": 51,
+		"exchange_code": null,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "INE",
+		"instrument": "bc2611",
+		"case": "非最小变动价位整倍数",
+		"violates": [
+			"最小变动价位"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 48,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "INE",
+		"instrument": "bc2611",
+		"case": "高于涨停",
+		"violates": [
+			"涨跌停"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 49,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "SHFE",
+		"instrument": "rb2701",
+		"case": "低于跌停",
+		"violates": [
+			"涨跌停"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 50,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "SHFE",
+		"instrument": "rb2701",
+		"case": "平仓位不足（账上无仓时平昨）",
+		"violates": [
+			"可平量"
+		],
+		"offset": "4",
+		"error_id": 51,
+		"exchange_code": null,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "SHFE",
+		"instrument": "rb2701",
+		"case": "非最小变动价位整倍数",
+		"violates": [
+			"最小变动价位"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 48,
+		"outcome": "rejected",
+		"source": "probe"
+	},
+	{
+		"trading_day": "20260915",
+		"exchange": "SHFE",
+		"instrument": "rb2701",
+		"case": "高于涨停",
+		"violates": [
+			"涨跌停"
+		],
+		"offset": "0",
+		"error_id": null,
+		"exchange_code": 49,
+		"outcome": "rejected",
+		"source": "probe"
+	}
+]
