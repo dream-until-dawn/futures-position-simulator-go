@@ -106,14 +106,17 @@ func TestDevOnlyClaimIsAccurate(t *testing.T) {
 		block := devOnlyBlock(body)
 		for _, pkg := range onlyOnDev {
 			if !strings.Contains(block, "`"+pkg+"`") {
-				t.Errorf("⚠️ 包 %s 只在 dev 上，而 fidelity.md 「只在 `dev` 上」那一段没点它的名 —— "+
+				t.Errorf("⚠️ 【横幅漏报 dev 独有包】包 %s 只在 dev 上，而 fidelity.md 「只在 `dev` 上」那一段没点它的名 —— "+
 					"标记在不等于说全了", pkg)
 			}
 		}
 	}
 	switch {
 	case len(onlyOnDev) > 0 && !has:
-		t.Errorf("⚠️ 这些包**只在 dev 上**：%v，而 docs/fidelity.md 里没有 %q —— "+
+		// ⚠️ 两个漏报分支共用【横幅漏报 dev 独有包】这个标签：破坏 160 在横幅有标记时走上一支、
+		// 没标记时（例如刚合完、dev 与 main 一致）走这一支 —— 它的 want 只能认一个与仓库状态无关的词。
+		// 20260914 合并之后它就因为认的是上一支的措辞而判「红错了理由」。
+		t.Errorf("⚠️ 【横幅漏报 dev 独有包】这些包**只在 dev 上**：%v，而 docs/fidelity.md 里没有 %q —— "+
 			"横幅把只在 dev 上的东西说成了已实现。`go get` 默认拿 main，"+
 			"读的人会去 main 上找一个不存在的包，而那不会报错", onlyOnDev, devOnlyMarker)
 	case len(onlyOnDev) == 0 && has:

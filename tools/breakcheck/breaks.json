@@ -1774,14 +1774,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "160 包差集算成「全都只在 dev 上」：横幅只点了 match 的名，其余包没点——该红（20260914 起标记合法存在，改成按点名判）",
+		"name": "160 包差集算成「全都只在 dev 上」——横幅有无标记都该红（want 认两个漏报分支共用的标签，与仓库状态无关）",
 		"dir": "",
 		"file": "branch_claim_test.go",
 		"old": "\t\tif !b[k] {",
 		"new": "\t\tif true {\n",
 		"pkg": "./",
 		"test": "TestDevOnlyClaimIsAccurate",
-		"want": "标记在不等于说全了",
+		"want": "【横幅漏报 dev 独有包】",
 		"expect": "red"
 	},
 	{
