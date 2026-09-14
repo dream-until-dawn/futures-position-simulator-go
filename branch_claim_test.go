@@ -97,6 +97,20 @@ func TestDevOnlyClaimIsAccurate(t *testing.T) {
 	has := strings.Contains(body, devOnlyMarker)
 	t.Logf("只在 dev 上的包 %v（基准 %s，来自 %s）；fidelity.md 里%s那句区分",
 		onlyOnDev, base, how, map[bool]string{true: "有", false: "没有"}[has])
+	// ⚠️ 点名：只在 dev 上的**每一个**包，都要在横幅「只在 `dev` 上」那一段里以 `包路径` 出现。
+	//
+	// 20260914 全量破坏撞出来的：上一版只查标记在不在。`match` 合法地让标记出现之后，
+	// 破坏 160（差集算成「全部包都只在 dev 上」）**照样通过** —— 标记在，就什么都不再查。
+	// ⇒ 那也意味着：再有一个新包只在 dev 上而横幅没点它，本条同样不响。
+	if len(onlyOnDev) > 0 && has {
+		block := devOnlyBlock(body)
+		for _, pkg := range onlyOnDev {
+			if !strings.Contains(block, "`"+pkg+"`") {
+				t.Errorf("⚠️ 包 %s 只在 dev 上，而 fidelity.md 「只在 `dev` 上」那一段没点它的名 —— "+
+					"标记在不等于说全了", pkg)
+			}
+		}
+	}
 	switch {
 	case len(onlyOnDev) > 0 && !has:
 		t.Errorf("⚠️ 这些包**只在 dev 上**：%v，而 docs/fidelity.md 里没有 %q —— "+
@@ -107,6 +121,27 @@ func TestDevOnlyClaimIsAccurate(t *testing.T) {
 			"那是一条**低报**：把已经合进去的东西说成还没合。"+
 			"评审门禁①明写「低报也算」", devOnlyMarker)
 	}
+}
+
+// devOnlyBlock 取出 fidelity.md 里「只在 `dev` 上」那一行，连同它的续行。
+//
+// 横幅是引用块里的对齐表：新的一项以 ">\t" 后紧跟非空白开头，续行以 ">\t" 后跟空格开头。
+func devOnlyBlock(body string) string {
+	lines := strings.Split(body, "\n")
+	for i, l := range lines {
+		if !strings.Contains(l, devOnlyMarker) {
+			continue
+		}
+		out := []string{l}
+		for _, c := range lines[i+1:] {
+			if !strings.HasPrefix(c, ">\t ") {
+				break
+			}
+			out = append(out, c)
+		}
+		return strings.Join(out, "\n")
+	}
+	return ""
 }
 
 // mainRef 挑一个可用的 `main` 基准，并**报告用的是哪一个**。
