@@ -179,7 +179,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 
 #### 1. 入口是什么：`Fill(req, facts)`，而不是 `Fill(req, result)`
 
-    match.Fill(req order.Request, facts order.Facts) (Fill, error)
+    match.Fill(req order.Request, facts order.Facts) (Trade, error)
 
 `match` **自己调** `order.Validate`，不接收调用方传进来的 `order.Result`。
 理由：一个 `Result` 与它对应的是哪一笔 `Request`，在类型上没有任何绑定 ——
@@ -198,7 +198,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 
 #### 2. 成交成什么：价 = 自己的报价，量 = 全部，时刻 = 立刻
 
-    Fill{Instrument, Direction, Offset, Hedge, Price = req.Price, Volume = req.Volume}
+    Trade{Instrument, Direction, Offset, Hedge, Price = req.Price, Volume = req.Volume}
 
 ⚠️ 这是**裁决**，不是实测（roadmap「已裁决：`match` 不做盘口」）。偏离有两个维度、**方向相反**：
 
@@ -215,7 +215,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 
 | 不做 | 为什么 |
 |---|---|
-| 改持仓、改资金 | `Fill` 是一条**成交记录**，不是状态推进。把它应用到 `position.Open/Close` 与 `account` 是门面（`futsim`，未落地）的事 —— 放进 `match` 会让它 import 状态层，而撮合规则与记账规则就长在了一个函数里，改一边要读两边 |
+| 改持仓、改资金 | `Trade` 是一条**成交记录**，不是状态推进。把它应用到 `position.Open/Close` 与 `account` 是门面（`futsim`，未落地）的事 —— 放进 `match` 会让它 import 状态层，而撮合规则与记账规则就长在了一个函数里，改一边要读两边 |
 | 市价单 | `order.Request` 本来只有限价（「市价单的成交价由盘口决定，而本库没有盘口」）。本库**没有**假装能撮合它的地方 |
 | 部分成交、FAK / FOK | 裁决是 100% 全量；部分成交需要深度，与「不做盘口」同源 |
 | 成交角色（主动 / 被动） | 本库的手续费不按成交角色区分：`refdata.CommissionRates` 只按开 / 平昨 / 平今、按额 / 按手分档，柜台费率查询（`ctp-rates`）读到的字段也没有这一维。⚠️ 它是**按本库费率结构推得**，不是实测「柜台不分角色」—— 若将来有交易所按角色分档，要从费率结构那一层改起 |

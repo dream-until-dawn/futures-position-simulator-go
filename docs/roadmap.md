@@ -134,7 +134,7 @@ cn-futures-rules.md §13 列出的**全部待实测项**（当前条数见 [stat
 | `v0.1.0` | **规则数据层 + 判别实验**：`types` / `ctperr` / `refdata`（合约规格、保证金率、手续费率、交易日历与时段、Provider 抽象、快照持久化、内置快照）、`refdata/live`、`cmd/refdata-sync`、**`cmd/oracle`（嵌套模块，`probe` 子命令跑判别实验）** | [state.md](./state.md) 里 `rules_pending` 的**全部**待实测项收敛为「实测」（带双坐标），原始输出入库 | 5 |
 | `v0.2.0` | **单合约投机核算 + 逐日盯市结算**：`fee` / `margin` / `pnl` 三个纯函数包、`position`（含逐笔明细**与今昨仓划分**）、`account`、**完整**的日终结算链路（含第 7 步今仓转昨仓；⚠️ 实现在 `position.Settle`，`settle` 包已并入，见下方变更记录）、`view`、对拍的**到期机制** | 与快期模拟逐字段对拍，**三态验收**：**账户与持仓的全部字段**（数量以 [state.md](./state.md) 为准，⚠️ 不在此处抄数）落进「一致且被触发」或「已声明不建模且带到期版本」；**未触发**的列白名单并说明何时能触发 | 7 |
 | `v0.3.0` | **平今平昨的报单语义**：~~`PositionDateType` 两条链路~~ ✅ **已落地（20260909）**：`position.New` 带上它、`Settle` 按它分岔（UseHistory 滚今昨、NoUseHistory 只推进基线），零值结算报错；⚠️ 清单上剩的三项，20260909 复核后**一项已做、两项被这个口子堵死**：**显式平今/平昨声明已落地**（`position.Close` 带 offset 且今昨分别校验，`order.CheckClosable` 同）；**平今费率**在这个口子上与开仓同值、分不开（kq_facts 18/34，`fee` 的档位代码在、只缺能区分的语料）；**消耗顺序**结构性测不出（kq_facts 40）。⚠️ 「做不了」与「没做」在清单上长得一样而处理方式相反 —— 前者要换口子，后者才排期| 隔夜持仓的完整对拍：开仓 → 结算 → 次日平今平昨，费用、**平仓盈亏**与持仓逐字段一致 | 4 |
-| `v0.4.0` | **报单与撮合**：~~`order` 的八项校验与冻结~~ ✅ **已落地（20260909）**；⚠️ `match` 的限价/市价、成交角色判定 —— **20260909 使用者已裁决**：不做盘口，默认 **100% 全量成交**。⚠️ 偏离有两个维度且**方向相反**（价格保守 / 成交与否乐观），且**无法被本库的对拍验证** —— 见下方变更记录与 silent-risks 第 9 条。涨跌停与最小变动价位已在 `order` 的八项校验里，那两项**能**验证；⚠️ **`UseHistory` 合约上收到裸 `CLOSE` 必须报错**（依据 cn-futures-rules.md §4，且 [state.md](./state.md) 的 `simnow_pending#1` 未裁决前不得改成按平昨处理） | 冻结额与 `frozen_margin`/`frozen_commission` 一致；被拒报单的错误码一致；裸 `CLOSE` 报错有守卫测试 | 4 |
+| `v0.4.0` | **报单与撮合**：~~`order` 的八项校验与冻结~~ ✅ **已落地（20260909）**；~~`match`~~ ✅ **已落地（20260914，按裁决：通过校验的限价单按报价立刻全量成交；市价、部分成交、成交角色不建模）**；⚠️ `match` 的限价/市价、成交角色判定 —— **20260909 使用者已裁决**：不做盘口，默认 **100% 全量成交**。⚠️ 偏离有两个维度且**方向相反**（价格保守 / 成交与否乐观），且**无法被本库的对拍验证** —— 见下方变更记录与 silent-risks 第 9 条。涨跌停与最小变动价位已在 `order` 的八项校验里，那两项**能**验证；⚠️ **`UseHistory` 合约上收到裸 `CLOSE` 必须报错**（依据 cn-futures-rules.md §4，且 [state.md](./state.md) 的 `simnow_pending#1` 未裁决前不得改成按平昨处理） | 冻结额与 `frozen_margin`/`frozen_commission` 一致；被拒报单的错误码一致；裸 `CLOSE` 报错有守卫测试 | 4 |
 | `v0.5.0` | **多合约多品种 + 单向大边**：跨合约跨品种的保证金合并、`MaxMarginSideAlgorithm`、多空分率 | ⚠️ **必须用同品种两个不同月份**建多空验证大边合并范围，单合约测不出来 | 3 |
 | `v0.6.0` | **风控与结算单**（`risk` 包在此版本落地）：风险度、追保判据、可选的约定强平策略（默认关闭）、结算单生成 | **结算单逐项对拍**——它是逐日盯市的最终陈述 | 3 |
 | `v0.7.0` | **交割月与到期**：交割月保证金递增、自然人持仓限制告警、合约到期处理 | 跨越交割月前一个月的完整回测，保证金阶梯逐档一致 | 2 |
@@ -973,6 +973,22 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 （`match` 的另外几项 —— 涨跌停、最小变动价位 —— 已经在 `order` 的八项校验里，
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
+
+### 2026-09-14：`match` 落地（v0.4.0 的另一半）—— 按裁决实现，**不可验证**的那一行写在导出面上
+
+设计先行：docs/design.md「match 的形状」（同日先提交）。导出面（门禁④）：
+
+    函数   Fill(req order.Request, facts order.Facts) (Trade, error)
+    类型   Trade / RejectedError / UncheckedError
+    字段   Trade.Instrument / Direction / Offset / Hedge / Price / Volume
+           RejectedError.Rejection；UncheckedError.Unchecked
+    方法   (*RejectedError).Error；(*UncheckedError).Error
+
+- `Fill` **自己调** `order.Validate`，不收调用方的 `Result`（类型上绑不住是哪一笔）；`OK()` 才成交
+- ⚠️ 实现时撞到 `order.Validate` 的一个缺口：它**不核对** `req.Instrument` 与 `facts` 里的合约规格、持仓是同一个合约。
+  `match` 在校验前先核对；`order` 本身未改（改它要动 `order` 全部用例的 `Request` 构造），登记在此
+- 两个方向相反的偏离写在包文档，`TestPackageDocStatesBothDeviations` 钉住**配对**（价格 ⇒ 保守、成交与否 ⇒ 乐观）
+- ⚠️ v0.4.0 验收仍未达成：「被拒报单的错误码一致」要 `ctperr`，而 `ctperr` 的取值要等 #6 语料
 
 ### 2026-09-09：`order` 的八项校验落地（v0.4.0 的一半）
 

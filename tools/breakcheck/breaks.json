@@ -4527,5 +4527,71 @@
 		"test": "TestCloseTodayStepStopsWhenYesterdayShrinks",
 		"want": "没有调用 closeTodayStep",
 		"expect": "red"
+	},
+	{
+		"name": "469 match 的成交价偏离报价——裁决是「按自己的报价」",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\t\tPrice:      req.Price,\n",
+		"new": "\t\tPrice:      req.Price.Add(decimal.NewFromInt(1)),\n",
+		"pkg": "./match/",
+		"test": "TestFillTradesAtOwnPriceFullVolume",
+		"want": "按报价",
+		"expect": "red"
+	},
+	{
+		"name": "470 match 只成交 1 手——裁决是 100% 全量",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\t\tVolume:     req.Volume,\n",
+		"new": "\t\tVolume:     1,\n",
+		"pkg": "./match/",
+		"test": "TestFillTradesAtOwnPriceFullVolume",
+		"want": "全部手数",
+		"expect": "red"
+	},
+	{
+		"name": "471 match 把「没查成」当成通过——回测会开出实际开不出的仓",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\tif !res.FullyChecked() {",
+		"new": "\tif false && !res.FullyChecked() {",
+		"pkg": "./match/",
+		"test": "TestFillRefusesRejectedAndUncheckedDifferently",
+		"want": "查不了",
+		"expect": "red"
+	},
+	{
+		"name": "472 match 不核对报单与合约规格、持仓是同一合约——拿别的合约的规格查过就成交",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\tif err := sameInstrument(req, facts); err != nil {",
+		"new": "\tif err := error(nil); err != nil {",
+		"pkg": "./match/",
+		"test": "TestFillRefusesMismatchedInstrument",
+		"want": "合约规格",
+		"expect": "red"
+	},
+	{
+		"name": "473 被拒的单报成「没查成」——调用方分不出该改单还是该补事实",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "\t\treturn Trade{}, &RejectedError{Rejection: *res.Rejected}\n",
+		"new": "\t\treturn Trade{}, &UncheckedError{}\n",
+		"pkg": "./match/",
+		"test": "TestFillRefusesRejectedAndUncheckedDifferently",
+		"want": "RejectedError",
+		"expect": "red"
+	},
+	{
+		"name": "474 包文档把两个偏离的方向写反——价格写成乐观、成交与否写成保守",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "//\t              本库按自己的报价成交 ⇒ 买贵了、卖便宜了 ⇒ **保守**\n//\t成交与否维度  本库假定立刻全量成交；而挂在远离市场的限价单实盘上**可能永远不成交**\n//\t              ⇒ **乐观** —— 这是危险的那一头",
+		"new": "//\t              本库按自己的报价成交 ⇒ 买贵了、卖便宜了 ⇒ **乐观**\n//\t成交与否维度  本库假定立刻全量成交；而挂在远离市场的限价单实盘上**可能永远不成交**\n//\t              ⇒ **保守** —— 这是危险的那一头",
+		"pkg": "./match/",
+		"test": "TestPackageDocStatesBothDeviations",
+		"want": "方向配对不对",
+		"expect": "red"
 	}
 ]
