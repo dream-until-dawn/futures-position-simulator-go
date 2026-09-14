@@ -193,8 +193,13 @@ func (c *Client) registerOrderCallbacks() {
 		ref := text(o.OrderRef[:])
 		st, msg := o.OrderStatus, text(o.StatusMsg[:])
 		traded := int(o.VolumeTraded)
+		sysID := text(o.OrderSysID[:])
 		c.book.put(ref, func(s *OrderState) {
 			s.Status, s.StatusMsg, s.VolumeTraded = byte(st), msg, traded
+			// ⚠️ 只在非空时写：交易所编号一旦出现就不会再消失，后到的空回报不许把它抹掉。
+			if sysID != "" {
+				s.OrderSysID = sysID
+			}
 		})
 		c.logf("[ctp] 回报 ref=%s status=%q 已成交=%d  %s", ref, string(st), traded, msg)
 		return 0

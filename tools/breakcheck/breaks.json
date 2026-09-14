@@ -3877,7 +3877,7 @@
 	{
 		"name": "409 语料的 source 改成手填值——带机器可读外形的转录会被当成观测",
 		"dir": "cmd/oracle",
-		"file": "cmd/oracle/reject.go",
+		"file": "cmd/oracle/rejectcorpus.go",
 		"old": "Outcome: outcome, Source: \"probe\",",
 		"new": "Outcome: outcome, Source: \"transcribed\",",
 		"pkg": ".",
@@ -4691,6 +4691,17 @@
 		"pkg": ".",
 		"test": "TestNoPositionQueryErrorIsSwallowed",
 		"want": "错误返回值被赋给了 _",
+		"expect": "red"
+	},
+	{
+		"name": "484 语料不再记「有没有交易所委托号」——#6 那个替代解释（柜台前置拒 vs 交易所拒）又分不开",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/rejectcorpus.go",
+		"old": "\to.HasOrderSysID = &has\n",
+		"new": "\t_ = has\n",
+		"pkg": ".",
+		"test": "TestObserveRecordsOrderSysIDPresence",
+		"want": "新拍的每一条都要明确记",
 		"expect": "red"
 	}
 ]

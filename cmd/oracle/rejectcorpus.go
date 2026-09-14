@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
 )
 
 // rejectObservation 是一次拒单的**机器可读**记录，`ctperr` 的语料。
@@ -60,6 +62,33 @@ type rejectObservation struct {
 	// ⇒ 守卫 `TestRejectCorpusIsProbeWrittenOnly` 断言每一条都是 `"probe"`。
 	// 谁要手填，得先把那条守卫改掉 —— **而那一改会出现在 diff 里**。
 	Source string `json:"source"`
+	// HasOrderSysID 报告这笔委托的回报里**有没有交易所委托号**；nil 表示那一轮没记这一栏（20260915 之前的 12 条）。
+	//
+	// ⚠️ 为 §13 #6 那个替代解释补的（评审 20260915）：`true` ⇒ 进过交易所，那个码出自交易所；
+	// `false` ⇒ 没有交易所编号 —— 柜台前置拒，**或**交易所在分配编号之前拒，本栏分不开。
+	// ⚠️ 只记有无，**不记编号本身**：判别只要有无，而多记一个标识字段没有收益。
+	HasOrderSysID *bool `json:"has_order_sys_id,omitempty"`
+}
+
+// observe 把一次用例的委托回报折成一条语料。纯函数：离线可测。
+func observe(day, ex, inst string, rc rejectCase, st ctp.OrderState, outcome string) rejectObservation {
+	o := rejectObservation{
+		TradingDay: day, Exchange: ex, Instrument: inst,
+		Case: rc.Name, Violates: rc.Violates,
+		Offset: string(rc.Off), Outcome: outcome, Source: "probe",
+	}
+	// ⚠️ 两个码位都用指针：**「缺」与「零」必须分得开**。
+	// `ErrorID == 0` 恰恰是价格类拒单的常态（它们不经过 RspInfo）。
+	if st.ErrorID != 0 {
+		id := st.ErrorID
+		o.ErrorID = &id
+	}
+	if code, ok := msgCode(st.StatusMsg); ok {
+		o.ExchangeCode = &code
+	}
+	has := st.OrderSysID != ""
+	o.HasOrderSysID = &has
+	return o
 }
 
 // msgCode 从柜台自由文本里解析**开头那个整数码**，形如 `48:…`。
