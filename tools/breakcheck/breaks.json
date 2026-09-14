@@ -3898,14 +3898,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "411 §13 里那句「按未排除处理」被删掉——而留底仍缺适用范围那一列",
+		"name": "411 新留底已带适用范围列，§13 仍写着「按未排除处理」——过期低报（20260914 起判据改为「有一份带了」）",
 		"dir": ".",
 		"file": "docs/cn-futures-rules.md",
-		"old": "**在那之前第 19 条的「声明不完整」这半句按未排除处理。**",
-		"new": "**第 19 条已定论。**",
+		"old": "**在那之前第 19 条的「声明不完整」这半句当时按「未排除」处理。**",
+		"new": "**在那之前第 19 条的「声明不完整」这半句按未排除处理。**",
 		"pkg": "./",
 		"test": "TestRateFileColumnDebtIsDeclared",
-		"want": "两头都不说",
+		"want": "过期陈述",
 		"expect": "red"
 	},
 	{
@@ -4636,6 +4636,17 @@
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestMarginAgainstCTP",
 		"want": "944.16",
+		"expect": "red"
+	},
+	{
+		"name": "479 新留底表头里没有适用范围列、只在注释里提到——守卫按表头判，两头都不说要红",
+		"dir": ".",
+		"file": "testdata/refdata/ctp-commission-rates-20260915.txt",
+		"old": "平今/每手  适用范围",
+		"new": "平今/每手  范围",
+		"pkg": "./",
+		"test": "TestRateFileColumnDebtIsDeclared",
+		"want": "两头都不说",
 		"expect": "red"
 	}
 ]

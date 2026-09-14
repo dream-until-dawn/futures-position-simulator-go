@@ -1687,8 +1687,13 @@ func TestRateFileColumnDebtIsDeclared(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(b), column) {
-			withColumn++
+		// ⚠️ 只认**表头行**（以「合约」开头的那行）：20260914 新留底的**文件头注释**里就提了三次「适用范围」，
+		// 按全文子串判，一份只在注释里提到这一列、表里其实没有的留底也会被算成「带了」。
+		for _, line := range strings.Split(string(b), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "合约") && strings.Contains(line, column) {
+				withColumn++
+				break
+			}
 		}
 	}
 	switch {
@@ -1700,11 +1705,13 @@ func TestRateFileColumnDebtIsDeclared(t *testing.T) {
 		t.Logf("ⓘ %d 份费率留底都缺「%s」那一列，而 §13 已声明 %q —— "+
 			"本条此刻只在核对那个声明。工具已补那一列，等下一次开盘重扫",
 			len(files), column, debtPhrase)
-	case withColumn == len(files) && declared:
-		t.Errorf("⚠️ %d 份留底都带上「%s」了，而 §13 里仍写着 %q —— "+
-			"**过期陈述**，把那句话改掉", len(files), column, debtPhrase)
+	case declared:
+		// ⚠️ 20260914 全量抓到（破坏 411 被缴械）：上一版要求「**全部**留底都带上这一列」才判过期，
+		// 而旧那份**永久**缺这一列（重扫补不回那一天）⇒ 混合状态永远成立，那句话就永远删不删都绿。
+		// ⇒ 判据改成**有一份带了**：那一份已经能排除替代解释，§13 不该再说它未排除。
+		t.Errorf("⚠️ %d/%d 份留底的表头带上「%s」了，而 §13 里仍写着 %q —— "+
+			"**过期陈述**：带列的那一份已经能排除替代解释", withColumn, len(files), column, debtPhrase)
 	default:
-		t.Logf("ⓘ %d/%d 份留底带「%s」—— 混着，所以 §13 那句话还得留着",
-			withColumn, len(files), column)
+		t.Logf("ⓘ %d/%d 份留底的表头带「%s」，§13 已不再写 %q", withColumn, len(files), column, debtPhrase)
 	}
 }
