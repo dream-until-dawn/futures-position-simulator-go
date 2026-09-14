@@ -4593,5 +4593,16 @@
 		"test": "TestPackageDocStatesBothDeviations",
 		"want": "方向配对不对",
 		"expect": "red"
+	},
+	{
+		"name": "475 清单校验放过「同一次破坏对同一文件改两处」——后写覆盖先写，破坏只发生一半",
+		"dir": "",
+		"file": "tools/breakcheck/breakcheck.go",
+		"old": "\t\t\tif files[a.File] {\n",
+		"new": "\t\t\tif false && files[a.File] {\n",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestValidateRefusesSameFileTwice",
+		"want": "没有被拦",
+		"expect": "red"
 	}
 ]
