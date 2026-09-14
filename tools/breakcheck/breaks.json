@@ -4615,5 +4615,27 @@
 		"test": "TestOnlyThePreOpenStageSkipsTrades",
 		"want": "20260914 夜盘原样",
 		"expect": "red"
+	},
+	{
+		"name": "477 保证金对拍不拆大商所今昨合成记录——昨仓也按开仓价算，差 21（20260914 夜盘原样）",
+		"dir": "",
+		"file": "conformance/ctpfixture/ctp_test.go",
+		"old": "\t\t\t\tif yd.IsPositive() {",
+		"new": "\t\t\t\tif false && yd.IsPositive() {",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "ctp-slices-20260915-2.json",
+		"expect": "red"
+	},
+	{
+		"name": "478 拆出来的两条腿不乘合约乘数——算出 944.16（拆腿第一版原样）",
+		"dir": "",
+		"file": "conformance/ctpfixture/ctp_test.go",
+		"old": "\t\t\t\t\tpre, openPx = pre.Mul(mult), openPx.Mul(mult)\n",
+		"new": "\t\t\t\t\t_ = mult\n",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMarginAgainstCTP",
+		"want": "944.16",
+		"expect": "red"
 	}
 ]
