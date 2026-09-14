@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strings"
 	"testing"
 
 	def "gitee.com/haifengat/goctp/ctpdefine"
@@ -236,5 +237,48 @@ func TestCleanupChecksBeforeClosing(t *testing.T) {
 	})
 	if !called {
 		t.Error("⚠️ runCTPCloseOrder 没有调用 closeOrderCleanup —— -cleanup 这个开关是空的")
+	}
+}
+
+// TestCloseTodayStepStopsWhenYesterdayShrinks 钉住收尾在昨仓变少时**停手并报出来**，而不是接着平。
+func TestCloseTodayStepStopsWhenYesterdayShrinks(t *testing.T) {
+	so := func(today, yd int) longSides { return longSides{Today: today, Yd: yd} }
+	for _, c := range []struct {
+		name    string
+		yd0     int
+		s       longSides
+		done    bool
+		stopHas string
+	}{
+		{"今 1 昨 1（刚进收尾）⇒ 接着平", 1, so(1, 1), false, ""},
+		{"今 0 昨 1 ⇒ 清空，种子留着", 1, so(0, 1), true, ""},
+		{"没有昨仓的收尾：今 1 昨 0 ⇒ 接着平", 0, so(1, 0), false, ""},
+		{"⚠️ 平今之后今仍 1、昨 1→0 ⇒ 平今吃掉了种子，停手", 1, so(1, 0), false, "平今单吃掉了昨仓"},
+		{"⚠️ 今 0 而昨也少了 ⇒ 仍然停手报出来，不报「已清空」", 1, so(0, 0), false, "#4 的观测"},
+	} {
+		done, err := closeTodayStep(c.yd0, c.s)
+		switch {
+		case c.stopHas != "":
+			if err == nil || !strings.Contains(err.Error(), c.stopHas) {
+				t.Errorf("%s：要停手并报 %q，得到 done=%v err=%v", c.name, c.stopHas, done, err)
+			}
+		case err != nil || done != c.done:
+			t.Errorf("%s：得到 done=%v err=%v，要 done=%v", c.name, done, err, c.done)
+		}
+	}
+	// ⚠️ 接线：closeTodayOnly 真的每轮调用它。
+	_, files := parsePkgMain(t)
+	fn := findFunc(files["closeorder.go"], "closeTodayOnly")
+	called := false
+	ast.Inspect(fn, func(n ast.Node) bool {
+		if c, ok := n.(*ast.CallExpr); ok {
+			if id, ok := c.Fun.(*ast.Ident); ok && id.Name == "closeTodayStep" {
+				called = true
+			}
+		}
+		return true
+	})
+	if !called {
+		t.Error("⚠️ closeTodayOnly 没有调用 closeTodayStep —— 昨仓变少时不会停手")
 	}
 }

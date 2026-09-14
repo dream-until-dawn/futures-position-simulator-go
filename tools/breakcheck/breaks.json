@@ -4505,5 +4505,27 @@
 		"test": "TestFlattenLoopFinishesAndChecksFirst",
 		"want": "没有把 c.TradingDay() 传给",
 		"expect": "red"
+	},
+	{
+		"name": "467 收尾不再比昨仓——平今吃掉种子后接着平，打印「今仓已清空」正常返回",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\tif s.Yd < yd0 {",
+		"new": "\tif false && s.Yd < yd0 {",
+		"pkg": ".",
+		"test": "TestCloseTodayStepStopsWhenYesterdayShrinks",
+		"want": "平今单吃掉了昨仓",
+		"expect": "red"
+	},
+	{
+		"name": "468 closeTodayOnly 不经 closeTodayStep 判——昨仓变少的停手判定没接上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\t\tdone, err := closeTodayStep(yd0, s)\n",
+		"new": "\t\tdone, err := s.Today == 0, error(nil)\n",
+		"pkg": ".",
+		"test": "TestCloseTodayStepStopsWhenYesterdayShrinks",
+		"want": "没有调用 closeTodayStep",
+		"expect": "red"
 	}
 ]
