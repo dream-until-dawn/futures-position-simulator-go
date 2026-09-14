@@ -143,21 +143,7 @@ func runCTPReject(args []string) error {
 	// ⚠️ 每一条用例都要产出一条观测，**包括没被拒的那些** ——
 	// 否则语料里只剩成功的那几条，而那看起来覆盖得很齐。
 	record := func(rc rejectCase, st ctp.OrderState, outcome string) {
-		o := rejectObservation{
-			TradingDay: c.TradingDay(), Exchange: ex, Instrument: inst,
-			Case: rc.Name, Violates: rc.Violates,
-			Offset: string(rc.Off), Outcome: outcome, Source: "probe",
-		}
-		// ⚠️ 两个码位都用指针：**「缺」与「零」必须分得开**。
-		// `ErrorID == 0` 恰恰是价格类拒单的常态（它们不经过 RspInfo）。
-		if st.ErrorID != 0 {
-			id := st.ErrorID
-			o.ErrorID = &id
-		}
-		if code, ok := msgCode(st.StatusMsg); ok {
-			o.ExchangeCode = &code
-		}
-		obs = append(obs, o)
+		obs = append(obs, observe(c.TradingDay(), ex, inst, rc, st, outcome))
 	}
 	for i, rc := range rejectCases {
 		px := rc.Price(md, *tick)

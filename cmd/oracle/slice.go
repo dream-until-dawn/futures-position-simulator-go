@@ -272,7 +272,11 @@ func runCTPSlices(args []string) error {
 		}
 	}
 
-	pos2 := longToday(mustPositions(c, *timeout, logf), inst)
+	posQ2, err := c.Positions(*timeout)
+	if err != nil {
+		return fmt.Errorf("⚠️ 两腿开完之后查持仓失败 —— 不判：%w", err)
+	}
+	pos2 := longToday(posQ2, inst)
 	if pos2 == nil || int(pos2.Position) != 2 {
 		return fmt.Errorf("⚠️ 两腿开完之后今仓不是 2 手 —— 前提塌了，不判")
 	}
@@ -322,7 +326,11 @@ func runCTPSlices(args []string) error {
 	if err != nil || st.VolumeTraded == 0 {
 		return fmt.Errorf("平一手没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
-	pos3 := longToday(mustPositions(c, *timeout, logf), inst)
+	posQ3, err := c.Positions(*timeout)
+	if err != nil {
+		return fmt.Errorf("⚠️ 平完之后查持仓失败 —— 不判：%w", err)
+	}
+	pos3 := longToday(posQ3, inst)
 	if pos3 == nil || int(pos3.Position) != 1 {
 		return fmt.Errorf("⚠️ 平完之后今仓不是 1 手 —— 前提塌了，不判")
 	}
@@ -533,16 +541,6 @@ func longToday(pos map[string]*def.CThostFtdcInvestorPositionField,
 	return nil
 }
 
-func mustPositions(c *ctp.Client, timeout time.Duration,
-	logf func(string, ...any)) map[string]*def.CThostFtdcInvestorPositionField {
-	pos, err := c.Positions(timeout)
-	if err != nil {
-		logf("[sl] ⚠️ 查持仓失败：%v", err)
-		return nil
-	}
-	return pos
-}
-
 // openOneLot 开一手多头今仓（**打卖一，立即成交**），并由 OpenCost 增量反解成交价。
 //
 // ⚠️ 为什么不直接读成交回报的价：OrderState 里没有成交价这一项，
@@ -554,7 +552,10 @@ func openOneLot(c *ctp.Client, ex, inst string, mult float64,
 	if err != nil {
 		return 0, err
 	}
-	before := openCostOf(c, inst, timeout, logf)
+	before, err := openCostOf(c, inst, timeout)
+	if err != nil {
+		return 0, err
+	}
 	// ⚠️ 挂涨停 ⇒ 一定成交（本命令要的是真持仓，不是挂单）。
 	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
@@ -595,7 +596,10 @@ func openOneLotResting(c *ctp.Client, ex, inst string, mult, tick float64,
 	if px <= float64(md.LowerLimitPrice) {
 		return 0, fmt.Errorf("⚠️ 挂价 %.4f 已到跌停 —— 不挂", px)
 	}
-	before := openCostOf(c, inst, timeout, logf)
+	before, err := openCostOf(c, inst, timeout)
+	if err != nil {
+		return 0, err
+	}
 	req := ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
 		Volume: 1, LimitPrice: px}
@@ -622,19 +626,35 @@ func openOneLotResting(c *ctp.Client, ex, inst string, mult, tick float64,
 	return filledPrice(c, inst, before, mult, timeout, logf)
 }
 
-// openCostOf 读该合约多头今仓当前的 OpenCost；没有持仓时是 0。
-func openCostOf(c *ctp.Client, inst string, timeout time.Duration,
-	logf func(string, ...any)) float64 {
-	if p := longToday(mustPositions(c, timeout, logf), inst); p != nil {
-		return float64(p.OpenCost)
+// openCostOf 读该合约多头今仓当前的 OpenCost；没有持仓时是 0。**查询失败时报错**，见 openCostFrom。
+func openCostOf(c *ctp.Client, inst string, timeout time.Duration) (float64, error) {
+	pos, err := c.Positions(timeout)
+	return openCostFrom(longToday(pos, inst), err)
+}
+
+// openCostFrom 是 openCostOf 的判定：查询出错 ⇒ 报错；查到但没有今仓 ⇒ 0。
+//
+// ⚠️⚠️ 20260915 评审指出：上一版经 mustPositions 把**查询失败**也变成 nil，于是这里返回 0 ——
+// 当成「开仓前没有这一片」。而此后 filledPrice 用 (开仓后 OpenCost − 0) ÷ 乘数 反解成交价，
+// 账上若已有一片，反解出来的是**两片之和**那么大的价，腿 2 合不合格正按它判 —— 不报错。
+func openCostFrom(p *def.CThostFtdcInvestorPositionField, queryErr error) (float64, error) {
+	if queryErr != nil {
+		return 0, fmt.Errorf("⚠️ 查开仓前的 OpenCost 失败 —— 不当成 0（那会反解出两片之和那么大的价）：%w", queryErr)
 	}
-	return 0
+	if p == nil {
+		return 0, nil
+	}
+	return float64(p.OpenCost), nil
 }
 
 // filledPrice 由 OpenCost 的增量反解刚成交那一手的价。
 func filledPrice(c *ctp.Client, inst string, before, mult float64,
 	timeout time.Duration, logf func(string, ...any)) (float64, error) {
-	p := longToday(mustPositions(c, timeout, logf), inst)
+	pos, err := c.Positions(timeout)
+	if err != nil {
+		return 0, fmt.Errorf("⚠️ 开完之后查持仓失败 —— 不猜价，直接停：%w", err)
+	}
+	p := longToday(pos, inst)
 	if p == nil {
 		return 0, fmt.Errorf("⚠️ 开完之后查不到今仓 —— 不猜价，直接停")
 	}
@@ -661,13 +681,30 @@ func flattenOneLongToday(c *ctp.Client, ex, inst string, timeout time.Duration) 
 	return nil
 }
 
+// flattenStep 是 flattenLongToday 每一轮的判定：done = 今仓已清空；err = 必须停手。
+//
+// ⚠️⚠️ **查询失败不许报「已清空」**（20260915 评审必修）。20260914 夜盘真撞上过：
+// 持仓查询 40s 超时 ⇒ 上一版 mustPositions 返回 nil ⇒ 这里打印「今仓已清空」并**正常返回** ——
+// 而那一刻账上清没清，没有人知道。当晚靠另拍一份只读截面才核实。
+// ⚠️ 与 closeTodayOnly「查失败就 return err」同一个方向：收尾宁可报错让人去看，不许报平安。
+func flattenStep(p *def.CThostFtdcInvestorPositionField, queryErr error) (done bool, err error) {
+	if queryErr != nil {
+		return false, fmt.Errorf("⚠️⚠️ 查持仓失败，**不知道今仓清没清** —— 不报「已清空」，去看账户：%w", queryErr)
+	}
+	return p == nil || int(p.Position) == 0, nil
+}
+
 // flattenLongToday 把该合约的多头**今仓**清干净。⚠️ 它不碰昨仓：
 // 本命令造的片全是今天开的，而账上可能有别的实验留的过夜仓。
 func flattenLongToday(c *ctp.Client, ex, inst string,
 	timeout time.Duration, logf func(string, ...any)) error {
 	for i := 0; i < 5; i++ {
-		p := longToday(mustPositions(c, timeout, logf), inst)
-		if p == nil || int(p.Position) == 0 {
+		pos, qerr := c.Positions(timeout)
+		done, err := flattenStep(longToday(pos, inst), qerr)
+		if err != nil {
+			return err
+		}
+		if done {
 			logf("[sl] 今仓已清空")
 			return nil
 		}

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
 )
 
 // TestMsgCodeOnlyTakesTheLeadingInteger 钉住「码」与「文本里别处的数字」分得开。
@@ -124,5 +126,44 @@ func TestRejectCorpusIsProbeWrittenOnly(t *testing.T) {
 	// ⚠️ 原话不得入库：整份文件里不许出现柜台文案的痕迹。
 	if s := string(b); strings.Contains(s, "status_msg") || strings.Contains(s, "StatusMsg") {
 		t.Error("⚠️⚠️ 语料里出现了 StatusMsg —— 柜台自由文本不进库")
+	}
+}
+
+// TestObserveRecordsOrderSysIDPresence 钉住语料记下「有没有交易所委托号」，而旧语料读出来是**未知**不是「没有」。
+//
+// ⚠️ 为 §13 #6 那个替代解释补的（评审 20260915）：价格类拒单是柜台前置拒的还是交易所拒的。
+func TestObserveRecordsOrderSysIDPresence(t *testing.T) {
+	rc := rejectCase{Name: "低于跌停", Violates: []string{"涨跌停"}}
+	with := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{OrderSysID: "      123", StatusMsg: "50:x"}, "rejected")
+	without := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected")
+	if with.HasOrderSysID == nil || !*with.HasOrderSysID {
+		t.Errorf("⚠️ 回报里有交易所委托号，语料却记成 %v", with.HasOrderSysID)
+	}
+	if without.HasOrderSysID == nil || *without.HasOrderSysID {
+		t.Errorf("⚠️ 回报里没有交易所委托号，语料却记成 %v —— 新拍的每一条都要明确记 true/false", without.HasOrderSysID)
+	}
+	if with.ExchangeCode == nil || *with.ExchangeCode != 50 {
+		t.Errorf("抽出 observe 之后前缀码没解析对：%v", with.ExchangeCode)
+	}
+	// ⚠️ 旧语料（20260915 那 12 条）没有这一栏：必须读成 nil（未知），不许读成 false（没进交易所）。
+	b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "refdata", "ctp-reject-codes.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var all []rejectObservation
+	if err := json.Unmarshal(b, &all); err != nil {
+		t.Fatal(err)
+	}
+	old := 0
+	for _, o := range all {
+		if o.TradingDay == "20260915" {
+			old++
+			if o.HasOrderSysID != nil {
+				t.Errorf("⚠️ %s %s %s 是没记这一栏的旧语料，却读出了 %v", o.TradingDay, o.Exchange, o.Case, *o.HasOrderSysID)
+			}
+		}
+	}
+	if old == 0 {
+		t.Fatal("⚠️ 一条 20260915 的旧语料都没读到 —— 本条后半在空集上跑")
 	}
 }

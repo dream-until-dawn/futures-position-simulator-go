@@ -1774,14 +1774,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "160 包差集算成「全都只在 dev 上」：横幅只点了 match 的名，其余包没点——该红（20260914 起标记合法存在，改成按点名判）",
+		"name": "160 包差集算成「全都只在 dev 上」——横幅有无标记都该红（want 认两个漏报分支共用的标签，与仓库状态无关）",
 		"dir": "",
 		"file": "branch_claim_test.go",
 		"old": "\t\tif !b[k] {",
 		"new": "\t\tif true {\n",
 		"pkg": "./",
 		"test": "TestDevOnlyClaimIsAccurate",
-		"want": "标记在不等于说全了",
+		"want": "【横幅漏报 dev 独有包】",
 		"expect": "red"
 	},
 	{
@@ -3877,7 +3877,7 @@
 	{
 		"name": "409 语料的 source 改成手填值——带机器可读外形的转录会被当成观测",
 		"dir": "cmd/oracle",
-		"file": "cmd/oracle/reject.go",
+		"file": "cmd/oracle/rejectcorpus.go",
 		"old": "Outcome: outcome, Source: \"probe\",",
 		"new": "Outcome: outcome, Source: \"transcribed\",",
 		"pkg": ".",
@@ -4647,6 +4647,61 @@
 		"pkg": "./",
 		"test": "TestRateFileColumnDebtIsDeclared",
 		"want": "两头都不说",
+		"expect": "red"
+	},
+	{
+		"name": "480 flattenStep 忽略持仓查询错误——超时被当成「今仓已清空」正常返回（20260914 夜盘原样）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\tif queryErr != nil {\n\t\treturn false, ",
+		"new": "\tif false && queryErr != nil {\n\t\treturn false, ",
+		"pkg": ".",
+		"test": "TestFlattenStepNeverReportsClearedOnQueryError",
+		"want": "不许判清空",
+		"expect": "red"
+	},
+	{
+		"name": "481 openCostFrom 把查询失败当成 0——反解出两片之和那么大的价",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\tif queryErr != nil {\n\t\treturn 0, ",
+		"new": "\tif false && queryErr != nil {\n\t\treturn 0, ",
+		"pkg": ".",
+		"test": "TestOpenCostFromRefusesZeroOnQueryError",
+		"want": "当成 0 会反解",
+		"expect": "red"
+	},
+	{
+		"name": "482 flattenLongToday 不经 flattenStep 判——查询失败时的「不报清空」没接上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\tdone, err := flattenStep(longToday(pos, inst), qerr)\n",
+		"new": "\t\tdone, err := longToday(pos, inst) == nil, error(nil)\n\t\t_ = qerr\n",
+		"pkg": ".",
+		"test": "TestNoPositionQueryErrorIsSwallowed",
+		"want": "不经 flattenStep",
+		"expect": "red"
+	},
+	{
+		"name": "483 ctp-closeorder 开跑前的持仓查询错误赋给 _——查询失败会被当成「没有持仓」",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\tpos0, err := c.Positions(*timeout)\n",
+		"new": "\tpos0, _ := c.Positions(*timeout)\n",
+		"pkg": ".",
+		"test": "TestNoPositionQueryErrorIsSwallowed",
+		"want": "错误返回值被赋给了 _",
+		"expect": "red"
+	},
+	{
+		"name": "484 语料不再记「有没有交易所委托号」——#6 那个替代解释（柜台前置拒 vs 交易所拒）又分不开",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/rejectcorpus.go",
+		"old": "\to.HasOrderSysID = &has\n",
+		"new": "\t_ = has\n",
+		"pkg": ".",
+		"test": "TestObserveRecordsOrderSysIDPresence",
+		"want": "新拍的每一条都要明确记",
 		"expect": "red"
 	}
 ]
