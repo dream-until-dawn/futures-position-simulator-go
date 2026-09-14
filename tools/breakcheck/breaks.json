@@ -4648,5 +4648,49 @@
 		"test": "TestRateFileColumnDebtIsDeclared",
 		"want": "两头都不说",
 		"expect": "red"
+	},
+	{
+		"name": "480 flattenStep 忽略持仓查询错误——超时被当成「今仓已清空」正常返回（20260914 夜盘原样）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\tif queryErr != nil {\n\t\treturn false, ",
+		"new": "\tif false && queryErr != nil {\n\t\treturn false, ",
+		"pkg": ".",
+		"test": "TestFlattenStepNeverReportsClearedOnQueryError",
+		"want": "不许判清空",
+		"expect": "red"
+	},
+	{
+		"name": "481 openCostFrom 把查询失败当成 0——反解出两片之和那么大的价",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\tif queryErr != nil {\n\t\treturn 0, ",
+		"new": "\tif false && queryErr != nil {\n\t\treturn 0, ",
+		"pkg": ".",
+		"test": "TestOpenCostFromRefusesZeroOnQueryError",
+		"want": "当成 0 会反解",
+		"expect": "red"
+	},
+	{
+		"name": "482 flattenLongToday 不经 flattenStep 判——查询失败时的「不报清空」没接上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\tdone, err := flattenStep(longToday(pos, inst), qerr)\n",
+		"new": "\t\tdone, err := longToday(pos, inst) == nil, error(nil)\n\t\t_ = qerr\n",
+		"pkg": ".",
+		"test": "TestNoPositionQueryErrorIsSwallowed",
+		"want": "不经 flattenStep",
+		"expect": "red"
+	},
+	{
+		"name": "483 ctp-closeorder 开跑前的持仓查询错误赋给 _——查询失败会被当成「没有持仓」",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\tpos0, err := c.Positions(*timeout)\n",
+		"new": "\tpos0, _ := c.Positions(*timeout)\n",
+		"pkg": ".",
+		"test": "TestNoPositionQueryErrorIsSwallowed",
+		"want": "错误返回值被赋给了 _",
+		"expect": "red"
 	}
 ]

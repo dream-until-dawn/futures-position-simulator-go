@@ -987,6 +987,8 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 - `Fill` **自己调** `order.Validate`，不收调用方的 `Result`（类型上绑不住是哪一笔）；`OK()` 才成交
 - ⚠️ 实现时撞到 `order.Validate` 的一个缺口：它**不核对** `req.Instrument` 与 `facts` 里的合约规格、持仓是同一个合约。
   `match` 在校验前先核对；`order` 本身未改（改它要动 `order` 全部用例的 `Request` 构造），登记在此
+  ⚠️ 这道核对是**结构性部分覆盖**（评审 20260915）：只查带身份的两项（合约规格的 `ID`、持仓的 `Instrument`）。
+  `Facts.PreSettlement` 是裸 `decimal`、不带合约身份 —— 传进别的合约的昨结，涨跌停静默算错，`sameInstrument` 查不出来
 - 两个方向相反的偏离写在包文档，`TestPackageDocStatesBothDeviations` 钉住**配对**（价格 ⇒ 保守、成交与否 ⇒ 乐观）
 - ⚠️ v0.4.0 验收仍未达成：「被拒报单的错误码一致」要 `ctperr`，而 `ctperr` 的取值要等 #6 语料
 
