@@ -974,6 +974,19 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### 2026-09-15：门面 `futsim` 开工 —— 分四期，F1 是灌成交路径（实现之前写）
+
+设计见 design.md「门面的形状」。要点：
+
+- **为什么现在**：记账链条（成交 → 持仓 → 手续费 → 平仓盈亏 → 占用 / 持仓盈亏 → 账户）此刻只存在于 `conformance/fixture.Rebuild`，
+  门面若照着另写一份，两份一起退化时对拍全绿
+- **口径全部显式**：`Choices` 六项，零值报错；`CTPChoices()` / `KQChoices()` 只填实测过的格，`FeeRounding`（§13 #5）两个都留空
+- **F1**：`fee.PriceBasis` 与 `fee.Rounding` 导出别名、`position.Position.Clone`、`futsim.New` / 出入金 / `Mark` / `ApplyTrade` / 查询；
+  在持仓副本上算完再换进去，写账户中途失败则整个模拟器失效
+- **F1 验收**：`Rebuild` 直接改成调门面（不做两份实现互比的过渡测试），替换前后破坏验证的数不许变少；
+  CTP 侧用 20260915 的 slices 按 `SequenceNo` 重放，比账户平仓盈亏、`ag2702` 持仓与 `OpenCost`、占用 —— 手续费只比同一轮相邻两份之差且受 §13 #19 阻塞
+- F2 结算、F3 报单路径（接 `order` / `match` / `ctperr`）、F4 挂单冻结与状态存取，依次
+
 ### 2026-09-15：`account` 接上 §13 #17 —— 浮盈算不算进可用，由盈亏算法决定（实现之前写）
 
 **为什么现在做**：门面（`futsim`）的报单路径要把 `account.Available()` 喂给 `order.Facts.Available`。

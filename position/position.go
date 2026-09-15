@@ -403,3 +403,15 @@ func (p *Position) VolumeHistory(dir types.Direction) int {
 
 // IsFlat 报告是否已无持仓。
 func (p *Position) IsFlat() bool { return p.long.Volume() == 0 && p.short.Volume() == 0 }
+
+// Clone 返回一份深拷贝：改副本的明细不影响原件，反之亦然。
+//
+// ⚠️ 门面在副本上做一整笔成交（持仓、手续费、平仓盈亏、占用），全部算完才换进去 ——
+// 中途任何一步失败，原件一点没动。浅拷贝会让两份共用同一个明细切片，
+// 于是「失败的那一笔」在原件上留下半截，而原件看起来完全正常。
+func (p *Position) Clone() *Position {
+	c := *p
+	c.long = Side{lots: p.long.Lots()}
+	c.short = Side{lots: p.short.Lots()}
+	return &c
+}

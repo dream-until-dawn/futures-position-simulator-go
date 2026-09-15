@@ -300,6 +300,116 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
   断言 `Validate` 拒在同一项、`Kind` 查出来的码与语料的码一致。⚠️ 它核的是「本库给这一种违反挑的拒因」与柜台对得上 ——
   ctperr 的表本身来自同一份语料，所以**码值**这一半是同源的，不是独立验证；独立的是「拒因挑得对不对」那一半。
 
+### 门面的形状：`futsim.Simulator` 把成交记进持仓与资金
+
+⚠️ 这一节是**实现之前**写的（2026-09-15）。`match.Trade`、`position.MeasuredCloseOrder`、`account.Algorithm` 都已落地，
+缺的是把它们串起来的那一处 —— 而那一处此刻**只存在于** `conformance/fixture.Rebuild`（对拍的支撑代码）里。
+一个库的记账链条只活在对拍工具里，就是第二份实现迟早要出现的形状：门面照着写一份，两份一起退化时对拍全绿。
+
+#### 1. 口径全部由调用方显式选，零值报错
+
+门面要做的每一处「按哪个价 / 怎么合并 / 算不算」，本库都已有一个零值即「未实测」的枚举。门面**不替调用方选**：
+
+    type Choices struct {
+        FeeBasis    fee.PriceBasis      // 按额手续费按哪个价   ← 新增（F1）
+        FeeRounding fee.Rounding        // 手续费取整           ← decimalx.Rounding 的导出别名（F1）
+        MarginBasis margin.PriceBasis   // 保证金按哪个价
+        SideScope   margin.SideScope    // 单向大边的合并范围
+        Mark        pnl.Mark            // 盘中持仓盈亏的计价价
+        Algorithm   account.Algorithm   // 浮盈算不算进可用
+    }
+
+| 项 | CTP / SimNow 实测 | 快期模拟实测 |
+|---|---|---|
+| `FeeBasis` | **成交价**：平昨 @3137 收 3.142（昨结算 3147 ⇒ 3.152，否）。⚠️ 以行为费率「按额 0.0001 + 每手 0.005」为前提，而那个 0.005 声明里没有（§13 #19，开着） | **昨结算价**（kq_facts 4，`cu2701` 八个成交价一个费额） |
+| `FeeRounding` | ⚠️ **未收敛**（§13 #5：两边都排除了「到分」，剩下两个候选在现有费率结构下给同一个数） | 同左 |
+| `MarginBasis` | `OpenTodayPreSettleHistory`（§13 #1） | `PreSettleAll`（`Rebuild` 现用；实现时核过判别力：换成今仓按开仓价，快期夹具 margin 差 22.4，破坏 518） |
+| `SideScope` | `ByProduct`（§13 #3） | ⚠️ 快期**没实现大边**（simnow_pending#6）—— 这一项在那个口子上测不了 |
+| `Mark` | `MarkLast`，基线是结算推进后的 `Basis`（§13 #2） | `MarkLast`（`Rebuild` 现用；换成昨结算价时 position_profit 700 → −320，破坏 519） |
+| `Algorithm` | `AlgorithmOnlyLost`（§13 #17） | `AlgorithmAll`（kq_facts 11） |
+
+⇒ 提供两个**预设** `CTPChoices()` / `KQChoices()`，**只填实测过的格**；`FeeRounding` 在两个预设里都留零值，
+`New` 因此报错，调用方必须自己写一行 `c.FeeRounding = …` —— **那一行就是「我知道这一项没实测」的签字**。
+快期预设的 `SideScope` 同理留空（测不了不等于测过）。
+⚠️ 预设不是「推荐配置」，是「这个口子上量到的是什么」；一条测试钉住预设里每个非零格都在上表有出处、零值格恰好是表里标 ⚠️ 的那几格。
+
+⚠️ `decimalx` 是 internal 包：`fee.Compute` 的导出签名里有 `decimalx.Rounding`，模块外的调用方**点不出它的常量**。
+门面的 `Choices` 若照搬，外部根本填不了 —— 所以 F1 先在 `fee` 包里给出 `type Rounding = decimalx.Rounding` 与常量别名。
+
+#### 2. 入口与链条（F1：灌成交路径）
+
+    func New(cfg Config) (*Simulator, error)      // Config{Day, PreBalance, Rules refdata.Provider, Choices}
+    func (s *Simulator) Deposit / Withdraw(day, amount) error
+    func (s *Simulator) Mark(day, Quote) error    // Quote{Instrument, Last/HasLast, PreSettlement/HasPreSettlement}
+    func (s *Simulator) ApplyTrade(day, match.Trade) error
+    func (s *Simulator) Account() account.Snapshot
+    func (s *Simulator) Position(types.InstrumentID, types.HedgeFlag) (*position.Position, bool)   // 返回副本
+
+`ApplyTrade` 一步之内：
+
+    ① 查齐输入   合约规格、费率、保证金率（refdata）；昨结算价、计价价（Mark 给过的）
+                 —— **任何一样缺就报错，状态一点不动**
+    ② 持仓       开 ⇒ position.Open
+                 平今 / 平昨 ⇒ position.Close 直传
+                 裸 CLOSE 与强平标志 ⇒ MeasuredCloseOrder(合约的 PositionDateType)；没有实测顺序 ⇒ 报错（UseHistory 上 simnow_pending#1）
+    ③ 手续费     fee.Compute(按 FeeBasis 取价) ⇒ account.AddCommission
+    ④ 平仓盈亏   pnl.CloseProfit(被消耗的明细).ByDate ⇒ account.AddCloseProfit（逐日盯市口径进结存，§5）
+    ⑤ 重算截面   **全部**持仓 ⇒ margin.Compute(MarginBasis, SideScope) ⇒ account.SetMargin(公司, 交易所)
+                 全部持仓 ⇒ pnl.PositionProfit(Mark) 求和 ⇒ account.SetPositionProfit
+    ⑥ account.Check()
+
+- ③ 裸 `CLOSE` 的手续费按②实际消耗的今昨**拆两档**：昨仓部分走平仓档、今仓部分走平今档。⚠️ 这是**推得**：
+  平今 / 平昨三档同费率只在上期所实测过（§13 #8），大商所裸 `CLOSE` 收哪一档没有观测；拆档在三档同费率时与不拆同值。
+  ⚠️ 与 `fee` 包现有注释「裸 Close 在不区分今昨的交易所上也走这一档（平昨）」相左 —— 那句写于 #20 裁决之前。拆档与强平标志那一支「先解析成平今或平昨」同一个道理，实现时一并改那句注释。
+  强平标志同样按消耗拆档
+- ⑤ 必须是**全部**持仓而不是这一笔的合约：`ByProduct` 下同品种另一个月份的反向仓会被这一笔改变占用
+- ⚠️ **不许留半截状态**。做法：②–⑤ 全部在**持仓的副本**上算（`position.Position.Clone`，F1 新增），
+  手续费、平仓盈亏、占用、持仓盈亏四个数都算出来之后，才把副本换进去、把四个数写进账户。
+  任何一步缺输入（费率、保证金率、昨结算价、计价价 —— `Mark` 没给过就报错，不拿成交价顶）都在换进去之前失败。
+  一条测试钉住：一笔失败的 `ApplyTrade` 之后，持仓与账户快照与调用前逐字段相同
+- ⚠️ 换进去之后写账户那几步**仍然**可能失败（按现有代码只有「交易日不对」一条路，而它在①就查过 —— 但不是类型保证的）：
+  模拟器进入**失效态**，此后每个动词都返回那个错误。⚠️ 不回滚、不假装没发生 —— 半截状态上继续记账，
+  后面每一个数都错而且没有任何报错；让它停下是唯一不静默的做法
+- 计价价与昨结算价由 `Mark` 给，按合约存；昨结算价一个交易日内不变，`Mark` 收到与已存值不同的昨结算价 ⇒ 报错
+- ⚠️ 灌进来的成交**不跑八项校验**（§4「两条并存的路径」）：它被当成柜台已经接受的事实。超量平仓照样报错 —— 那不是校验，是账算不下去
+- ⚠️ §13 #18：账户级持仓盈亏与各持仓之和**口径相同**（差额是两次请求不同瞬），所以⑤求和是对的；对拍时两组字段要来自同一次请求
+
+#### 3. 分期
+
+| 期 | 内容 | 验收 |
+|---|---|---|
+| **F1** | 上面这些：`Choices` 与两个预设、`fee.PriceBasis`、`fee.Rounding` 别名、`New` / 出入金 / `Mark` / `ApplyTrade` / 查询 | 见 §4 验证 |
+| F2 | `Settle(day, 结算价表, nextDay)`：全部持仓 `position.Settle` ⇒ 按结算价重算占用 ⇒ `account.Settle`。缺任何一个持仓合约的结算价 ⇒ 报错，不拿昨结算价顶 | 跨日结转夹具（快期 crossday、CTP 过夜种子）逐字段 |
+| F3 | 报单路径：`Submit(day, order.Request)` 组装 `order.Facts`（`Available` 取 `account.Available()`、`Need` 由 `order.FreezeOf`）⇒ `match.Fill` ⇒ `ApplyTrade` | 被拒单的码与 ctperr 语料；冻结额与 frozen 夹具 |
+| F4 | 挂单（引擎自己撮合时）：`order.Book` + `account.Freeze` / `Unfreeze` + 撤单；`State()` / `Restore()` | 冻结往返差 0（§13 #9） |
+
+#### 4. 验证（F1）—— 两个口子各一条，都从生产的门面出发
+
+- **快期**：`Rebuild` 改成调门面（`KQChoices()` + 显式 `FeeRounding = NoRounding`、`SideScope` 沿用 `ByInstrument`）。
+  ⚠️ **不做「门面与 Rebuild 逐字段一致」那种过渡测试**：两份实现并存期间比对彼此，恰好就是本节开头说的那个形状。
+  直接替换，`TestRebuildAccountFieldByField` 等既有对拍从此钉的是门面；替换前后各跑一次破坏验证，数不许变少
+- **CTP**：交易日 20260915 的 `ctp-slices-20260915{,-2..-9}`。⚠️ 每份截面**只附本轮那个合约**的当日成交
+  （-2/-3 是 `DCE.m2701` 的 2 笔，-4 起是 `SHFE.ag2702`，-9 带齐它全天 9 笔）。
+  - ⚠️ **实现时改了**（原写「从过夜的 m2701 昨仓起点合并两个合约重放、比账户平仓盈亏」）：F1 没有结算，造不出昨仓；
+    而 ag2702 的 9 笔从空仓开始、自成一段。⇒ `TestFacadeReplaysAg2702AgainstCTP` 只重放 ag2702，
+    在 -4..-9 六个时点比**那一条持仓记录**的六个字段：手数、`OpenCost`、`UseMargin`、`PositionProfit`、`CloseProfit`、`Commission`
+  - 全部取自**同一条记录**（同一次请求）：持仓盈亏的计价价用记录自己的 `SettlementPrice`（盘中柜台就用它算），
+    不用行情快照 —— 两次请求中间价会动（§13 #18；-6 那份记录 15459、行情 15456）
+  - ⚠️ **账户级字段不比**：账户手续费累计里有本批截面之外的合约（-3 → -4 之间只有一笔 ag 开仓，账户手续费涨了 2.52355、那一笔只该 2.324），
+    账户平仓盈亏里有 m2701 的 −240
+  - ⚠️ **手续费**：柜台比本库**恰好**多 0.005 × 成交笔数（§13 #19，声明费率里没有这个每手常数）。
+    测试钉的是「差恰好是这个常数」—— #19 收敛或本库手续费错一分都会红；**不是**「一致」
+  - 首跑 6 份 × 6 字段全部对上；破坏 515（保证金基准）/ 516（手续费基准）/ 517（平今按后开先平）各自红在对应字段
+
+#### 5. 它**不做**的
+
+| 不做 | 为什么 |
+|---|---|
+| 替调用方选任何口径 | 两个口子量到的值相反的就有三项（手续费基准、保证金基准、浮盈算法）|
+| 灌成交路径上的八项校验 | 那是 F3 报单路径的事；灌进来的成交是已发生的事实 |
+| 从最新价推结算价、从昨结算价顶结算价 | §6.5：结算价是交易所的结算结果，推不出来 |
+| 强平执行 | 决策 11 |
+
 ### 为什么这样切
 
 **纯函数层与状态层的分界是这套结构的主轴。** `fee` / `margin` / `pnl` 只做计算：

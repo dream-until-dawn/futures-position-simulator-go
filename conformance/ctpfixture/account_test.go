@@ -33,7 +33,7 @@ func ctpAlgorithm(s string) (account.Algorithm, bool) {
 // 而本条要分开的差是**浮盈本身**（最小的正样本 +30），差七个数量级以上。
 func TestProductionAccountAvailableAgainstCTP(t *testing.T) {
 	const tol = 1e-6
-	n, positives := 0, 0
+	n, positives, mixed := 0, 0, 0
 	for name, f := range loadCTP(t) {
 		if len(f.Account) == 0 {
 			continue
@@ -93,6 +93,9 @@ func TestProductionAccountAvailableAgainstCTP(t *testing.T) {
 		if pp > 0 {
 			positives++
 		}
+		if hasGainAndLoss(f.Positions) {
+			mixed++
+		}
 	}
 	if n < 5 {
 		t.Fatalf("⚠️ 只核了 %d 份（下界 5）—— 本条在空转", n)
@@ -101,5 +104,24 @@ func TestProductionAccountAvailableAgainstCTP(t *testing.T) {
 	if positives == 0 {
 		t.Fatalf("⚠️ 核了 %d 份，没有一份持仓盈亏 > 0 —— 「全部计算」与「只计浮亏」在这批上给同一个数，本条分不开它们", n)
 	}
-	t.Logf("ⓘ 生产 account 核了 %d 份 CTP 截面，其中浮盈为正 %d 份", n, positives)
+	// ⚠️ 判别力第二层（评审 20260915）：「按账户净额扣」与「逐持仓扣正数」只在**有赚有赔**的截面上分得开。
+	// 全是单腿的截面上两种读法同值 —— 那时本条守不住「净额」这一半。
+	if mixed == 0 {
+		t.Fatalf("⚠️ %d 份截面里没有一份同时有赚有赔的持仓 —— 净额与逐持仓分不开（原先靠 ctp-status-20260914-2）", n)
+	}
+	t.Logf("ⓘ 生产 account 核了 %d 份 CTP 截面，其中浮盈为正 %d 份、有赚有赔 %d 份", n, positives, mixed)
+}
+
+// hasGainAndLoss 报告一份截面里是否同时有持仓盈亏为正与为负的持仓记录。
+func hasGainAndLoss(positions map[string]map[string]any) bool {
+	gain, loss := false, false
+	for _, r := range positions {
+		pp, ok := r["PositionProfit"].(float64)
+		if !ok {
+			continue
+		}
+		gain = gain || pp > 0
+		loss = loss || pp < 0
+	}
+	return gain && loss
 }

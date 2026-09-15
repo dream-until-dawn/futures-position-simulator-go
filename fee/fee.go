@@ -69,11 +69,12 @@ func pick(r Rates, offset types.Offset) (byMoney, byVolume decimal.Decimal, err 
 		return r.CloseTodayByMoney, r.CloseTodayByVolume, nil
 
 	case types.Close, types.CloseYesterday:
-		// CTP 的 CloseRatio 就是平昨费率；裸 Close 在不区分今昨的交易所上也走这一档。
+		// CTP 的 CloseRatio 就是平昨费率；传裸 Close 进来按这一档算。
 		//
-		// ⚠️ 但「裸 Close 在 UseHistory 交易所上到底算平昨还是由柜台择优」
-		// 尚未由 SimNow 裁决（state.md 的 simnow_pending#1）。
-		// 那个判断属于 order 包，不在这里重复——本包只按传进来的标志算钱。
+		// ⚠️ 本包只按传进来的标志算钱。裸 Close 消耗的可能今昨都有 ——
+		// 门面（futsim.ApplyTrade）按实际消耗拆成平昨 / 平今两档分别传进来（推得，design.md「门面的形状」§2）。
+		// 这句注释原写「裸 Close 在不区分今昨的交易所上也走这一档」，写于 §13 #20 裁决之前。
+		// 「裸 Close 在 UseHistory 交易所上算什么」仍未由 SimNow 裁决（simnow_pending#1），那个判断属于 order 包。
 		return r.CloseByMoney, r.CloseByVolume, nil
 
 	case types.ForceClose, types.ForceOff, types.LocalForceClose:
