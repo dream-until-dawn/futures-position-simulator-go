@@ -12,17 +12,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// marginRates 是各品种的保证金率。
-//
-// ⚠️ 出处：probes.md §7.2 的实测（从每手保证金反解，跨合约跨交易所互验）。
-// **至少三档**（rb/m 7%、i/cu 11%、ag 22%）—— 而我曾经用三个同为 7% 的样本
-// 得出过「全局统一简化费率」这个相反结论（silent-risks.md）。
-// 那次的教训是：**同值的样本不构成「统一」的证据**。
-var marginRates = map[string]string{
-	"rb": "0.07", "m": "0.07",
-	"i": "0.11", "cu": "0.11",
-	"ag": "0.22",
-}
 
 func ratesFor(product string) (refdata.MarginRates, bool) {
 	r, ok := marginRates[product]

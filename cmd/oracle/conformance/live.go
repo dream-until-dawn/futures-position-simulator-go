@@ -44,8 +44,10 @@ import (
 // ⚠️ 与 fixture.Spec 同理：**没有默认值**。一个「差不多能用」的乘数或费率
 // 会让每一个金额都错，而错出来的数看起来完全正常。
 type Spec struct {
-	Multiplier   decimal.Decimal
-	Margin       refdata.MarginRates
+	Multiplier decimal.Decimal
+	Margin     refdata.MarginRates
+	// Commission 是实测手续费率（F7a 起有，`-carry` 走门面记账要它；持仓对拍不看它的值）。
+	Commission   refdata.CommissionRates
 	PositionDate refdata.PositionDateType
 }
 
