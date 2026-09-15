@@ -974,6 +974,22 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### ✅ 已裁决：大商所（`NoUseHistory`）跨过结算即记作**昨仓**，跟 CTP（2026-09-15，使用者裁决）
+
+§13 #20：快期结算后大商所持仓仍记今仓（kq_facts 24），CTP 实测记作昨仓且接受平昨（#4 夹具 ①、§13 #16）。
+使用者在三个选项里选了**跟 CTP**（另两个：跟快期维持现状 / 两种都支持按口子配置）。⚠️ 经实现方会话做出，评审侧未见过。
+
+**改动（实现之前写）**
+
+- `position.Settle`：`NoUseHistory` 与 `UseHistory` 走同一条 `SettleAll`（今仓 → 昨仓、基线推进到结算价）；
+  `RebaseAll` 随之删除（没有调用方）。`PositionDateType` 零值结算照旧报错 —— 那道关口不变
+- ⚠️ `PositionDateType` 在结算上**不再分岔**。它仍在别处起作用（裸 `CLOSE` 的校验、快期夹具的今昨拆分读法），不删
+- 影响实验（本地临时改、跑完还原）：根模块只红三条 —— 钉旧行为的 `TestSettleRespectsPositionDateType`、
+  `TestKindStaysUnknownOutsideCorpus` 里「大商所跨结算后平昨」那一格（现在是昨仓、可平）、锚点守卫
+- ⚠️ **快期对拍一条没红，是因为没测到**：跨日结转对拍因大商所日行情 412 跳过了 DCE。一旦打通，
+  类 B（NoUseHistory 不滚）必然出现 —— 按**口子差**登记，不回退本库
+- 破坏 89（「对 NoUseHistory 也滚今昨」）现在就是正确行为 ⇒ 翻成反向；90 / 91 锚在 `RebaseAll` 分支上 ⇒ 重锚或退役
+
 ### 2026-09-15：`order` / `match` 接上 `ctperr` —— 被拒的单能说出柜台会给的码（语料粒度内）
 
 设计先行：docs/design.md「ctperr 的形状」第 6 条。导出面（门禁④）：
