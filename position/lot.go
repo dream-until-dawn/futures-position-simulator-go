@@ -140,6 +140,12 @@ func (s *Side) SettleAll(settlementPrice decimal.Decimal) {
 // 于是「推进了」与「没推进」给出同一个数。
 // 这里按规则实现（逐日盯市对所有合约成立），而不是按样本 ——
 // 因为样本在这一点上什么都没说。要一个开仓价 ≠ 结算价的 NoUseHistory 样本。
+//
+// ✅ **20260915 还上了**（CTP 侧）：#4 夹具 ①（testdata/ctp/ctp-slices-20260915.json）DCE.m2701 一手跨结算，
+// 开仓 3399、昨结 3384，`PositionCost` 已是 33840 = 昨结 × 乘数，≠ `OpenCost` 33990 ⇒ **基线推进了**，与本函数一致。
+// 守卫 conformance/ctpfixture 的 TestNoUseHistoryBasisAdvancesOnCTP。
+// ⚠️ 但同一条记录 `TodayPosition 0 / YdPosition 1` —— CTP 把它记作**昨仓**，而本函数**不标昨仓**（快期如此）。
+// 两个口子在这一半上结论相反，本库跟哪边待使用者裁决：cn-futures-rules.md §13 #20。
 func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {
 	for i := range s.lots {
 		s.lots[i].Basis = settlementPrice

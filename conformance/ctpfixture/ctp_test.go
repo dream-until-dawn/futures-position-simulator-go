@@ -469,3 +469,46 @@ func specMultiplier(t *testing.T, symbol string, id types.InstrumentID) (decimal
 	}
 	return byProduct, byProduct.IsPositive()
 }
+
+// TestNoUseHistoryBasisAdvancesOnCTP 还掉 position/lot.go RebaseAll 注释里登记的盲区：
+// 「NoUseHistory 上基线到底推没推进」—— 此前唯一的样本开仓价恰好等于结算价，两个答案同值。
+//
+// 判别样本是 #4 夹具 ①（交易日 20260915，DCE.m2701 多头一手跨结算）：开仓 3399、昨结 3384。
+// ⇒ 若基线推进了，PositionCost = 昨结 × 乘数 = 33840；若没推进，PositionCost = OpenCost = 33990。
+// 昨结取自行情快照、乘数取自天勤规格，都与持仓记录本身独立。
+//
+// ⚠️ 它只证实**基线推进**这一半（与 RebaseAll 一致）。同一条记录 TodayPosition 0 / YdPosition 1 ——
+// CTP 把它记作**昨仓**，而 RebaseAll 不标昨仓：那是 §13 #20，待使用者裁决，本条不管。
+func TestNoUseHistoryBasisAdvancesOnCTP(t *testing.T) {
+	fx := loadCTP(t)
+	f, ok := fx["ctp-slices-20260915.json"]
+	if !ok {
+		t.Fatal("⚠️ 找不到 #4 夹具 ① ctp-slices-20260915.json —— 盲区的判别样本没了")
+	}
+	p, ok := f.Positions["DCE.m2701/2/1"]
+	if !ok {
+		t.Fatal("⚠️ 夹具 ① 里没有 DCE.m2701 多头记录")
+	}
+	vol, today := num(t, p, "Position"), num(t, p, "TodayPosition")
+	if !vol.Equal(decimal.NewFromInt(1)) || !today.IsZero() {
+		t.Fatalf("前提：一手跨结算的仓（Position 1 / TodayPosition 0），得到 %s / %s", vol, today)
+	}
+	pre, okPre := f.Quotes["DCE.m2701"]["PreSettlementPrice"].(float64)
+	id, err := types.ParseSymbol("DCE.m2701", types.TradingDay(20260915))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mult, okMult := specMultiplier(t, "DCE.m2701", id)
+	if !okPre || !okMult {
+		t.Fatalf("⚠️ 缺独立来源：行情昨结 %v、规格乘数 %v", okPre, okMult)
+	}
+	advanced := decimal.NewFromFloat(pre).Mul(mult)
+	cost, open := num(t, p, "PositionCost"), num(t, p, "OpenCost")
+	if advanced.Equal(open) {
+		t.Fatalf("⚠️ 昨结 × 乘数（%s）恰好等于 OpenCost（%s）—— 这份样本分不开，盲区没还上", advanced, open)
+	}
+	if !cost.Equal(advanced) {
+		t.Errorf("⚠️ PositionCost %s，昨结 × 乘数 %s，OpenCost %s —— 基线没有推进到结算价，与 RebaseAll 相反", cost, advanced, open)
+	}
+	t.Logf("ⓘ PositionCost %s = 昨结 %.0f × 乘数 %s ≠ OpenCost %s ⇒ NoUseHistory 结算推进了基线（CTP 侧实测）", cost, pre, mult, open)
+}

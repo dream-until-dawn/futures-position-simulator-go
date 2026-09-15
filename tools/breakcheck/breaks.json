@@ -4802,5 +4802,16 @@
 		"test": "TestKindStaysUnknownOutsideCorpus",
 		"want": "柜台会接受这笔单",
 		"expect": "red"
+	},
+	{
+		"name": "494 #4 夹具 ① 的 PositionCost 改成开仓成本 33990——大商所结算没推进基线，TestNoUseHistoryBasisAdvancesOnCTP 要红",
+		"dir": "",
+		"file": "testdata/ctp/ctp-slices-20260915.json",
+		"old": "\"PositionCost\": 33840",
+		"new": "\"PositionCost\": 33990",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestNoUseHistoryBasisAdvancesOnCTP",
+		"want": "基线没有推进到结算价",
+		"expect": "red"
 	}
 ]
