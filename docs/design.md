@@ -754,6 +754,14 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 - **F7c（重放一处）**：同日样本改走门面（一个合约一个模拟器，`PositionDateNotNeeded` 即 `specRules` 的默认）；删 `Replay` / `ReplayFrom` / `ReplayRealized` / `closeOffsetOf` / `replay_test`
   - ⚠️ 失去的检查：`TestReplayIsUnambiguous`（三种消耗顺序在全部当日样本上一致）。当日样本全是今仓，三种顺序**结构上**消耗同一批（`ReplayFrom` 注释自己写着「start 为 nil 时结构上不可能触发」）⇒ 它一直在答「一致」，删掉登记 silent-risks
 
+##### F7a 落地（2026-09-15）
+
+- json 新段 `commission_rate_by_product`：五个品种，`classified` 显式写（rb / m 真；i / cu / ag 假 —— 只有一个月份，按额按手判不了，**不把测试变量里的「按额」当成实测结论照搬**）
+- 读取挪到 `conformance/fixture/measured.go`，`cmd/oracle` 的 `MeasuredRules` / `LoadMeasuredRules` 改成别名；新增校验：重复条目、`classified` 必填、按额按手二选一、标定合约必填；`BuildSpecs` 缺手续费率不给规格
+- 此前加载器与 `BuildSpecs` 一条单测都没有，补上（`measured_test` / `cmd/oracle/conformance/rules_test`）
+- 替换前后 `conformance/fixture` 全包 -v 日志逐行相同（两行差异来自 `TestOrdersAcceptedOutsideSession` 遍历 map 的示例输出，重跑三次三个结果）
+- 破坏 357/362/363/93/180 改指到 json（93 原为删行，json 删行会留尾逗号读不成，改成把 m2701 改成同一型）、171/173 改指到 measured.go；新增 602–610（602 预判错：没写 classified 是空指针 panic，不是缺省成 false）
+
 ##### 决策点（实现方倾向，F7c 之前定）
 
 1. **`account_test` 怎么办**。候选：
