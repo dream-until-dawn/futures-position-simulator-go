@@ -4892,11 +4892,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "502 没有观测的 '3'/'4' 也放行开户",
+		"name": "502 没有观测的 '3'/'4' 也放行开户（第一版改 case 列表撞重复 case，编译红）",
 		"dir": "",
 		"file": "account/algorithm.go",
-		"old": "\tcase AlgorithmAll, AlgorithmOnlyLost:\n\t\treturn nil",
-		"new": "\tcase AlgorithmAll, AlgorithmOnlyLost, AlgorithmOnlyGain, AlgorithmNone:\n\t\treturn nil",
+		"old": "\tcase AlgorithmOnlyGain, AlgorithmNone:\n\t\treturn fmt.Errorf(",
+		"new": "\tcase AlgorithmOnlyGain, AlgorithmNone:\n\t\treturn nil\n\t\treturn fmt.Errorf(",
 		"pkg": "./account/",
 		"test": "TestNewRefusesUnmeasuredAlgorithm",
 		"want": "把枚举名当成了行为",
