@@ -169,7 +169,7 @@ func TestReplayOnFacadeClosesOnTheRightSide(t *testing.T) {
 		}}
 	p, err := ReplayOnFacade(f, "SHFE.rb2701", mustSpec(t, f, "SHFE.rb2701"), refdata.UseHistory, dd("3158"))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("⚠️ 开多 2、卖出平今 1 之后重放报错 —— 平仓方向取反会去平空头，而空头没有仓：%v", err)
 	}
 	if p.VolumeToday(types.Buy) != 1 || p.VolumeToday(types.Sell) != 0 {
 		t.Errorf("⚠️ 开多 2、卖出平今 1 之后 多 %d / 空 %d，应为 多 1 / 空 0", p.VolumeToday(types.Buy), p.VolumeToday(types.Sell))
