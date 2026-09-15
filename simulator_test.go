@@ -359,7 +359,7 @@ func TestApplyTradeShortSide(t *testing.T) {
 
 	// 买入平今 1 @3345：平今档 0.75；平仓盈亏 (3360−3345)×10 = +150；剩 1 手浮盈 (3360−3340)×10 = 200
 	if err := s.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Buy, types.CloseToday, "3345", 1)); err != nil {
-		t.Fatal(err)
+		t.Fatalf("买平今 1：%v", err)
 	}
 	wantAccount(t, s, "买平今 1", "100346.25", "96786.25", "3360", "150", "3.75", "200")
 
