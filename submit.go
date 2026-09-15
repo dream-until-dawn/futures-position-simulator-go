@@ -36,6 +36,7 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 		return order.Frozen{}, err
 	}
 	in := order.FreezeInput{}
+	req.Offset = s.datedOffset(inst.PositionDateType, req.Offset) // 冻昨仓，与成交时平昨一致
 	tr := match.Trade{Instrument: req.Instrument, Direction: req.Direction, Offset: req.Offset,
 		Hedge: req.Hedge, Price: req.Price, Volume: req.Volume}
 

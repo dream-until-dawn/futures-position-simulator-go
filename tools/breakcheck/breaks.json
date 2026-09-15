@@ -5639,5 +5639,160 @@
 		"test": "TestCompileFailureIsItsOwnVerdict",
 		"want": "假好消息",
 		"expect": "red"
+	},
+	{
+		"name": "570 ApplyTrade 不按第八项口径改写裸 CLOSE（UseHistory 上照旧报「没有实测的消耗顺序」）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\ttr.Offset = s.datedOffset(inst.PositionDateType, tr.Offset) // UseHistory 上的裸 CLOSE 按口径改写成平昨",
+		"new": "\t\t// UseHistory 上的裸 CLOSE 按口径改写成平昨（破坏：不改写）",
+		"pkg": "./",
+		"test": "TestUndatedCloseAsYesterdayOnUseHistory",
+		"want": "快期口径下 UseHistory 上的裸 CLOSE 成交不了",
+		"expect": "red"
+	},
+	{
+		"name": "571 FreezeOf 不按第八项口径改写裸 CLOSE（冻结算不出）",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\treq.Offset = s.datedOffset(inst.PositionDateType, req.Offset) // 冻昨仓，与成交时平昨一致",
+		"new": "\t// 冻昨仓，与成交时平昨一致（破坏：不改写）",
+		"pkg": "./",
+		"test": "TestUndatedCloseAsYesterdayOnUseHistory",
+		"want": "快期口径下 UseHistory 上的裸 CLOSE 算不出冻结",
+		"expect": "red"
+	},
+	{
+		"name": "572 datedOffset 不看 PositionDateType（NoUseHistory 上的裸 CLOSE 也记作平昨）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "if off == types.Close && dt == refdata.UseHistory && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {",
+		"new": "if off == types.Close && dt == dt && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {",
+		"pkg": "./",
+		"test": "TestUndatedCloseChoiceZeroValue",
+		"want": "第八项漏到了 NoUseHistory 上",
+		"expect": "red"
+	},
+	{
+		"name": "573 datedOffset 不看口径（零值也记作平昨）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "if off == types.Close && dt == refdata.UseHistory && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {",
+		"new": "if off == types.Close && dt == refdata.UseHistory {",
+		"pkg": "./",
+		"test": "TestUndatedCloseChoiceZeroValue",
+		"want": "零值口径下 UseHistory 上的裸 CLOSE 成交了",
+		"expect": "red"
+	},
+	{
+		"name": "574 datedOffset 把强平标志也改写成平昨（kq_facts 32 只观测过 CLOSE）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "if off == types.Close && dt == refdata.UseHistory && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {",
+		"new": "if off.IsClose() && !off.SpecifiesPositionDate() && dt == refdata.UseHistory && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {",
+		"pkg": "./",
+		"test": "TestUndatedCloseAsYesterdayOnUseHistory|TestUndatedCloseChoiceZeroValue",
+		"want": "",
+		"expect": "green",
+		"why": "强平标志在 UseHistory 上的语义没有任何观测，也没有测试把强平标志喂进记账路径 —— 盲区如实登记，不为它造一个没有出处的期望值"
+	},
+	{
+		"name": "575 Choices.validate 不拒认不得的第八项取值",
+		"dir": "",
+		"file": "choices.go",
+		"old": "\tif c.UndatedCloseOnUseHistory > UndatedCloseAsYesterday {",
+		"new": "\tif false && c.UndatedCloseOnUseHistory > UndatedCloseAsYesterday {",
+		"pkg": "./",
+		"test": "TestUndatedCloseChoiceZeroValue",
+		"want": "认不得的第八项取值开户成功了",
+		"expect": "red"
+	},
+	{
+		"name": "576 KQChoices 不填第八项（快期上裸 CLOSE = 平昨，kq_facts 32）",
+		"dir": "",
+		"file": "choices.go",
+		"old": "\t\tUndatedCloseOnUseHistory: UndatedCloseAsYesterday, // kq_facts 32",
+		"new": "\t\t// kq_facts 32（破坏：不填）",
+		"pkg": "./",
+		"test": "TestPresetsLeaveExactlyTheUnmeasuredCellsEmpty",
+		"want": "UseHistory 上裸 CLOSE 的口径",
+		"expect": "red"
+	},
+	{
+		"name": "577 PlaceAccepted 的可平量守卫不加簿上已冻的（单笔各自不超、合计超放过去）",
+		"dir": "",
+		"file": "place.go",
+		"old": "if fz.VolumeToday+fr.VolumeToday > today || fz.VolumeHistory+fr.VolumeHistory > history {",
+		"new": "if fr.VolumeToday > today || fr.VolumeHistory > history {",
+		"pkg": "./",
+		"test": "TestPlaceAcceptedKeepsBooksConsistent",
+		"want": "合计超今仓",
+		"expect": "red"
+	},
+	{
+		"name": "578 PlaceAccepted 不守可平量（冻住的手数超过持仓也记进簿）",
+		"dir": "",
+		"file": "place.go",
+		"old": "\tif req.Offset.IsClose() {\n\t\theld := opposite(req.Direction)\n\t\ttoday, history := 0, 0",
+		"new": "\tif false && req.Offset.IsClose() {\n\t\theld := opposite(req.Direction)\n\t\ttoday, history := 0, 0",
+		"pkg": "./",
+		"test": "TestPlaceAcceptedKeepsBooksConsistent",
+		"want": "单笔超昨仓",
+		"expect": "red"
+	},
+	{
+		"name": "579 PlaceAccepted 不拒不为正的价格（按昨结算价冻结时照样算得出、记得进簿）",
+		"dir": "",
+		"file": "place.go",
+		"old": "\tif !req.Price.IsPositive() {\n\t\treturn order.Frozen{}, fmt.Errorf(\"委托 %s 的价格 %s 不为正",
+		"new": "\tif false && !req.Price.IsPositive() {\n\t\treturn order.Frozen{}, fmt.Errorf(\"委托 %s 的价格 %s 不为正",
+		"pkg": "./",
+		"test": "TestPlaceAcceptedKeepsBooksConsistent",
+		"want": "价格为零",
+		"expect": "red"
+	},
+	{
+		"name": "580 PlaceAccepted 不从可用里扣冻结额（资金不够也记进簿）",
+		"dir": "",
+		"file": "place.go",
+		"old": "\tif err := s.acc.Freeze(day, fr.Margin, fr.Commission); err != nil {\n\t\treturn order.Frozen{}, fmt.Errorf(\"委托 %s：%w —— 柜台接受了",
+		"new": "\tif err := error(nil); err != nil {\n\t\treturn order.Frozen{}, fmt.Errorf(\"委托 %s：%w —— 柜台接受了",
+		"pkg": "./",
+		"test": "TestPlaceAcceptedSkipsValidation|TestPlaceAcceptedKeepsBooksConsistent",
+		"want": "资金不够",
+		"expect": "red"
+	},
+	{
+		"name": "581 PlaceAccepted 进簿失败时不解冻（重复编号被簿拒掉而冻结留在账户上）",
+		"dir": "",
+		"file": "place.go",
+		"old": "\t\tif uerr := s.acc.Unfreeze(day, fr.Margin, fr.Commission); uerr != nil {\n\t\t\ts.broken = uerr\n\t\t}\n\t\treturn order.Frozen{}, err\n\t}\n\treturn fr, nil\n}\n\n// Cancel",
+		"new": "\t\treturn order.Frozen{}, err\n\t}\n\treturn fr, nil\n}\n\n// Cancel",
+		"pkg": "./",
+		"test": "TestPlaceAcceptedKeepsBooksConsistent",
+		"want": "重复编号：被拒之后状态变了",
+		"expect": "red"
+	},
+	{
+		"name": "582 Restore 不核记作平昨的裸 CLOSE 挂单的今 / 昨拆分",
+		"dir": "",
+		"file": "state.go",
+		"old": "\tif want.VolumeToday != o.Frozen.VolumeToday || want.VolumeHistory != o.Frozen.VolumeHistory {",
+		"new": "\tif false && (want.VolumeToday != o.Frozen.VolumeToday || want.VolumeHistory != o.Frozen.VolumeHistory) {",
+		"pkg": "./",
+		"test": "TestRestoreChecksAsYesterdaySplit",
+		"want": "把记作平昨的裸 CLOSE 改成冻今 1",
+		"expect": "red"
+	},
+	{
+		"name": "583 Restore 核挂单冻结时不按第八项口径改写（记作平昨的裸 CLOSE 走了今昨拆法那一支）",
+		"dir": "",
+		"file": "state.go",
+		"old": "if off := s.datedOffset(inst.PositionDateType, req.Offset); off.IsClose() && !off.SpecifiesPositionDate() {",
+		"new": "if off := req.Offset; off.IsClose() && !off.SpecifiesPositionDate() {",
+		"pkg": "./",
+		"test": "TestRestoreChecksAsYesterdaySplit",
+		"want": "合法存档恢复不了",
+		"expect": "red"
 	}
 ]

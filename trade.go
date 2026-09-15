@@ -153,7 +153,8 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 			return err
 		}
 	case tr.Offset.IsClose():
-		held := opposite(tr.Direction) // 卖出平仓平的是多头
+		tr.Offset = s.datedOffset(inst.PositionDateType, tr.Offset) // UseHistory 上的裸 CLOSE 按口径改写成平昨
+		held := opposite(tr.Direction)                              // 卖出平仓平的是多头
 		order := position.CloseOrderUnmeasured
 		if !tr.Offset.SpecifiesPositionDate() {
 			o, ok := position.MeasuredCloseOrder(p.DateType())
@@ -232,6 +233,17 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 	}
 	s.positions = positions
 	return s.commit(day, v, commission, closeProfit)
+}
+
+// datedOffset 按口径 UndatedCloseOnUseHistory 改写开平标志：UseHistory 合约上的裸 CLOSE ⇒ 平昨，其余原样。
+//
+// 记账路径（ApplyTrade、FreezeOf）进门先过它，commission 收到的已是改写后的 —— 各判各的，就会冻昨仓、平今仓、收平今档。
+// ⚠️ 只改 types.Close：强平标志也不指定今昨，但 kq_facts 32 只观测过 CLOSE。
+func (s *Simulator) datedOffset(dt refdata.PositionDateType, off types.Offset) types.Offset {
+	if off == types.Close && dt == refdata.UseHistory && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {
+		return types.CloseYesterday
+	}
+	return off
 }
 
 // undatedSplit 把一笔裸 CLOSE 拆成今 / 昨手数：在**扣掉挂单冻住之后**的今昨里先平昨。
