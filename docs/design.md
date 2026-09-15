@@ -279,9 +279,26 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 
 | 不做 | 为什么 |
 |---|---|
-| 从 `order.Result` 映射到码 | 要按涨停 / 跌停、平今 / 平昨把一个 `Check` 拆开，属于调用方；等 v0.4.0 验收那一步（「被拒报单的错误码一致」）一起接 |
+| ~~从 `order.Result` 映射到码~~ | ✅ 2026-09-15 接上，见下面第 6 条 |
 | 错误文案 | `StatusMsg` 是柜台自由文本，按纪律不进库；ctperr 只有码 |
 | 快期（DIFF）那侧的码 | 那是天勤自己的码空间（cn-futures-rules.md 那一节写明「填不了 `ctperr`」） |
+
+#### 6. 与 `order` 的接线：拒因在**拒绝的那一刻**写进 `Rejection`（2026-09-15，实现之前写）
+
+    order.Rejection{Check, Reason string, Kind ctperr.Reason}      // 新增 Kind 字段（Reason 已是中文说明）
+    match.RejectedError{Rejection, Exchange types.Exchange}        // 新增 Exchange
+    func (e *match.RejectedError) Code() (ctperr.Code, bool)       // = ctperr.Lookup(Exchange, Rejection.Kind)
+
+- **在 `Validate` 里写，不由调用方事后拆**：拒绝的那一刻 `Validate` 手里有涨停价与跌停价、开平标志、今昨手数；
+  调用方拿到的只剩一个 `Check` 与一句中文 —— 从中文里解析涨停还是跌停，就是在拿自由文本做判断。
+- **粒度仍只到语料**：
+  - `CheckPriceTick` ⇒ `ReasonPriceTick`；`CheckPriceLimit` 高于 / 低于 ⇒ `ReasonAboveUpperLimit` / `ReasonBelowLowerLimit`
+  - `CheckClosable` **平昨、且账上无仓（今 0 且昨 0）** ⇒ `ReasonCloseYesterdayExceeds`
+  - ⚠️ 平昨而有今仓、昨仓**有但不够**、平今、裸 `CLOSE`，以及其余五项 ⇒ `ReasonUnknown`（语料只测过「账上无仓时平昨」）
+  - ⚠️ 评审 20260915 打回过「只看昨仓为 0」：大商所跨结算后本库记作今仓、CTP 却接受平昨，那一版会给柜台接受的单配上码
+- **验收那一行怎么核**（「被拒报单的错误码一致」）：对语料里每一条单一违反的拒单，在 `order` 这边构造同一种违反，
+  断言 `Validate` 拒在同一项、`Kind` 查出来的码与语料的码一致。⚠️ 它核的是「本库给这一种违反挑的拒因」与柜台对得上 ——
+  ctperr 的表本身来自同一份语料，所以**码值**这一半是同源的，不是独立验证；独立的是「拒因挑得对不对」那一半。
 
 ### 为什么这样切
 

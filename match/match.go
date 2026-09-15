@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/ctperr"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -53,6 +54,14 @@ type Trade struct {
 // RejectedError 是「这笔单被拒了，所以没有成交」。
 type RejectedError struct {
 	Rejection order.Rejection
+	// Exchange 是报单所在的交易所 —— 查码要它：同一拒因的码随交易所变。
+	Exchange types.Exchange
+}
+
+// Code 是柜台对这次拒绝会给的码（ctperr 实测表）。第二个返回值为 false 表示**没有观测**：
+// 拒因不在语料粒度内（Rejection.Kind 为 ReasonUnknown），或这个交易所没拍过 —— 调用方不许拿零值当码。
+func (e *RejectedError) Code() (ctperr.Code, bool) {
+	return ctperr.Lookup(e.Exchange, e.Rejection.Kind)
 }
 
 func (e *RejectedError) Error() string {
@@ -91,7 +100,7 @@ func Fill(req order.Request, facts order.Facts) (Trade, error) {
 	}
 	res := order.Validate(req, facts)
 	if res.Rejected != nil {
-		return Trade{}, &RejectedError{Rejection: *res.Rejected}
+		return Trade{}, &RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}
 	}
 	if !res.FullyChecked() {
 		return Trade{}, &UncheckedError{Unchecked: res.Unchecked}
