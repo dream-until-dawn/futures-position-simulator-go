@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
+	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
 	"github.com/shopspring/decimal"
 )
@@ -73,6 +74,31 @@ func TestRebuildAccountFieldByField(t *testing.T) {
 	rb, err := Rebuild(target, specsFor(t, target))
 	if err != nil {
 		t.Fatalf("重建失败：%v", err)
+	}
+
+	// —— 三道守卫（F7c 从 TestAccountAggregatesFromTrades 挪来：那条与本条同一份夹具、比同样的 commission / close_profit，
+	// 自己调 fee.Compute + 旧重放，是第二份实现，删了；它独有的就是这三道）——
+	//
+	// ⚠️ 平仓笔数为零时 close_profit 两边都是 0，「一致」什么都不说明
+	closes := 0
+	for _, tr := range target.Trades {
+		if tr.Offset != types.Open {
+			closes++
+		}
+	}
+	if closes < 10 {
+		t.Fatalf("⚠️ 只有 %d 笔平仓 —— 平仓盈亏那条判别力不足", closes)
+	}
+	// ⚠️ 柜台的平仓盈亏必须**非零**：全平在成本价上时它是 0，本库也算出 0 —— 那是两个零相等，不是一次验证
+	if target.Account["close_profit"].Number.IsZero() {
+		t.Fatal("⚠️ 柜台的 close_profit 是 0 —— 那么「平仓盈亏对得上」只是两个零相等")
+	}
+	// ⚠️ 手续费残差显式打出来，别让容差把它藏了：柜台侧是 float64 累加（观测到过 394.6773000000001 对本库 394.6773，1e-13 量级），
+	// 那个尾巴是柜台的；大到能被看见（> 1e-5）就不是浮点尾巴了
+	resid := rb.Account.Commission.Sub(target.Account["commission"].Number).Abs()
+	t.Logf("手续费残差 %s（柜台 float64 累加、本库 decimal；尾巴是柜台的）", resid)
+	if resid.GreaterThan(decimal.RequireFromString("0.00001")) {
+		t.Errorf("⚠️ 手续费残差 %s 已经超出浮点尾巴的量级 —— 这是一个真实的差异，不要用容差盖过去", resid)
 	}
 	// ⚠️ 把浮动盈亏也交给视图 —— 它是本项目核心那对区分的**另一半**，
 	// 而在此之前它在账户对拍里一直被**跳过**：

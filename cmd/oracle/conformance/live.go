@@ -34,7 +34,6 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
-	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
 	"github.com/shopspring/decimal"
 )
@@ -132,9 +131,14 @@ func Compare(raw []byte, specs map[string]Spec, carry *Carry) (Result, error) {
 			res.Symbols = append(res.Symbols, sym+"（结转）")
 			continue
 		}
-		trades := f.TradesOf(sym)
-		p, err := fixture.Replay(trades[0].Instrument, types.Speculation,
-			spec.PositionDate, f.TradingDay, trades)
+		// F7c：同日重放走门面（实时截面带行情；缺昨结算价就报错，不借别处的）
+		pre, ok := f.PreSettlement(sym)
+		if !ok {
+			return res, fmt.Errorf("实时截面里 %s 没有昨结算价 —— 门面记账要它，不拿别处的顶替", sym)
+		}
+		p, err := fixture.ReplayOnFacade(f, sym,
+			fixture.Spec{Multiplier: spec.Multiplier, Commission: spec.Commission, Margin: spec.Margin},
+			spec.PositionDate, pre)
 		if err != nil {
 			return res, fmt.Errorf("重放 %s：%w", sym, err)
 		}

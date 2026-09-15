@@ -966,6 +966,11 @@ var goneTests = map[string]string{
 		"⚠️ 文档里那几处提到它的地方讲的是**那件事怎么发生的** —— " +
 		"改写成「某条现存守卫」会把「绊线红了就该删掉它」这条做法本身抹掉，" +
 		"而那正是它最值得留下的部分",
+	"TestReplayIsUnambiguous": "F7c 随旧重放一起删的「三种消耗顺序查歧义」对拍。⚠️ probes.md「今晚这几个数怎么变」那张表、state.md kq_facts 40 的论证、" +
+		"design.md §11 的调用面清单，讲的都是**它还在时**的事 —— 改写成现存测试会把「那个 0 为什么不能加强结论」这段论证抹掉",
+	"TestAccountAggregatesFromTrades": "F7c 决策点 1 删掉（与 TestRebuildAccountFieldByField 同一份夹具比同样两个字段，是第二份实现），三道守卫挪进后者。" +
+		"design.md §11 讲的是删之前的调用面与决策",
+	"TestReplayTranslatesUseHistoryBareClose": "F7b 为了钉住 closeOffsetOf 临时加的，F7c 删 closeOffsetOf 时一起删了。design.md §11「F7b 落地」记的是那一刻",
 	"TestReconstructMatchesFacade": "F6b 期间钉「Reconstruct ≡ 门面」的等价守卫，F7b 删 Reconstruct 时一起删了。" +
 		"⚠️ design.md §10「F6b 落地」与 §11「为什么」讲的是 **F6b 那时的状态**（两份实现并存、靠它守）—— " +
 		"改写成现存测试会让「当时怎么守住第二份实现」这段过程消失",
@@ -1497,6 +1502,10 @@ var breakRefRe = regexp.MustCompile(`破坏 (\d+)`)
 // ⚠️ 而且下面额外钉一条：**编号一旦回到清单里，本条要红** ——
 // 否则这张表会烂在原地，替一个已经能解析的编号继续开着口子。
 var retiredBreakNums = map[string]string{
+	"81": "F7c 删掉的破坏：它破坏的「保证金对拍跳过带昨仓的方向」那道跳过本身删了 —— 带昨仓的合约改走结转后那些方向对得上" +
+		"（F7c 全量里去掉跳过的破坏从红变绿，就是证据）。文档里提到它讲的是当时的跳过",
+	"97": "F7c 删掉的破坏（它锚的 closeOffsetOf 随旧重放删了；门面上同义的 datedOffset 由 570–573 守）。" +
+		"design.md §10 / §11 记的是 F6b、F7b 时它改由谁接住 —— 那是当时的事",
 	"1": "⚠️ 讲的是 20260910 重编号**之前**那件事：前缀 1 当时被 12 条共用。" +
 		"state.md 那一段记的正是「我写下『零处歧义引用』，而加进歧义引用的是同一个提交」——" +
 		"把它改写成新号 356 会把「当时它是歧义的」这件事本身抹掉",

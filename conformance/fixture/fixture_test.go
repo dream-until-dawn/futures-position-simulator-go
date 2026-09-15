@@ -1,10 +1,10 @@
 package fixture
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
@@ -105,56 +105,6 @@ func TestDashParsesAsAbsentNotZero(t *testing.T) {
 	}
 }
 
-// TestReplayIsUnambiguous 断言重放在三种消耗顺序下给出同一个结果。
-//
-// ⚠️ 三者相同**不等于**消耗顺序不重要，只等于**这次样本分不开它们**。
-// 本测试因此同时报告「有几个合约的样本能分开它们」——
-// 那个数现在应当是 0，而实验 4 的目的就是把它变成非 0。
-func TestReplayIsUnambiguous(t *testing.T) {
-	all := loadAll(t)
-	replayed, ambiguous, withCloses := 0, 0, 0
-	for _, f := range all {
-		for _, sym := range f.Symbols() {
-			trades := f.TradesOf(sym)
-			if len(trades) == 0 {
-				continue
-			}
-			closes := 0
-			for _, tr := range trades {
-				if tr.Offset != types.Open {
-					closes++
-				}
-			}
-			if closes > 0 {
-				withCloses++
-			}
-			inst := trades[0].Instrument
-			_, err := Replay(inst, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
-			if err != nil {
-				if strings.Contains(err.Error(), "重放有歧义") {
-					ambiguous++
-					t.Logf("ⓘ %s %s：%v", f.Path, sym, err)
-					continue
-				}
-				t.Errorf("⚠️ %s %s 重放失败：%v", f.Path, sym, err)
-				continue
-			}
-			replayed++
-		}
-	}
-	t.Logf("重放成功 %d 个合约截面（其中 %d 个含平仓成交），有歧义 %d 个",
-		replayed, withCloses, ambiguous)
-	// ⚠️ 下界：一次平仓都没重放过时，「三种顺序一致」是空话。
-	if withCloses < 5 {
-		t.Fatalf("只有 %d 个合约截面含平仓成交 —— "+
-			"「三种消耗顺序一致」这句话此时没被考验过", withCloses)
-	}
-	if ambiguous > 0 {
-		t.Logf("⚠️ 有 %d 个截面能把三种消耗顺序分开 —— "+
-			"那正是实验 4 要的样本，去看上面的 ⓘ 行", ambiguous)
-	}
-}
-
 // TestReplayMatchesOracleVolumeAndPrice 是第一次真正的持仓对拍。
 //
 // ⚠️ 它只比**两个方向的手数与开仓均价**，不比全部 54 个字段 ——
@@ -166,15 +116,27 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 	var fields []conformance.Field
 	checked, withPosition, multiPrice := 0, 0, 0
 	skippedHistory := 0
+	// borrowedPre 是昨结算价借自同日兄弟夹具的样本数（只当门面的计价前提，这里比的手数与开仓均价不依赖它；design.md §11 决策点 3）
+	borrowedPre := 0
+	var noPre []string
 	for _, f := range all {
 		for _, sym := range f.Symbols() {
 			trades := f.TradesOf(sym)
 			if len(trades) == 0 {
 				continue
 			}
-			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
+			p, borrowed, err := positionOf(t, all, f, sym)
+			if errors.Is(err, errNoSameDayPre) || errors.Is(err, errNoCarrySource) {
+				noPre = append(noPre, f.Path+" "+sym)
+				continue
+			}
 			if err != nil {
-				continue // 歧义与失败在上一条测试里已经报过
+				// ⚠️ F7c 之前这里静默 continue（「上一条测试已经报过」），那条测试（三种消耗顺序查歧义）随旧重放删了 ⇒ 这里自己报。
+				t.Errorf("⚠️ %s %s 重放 / 结转失败：%v", f.Path, sym, err)
+				continue
+			}
+			if borrowed {
+				borrowedPre++
 			}
 			oracle := f.Positions[sym]
 			for _, side := range []struct {
@@ -251,7 +213,8 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 		t.Fatalf("⚠️ 一个「多笔且不同价」的持仓都没有 —— " +
 			"单笔样本上均价恒等于那一笔的价，加权平均这条逻辑一次都没走到")
 	}
-	t.Logf("有持仓的方向 %d 个，其中多笔不同价的 %d 个", withPosition, multiPrice)
+	t.Logf("有持仓的方向 %d 个，其中多笔不同价的 %d 个；昨结算价借自同日兄弟夹具的合约样本 %d 个", withPosition, multiPrice, borrowedPre)
+	t.Logf("ⓘ 取不到门面前提（没有昨结算价且同日无唯一值 / 带昨仓而结转不了）而跳过的合约样本 %d 个：%v", len(noPre), noPre)
 	// ⚠️ 跳掉的那些要**报出来**：一个悄悄增长的跳过数，
 	// 会让这条测试在覆盖越来越小的同时一直保持绿色。
 	t.Logf("ⓘ 因该侧有昨仓而跳过 %d 个方向 —— 重放只回放当日成交，"+
@@ -323,7 +286,11 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	if len(trades) == 0 {
 		t.Fatalf("%s 在 %s 里没有成交", sym, target.Path)
 	}
-	p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, target.TradingDay, trades)
+	pre, ok := target.PreSettlement(sym)
+	if !ok {
+		t.Fatalf("%s 没有 %s 的昨结算价 —— 本条选它就是因为它带行情", target.Path, sym)
+	}
+	p, err := ReplayOnFacade(target, sym, mustSpec(t, target, sym), refdata.PositionDateNotNeeded, pre)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -533,8 +500,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 				p, err = ReconstructOnFacade(carrySrc.prev, f, sym, carrySrc.spec,
 					positionDateOf(t, sym), carrySrc.settle, f.TradingDay)
 			} else {
-				p, err = Replay(trades[0].Instrument, types.Speculation,
-					refdata.PositionDateNotNeeded, f.TradingDay, trades)
+				p, _, err = replaySameDay(t, all, f, sym)
 			}
 			if err != nil {
 				continue
@@ -648,8 +614,8 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			// ⚠️ 这一支是**真的异常**，所以它红而不是 log：
 			// 有夹具记了委托、又没有一份是因为昨仓被跳过的，
 			// 那么冻结没接上就另有原因 —— 而那个原因没人知道。
-			t.Errorf("⚠️ 有夹具记了委托、也没有任何一个样本是因为**带昨仓**被跳过的，"+
-				"而冻结**仍然一个样本都没接上** —— 上面那条「两件事耦在一起」的解释"+
+			t.Errorf("⚠️ 有夹具记了委托、也没有任何一个样本是因为**带昨仓**被跳过的，" +
+				"而冻结**仍然一个样本都没接上** —— 上面那条「两件事耦在一起」的解释" +
 				"因此不再成立，真正的原因是别的，去查 FrozenBook 为什么返回 has=false")
 		default:
 			t.Log("ⓘ 没有一个样本接上冻结 —— volume_*_frozen_* 三个字段" +

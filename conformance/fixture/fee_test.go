@@ -28,7 +28,6 @@ type feeRate struct {
 	predictive bool
 }
 
-
 func ratesOf(product string) (refdata.CommissionRates, feeRate, bool) {
 	for _, r := range feeRates {
 		if r.product != product {
