@@ -218,6 +218,7 @@ func seedHistory(t *testing.T, s *Simulator, sym string, dir types.Direction, op
 //
 // 合成费率与 DCE.m2701 的声明同形（平昨 1.2 / 平今 0.75，两档不同），读数照 ctp-slices-20260915-{2,3}：
 // 今 1 + 昨 1、裸平 1 手 ⇒ 按先平昨消耗了昨仓，而收**平今档**。
+// ⚠️ 它钉的是本库在收敛前的做法（a、b 一致的那一段），不是规则本身：候选 c（行为平昨费率 ≠ 声明）未排除。
 func TestUndatedCloseFeeTier(t *testing.T) {
 	s := newSim(t)
 	mark(t, s, "DCE.m2701", "3360", "3384")

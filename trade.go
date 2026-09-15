@@ -227,8 +227,11 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 //
 //	(a) min(平仓量, 平仓前今仓量) 走平今，其余走平昨
 //	(b) 一律走平今
+//	(c) 按消耗拆档没错，是大商所行为上的平昨费率 ≠ 声明（评审 20260915 补；语料里没有大商所显式平昨成交）
 //
-// 平仓量 ≤ 平仓前今仓量时两者都是「全走平今」；超出的部分只在两档费率相同时两者同值 —— 不同就报错，不猜。
+// 平仓量 ≤ 平仓前今仓量时 a、b 都是「全走平今」；⚠️ c 未排除，它在这一段预言的是「行为平昨费率」，
+// 与声明平今费率相等只是 m2701 上的巧合 ⇒ **这一段只在 m2701 上有观测**。
+// 超出的部分只在两档声明费率相同时 a、b 同值 —— 不同就报错，不猜。
 func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRates, charge func(types.Offset, int) error) error {
 	todayPart := tr.Volume
 	if todayPart > todayBefore {
