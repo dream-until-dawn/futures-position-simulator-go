@@ -5163,7 +5163,7 @@
 		"new": "nextPrices[k.inst] = priceState{last: px, hasLast: true, pre: st.pre, hasPre: true}",
 		"pkg": "./",
 		"test": "TestSettleRollsRebasesAndCarries",
-		"want": "结算后占用",
+		"want": "结算后 之后占用",
 		"expect": "red"
 	},
 	{
