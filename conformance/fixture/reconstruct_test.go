@@ -147,15 +147,7 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		// 不再是真正的逐笔对冲口径 —— 而两边都不会报错。
 		// 本库不改：存明细是 design.md 决策 10，事后补明细等于把历史丢了。
 		if closedOnSide(f, sym, types.Buy) {
-			opField.Deviation = &conformance.Deviation{
-				Fixture: f.Path + "（对照 position-frozen-20260909-5.json，同一持仓平昨前后）",
-				Arbiter: "simnow_pending#10：真实 CTP 的 OpenCost 在部分平仓时按均价冲减" +
-					"还是按被消耗的明细冲减，未裁决",
-				Chose: "本库选**逐笔明细**：逐笔对冲口径要求知道「这一手是哪一笔开的」，" +
-					"而均价把它压没了（(2手@100,1手@130) 与 (3手@110) 均价相同，" +
-					"平掉1手@120 时逐笔对冲 +20、按均价 +10，两个结果都不报错）。" +
-					"design.md 决策 10，事后补明细等于把历史丢了",
-			}
+			opField.Deviation = openPriceAfterCloseDeviation(f)
 		}
 		fields = append(fields, opField)
 		// —— 保证金：两个方向一起 ——
@@ -310,6 +302,21 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 	}
 	if n := r.Counts[conformance.Matched]; n < 8 {
 		t.Errorf("⚠️ 只有 %d 个字段「对得上且被触发过」—— 太少", n)
+	}
+}
+
+// openPriceAfterCloseDeviation 是「这一侧平过仓之后 open_price 两边分岔」的已知口子声明（三样齐全）。
+//
+// reconstruct_test 与 TestReplayMatchesOracleVolumeAndPrice 共用它（F7c 之后后者也比带昨仓的方向）：两处各写一份，声明的内容就可能分岔。
+func openPriceAfterCloseDeviation(f *Fixture) *conformance.Deviation {
+	return &conformance.Deviation{
+		Fixture: f.Path + "（对照 position-frozen-20260909-5.json，同一持仓平昨前后）",
+		Arbiter: "simnow_pending#10：真实 CTP 的 OpenCost 在部分平仓时按均价冲减" +
+			"还是按被消耗的明细冲减，未裁决",
+		Chose: "本库选**逐笔明细**：逐笔对冲口径要求知道「这一手是哪一笔开的」，" +
+			"而均价把它压没了（(2手@100,1手@130) 与 (3手@110) 均价相同，" +
+			"平掉1手@120 时逐笔对冲 +20、按均价 +10，两个结果都不报错）。" +
+			"design.md 决策 10，事后补明细等于把历史丢了",
 	}
 }
 

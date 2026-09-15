@@ -131,7 +131,10 @@ func Compare(raw []byte, specs map[string]Spec, carry *Carry) (Result, error) {
 			res.Symbols = append(res.Symbols, sym+"（结转）")
 			continue
 		}
-		// F7c：同日重放走门面（实时截面带行情；缺昨结算价就报错，不借别处的）
+		// F7c：同日重放走门面，昨结算价只用实时截面自己的。
+		// ⚠️ 缺昨结算价**整次报错**，而缺规格是跳过并计数 —— 两种处理刻意不同（评审 20260915 问过）：
+		// 规格缺是「本库没准备好这个品种的规则数据」，是覆盖问题；实时截面是订阅行情时拍的，缺昨结算价说明截面本身不全（行情没推到），
+		// 这一次对拍的输入不自足，跳过它会让「比了几个合约」看起来正常。离线夹具那条路不同，那里借同日值只当前提（design.md §11 决策点 3）
 		pre, ok := f.PreSettlement(sym)
 		if !ok {
 			return res, fmt.Errorf("实时截面里 %s 没有昨结算价 —— 门面记账要它，不拿别处的顶替", sym)
