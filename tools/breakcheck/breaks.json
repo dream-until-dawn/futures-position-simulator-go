@@ -5221,5 +5221,16 @@
 		"test": "TestUndatedCloseFeeTier",
 		"want": "两档同费率",
 		"expect": "red"
+	},
+	{
+		"name": "532 裸 CLOSE 超出今仓的部分在两档费率相同时也报错（过严）——两候选同值的那一段被拒（评审 20260915 验过：红在两档同费率那两格）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\treturn charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值",
+		"new": "\treturn fmt.Errorf(\"过严\")",
+		"pkg": "./",
+		"test": "TestUndatedCloseFeeTier",
+		"want": "两档同费率",
+		"expect": "red"
 	}
 ]
