@@ -5033,5 +5033,38 @@
 		"test": "TestChoicesReachTheLedger",
 		"want": "手续费基准没传到",
 		"expect": "red"
+	},
+	{
+		"name": "515 CTP 预设的保证金基准写成昨结算价——ag2702 今仓 UseMargin 对不上柜台",
+		"dir": "",
+		"file": "choices.go",
+		"old": "MarginBasis: margin.OpenTodayPreSettleHistory,",
+		"new": "MarginBasis: margin.PreSettleAll,",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeReplaysAg2702AgainstCTP",
+		"want": "UseMargin",
+		"expect": "red"
+	},
+	{
+		"name": "516 CTP 预设的手续费基准写成昨结算价——ag2702 的 Commission 差不再恰好是 0.005/笔",
+		"dir": "",
+		"file": "choices.go",
+		"old": "FeeBasis:    fee.TradePrice,",
+		"new": "FeeBasis:    fee.PreSettlement,",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeReplaysAg2702AgainstCTP",
+		"want": "Commission",
+		"expect": "red"
+	},
+	{
+		"name": "517 平仓按后开先平消耗（LIFO）——样本 B 平今 @15433 的平仓盈亏与剩下那片的 OpenCost 对不上柜台（§13 #13）",
+		"dir": "",
+		"file": "position/position.go",
+		"old": "\tfor i := range s.lots {\n\t\tif left == 0 {",
+		"new": "\tfor j := range s.lots {\n\t\ti := len(s.lots) - 1 - j\n\t\tif left == 0 {",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeReplaysAg2702AgainstCTP",
+		"want": "CloseProfit",
+		"expect": "red"
 	}
 ]
