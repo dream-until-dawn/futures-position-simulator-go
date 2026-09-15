@@ -3,6 +3,9 @@ package fixture
 import (
 	"strings"
 	"testing"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/order"
+	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 )
 
 func ord(kv ...string) map[string]Value {
@@ -18,103 +21,177 @@ func withLeft(o map[string]Value, n string) map[string]Value {
 	return o
 }
 
-// TestFrozenOfDistinguishesNoOrdersFromNoRecord 是本文件最要紧的一条。
+func withPrice(o map[string]Value, px string) map[string]Value {
+	o["limit_price"] = Value{Number: dd(px)}
+	return o
+}
+
+// frozenBookOf 按对拍的筛法凑规格（specsForOrders）、按实测 PositionDateType（positionDates）走 FrozenBook。
+//
+// 凑不齐规格 ⇒ skipped=true：调用方把冻结字段留作「未实现」并计数，不拿半本簿去比。
+// ⚠️ F6b 之前冻结手数不要规格（FrozenOf 自己数），这类夹具照样比手数；改由门面算之后要规格与昨结算价 ——
+// 语料里只有 exp-reject-tick-vs-limit-20260909-3 一份（缺 DCE.i2701 的昨结算价），design.md §10「F6b 修订」。
+// ⚠️ 读委托的错（没有 status 之类）不被「凑不齐规格」吞掉：先单独读一遍合约。
+func frozenBookOf(t *testing.T, f *Fixture) (book *order.Book, has, skipped bool, err error) {
+	t.Helper()
+	if !f.HasOrders {
+		return nil, false, false, nil
+	}
+	if _, err := LiveOrderSymbols(f); err != nil {
+		return nil, false, false, err
+	}
+	specs, ok := specsForOrders(t, f)
+	if !ok {
+		return nil, false, true, nil
+	}
+	book, has, err = FrozenBook(f, specs, positionDates)
+	return book, has, false, err
+}
+
+// sideTotals 取簿上某合约多头、空头两侧的冻结（平仓单归被平的那一侧）。
+func sideTotals(t *testing.T, book *order.Book, f *Fixture, sym string) (long, short order.Frozen) {
+	t.Helper()
+	inst, err := types.ParseSymbol(sym, f.TradingDay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return book.TotalOf(inst, types.Buy), book.TotalOf(inst, types.Sell)
+}
+
+// synthetic 是一份记了委托的合成夹具：rb2701 与 m2701 有规格与昨结算价。
+func synthetic(t *testing.T, orders map[string]map[string]Value) (*Fixture, map[string]Spec) {
+	t.Helper()
+	f := &Fixture{HasOrders: true, TradingDay: mustDay(t, "20260909"), Orders: orders,
+		Quotes: map[string]map[string]Value{
+			"SHFE.rb2701": {"pre_settlement": {Number: dd("3163")}},
+			"DCE.m2701":   {"pre_settlement": {Number: dd("3000")}},
+		}}
+	specs := map[string]Spec{
+		"SHFE.rb2701": {Multiplier: dd("10"), Commission: mustRates(t, "rb"), Margin: mustMargin(t, "rb")},
+		"DCE.m2701":   {Multiplier: dd("10"), Commission: mustRates(t, "m"), Margin: mustMargin(t, "m")},
+	}
+	return f, specs
+}
+
+// TestFrozenBookDistinguishesNoOrdersFromNoRecord 是本文件最要紧的一条。
 //
 // ⚠️ 「这份夹具里没有挂着的委托」与「这份夹具根本没记委托」——
 // 两种情形下冻结量**都是 0**，而前者可以拿去对拍（结论是「都是 0」），
 // 后者不能：判成一致什么都不说明。
 //
 // 20260909 之前的全部夹具都是后者。
-func TestFrozenOfDistinguishesNoOrdersFromNoRecord(t *testing.T) {
+func TestFrozenBookDistinguishesNoOrdersFromNoRecord(t *testing.T) {
 	// ① 根本没记委托
 	f := &Fixture{Orders: map[string]map[string]Value{}, HasOrders: false}
-	_, _, has, err := FrozenOf(f, "SHFE.rb2701", NakedCloseRefuse)
+	book, has, err := FrozenBook(f, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if has {
+	if has || book != nil {
 		t.Error("⚠️ 没记委托的夹具报了 has=true —— " +
 			"那会让「冻结都是 0」被当成一个可对拍的结论")
 	}
 	// ② 记了，但一笔挂单都没有
 	f2 := &Fixture{Orders: map[string]map[string]Value{}, HasOrders: true}
-	long, short, has, err := FrozenOf(f2, "SHFE.rb2701", NakedCloseRefuse)
+	book, has, err = FrozenBook(f2, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !has {
-		t.Error("⚠️ 记了委托但没有挂单，报了 has=false —— " +
+	if !has || book == nil {
+		t.Fatal("⚠️ 记了委托但没有挂单，报了 has=false —— " +
 			"「这个合约此刻没有挂单」是一个可以拿去对拍的结论")
 	}
-	if !long.IsZero() || !short.IsZero() {
-		t.Errorf("没有挂单却算出了冻结：多 %+v 空 %+v", long, short)
+	if tot := book.Total(); !tot.IsZero() {
+		t.Errorf("没有挂单却算出了冻结：%+v", tot)
 	}
 }
 
-// TestFrozenOfSidesAndDates 断言方向与今昨都记对了。
-func TestFrozenOfSidesAndDates(t *testing.T) {
-	f := &Fixture{HasOrders: true, Orders: map[string]map[string]Value{
+// TestFrozenBookSidesAndDates 断言方向与今昨都记对了。
+func TestFrozenBookSidesAndDates(t *testing.T) {
+	f, specs := synthetic(t, map[string]map[string]Value{
 		// SELL/CLOSETODAY 平的是**多头**今仓
-		"a": withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "2"),
+		"a": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "2"), "3170"),
 		// BUY/CLOSEYESTERDAY 平的是**空头**昨仓
-		"b": withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-			"instrument_id", "rb2701", "direction", "BUY", "offset", "CLOSEYESTERDAY"), "3"),
+		"b": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+			"instrument_id", "rb2701", "direction", "BUY", "offset", "CLOSEYESTERDAY"), "3"), "3150"),
 		// 开仓单不冻持仓手数
-		"c": withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-			"instrument_id", "rb2701", "direction", "BUY", "offset", "OPEN"), "9"),
+		"c": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+			"instrument_id", "rb2701", "direction", "BUY", "offset", "OPEN"), "9"), "3100"),
 		// 已终结的不冻
-		"d": withLeft(ord("status", "FINISHED", "exchange_id", "SHFE",
-			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "7"),
+		"d": withPrice(withLeft(ord("status", "FINISHED", "exchange_id", "SHFE",
+			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "7"), "3170"),
 		// 别的合约不算进来
-		"e": withLeft(ord("status", "ALIVE", "exchange_id", "DCE",
-			"instrument_id", "m2701", "direction", "SELL", "offset", "CLOSETODAY"), "5"),
-	}}
-	long, short, has, err := FrozenOf(f, "SHFE.rb2701", NakedCloseRefuse)
+		"e": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "DCE",
+			"instrument_id", "m2701", "direction", "SELL", "offset", "CLOSETODAY"), "5"), "3000"),
+		// UseHistory 上的裸 CLOSE 冻昨仓（快期口径，kq_facts 32）：SELL 平多头
+		"g": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSE"), "4"), "3170"),
+	})
+	book, has, err := FrozenBook(f, specs, positionDates)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !has {
 		t.Fatal("has 应为 true")
 	}
-	if long.VolumeToday != 2 || long.VolumeHistory != 0 {
-		t.Errorf("⚠️ 多头冻结 今%d/昨%d，应为 今2/昨0 —— "+
-			"SELL/CLOSETODAY 平的是多头今仓", long.VolumeToday, long.VolumeHistory)
+	long, short := sideTotals(t, book, f, "SHFE.rb2701")
+	if long.VolumeToday != 2 || long.VolumeHistory != 4 {
+		t.Errorf("⚠️ 多头冻结 今%d/昨%d，应为 今2/昨4 —— "+
+			"SELL/CLOSETODAY 平的是多头今仓、SELL/CLOSE 在 UseHistory 上冻多头昨仓", long.VolumeToday, long.VolumeHistory)
 	}
 	if short.VolumeHistory != 3 || short.VolumeToday != 0 {
 		t.Errorf("⚠️ 空头冻结 今%d/昨%d，应为 今0/昨3", short.VolumeToday, short.VolumeHistory)
 	}
 	// ⚠️ 三条判别力：开仓单、已终结、别的合约，各自都必须**没有**被算进来。
 	// 少任何一条，对应的过滤写错了都不会红。
-	if long.VolumeToday+long.VolumeHistory+short.VolumeToday+short.VolumeHistory != 5 {
-		t.Errorf("⚠️ 合计冻结 %d 手，应为 5 —— "+
-			"开仓单(9)、已终结(7)、别的合约(5) 里有东西被算进来了",
-			long.VolumeToday+long.VolumeHistory+short.VolumeToday+short.VolumeHistory)
+	if n := long.VolumeToday + long.VolumeHistory + short.VolumeToday + short.VolumeHistory; n != 9 {
+		t.Errorf("⚠️ 合计冻结 %d 手，应为 9 —— "+
+			"开仓单(9)、已终结(7)、别的合约(5) 里有东西被算进来了", n)
 	}
 }
 
-// TestFrozenOfRefusesAmbiguousOrMissing 断言**读不到就报错**，不给默认值。
-func TestFrozenOfRefusesAmbiguousOrMissing(t *testing.T) {
+// TestFrozenBookRefusesAmbiguousOrMissing 断言**读不到就报错**，不给默认值。
+func TestFrozenBookRefusesAmbiguousOrMissing(t *testing.T) {
+	rb := func(kv ...string) map[string]Value {
+		return withPrice(withLeft(ord(append([]string{"exchange_id", "SHFE", "instrument_id", "rb2701"}, kv...)...), "1"), "3170")
+	}
+	m := func(kv ...string) map[string]Value {
+		return withPrice(withLeft(ord(append([]string{"exchange_id", "DCE", "instrument_id", "m2701"}, kv...)...), "1"), "3000")
+	}
+	noPrice := withLeft(ord("status", "ALIVE", "exchange_id", "SHFE", "instrument_id", "rb2701",
+		"direction", "SELL", "offset", "CLOSETODAY"), "1")
 	cases := []struct {
-		name string
-		o    map[string]Value
-		want string
+		name  string
+		o     map[string]Value
+		dates bool
+		drop  string
+		want  string
 	}{
-		{"没有 status", withLeft(ord("exchange_id", "SHFE", "instrument_id", "rb2701",
-			"direction", "SELL", "offset", "CLOSETODAY"), "1"), "没有 status"},
-		{"裸 CLOSE", withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSE"), "1"),
-			"本函数不猜"},
-		{"没有 offset", withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-			"instrument_id", "rb2701", "direction", "SELL"), "1"), "没有 offset"},
-		{"方向不认识", withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-			"instrument_id", "rb2701", "direction", "LONG", "offset", "CLOSETODAY"), "1"),
-			"买卖方向"},
+		{"没有 status", rb("direction", "SELL", "offset", "CLOSETODAY"), true, "", "没有 status"},
+		{"没有 offset", rb("status", "ALIVE", "direction", "SELL"), true, "", "没有 offset"},
+		{"方向不认识", rb("status", "ALIVE", "direction", "LONG", "offset", "CLOSETODAY"), true, "", "买卖方向"},
+		{"没有 limit_price", noPrice, true, "", "limit_price"},
+		// PositionDateType 没实测时不按交易所推：UseHistory 上裸 CLOSE = 平昨只在 rb2701 上量过
+		{"裸 CLOSE 而 PositionDateType 没实测", rb("status", "ALIVE", "direction", "SELL", "offset", "CLOSE"), false, "", "没有实测的消耗顺序"},
+		{"没有规格", rb("status", "ALIVE", "direction", "SELL", "offset", "CLOSETODAY"), true, "spec", "没有规格"},
+		{"没有昨结算价", rb("status", "ALIVE", "direction", "SELL", "offset", "CLOSETODAY"), true, "pre", "没有昨结算价"},
+		// NoUseHistory 上的裸 CLOSE 要按持仓拆今昨，而 FrozenBook 不带持仓 —— 报错，不猜一份拆分
+		{"NoUseHistory 上的裸 CLOSE", m("status", "ALIVE", "direction", "SELL", "offset", "CLOSE"), true, "", "裸 CLOSE"},
 	}
 	for _, c := range cases {
-		f := &Fixture{HasOrders: true,
-			Orders: map[string]map[string]Value{"x": c.o}}
-		_, _, _, err := FrozenOf(f, "SHFE.rb2701", NakedCloseRefuse)
+		f, specs := synthetic(t, map[string]map[string]Value{"x": c.o})
+		switch c.drop {
+		case "spec":
+			delete(specs, "SHFE.rb2701")
+		case "pre":
+			delete(f.Quotes, "SHFE.rb2701")
+		}
+		dates := positionDates
+		if !c.dates {
+			dates = nil
+		}
+		_, _, err := FrozenBook(f, specs, dates)
 		if err == nil {
 			t.Errorf("⚠️ %s：本该报错 —— 给默认值会让冻结记到错的地方，"+
 				"而账面上只表现为「可平量多了几手」", c.name)
@@ -126,29 +203,33 @@ func TestFrozenOfRefusesAmbiguousOrMissing(t *testing.T) {
 	}
 }
 
-// TestEveryFixtureFrozenParses 断言**每一份入库夹具**都算得出冻结。
+// TestEveryFixtureFrozenParses 断言**每一份记了委托的入库夹具**都算得出冻结（凑不齐规格的计数报出来）。
 //
-// ⚠️ 它同时报出「有几份记了委托」——那个数现在应当很小，
-// 而它变大是好消息：冻结那一块的证据在积累。
+// ⚠️ 它同时报出「有几份记了委托」——那个数变大是好消息：冻结那一块的证据在积累。
 func TestEveryFixtureFrozenParses(t *testing.T) {
 	all := loadAll(t)
-	withOrders, total := 0, 0
+	withOrders, noSpec := 0, 0
 	for _, f := range all {
-		if f.HasOrders {
-			withOrders++
+		if !f.HasOrders {
+			continue
 		}
-		for _, sym := range f.Symbols() {
-			total++
-			if _, _, _, err := FrozenOf(f, sym, NakedCloseIsYesterday); err != nil {
-				t.Errorf("⚠️ %s 的 %s 冻结算不出来：%v", f.Path, sym, err)
-			}
+		withOrders++
+		_, _, skipped, err := frozenBookOf(t, f)
+		if err != nil {
+			t.Errorf("⚠️ %s 冻结算不出来：%v", f.Path, err)
+		}
+		if skipped {
+			noSpec++
+			t.Logf("ⓘ %s：委托涉及的合约凑不齐规格", f.Path)
 		}
 	}
-	t.Logf("%d 份夹具、%d 个合约截面；**记了委托的 %d 份**", len(all), total, withOrders)
+	t.Logf("%d 份夹具；**记了委托的 %d 份**，其中凑不齐规格 %d 份", len(all), withOrders, noSpec)
 	if withOrders == 0 {
-		t.Log("ⓘ 一份记了委托的夹具都没有 —— 冻结那一块目前**没有任何证据支撑**。" +
-			"⚠️ 这不是失败，是现状：委托进夹具是 20260909 才加的，" +
-			"要等下一次采集。在那之前 volume_*_frozen_* 的实现是没被验过的")
+		t.Log("ⓘ 一份记了委托的夹具都没有 —— 冻结那一块目前**没有任何证据支撑**。")
+	}
+	// ⚠️ 凑不齐规格的份数是 F6b 迁移时量出来的（1 份）；变多说明规格表或筛法退化了，覆盖在悄悄变小
+	if noSpec > 1 {
+		t.Errorf("⚠️ 凑不齐规格的夹具 %d 份，迁移时是 1 份 —— 覆盖变小了", noSpec)
 	}
 }
 
@@ -170,15 +251,16 @@ func TestFrozenAgainstOracle(t *testing.T) {
 		if !f.HasOrders {
 			continue // 老夹具没记委托 —— 那不是「没有挂单」
 		}
+		book, has, skipped, err := frozenBookOf(t, f)
+		if err != nil {
+			t.Errorf("⚠️ %s：%v", f.Path, err)
+			continue
+		}
+		if skipped || !has {
+			continue
+		}
 		for _, sym := range f.Symbols() {
-			long, short, has, err := FrozenOf(f, sym, NakedCloseIsYesterday)
-			if err != nil {
-				t.Errorf("⚠️ %s 的 %s：%v", f.Path, sym, err)
-				continue
-			}
-			if !has {
-				continue
-			}
+			long, short := sideTotals(t, book, f, sym)
 			pos := f.Positions[sym]
 			for _, c := range []struct {
 				side  string
@@ -228,8 +310,8 @@ func TestFrozenAgainstOracle(t *testing.T) {
 
 // TestLoadDistinguishesEmptyOrdersFromNoOrders 在**解析那一层**验同一个区分。
 //
-// ⚠️ 上面那条 TestFrozenOfDistinguishesNoOrdersFromNoRecord 直接构造 Fixture，
-// 于是它验的是「给定 HasOrders，FrozenOf 怎么办」——**没有验 HasOrders 是怎么来的**。
+// ⚠️ 上面那条 TestFrozenBookDistinguishesNoOrdersFromNoRecord 直接构造 Fixture，
+// 于是它验的是「给定 HasOrders，FrozenBook 怎么办」——**没有验 HasOrders 是怎么来的**。
 // 破坏验证当场撞到：把 `raw.Orders != nil` 改成 `len(raw.Orders) > 0`，
 // 那条测试照样绿。
 //

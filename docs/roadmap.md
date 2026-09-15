@@ -983,6 +983,18 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
 **F6a 落地**：`Choices.UndatedCloseOnUseHistory`、`datedOffset`、`PlaceAccepted`；`Restore` 核挂单时也核今 / 昨手数。破坏 570–583（13 红对了、574 如预期仍然绿）。
 实现时定下的边界见 design.md §10「F6a 实现时定下的边界」。其中「八项校验不跟这一格」被评审 20260915 打回（快期口径下拒因原话与行为矛盾），改为跟、改写得来的拒单不给码。
 
+**F6b 修订（实现之前写）**：调用面比设计时大（`cmd/oracle -carry` 用 `Reconstruct`，而它的规格没有手续费率）。
+先入库探针：冻结 24 份夹具 0 差异、跨日 98 组逐片相同，各自改一处能打红。据此冻结那一半删旧函数；跨日那一半对拍改走门面、`Carry` / `Reconstruct` 暂留给 `-carry` 并用等价守卫钉住，删它们登记 F7。见 design.md §10「F6b 修订」。
+
+**F6b 落地**：`FrozenBook` / `ReconstructOnFacade`；破坏改指 9 条、新增 584–597。见 design.md §10「F6b 落地」。
+⚠️ 实现中错的两处，都是单跑破坏抓到的：584 以为零值规格会静默算出 0，跑出来是门面报「合约乘数必须为正」（红错了理由）⇒ 改名与 want 如实写；
+225 改锚点时顺手把 `new` 的形状也改了（原为「跳过并计数」，误写成「照常计数但不用」）⇒ 红错了理由，恢复原形状。**改指一条破坏只该动锚点，不该动它破坏的是什么。**
+
+### F7（登记，未排期）：快期夹具的同日重放与 `-carry` 收进门面
+
+前提：`cmd/oracle` 的规格有手续费率来源（候选：快期行情的每手手续费反解，`fee_test` 的 `feeRates` 就是这样标定的，只覆盖五个品种）。
+范围：删 `Carry` / `Reconstruct` / `ReplayFrom` / `closeOffsetOf`；同日 `Replay`（`fixture_test` / `margin_test` / `account_test` / `cmd/oracle`）改走门面。
+
 ### 2026-09-15：breakcheck 把「破坏编译不过」单独判出来，加 `-compile` 模式（实现之前写）
 
 **为什么**：同一个形状出了四次（455 / 502 / 522 / 550）—— 破坏替换后某个变量或导入没用上，编译失败。

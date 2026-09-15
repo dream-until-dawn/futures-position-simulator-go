@@ -41,7 +41,7 @@ const (
 	//
 	// ⚠️ 快期模拟的实测语义（kq_facts 32：今 1 昨 3 时 CLOSE 冻昨；只有今仓时 CLOSE 被拒「平昨手数超过昨仓持仓量」）。
 	// 记账路径（ApplyTrade / Fill / FreezeOf / PlaceAccepted）与八项校验（Submit / Place）都跟它：按平昨校验、按平昨记账。
-	// 改写得来的拒单不给 CTP 拒因码（语料是 CTP 上显式平昨的拒单，不外推）。评审 20260915 打回「八项不跟」那一版后改。
+	// 改写得来的拒单不论拒在哪一项都不给 CTP 拒因码（这种单整笔都不在 CTP 语料里，不外推）。评审 20260915 打回「八项不跟」那一版后改。
 	UndatedCloseAsYesterday
 )
 

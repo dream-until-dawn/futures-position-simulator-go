@@ -75,14 +75,15 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 		if skipped {
 			continue
 		}
-		// ⚠️ 走 FrozenAccountOf —— 与 Rebuild 那条路**同一份实现**。
-		// 这里原先自己建一个 order.Book 逐笔 Insert，于是同一件事有两份实现，
-		// 而两份之间从来没有任何东西比过。
-		got, err := FrozenAccountOf(f, specs)
+		// ⚠️ 走 FrozenBook —— 冻多少由门面的 FreezeOf 算（F6b）。
+		// 这里原先自己建一个 order.Book 逐笔 Insert，后来收进 FrozenAccountOf，再后来那份自己调 fee / margin 的实现也收进门面：
+		// 同一件事的第二份实现，两份之间从来没有任何东西比过。
+		book, _, err := FrozenBook(f, specs, positionDates)
 		if err != nil {
 			t.Errorf("⚠️ %s 算冻结：%v", f.Path, err)
 			continue
 		}
+		got := book.Total()
 		for _, c := range []struct {
 			key  string
 			want decimal.Decimal
@@ -124,7 +125,7 @@ func TestFrozenAccountAgainstOracle(t *testing.T) {
 	case compared < comparedRatchet:
 		t.Errorf("⚠️ 只比了 %d 个字段，此前是 %d —— 覆盖变小了。"+
 			"先查是不是有夹具因为凑不齐规格被跳过了，"+
-			"或者 LiveOrderSymbols 的筛法与 FrozenAccountOf 分了岔", compared, comparedRatchet)
+			"或者 LiveOrderSymbols 的筛法与 FrozenBook 分了岔", compared, comparedRatchet)
 	case compared > comparedRatchet:
 		t.Errorf("ⓘ 比到了 %d 个字段（此前 %d）—— 好消息，"+
 			"把 comparedRatchet 改成 %d 钉住它，否则退化不会红",
@@ -151,17 +152,18 @@ func TestFrozenTotals(t *testing.T) {
 			"SHFE.rb2701": {"pre_settlement": {Number: dd("3163")}},
 		},
 		Orders: map[string]map[string]Value{
-			"a": withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-				"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "1"),
+			"a": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+				"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "1"), "3170"),
 			// 已终结的不算
-			"b": withLeft(ord("status", "FINISHED", "exchange_id", "SHFE",
-				"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "9"),
+			"b": withPrice(withLeft(ord("status", "FINISHED", "exchange_id", "SHFE",
+				"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "9"), "3170"),
 		},
 	}
-	fr, err := FrozenAccountOf(f, specs)
+	book, _, err := FrozenBook(f, specs, positionDates)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fr := book.Total()
 	// 平仓单不冻保证金（20260909 实测）。
 	if !fr.Margin.IsZero() {
 		t.Errorf("⚠️ 平仓挂单冻了 %s 保证金 —— 实测柜台不冻（kq_facts 42）", fr.Margin)
@@ -172,21 +174,21 @@ func TestFrozenTotals(t *testing.T) {
 			"已终结的那笔（9 手）是不是被算进来了？", fr.Commission)
 	}
 
-	// ⚠️ 开仓挂单**要冻保证金**，基准是昨结算价而不是报单价。
-	// 这一支原先是「遇到就报错」，20260909 有了两次独立实测之后才实现
-	// （见 openFrozenMargin 的注释）。
+	// ⚠️ 开仓挂单**要冻保证金**，基准是昨结算价而不是报单价（kq_facts 46：
+	// 20260909 两次独立实测，SHFE.ag2702 昨结 16262 × 15 × 22% = 53664.6、DCE.i2701 昨结 740 × 100 × 11% = 8140，
+	// 两笔报单价 13009.9 / 673.95 都远低于昨结算价，按报单价会算出 42932.67 / 7413.45 —— 分得干干净净）。
 	//
-	// rb2701：昨结 3163 × 乘数 10 × 7% = 2214.1
-	f.Orders["c"] = withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
-		"instrument_id", "rb2701", "direction", "BUY", "offset", "OPEN"), "1")
-	fr2, err := FrozenAccountOf(f, specs)
+	// rb2701：昨结 3163 × 乘数 10 × 7% = 2214.1；报单价给 3000，按报单价会是 2100
+	f.Orders["c"] = withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
+		"instrument_id", "rb2701", "direction", "BUY", "offset", "OPEN"), "1"), "3000")
+	book2, _, err := FrozenBook(f, specs, positionDates)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fr2 := book2.Total()
 	if !fr2.Margin.Equal(dd("2214.1")) {
 		t.Errorf("⚠️ 开仓挂单冻结保证金 %s，应为 2214.1（3163×10×7%%）—— "+
-			"⚠️ 先查基准是不是用成了**报单价**：那一项在这条用例上分得开，"+
-			"因为报单价压根没给", fr2.Margin)
+			"⚠️ 先查基准是不是用成了**报单价**（3000 → 2100）", fr2.Margin)
 	}
 	// 手续费多出开仓那一笔：0.3163 + 0.3163 = 0.6326
 	if !fr2.Commission.Equal(dd("0.6326")) {
@@ -251,10 +253,11 @@ func TestFrozenIsNotCopiedFromOracle(t *testing.T) {
 		if !ok {
 			continue
 		}
-		clean, err := FrozenAccountOf(f, specs)
+		cleanBook, _, err := FrozenBook(f, specs, positionDates)
 		if err != nil {
 			continue // 缺输入的份数由上面那条测试报，这里不重复
 		}
+		clean := cleanBook.Total()
 		// 复制一份，把柜台自报的两个金额字段改成荒谬值。
 		dirty := *f
 		dirty.Orders = map[string]map[string]Value{}
@@ -269,12 +272,13 @@ func TestFrozenIsNotCopiedFromOracle(t *testing.T) {
 			}
 			dirty.Orders[id] = cp
 		}
-		got, err := FrozenAccountOf(&dirty, specs)
+		dirtyBook, _, err := FrozenBook(&dirty, specs, positionDates)
 		if err != nil {
 			t.Errorf("⚠️ %s 污染之后算不出来了：%v —— "+
 				"那说明本库**读了**柜台自报的那两个字段", f.Path, err)
 			continue
 		}
+		got := dirtyBook.Total()
 		checked++
 		if !got.Margin.Equal(clean.Margin) || !got.Commission.Equal(clean.Commission) {
 			t.Errorf("⚠️ %s 污染柜台自报的 frozen_* 之后，本库算出来的变了："+

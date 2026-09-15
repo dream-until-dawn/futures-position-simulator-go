@@ -677,7 +677,7 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 - ~~**八项校验不跟第八项口径**~~ **评审 20260915 打回，改为跟**：上一版 `Submit` / `Place` 照旧拒 UseHistory 上的裸 CLOSE，
   于是快期口径下同一笔单 `ApplyTrade` 收、`Submit` 拒，而拒因原话是「本库拒绝按平昨处理：那个语义只在快期模拟上实测过」—— 调用方选的恰恰是快期口径，**报错对判据的描述与行为不一致**。
   现在 `validate` 进门也过 `datedOffset`：按平昨校验（超过昨仓拒在可平量，原话是平昨的原话，与快期拒因「平昨手数超过昨仓持仓量」同义）；
-  改写得来的拒单**不给 CTP 拒因码**（码的语料是 CTP 上显式平昨的拒单，不外推）；`Submit` 返回的成交保留委托上的 `CLOSE`（快期成交里上期所裸 CLOSE 记作 CLOSE，语料 20 笔）。
+  改写得来的拒单**不给 CTP 拒因码，不论拒在哪一项**（这种单整笔都不在 CTP 语料里，simnow_pending#1；原写「码的语料是 CTP 上显式平昨的拒单」只覆盖可平量一种，评审 20260915 指出写窄了）；`Submit` 返回的成交保留委托上的 `CLOSE`（快期成交里上期所裸 CLOSE 记作 CLOSE，语料 20 笔）。
   零值口径（CTP）照旧拒、原话照旧。守卫 `TestUndatedCloseAsYesterdayInValidation`
   - 我原先的顾虑（按平昨校验会配上 CTP 码 30）由「改写的不给码」解决 —— 评审提的，我没想到拆开
 - 改写只在入口做一次（`datedOffset`：`ApplyTrade` 进平仓分支、`FreezeOf` 进门）；`commission` 收到的已是改写后的，不再各判一次（写了第三处，破坏验证会是如预期仍然绿）
@@ -685,6 +685,41 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 - `Restore` 核挂单时**手数也核**：记作平昨的裸 CLOSE 在簿上仍是 `Close`，簿取的是存档自己的今 / 昨拆分；金额核对分不开（平昨档与拆分无关）
 - `PlaceAccepted` 不做重复编号预检：`book.Insert` 报同一个错，冻结在回滚里解掉 —— 回滚因此有测试走到（破坏 581）
 - 测试用的规则数据加了 `SHFE.rb2701`（UseHistory、开 1 / 平昨 2 / 平今 5 按手，两两不同）：`ag2702` 三档同费率，分不开收哪一档
+
+##### F6b 修订：调用面比设计时看到的大，按两半分（2026-09-15，F6a 之后、F6b 实现之前写）
+
+**设计时漏看的调用面**（上面「已核」只数了四个测试）：
+`Carry` 还在 `carry_test`（守卫单测 5 条）、`carrywire_test`（`carryStartFor`，被 `fixture_test` 的全量持仓对拍用）、`crossday_test`；
+`Reconstruct` 还在 **`cmd/oracle` 的 `live.go`**（`-carry` 实时对拍）；`FrozenOf` 在 `fixture_test` / `frozen_test` / `reconstruct_test`。
+而 `cmd/oracle` 的规格（`BuildSpecs`：字典乘数 + 实测保证金率 + 实测 PositionDateType）**没有手续费率** —— 门面记账必须有它（`ApplyTrade` 每笔都算手续费），填零就是编数。
+
+**探针**（F6b 第一个提交入库；冻结那一半随旧函数删，跨日那一半转正为 `conformance/fixture/carry_equivalence_test.go`）：
+
+| 半边 | 比什么 | 结果 | 判别力（改一处再跑） |
+|---|---|---|---|
+| 冻结 | 24 份带委托的夹具：`FrozenAccountOf` 合计 ≡ 门面 `FreezeOf` 逐笔之和；每个合约 `FrozenOf` 多空今昨 ≡ 门面逐笔之和 | 0 差异 | 冻结保证金换报单价 → 2 处金额不同；第八项置零 → 5 笔裸 CLOSE 报错 |
+| 跨日 | rb2701：`reconstruct_test` 的 49 组输入 + `carrywire_test` 挑法的 49 组，`Reconstruct` 与门面「前日成交 → `Settle` → 当日成交」逐片明细（开仓价、基线、昨仓标记） | 98 组相同 | 结算价 +1 → 98 组全不同；第八项置零 → 40 组不同 |
+
+⚠️ 语料的覆盖是窄的：带委托的夹具 25 份，凑得齐规格的 24 份（`frozen_account_test` 同一筛法；差的一份 `exp-reject-tick-vs-limit-20260909-3` 缺 `DCE.i2701` 的昨结算价），
+其中活委托 9 笔（rb 平仓 5、平今 2，ag / i 开仓各 1；全语料 10 笔，差的就是那一份里的 1 笔）；跨日只有 rb2701 一个合约（交易所结算价只有上期所 20260908 一天）。
+
+**据此分两半**：
+
+- **F6b-1 冻结：删 `FrozenOf` / `FrozenAccountOf` / `NakedClosePolicy`**。调用方改用门面上的辅助（每份夹具一个模拟器：委托涉及的合约给规格与昨结算价，`PlaceAccepted` 不需要持仓的那部分直接 `FreezeOf`）。
+  `NakedCloseRefuse` 那几格的意图（不声明口径就拒）由第八项的零值承担，`frozen_test` 相应改写。没有非测试调用方
+- **F6b-2 跨日：四个对拍测试（`crossday` / `reconstruct` / `carrywire`→`fixture_test`）改从门面取持仓；`Carry` / `Reconstruct` 暂留**，只剩 `cmd/oracle -carry` 与 `carry_test` 用。
+  ⚠️ 留下的第二份实现用两道守着：对拍在门面上（门面退化 → 对柜台红）；探针的跨日那一半转正为**等价守卫**（`Reconstruct` 漂离门面 → 红）。两份一起同样退化才漏 —— 那正是对拍在门面上要抓的
+  - 删它们要 `cmd/oracle` 有手续费率来源（候选：快期行情的每手手续费反解，`fee_test` 的 `feeRates` 就是这么标定的，只覆盖五个品种）⇒ 登记为 F7，不在 F6 里编
+  - ⚠️ 失去的一道检查（原计划里已写）：对拍测试改走门面后，`ReplayFrom` 的三种消耗顺序歧义检查不再在对拍路径上跑；它仍在 `Reconstruct` 里（`-carry` 路径）。登记 silent-risks
+- 同日重放 `Replay`（`fixture_test` / `margin_test` / `account_test` 的 `ReplayRealized` / `cmd/oracle`）**不在 F6 里** —— 它是 `PositionDateNotNeeded` 上的逐合约重放，与 `closeOffsetOf`（与门面 `datedOffset` 同义的第二处）一起记进 F7
+
+##### F6b 落地（2026-09-15）
+
+- **F6b-1**：`FrozenBook`（读委托 → 门面 `FreezeOf` → `order.Book`）替掉 `FrozenOf` / `FrozenAccountOf` / `NakedClosePolicy`；`specRules` 带实测 PositionDateType，`Rebuild` 与 `FrozenBook` 共用 `fixtureChoices`。
+  指向旧函数的 8 条破坏改指到门面与 `FrozenBook`（132/133/137/139/140/143/151/152），新增 584–589。覆盖变化见 silent-risks「冻结对拍要规格与昨结算价」
+- **F6b-2**：`ReconstructOnFacade` 接 `crossday` / `reconstruct` / `carryStartFor`→`fixture_test`；三条对拍迁移前后日志（去行号与耗时）逐行相同。
+  `Carry` / `Reconstruct` 暂留，`TestReconstructMatchesFacade` 钉等价；破坏 97 改由它接住，新增 590–597
+- F6 的收尾（删 `Carry` / `Reconstruct`、同日 `Replay` 与 `closeOffsetOf` 收进门面）登记为 F7，前提是 `cmd/oracle` 有手续费率来源
 
 ##### 已核
 

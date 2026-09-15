@@ -101,7 +101,8 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 // ⚠️ 八项也跟第八项口径（评审 20260915 打回 F6a 后改）：UseHistory 上的裸 CLOSE 在口径为平昨时**按平昨校验**。
 // 上一版只在记账路径改写，于是快期口径下同一笔单 ApplyTrade 收、Submit 拒，而拒因原话说「本库拒绝按平昨处理：只在快期实测过」——
 // 调用方选的恰恰是快期口径，报错对判据的描述与实际行为不一致。
-// 改写得来的拒单**不给 CTP 拒因码**（Kind 清成 ReasonUnknown）：码的语料是 CTP 上显式平昨的拒单，快期口径下的裸 CLOSE 不在里面，不外推。
+// 改写得来的拒单**不给 CTP 拒因码**（Kind 清成 ReasonUnknown），**不论拒在哪一项**：上期所裸 CLOSE 这种单整笔都不在 CTP 语料里
+// （simnow_pending#1：连柜台先查价位还是先查开平都不知道），给哪个码都是外推。
 func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Request) (order.Request, order.Frozen, order.Facts, error) {
 	var f order.Facts
 

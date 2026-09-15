@@ -16,7 +16,7 @@ import (
 // 理由是重放只回放当日成交、凑不出昨仓。跳过诚实，但它让出去的
 // 恰好是 20260909 夜盘新出现、也最值得对的那批截面：**今昨并存**。
 //
-// 本条用 `Reconstruct`（前一交易日结转 + 当日成交重放）把它们接回来，
+// 本条在门面上重建（`ReconstructOnFacade`：前一交易日成交 → 结算 → 当日成交，F6b 之前是 `Reconstruct`）把它们接回来，
 // 比四个字段：**总手数**、**今昨划分**（两个）与**开仓均价**。
 //
 // # ⚠️ 为什么只比这四个
@@ -48,6 +48,10 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 			"本条的整条链子挂在它上面；**不拿柜台的顶替**", sym)
 	}
 
+	spec, ok := specsFor(t, prev)[sym]
+	if !ok {
+		t.Fatalf("%s 在前一日夹具里没有成交、凑不出规格", sym)
+	}
 	var fields []conformance.Field
 	reconstructed, withToday := 0, 0
 	frozenSamples, frozenNonZero := 0, 0
@@ -64,8 +68,7 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		if !his.IsPositive() {
 			continue // 没有昨仓的方向，原来那两条对拍已经在比了
 		}
-		p, err := Reconstruct(prev, f, sym, types.Speculation,
-			positionDateOf(t, sym), settle)
+		p, err := ReconstructOnFacade(prev, f, sym, spec, positionDateOf(t, sym), settle, f.TradingDay)
 		if err != nil {
 			t.Errorf("⚠️ %s 重建失败：%v", f.Path, err)
 			continue
@@ -80,9 +83,12 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		// ⚠️ 这是 view 那一侧冻结渲染的**唯一**证据来源。
 		// 不接的话，volume_*_frozen_* 三个字段永远落在「未实现」，
 		// 而它们的实现写成什么样都不会红。
-		if fl, fs, has, ferr := FrozenOf(f, sym, NakedCloseIsYesterday); ferr != nil {
+		if book, has, skipped, ferr := frozenBookOf(t, f); ferr != nil {
 			t.Errorf("⚠️ %s 算冻结失败：%v", f.Path, ferr)
+		} else if skipped {
+			t.Logf("ⓘ %s：委托涉及的合约凑不齐规格，冻结不接", f.Path)
 		} else if has {
+			fl, fs := sideTotals(t, book, f, sym)
 			frozenSamples++
 			for _, fc := range []struct {
 				key  string
