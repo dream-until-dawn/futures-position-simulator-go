@@ -4093,6 +4093,26 @@ breakcheck 跑的是这一行：
 补法：哨兵值 `safety.ErrProtectedLeg`（`%w` 包着）+ 计划排序（`flattenPlan`）+ 循环不提前返回、
 失败记账接着平 + 收尾重查持仓按腿判（`flattenVerdict`，它知道哪条腿是该留的）。
 
+**96. ⚠️ 规则量到之后改的是**对拍里的断言**，而对拍的断言若是**独立重写**的，生产代码可以与它背道而驰四天。**
+
+§13 #17（浮盈不计入可用）20260911 夜盘收敛。当晚改的是 `TestAccountIdentityAgainstCTP`：
+在 float64 里写 `Balance − 占用 − 冻结 − max(浮盈,0) == Available`。第二天又加了 `excludedUnrealized`，按柜台声明求值。
+⚠️ **两条都不经过 `account` 包。** 生产的 `account.Available()` 一直是旧式 `结存 − 占用 − 冻结`。
+
+20260915 的影响实验：把 `Available()` 改成新式，**CTP 对拍一条没红**；
+快期那侧的 `TestRebuildAccountFieldByField` 红了 —— 因为它**经过**生产的 `account`。
+
+    经过生产代码的对拍   规则变了它就红，方向对
+    独立重写的恒等式     证明「柜台自洽」，不证明「本库跟上了」
+
+⇒ 判据：**一条规则收敛时，问「生产代码里谁在算这个数，有没有一条对拍从它出发」**。
+独立重写的断言有它的用处（float64 复现柜台自己的运算、判「声明是否等于行为」），
+⚠️ 但它**不能**是规则在仓库里唯一的落点 —— 那时 rules_pending 减一、状态写着「已定论」，
+而本库在门面接上报单校验的那一刻，会带着被否掉的旧式去判「钱够不够」。
+
+补法：`account.Algorithm` 必填；`TestProductionAccountAvailableAgainstCTP` 用生产的 `account`
+按截面分量重建、比柜台的 `Available`（破坏 500）。
+
 ## 怎么用这份清单
 
 - **动到保证金、今昨仓、结算链路的代码前**，先看第一节对应那条的守卫还在不在

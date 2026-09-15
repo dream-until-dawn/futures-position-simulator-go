@@ -17,7 +17,7 @@ const (
 
 func newAcc(t *testing.T, pre string) *Account {
 	t.Helper()
-	a, err := New("CNY", d1, d(pre))
+	a, err := New("CNY", d1, d(pre), AlgorithmAll)
 	if err != nil {
 		t.Fatalf("开户失败: %v", err)
 	}
@@ -305,9 +305,9 @@ func TestRejects(t *testing.T) {
 		name string
 		err  error
 	}{
-		{"非 CNY 币种", mustErr(New("USD", d1, d("0")))},
-		{"上日结存为负", mustErr(New("CNY", d1, d("-1")))},
-		{"交易日不合法", mustErr(New("CNY", types.TradingDay(20260230), d("0")))},
+		{"非 CNY 币种", mustErr(New("USD", d1, d("0"), AlgorithmAll))},
+		{"上日结存为负", mustErr(New("CNY", d1, d("-1"), AlgorithmAll))},
+		{"交易日不合法", mustErr(New("CNY", types.TradingDay(20260230), d("0"), AlgorithmAll))},
 		{"入金为负", newAcc(t, "1000").Deposit(d1, d("-1"))},
 		{"入金为零", newAcc(t, "1000").Deposit(d1, d("0"))},
 		{"出金超过可用", newAcc(t, "1000").Withdraw(d1, d("1001"))},
