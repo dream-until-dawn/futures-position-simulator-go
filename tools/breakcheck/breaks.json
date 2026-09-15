@@ -2502,7 +2502,7 @@
 		"dir": "",
 		"file": "conformance/fixture/fixture_test.go",
 		"old": "\t\t\t\tcarrySrc = src\n\t\t\t\tcarried++",
-		"new": "\t\t\t\t_ = src\n\t\t\t\tcarried++",
+		"new": "\t\t\t\t_ = src\n\t\t\t\tskippedHistory++\n\t\t\t\tcontinue",
 		"pkg": "./conformance/fixture/",
 		"test": "TestPositionViewAcrossAllFixtures",
 		"want": "一个样本都没走结转路径",
