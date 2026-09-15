@@ -34,7 +34,7 @@ import (
 // **已终结（撤掉）的委托上，frozen_margin 仍是非零的那个历史值。**
 // 它是一枚戳记，不是当前占用。把委托记录里的 frozen_margin 直接加起来，
 // 会把早已撤掉的单算进冻结 —— 而那个和看起来完全合理，只是偏大。
-// FrozenAccountOf 只数还挂着的委托，正是为此。
+// FrozenBook 只数还挂着的委托（liveOrders），正是为此（F6b 之前是 FrozenAccountOf）。
 func TestOrderFrozenMarginShape(t *testing.T) {
 	type bucket struct{ with, without int }
 	var openAccepted, openRejected, openTraded, closed bucket
