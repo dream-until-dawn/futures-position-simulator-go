@@ -62,6 +62,7 @@ func (s *Simulator) PlaceAccepted(day types.TradingDay, id string, req order.Req
 		if p, ok := s.positions[posKey{req.Instrument, req.Hedge}]; ok {
 			today, history = p.VolumeToday(held), p.VolumeHistory(held)
 		}
+		// ⚠️ 与 Restore 末尾「挂单冻住的手数超过持仓」是同一个条件（一个在入口、一个在恢复），没合并 —— 改一处的判据或文案，另一处跟上
 		fz := s.book.TotalOf(req.Instrument, held)
 		if fz.VolumeToday+fr.VolumeToday > today || fz.VolumeHistory+fr.VolumeHistory > history {
 			return order.Frozen{}, fmt.Errorf("委托 %s 冻住 今 %d / 昨 %d，加上簿上已冻的 今 %d / 昨 %d 超过持仓 今 %d / 昨 %d —— "+

@@ -179,6 +179,7 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 		return nil, fmt.Errorf("挂单冻结合计（保证金 %s / 手续费 %s）与账户冻结（%s / %s）不同",
 			total.Margin, total.Commission, st.Account.FrozenMargin, st.Account.FrozenCommission)
 	}
+	// ⚠️ 与 PlaceAccepted 的可平量守卫是同一个条件（一个在恢复、一个在入口），没合并 —— 改一处的判据或文案，另一处跟上
 	for key, p := range s.positions {
 		for _, dir := range []types.Direction{types.Buy, types.Sell} {
 			fz := s.book.TotalOf(key.inst, dir)
