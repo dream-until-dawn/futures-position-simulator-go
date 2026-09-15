@@ -78,11 +78,10 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 	}
 	// —— 挂单冻结 ——
 	//
-	// ⚠️ 门面到 F4 才有冻结入口。原先这里有一支按夹具委托冻结的代码，**在现有语料上是死的**：
-	// 记了委托的夹具（20260909 起）全都带昨仓，而本函数拒绝昨仓。那一支的正确性一直靠
-	// frozenTotals 的直测（TestFrozenTotals），不靠这条路 —— 所以改成明说「做不了」，而不是悄悄不冻。
+	// ⚠️ 原先这里有一支按夹具委托冻结的代码，**在现有语料上是死的**：记了委托的夹具（20260909 起）全都带昨仓，
+	// 而本函数拒绝昨仓 —— 所以改成明说「做不了」，而不是悄悄不冻。冻结的对拍走 FrozenBook（F6b）。
 	if f.HasOrders {
-		return zero, fmt.Errorf("夹具 %s 记了委托 —— 门面到 F4 才有挂单冻结，重建出来的可用必然错，不重建", f.Path)
+		return zero, fmt.Errorf("夹具 %s 记了委托 —— 本函数不接挂单冻结，重建出来的可用必然错，不重建", f.Path)
 	}
 
 	var syms []string
@@ -105,13 +104,7 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 		syms = append(syms, sym)
 	}
 
-	ch := futsim.KQChoices()
-	// ⚠️ 两格是**这条路的调用方**签的，不是快期的实测：
-	//   取整 §13 #5 未收敛；在本批费率上「不取整」与「取到三位」同值
-	//   大边范围在快期上测不了（没实现大边，kq_facts 5），本批 spec.MaxMarginSide 全为假，范围取哪个都不起作用
-	ch.FeeRounding = fee.NoRounding
-	ch.SideScope = margin.ByInstrument
-	sim, err := futsim.New(futsim.Config{Day: f.TradingDay, PreBalance: pre, Rules: rules, Choices: ch})
+	sim, err := futsim.New(futsim.Config{Day: f.TradingDay, PreBalance: pre, Rules: rules, Choices: fixtureChoices()})
 	if err != nil {
 		return zero, err
 	}
@@ -184,15 +177,31 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 	}, nil
 }
 
+// fixtureChoices 是快期夹具走门面时的口径：快期预设，外加两格**这条路的调用方**签的（不是快期的实测）——
+//
+//	取整 §13 #5 未收敛；在本批费率上「不取整」与「取到三位」同值
+//	大边范围在快期上测不了（没实现大边，kq_facts 5），本批 spec.MaxMarginSide 全为假，范围取哪个都不起作用
+//
+// Rebuild 与 FrozenBook 共用它：两处各签一份，签的内容就可能分岔。
+func fixtureChoices() futsim.Choices {
+	ch := futsim.KQChoices()
+	ch.FeeRounding = fee.NoRounding
+	ch.SideScope = margin.ByInstrument
+	return ch
+}
+
 // specRules 把 Rebuild 的规格表包成 refdata.Provider，喂给门面。
 //
 // ⚠️ PositionDateType 给 PositionDateNotNeeded：本路径**永不结算**（有昨仓的合约在上面就报错了），
 // 那是调用方的声明，不是合约的属性 —— 所以这里不走 refdata.Builder（它按规则数据的标准拒绝这个值）。
 // 编一个 UseHistory / NoUseHistory 会被后来的人当成实测值；NotNeeded 下裸 CLOSE 会被门面拒绝，
 // 而本批夹具的成交只有 OPEN / CLOSETODAY。
+//
+// dates 给**实测过**的 PositionDateType（FrozenBook 用：UseHistory 上的裸 CLOSE 要它）；没有的合约照旧 PositionDateNotNeeded。
 type specRules struct {
 	version int64
 	byID    map[types.InstrumentID]Spec
+	dates   map[types.InstrumentID]refdata.PositionDateType
 }
 
 func (r specRules) spec(id types.InstrumentID) (Spec, error) {
@@ -208,8 +217,12 @@ func (r specRules) Instrument(id types.InstrumentID) (refdata.Instrument, error)
 	if err != nil {
 		return refdata.Instrument{}, err
 	}
+	dt := refdata.PositionDateNotNeeded
+	if d, ok := r.dates[id]; ok {
+		dt = d
+	}
 	return refdata.Instrument{ID: id, VolumeMultiple: s.Multiplier,
-		PositionDateType: refdata.PositionDateNotNeeded, MaxMarginSide: s.MaxMarginSide}, nil
+		PositionDateType: dt, MaxMarginSide: s.MaxMarginSide}, nil
 }
 
 func (r specRules) MarginRates(id types.InstrumentID, _ types.HedgeFlag) (refdata.MarginRates, error) {

@@ -482,6 +482,9 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 	skipWhy := map[string]int{}
 	carriedFailed := map[string]int{}
 	withFrozen := 0
+	// frozenNoSpec 是记了委托、而委托涉及的合约凑不齐规格（冻结算不了、留作「未实现」）的样本数。
+	// ⚠️ F6b 之前冻结手数不要规格（FrozenOf 自己数手数），这类样本照样接冻结；改由门面算之后要规格与昨结算价
+	frozenNoSpec := 0
 	exchanges := map[types.Exchange]bool{}
 	fieldCounts := map[int][]key{}
 
@@ -566,11 +569,14 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			// 「没记委托」在数上都是 0 —— 不给，让 view 渲染成「未实现」，
 			// 而不是拿一个 0 去比出一次空洞的一致。
 			//
-			// ⚠️ 裸 CLOSE 按快期实测语义解释（kq_facts 32），
-			// 那是一个**显式**选择，换口子要重新量。
-			if fl, fs, has, ferr := FrozenOf(f, sym, NakedCloseIsYesterday); ferr != nil {
+			// ⚠️ 冻结由门面算（FrozenBook，快期口径：裸 CLOSE 在 UseHistory 上冻昨仓，kq_facts 32）；
+			// 凑不齐规格的夹具冻结字段留作「未实现」，不拿半本簿去比。
+			if book, has, skipped, ferr := frozenBookOf(t, f); ferr != nil {
 				t.Errorf("⚠️ %s %s 算冻结失败：%v", f.Path, sym, ferr)
+			} else if skipped {
+				frozenNoSpec++
 			} else if has {
+				fl, fs := sideTotals(t, book, f, sym)
 				in.HasFrozen = true
 				in.FrozenLongToday, in.FrozenLongHistory = fl.VolumeToday, fl.VolumeHistory
 				in.FrozenShortToday, in.FrozenShortHistory = fs.VolumeToday, fs.VolumeHistory
@@ -618,8 +624,8 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 		}
 	}
 
-	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家；其中 %d 个接上了保证金、%d 个接上了冻结",
-		samples, len(exchanges), withMargin, withFrozen)
+	t.Logf("对拍 %d 个「夹具×合约」样本，覆盖交易所 %d 家；其中 %d 个接上了保证金、%d 个接上了冻结（记了委托而凑不齐规格 %d 个）",
+		samples, len(exchanges), withMargin, withFrozen, frozenNoSpec)
 	// ⚠️ 冻结这一块 20260909 才有第一份证据。这个数是 0 时，
 	// volume_*_frozen_* 三个字段全部落在「未实现」—— 那是**如实**的，
 	// 不是缺陷；但它同时意味着那三个字段的实现没被验过。
@@ -644,7 +650,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			// 那么冻结没接上就另有原因 —— 而那个原因没人知道。
 			t.Errorf("⚠️ 有夹具记了委托、也没有任何一个样本是因为**带昨仓**被跳过的，"+
 				"而冻结**仍然一个样本都没接上** —— 上面那条「两件事耦在一起」的解释"+
-				"因此不再成立，真正的原因是别的，去查 FrozenOf 为什么返回 has=false")
+				"因此不再成立，真正的原因是别的，去查 FrozenBook 为什么返回 has=false")
 		default:
 			t.Log("ⓘ 没有一个样本接上冻结 —— volume_*_frozen_* 三个字段" +
 				"目前**没有证据支撑**，且这批夹具里没有任何一份记了委托")

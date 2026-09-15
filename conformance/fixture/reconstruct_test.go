@@ -80,9 +80,12 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		// ⚠️ 这是 view 那一侧冻结渲染的**唯一**证据来源。
 		// 不接的话，volume_*_frozen_* 三个字段永远落在「未实现」，
 		// 而它们的实现写成什么样都不会红。
-		if fl, fs, has, ferr := FrozenOf(f, sym, NakedCloseIsYesterday); ferr != nil {
+		if book, has, skipped, ferr := frozenBookOf(t, f); ferr != nil {
 			t.Errorf("⚠️ %s 算冻结失败：%v", f.Path, ferr)
+		} else if skipped {
+			t.Logf("ⓘ %s：委托涉及的合约凑不齐规格，冻结不接", f.Path)
 		} else if has {
+			fl, fs := sideTotals(t, book, f, sym)
 			frozenSamples++
 			for _, fc := range []struct {
 				key  string

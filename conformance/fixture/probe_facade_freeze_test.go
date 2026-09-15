@@ -5,7 +5,6 @@ package fixture
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"testing"
 
@@ -13,126 +12,10 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
-	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
-
-type probeRules struct {
-	specRules
-	dates map[types.InstrumentID]refdata.PositionDateType
-}
-
-func (r probeRules) Instrument(id types.InstrumentID) (refdata.Instrument, error) {
-	in, err := r.specRules.Instrument(id)
-	if d, ok := r.dates[id]; ok {
-		in.PositionDateType = d
-	}
-	return in, err
-}
-
-func TestProbeFacadeFreezeEqualsOld(t *testing.T) {
-	all := loadAll(t)
-	compared, diffs, closeOnUnmeasured := 0, 0, 0
-	offsets := map[string]int{}
-	for _, f := range all {
-		if !f.HasOrders {
-			continue
-		}
-		specs, ok := specsForOrders(t, f)
-		if !ok {
-			continue
-		}
-		old, err := FrozenAccountOf(f, specs)
-		if err != nil {
-			t.Logf("%s 旧：%v", f.Path, err)
-			continue
-		}
-		rules := probeRules{specRules{version: 1, byID: map[types.InstrumentID]Spec{}}, map[types.InstrumentID]refdata.PositionDateType{}}
-		syms, _ := LiveOrderSymbols(f)
-		for _, sym := range syms {
-			inst, _ := types.ParseSymbol(sym, f.TradingDay)
-			rules.byID[inst] = specs[sym]
-			if d, ok := positionDates[sym]; ok {
-				rules.dates[inst] = d
-			}
-		}
-		ch := futsim.KQChoices()
-		ch.FeeRounding, ch.SideScope = fee.NoRounding, margin.ByInstrument
-		sim, err := futsim.New(futsim.Config{Day: f.TradingDay, PreBalance: decimal.NewFromInt(1), Rules: rules, Choices: ch})
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, sym := range syms {
-			inst, _ := types.ParseSymbol(sym, f.TradingDay)
-			pre, _ := f.PreSettlement(sym)
-			if err := sim.Mark(f.TradingDay, futsim.Quote{Instrument: inst, PreSettlement: pre, HasPreSettlement: true}); err != nil {
-				t.Fatal(err)
-			}
-		}
-		live, _ := liveOrders(f)
-		ids := make([]string, 0, len(live))
-		for id := range live {
-			ids = append(ids, id)
-		}
-		sort.Strings(ids)
-		sumM, sumC := decimal.Zero, decimal.Zero
-		vol := map[string]order.Frozen{}
-		failed := false
-		for _, id := range ids {
-			o := live[id]
-			sym, _ := textOf(o, "exchange_id", "instrument_id")
-			inst, _ := types.ParseSymbol(sym, f.TradingDay)
-			dir, off, _ := dirOffsetOf(o)
-			left, _ := numberOf(o, "volume_left")
-			px, _ := numberOf(o, "limit_price")
-			offsets[fmt.Sprintf("%s %v", sym, off)]++
-			if off.IsClose() {
-				if _, ok := positionDates[sym]; !ok {
-					closeOnUnmeasured++
-				}
-			}
-			fr, err := sim.FreezeOf(f.TradingDay, order.Request{Instrument: inst, Direction: dir, Offset: off,
-				Hedge: types.Speculation, Price: px, Volume: int(left.IntPart())})
-			if err != nil {
-				t.Errorf("%s 委托 %s（%s %v）新：%v", f.Path, id, sym, off, err)
-				failed = true
-				continue
-			}
-			sumM, sumC = sumM.Add(fr.Margin), sumC.Add(fr.Commission)
-			side := sym + "/long"
-			if dir == types.Buy {
-				side = sym + "/short"
-			}
-			v := vol[side]
-			v.VolumeToday += fr.VolumeToday
-			v.VolumeHistory += fr.VolumeHistory
-			vol[side] = v
-		}
-		if failed {
-			continue
-		}
-		compared++
-		if !sumM.Equal(old.Margin) || !sumC.Equal(old.Commission) {
-			diffs++
-			t.Errorf("%s 金额：旧 %s / %s，新 %s / %s", f.Path, old.Margin, old.Commission, sumM, sumC)
-		}
-		for _, sym := range syms {
-			l, s, has, err := FrozenOf(f, sym, NakedCloseIsYesterday)
-			if err != nil || !has {
-				t.Errorf("%s %s FrozenOf：%v %v", f.Path, sym, has, err)
-				continue
-			}
-			nl, ns := vol[sym+"/long"], vol[sym+"/short"]
-			if l.VolumeToday != nl.VolumeToday || l.VolumeHistory != nl.VolumeHistory || s.VolumeToday != ns.VolumeToday || s.VolumeHistory != ns.VolumeHistory {
-				diffs++
-				t.Errorf("%s %s 手数：旧 多%+v 空%+v，新 多%+v 空%+v", f.Path, sym, l, s, nl, ns)
-			}
-		}
-	}
-	t.Logf("比了 %d 份，差异 %d，未实测 PositionDateType 上的平仓单 %d；开平分布 %v", compared, diffs, closeOnUnmeasured, offsets)
-}
 
 func facadeCarry(t *testing.T, prev, cur *Fixture, sym string, settle decimal.Decimal) (string, error) {
 	t.Helper()
@@ -142,7 +25,7 @@ func facadeCarry(t *testing.T, prev, cur *Fixture, sym string, settle decimal.De
 		return "", fmt.Errorf("没有规格")
 	}
 	inst, _ := types.ParseSymbol(sym, prev.TradingDay)
-	rules := probeRules{specRules{version: 1, byID: map[types.InstrumentID]Spec{inst: spec}}, map[types.InstrumentID]refdata.PositionDateType{inst: positionDates[sym]}}
+	rules := specRules{version: 1, byID: map[types.InstrumentID]Spec{inst: spec}, dates: map[types.InstrumentID]refdata.PositionDateType{inst: positionDates[sym]}}
 	ch := futsim.KQChoices()
 	ch.FeeRounding, ch.SideScope = fee.NoRounding, margin.ByInstrument
 	pb, _ := numberOf(prev.Account, "pre_balance")
