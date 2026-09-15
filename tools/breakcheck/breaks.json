@@ -5355,11 +5355,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "544 门面给裸 CLOSE 的冻结改成先冻今——今1昨1裸平1 冻今而不冻昨（20260915 F4 打回后重锚：拆分改用扣掉簿上已冻的昨仓）",
+		"name": "544 门面给裸 CLOSE 的冻结改成先冻今——今1昨1裸平1 冻今而不冻昨（20260915 F4 打回后重锚：拆分改用扣掉簿上已冻的昨仓）（再重锚：拆分抽成 undatedSplit）",
 		"dir": "",
-		"file": "submit.go",
-		"old": "in.UndatedHistory = min(req.Volume, max(freeHistory, 0))",
-		"new": "in.UndatedHistory = 0 * min(req.Volume, max(freeHistory, 0))",
+		"file": "trade.go",
+		"old": "toHistory = min(volume, max(freeHistory, 0))",
+		"new": "toHistory = 0 * min(volume, max(freeHistory, 0))",
 		"pkg": "./",
 		"test": "TestFreezeOfBareCloseSplitsYesterdayFirst",
 		"want": "今1昨1 裸平 1 手",
@@ -5476,14 +5476,25 @@
 		"expect": "red"
 	},
 	{
-		"name": "563 裸 CLOSE 拆分拿持有的今昨、不扣簿上已冻——今1昨1 挂两笔裸平都冻昨 1，谁都成交不了（评审 20260915 打回的原样）",
+		"name": "563 裸 CLOSE 拆分拿持有的今昨、不扣簿上已冻——今1昨1 挂两笔裸平都冻昨 1，谁都成交不了（评审 20260915 打回的原样）（再重锚：拆分抽成 undatedSplit）",
 		"dir": "",
-		"file": "submit.go",
-		"old": "freeToday, freeHistory := today-fz.VolumeToday, history-fz.VolumeHistory",
-		"new": "freeToday, freeHistory := today-0*fz.VolumeToday, history-0*fz.VolumeHistory",
+		"file": "trade.go",
+		"old": "freeToday, freeHistory := today-frozen.VolumeToday, history-frozen.VolumeHistory",
+		"new": "freeToday, freeHistory := today-0*frozen.VolumeToday, history-0*frozen.VolumeHistory",
 		"pkg": "./",
 		"test": "TestTwoPlacedClosesSplitAcrossFreeVolumes",
 		"want": "两笔抢了同一手昨仓",
+		"expect": "red"
+	},
+	{
+		"name": "564 成交时裸 CLOSE 的拆分不扣挂单冻住的手数——先成交冻今的那笔会去平另一笔冻住的昨仓",
+		"dir": "",
+		"file": "trade.go",
+		"old": "p.VolumeHistory(held), s.book.TotalOf(tr.Instrument, held))",
+		"new": "p.VolumeHistory(held), s.book.TotalOf(types.InstrumentID{}, held))",
+		"pkg": "./",
+		"test": "TestBareCloseFillOrderAndSubmitAmongLiveOrders",
+		"want": "先成交冻今的那笔失败",
 		"expect": "red"
 	}
 ]

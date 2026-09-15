@@ -155,15 +155,21 @@ func TestSettleAndApplyTradeRespectLiveOrders(t *testing.T) {
 // withHistorySubmit 在 submitSim 上开多 1 @3399、按 3384 结算、次日开今 1 @3360 ⇒ 停在 simNext，m2701 今 1 昨 1。
 func withHistorySubmit(t *testing.T) *Simulator {
 	t.Helper()
+	return withHistorySubmitOn(t, "DCE.m2701", "3399", "3384", "3360")
+}
+
+// withHistorySubmitOn 同上，合约与价格可换：开多 1 @open、按 settle 结算、次日开今 1 @next。
+func withHistorySubmitOn(t *testing.T, sym, open, settle, next string) *Simulator {
+	t.Helper()
 	s := submitSim(t, ctpChoices(), "1000000")
-	if _, err := s.Submit(simDay, wall(t, "2026-09-15 10:00"), req(t, "DCE.m2701", types.Buy, types.Open, "3399", 1)); err != nil {
+	if _, err := s.Submit(simDay, wall(t, "2026-09-15 10:00"), req(t, sym, types.Buy, types.Open, open, 1)); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Settle(simDay, settlePx(t, "DCE.m2701", "3384", "SHFE.ag2702", "15785"), simNext); err != nil {
+	if err := s.Settle(simDay, settlePx(t, sym, settle), simNext); err != nil {
 		t.Fatal(err)
 	}
-	markOn(t, s, simNext, "DCE.m2701", "3360", "3384")
-	if err := s.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err != nil {
+	markOn(t, s, simNext, sym, next, settle)
+	if err := s.ApplyTrade(simNext, trade(t, sym, types.Buy, types.Open, next, 1)); err != nil {
 		t.Fatal(err)
 	}
 	return s
@@ -214,5 +220,72 @@ func TestTwoPlacedClosesSplitAcrossFreeVolumes(t *testing.T) {
 		if !sameSnapshot(s.Account(), b.Account()) {
 			t.Errorf("⚠️ %s：挂单成交与直接成交的账不同：\n%+v\n%+v", c.name, s.Account(), b.Account())
 		}
+	}
+}
+
+// TestBareCloseFillOrderAndSubmitAmongLiveOrders 钉住成交时的消耗与冻结时的拆分是同一个规则（在可平量里先平昨）：
+// 哪一笔先成交都行；已有挂单冻住昨仓时，立即成交的裸平去平今仓而不是去抢那手昨仓。
+//
+// ⚠️ 修 F4 打回时自己走多笔组合撞出来的：原来成交时按先平昨在整份持仓上消耗，「先成交冻今的那笔」会去平
+// 另一笔冻住的昨仓、被守卫拒掉；Submit 裸平在有挂单时同理。
+// 用 y2701（平今档 = 平昨档）：m2701 上后一笔会撞 §13 #21 的分歧段，那一格单独钉在最后。
+func TestBareCloseFillOrderAndSubmitAmongLiveOrders(t *testing.T) {
+	at := wall(t, "2026-09-16 10:00")
+	bare := req(t, "DCE.y2701", types.Sell, types.Close, "8000", 1)
+	y := simInst(t, "DCE.y2701")
+	pos := func(s *Simulator) (int, int) {
+		p, _ := s.Position(y, types.Speculation)
+		return p.VolumeToday(types.Buy), p.VolumeHistory(types.Buy)
+	}
+
+	s := withHistorySubmitOn(t, "DCE.y2701", "8000", "8000", "8000") // 今 1 昨 1
+	for _, id := range []string{"a", "b"} {
+		if _, err := s.Place(simNext, at, id, bare); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.Fill(simNext, "b"); err != nil {
+		t.Fatalf("⚠️ 先成交冻今的那笔失败：%v", err)
+	}
+	if td, hs := pos(s); td != 0 || hs != 1 {
+		t.Errorf("⚠️ b 冻的是今仓，成交后应剩昨 1，得到 今 %d / 昨 %d", td, hs)
+	}
+	if _, err := s.Fill(simNext, "a"); err != nil {
+		t.Errorf("⚠️ 再成交 a 失败：%v", err)
+	}
+
+	u := withHistorySubmitOn(t, "DCE.y2701", "8000", "8000", "8000")
+	if _, err := u.Place(simNext, at, "a", bare); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := u.Submit(simNext, at, bare); err != nil {
+		t.Fatalf("⚠️ 有挂单冻住昨仓时立即成交的裸平失败：%v", err)
+	}
+	if td, hs := pos(u); td != 0 || hs != 1 {
+		t.Errorf("⚠️ 立即成交的裸平应平今、留下挂单冻住的昨 1，得到 今 %d / 昨 %d", td, hs)
+	}
+	if _, err := u.Fill(simNext, "a"); err != nil {
+		t.Errorf("⚠️ 挂单 a 随后成交失败：%v", err)
+	}
+
+	// ⚠️ 已知陷阱（§13 #21 未收敛的直接后果，钉住而不是修）：m2701 平今档 ≠ 平昨档。
+	// 挂 a、b 各裸平 1 手、先成交 b（平今）之后，a 面对的是「只有昨仓的裸平」—— 分歧段 ⇒ 成交报错、a 留在簿上、冻结原样。
+	// 挂的时候按平仓前今仓 1 手收平今档，挂得上；成交时今仓已经没了。
+	w := withHistorySubmit(t)
+	barem := req(t, "DCE.m2701", types.Sell, types.Close, "3360", 1)
+	for _, id := range []string{"a", "b"} {
+		if _, err := w.Place(simNext, at, id, barem); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := w.Fill(simNext, "b"); err != nil {
+		t.Fatal(err)
+	}
+	before := w.Account()
+	if _, err := w.Fill(simNext, "a"); err == nil || !strings.Contains(err.Error(), "#21") {
+		t.Errorf("m2701 上 a 面对只有昨仓的裸平，要报 §13 #21：%v", err)
+	}
+	if !sameSnapshot(w.Account(), before) || len(w.Live()) != 1 {
+		t.Errorf("⚠️ #21 报错之后 a 或冻结没留住：簿 %v", w.Live())
 	}
 }
