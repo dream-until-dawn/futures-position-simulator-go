@@ -1,6 +1,7 @@
 package position
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -223,8 +224,8 @@ func TestCloseOrderUnmeasuredRefuses(t *testing.T) {
 	if err == nil {
 		t.Fatal("⚠️ 消耗顺序未实测，本该拒绝运行而不是挑一个默认")
 	}
-	if !strings.Contains(err.Error(), "实验 4") {
-		t.Errorf("报错应指向实验 4，实为 %v", err)
+	if !strings.Contains(err.Error(), "MeasuredCloseOrder") {
+		t.Errorf("报错应指向取实测值的 MeasuredCloseOrder，实为 %v", err)
 	}
 
 	// 显式指定则放行，且三种顺序给出**不同**的结果 —— 这正是它需要被实测的原因。
@@ -337,5 +338,90 @@ func TestHedgeFlagRequired(t *testing.T) {
 	inst, _ := types.ParseNative(types.SHFE, "rb2701", 20260907)
 	if _, err := New(inst, types.HedgeUnknown, 20260907, refdata.UseHistory); err == nil {
 		t.Error("⚠️ 投机套保标志决定保证金率，未指定时本该报错")
+	}
+}
+
+// TestYesterdayFirstEqualsFIFO 钉住 YesterdayFirst 与 FIFO **在本库的明细上恒等价**（不只是某个样本上）。
+//
+// ⚠️ 理由是结构性的：结算把当时的全部明细一起标昨，所以昨仓必然比今仓先开；
+// 而同为昨仓或同为今仓时，两者都按明细顺序消耗。本条用一串伪随机的开 / 结算 / 显式平今平昨 / 裸平操作逐步核对。
+// 若哪天 Settle 改成只标部分明细、或 consume 不再按明细顺序，两者会分开 —— 那时 MeasuredCloseOrder 的等价说法要重审。
+func TestYesterdayFirstEqualsFIFO(t *testing.T) {
+	seed := uint32(20260915)
+	next := func(n int) int {
+		seed = seed*1664525 + 1013904223
+		return int(seed>>8) % n
+	}
+	compared, mixed := 0, 0
+	for run := 0; run < 800; run++ {
+		day := types.TradingDay(20260907)
+		a, b := newPos(t, day), newPos(t, day)
+		for step := 0; step < 12; step++ {
+			switch next(4) {
+			case 0: // 开仓
+				px := d(fmt.Sprintf("%d", 3100+next(100)))
+				vol := 1 + next(3)
+				_ = a.Open(types.Buy, day, px, vol)
+				_ = b.Open(types.Buy, day, px, vol)
+			case 1: // 结算
+				nd := types.TradingDay(int(day) + 1)
+				_ = a.Settle(day, d("3150"), nd)
+				_ = b.Settle(day, d("3150"), nd)
+				day = nd
+			case 2: // 显式平今或平昨（两边同一笔，保持状态同步）
+				off := types.CloseToday
+				if next(2) == 0 {
+					off = types.CloseYesterday
+				}
+				_, errA := a.Close(types.Buy, off, day, 1, CloseOrderUnmeasured)
+				_, errB := b.Close(types.Buy, off, day, 1, CloseOrderUnmeasured)
+				if (errA == nil) != (errB == nil) {
+					t.Fatalf("前提：两边状态应当一致，而显式 %v 一边成一边不成", off)
+				}
+			case 3: // 裸 Close：两种顺序各平一边
+				total := a.VolumeToday(types.Buy) + a.VolumeHistory(types.Buy)
+				if total == 0 {
+					continue
+				}
+				vol := 1 + next(total)
+				// ⚠️ 只有今昨都在、且平的手数超过昨仓时，两种顺序才有「可能」分开 —— 这一类要单独数下界。
+				if a.VolumeToday(types.Buy) > 0 && a.VolumeHistory(types.Buy) > 0 && vol > a.VolumeHistory(types.Buy) {
+					mixed++
+				}
+				ra, errA := a.Close(types.Buy, types.Close, day, vol, YesterdayFirst)
+				rb, errB := b.Close(types.Buy, types.Close, day, vol, FIFO)
+				if errA != nil || errB != nil {
+					t.Fatalf("裸平 %d 手失败：%v / %v", vol, errA, errB)
+				}
+				if ra.VolumeToday != rb.VolumeToday || ra.VolumeHistory != rb.VolumeHistory || len(ra.Consumed) != len(rb.Consumed) {
+					t.Fatalf("⚠️ 第 %d 轮第 %d 步：先平昨消耗 今%d/昨%d，先开先平消耗 今%d/昨%d —— 两者分开了",
+						run, step, ra.VolumeToday, ra.VolumeHistory, rb.VolumeToday, rb.VolumeHistory)
+				}
+				for i := range ra.Consumed {
+					x, y := ra.Consumed[i], rb.Consumed[i]
+					if !x.OpenPrice.Equal(y.OpenPrice) || x.Volume != y.Volume || x.Settled != y.Settled {
+						t.Fatalf("⚠️ 第 %d 轮第 %d 步：两种顺序消耗的明细不同（第 %d 片 %v vs %v）", run, step, i, x, y)
+					}
+				}
+				compared++
+			}
+		}
+	}
+	// ⚠️ 反空转：若裸平一次都没发生，或者从没同时有过今仓与昨仓，上面什么都没验。
+	if compared < 100 || mixed < 20 {
+		t.Fatalf("⚠️ 只比较了 %d 次裸平、其中今昨都在且跨过昨仓的 %d 次（下界 100 / 20）—— 伪随机序列没走到要比的地方", compared, mixed)
+	}
+	t.Logf("ⓘ 比较了 %d 次裸平（其中今昨都在且平量跨过昨仓的 %d 次），先平昨与先开先平每次消耗同一批明细", compared, mixed)
+}
+
+// TestMeasuredCloseOrder 钉住只有 NoUseHistory 有实测的裸 Close 顺序。
+func TestMeasuredCloseOrder(t *testing.T) {
+	if o, ok := MeasuredCloseOrder(refdata.NoUseHistory); !ok || o != YesterdayFirst {
+		t.Errorf("⚠️ NoUseHistory 要给出先平昨（§13 #4），得到 %v %v", o, ok)
+	}
+	for _, dt := range []refdata.PositionDateType{refdata.UseHistory, refdata.PositionDateUnknown, refdata.PositionDateNotNeeded} {
+		if o, ok := MeasuredCloseOrder(dt); ok || o != CloseOrderUnmeasured {
+			t.Errorf("⚠️ %v 上给出了 %v —— 那里没有实测（UseHistory 裸 Close 见 simnow_pending#1）", dt, o)
+		}
 	}
 }

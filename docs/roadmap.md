@@ -1003,7 +1003,7 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 - `position.Settle`：`NoUseHistory` 与 `UseHistory` 走同一条 `SettleAll`（今仓 → 昨仓、基线推进到结算价）；
   `RebaseAll` 随之删除（没有调用方）。`PositionDateType` 零值结算照旧报错 —— 那道关口不变
 - ⚠️ `PositionDateType` 在结算上**不再分岔**。它仍在别处起作用（裸 `CLOSE` 的校验、快期夹具的今昨拆分读法），不删
-- 影响实验（本地临时改、跑完还原）：根模块只红三条 —— 钉旧行为的 `TestSettleRespectsPositionDateType`、
+- 影响实验（本地临时改、跑完还原）：根模块只红三条 —— 钉旧行为的结算测试（同日改名为 `TestSettleRollsBothDateTypesAndRejectsUnset`，旧名比断言说得多）、
   `TestKindStaysUnknownOutsideCorpus` 里「大商所跨结算后平昨」那一格（现在是昨仓、可平）、锚点守卫
 - ⚠️ **快期对拍一条没红，是因为没测到**：跨日结转对拍因大商所日行情 412 跳过了 DCE。一旦打通，
   类 B（NoUseHistory 不滚）必然出现 —— 按**口子差**登记，不回退本库

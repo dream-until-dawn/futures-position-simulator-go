@@ -201,3 +201,43 @@ func TestKindStaysUnknownOutsideCorpus(t *testing.T) {
 		t.Errorf("⚠️ 资金不够的拒因是 %s —— 没有语料", k)
 	}
 }
+
+// TestBareCloseAcceptedOnNoUseHistory 钉住裸 CLOSE：NoUseHistory 上按今昨合计校验（§13 #4 CTP 实测接受），UseHistory 上照旧拒绝。
+func TestBareCloseAcceptedOnNoUseHistory(t *testing.T) {
+	day, next := types.NewTradingDay(2026, 9, 15), types.NewTradingDay(2026, 9, 16)
+	bare := func(f Facts, vol int) Request {
+		return Request{Instrument: f.Instrument.ID, Direction: types.Sell, Offset: types.Close,
+			Hedge: types.Speculation, Price: d("3000"), Volume: vol}
+	}
+	// 大商所：昨 1（跨结算）+ 今 1，正是 #4 那晚的形状
+	dce := factsOn(t, "DCE", "m2701")
+	if err := dce.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := dce.Position.Settle(day, d("3000"), next); err != nil {
+		t.Fatal(err)
+	}
+	if err := dce.Position.Open(types.Buy, next, d("3000"), 1); err != nil {
+		t.Fatal(err)
+	}
+	for _, vol := range []int{1, 2} {
+		if res := Validate(bare(dce, vol), dce); res.Rejected != nil {
+			t.Errorf("⚠️ 大商所今1昨1 裸平 %d 手被拒：%v —— CTP 接受（§13 #4）", vol, res.Rejected)
+		}
+	}
+	res := Validate(bare(dce, 3), dce)
+	if res.Rejected == nil || res.Rejected.Check != CheckClosable || !strings.Contains(res.Rejected.Reason, "超过总持仓") {
+		t.Errorf("⚠️ 大商所今1昨1 裸平 3 手要按总持仓拒，得到 %v", res.Rejected)
+	} else if res.Rejected.Kind != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 裸平超量给了拒因 %s —— 语料里没有这一种", res.Rejected.Kind)
+	}
+	// 上期所：同形状照旧拒绝（simnow_pending#1）
+	shfe := factsOn(t, "SHFE", "rb2701")
+	if err := shfe.Position.Open(types.Buy, day, d("3000"), 2); err != nil {
+		t.Fatal(err)
+	}
+	res = Validate(bare(shfe, 1), shfe)
+	if res.Rejected == nil || !strings.Contains(res.Rejected.Reason, "裸 CLOSE") {
+		t.Errorf("⚠️ 上期所裸 CLOSE 要照旧拒绝（simnow_pending#1），得到 %v", res.Rejected)
+	}
+}

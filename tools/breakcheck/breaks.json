@@ -981,7 +981,7 @@
 		"old": "\tcase refdata.UseHistory, refdata.NoUseHistory:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)\n",
 		"new": "\tcase refdata.UseHistory:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)\n\tcase refdata.NoUseHistory:\n",
 		"pkg": "./position/",
-		"test": "TestSettleRespectsPositionDateType",
+		"test": "TestSettleRollsBothDateTypesAndRejectsUnset",
 		"want": "今仓没变成昨仓",
 		"expect": "red"
 	},
@@ -992,7 +992,7 @@
 		"old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"new": "\t\ts.lots[i].Settled = true",
 		"pkg": "./position/",
-		"test": "TestSettleRespectsPositionDateType",
+		"test": "TestSettleRollsBothDateTypesAndRejectsUnset",
 		"want": "逐日盯市对所有合约成立",
 		"expect": "red"
 	},
@@ -1036,7 +1036,7 @@
 		"old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"new": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"pkg": "./position/",
-		"test": "TestSettleRespectsPositionDateType",
+		"test": "TestSettleRollsBothDateTypesAndRejectsUnset",
 		"want": "它是逐笔对冲的基线，**永不改变**",
 		"expect": "red"
 	},
@@ -4812,6 +4812,61 @@
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestNoUseHistoryBasisAdvancesOnCTP",
 		"want": "基线没有推进到结算价",
+		"expect": "red"
+	},
+	{
+		"name": "495 MeasuredCloseOrder 给 NoUseHistory 返回先平今——与 #4 CTP 实测（消耗昨仓）相反",
+		"dir": "",
+		"file": "position/position.go",
+		"old": "\tif dt == refdata.NoUseHistory {\n\t\treturn YesterdayFirst, true",
+		"new": "\tif dt == refdata.NoUseHistory {\n\t\treturn TodayFirst, true",
+		"pkg": "./position/",
+		"test": "TestMeasuredCloseOrder",
+		"want": "先平昨",
+		"expect": "red"
+	},
+	{
+		"name": "496 order 对 NoUseHistory 的裸 CLOSE 退回一律拒绝——大商所柜台接受的通用平仓本库拒（#4 那晚的单）",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t\tif _, measured := position.MeasuredCloseOrder(p.DateType()); measured {",
+		"new": "\t\tif _, measured := position.MeasuredCloseOrder(p.DateType()); measured && false {",
+		"pkg": "./order/",
+		"test": "TestBareCloseAcceptedOnNoUseHistory",
+		"want": "CTP 接受",
+		"expect": "red"
+	},
+	{
+		"name": "497 NoUseHistory 裸 CLOSE 不校验总量——超量平仓也放行",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t\t\tif req.Volume > today+his {",
+		"new": "\t\t\tif req.Volume > today+his && false {",
+		"pkg": "./order/",
+		"test": "TestBareCloseAcceptedOnNoUseHistory",
+		"want": "要按总持仓拒",
+		"expect": "red"
+	},
+	{
+		"name": "498 MeasuredCloseOrder 给 UseHistory 也返回先平昨——上期所裸 CLOSE 在 CTP 上没测过（simnow_pending#1）",
+		"dir": "",
+		"file": "position/position.go",
+		"old": "\tif dt == refdata.NoUseHistory {\n\t\treturn YesterdayFirst, true",
+		"new": "\tif dt == refdata.NoUseHistory || dt == refdata.UseHistory {\n\t\treturn YesterdayFirst, true",
+		"pkg": "./position/",
+		"test": "TestMeasuredCloseOrder",
+		"want": "没有实测",
+		"expect": "red"
+	},
+	{
+		"name": "499 结算只把第一片标成昨仓——今昨与开仓先后脱钩，先平昨与先开先平分开",
+		"dir": "",
+		"file": "position/lot.go",
+		"old": "\t\ts.lots[i].Settled = true",
+		"new": "\t\ts.lots[i].Settled = i == 0",
+		"pkg": "./position/",
+		"test": "TestYesterdayFirstEqualsFIFO",
+		"want": "两者分开了",
 		"expect": "red"
 	}
 ]

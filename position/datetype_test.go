@@ -26,7 +26,7 @@ func dt(t *testing.T, kind refdata.PositionDateType) *Position {
 	return p
 }
 
-// TestSettleRespectsPositionDateType 断言结算对两种 PositionDateType **都**把今仓滚成昨仓、基线推进到结算价，
+// TestSettleRollsBothDateTypesAndRejectsUnset 断言结算对两种 PositionDateType **都**把今仓滚成昨仓、基线推进到结算价，
 // 而零值与 NotNeeded **不许结算**。
 //
 // ⚠️ 2026-09-15 使用者裁决跟 CTP（cn-futures-rules.md §13 #20）：大商所一手跨结算，CTP 记作昨仓、接受平昨
@@ -34,7 +34,7 @@ func dt(t *testing.T, kind refdata.PositionDateType) *Position {
 //
 // ⚠️ 判别力换到这里：只断言 UseHistory 的话，NoUseHistory 退回「不滚」照样绿 —— 所以两条路**都**要断言昨仓 3 手；
 // 而为了不让「谁都不滚」也能过，今仓必须同时是 0。
-func TestSettleRespectsPositionDateType(t *testing.T) {
+func TestSettleRollsBothDateTypesAndRejectsUnset(t *testing.T) {
 	d8 := types.NewTradingDay(2026, 9, 8)
 	d9 := types.NewTradingDay(2026, 9, 9)
 	settle := decimal.RequireFromString("3163")
