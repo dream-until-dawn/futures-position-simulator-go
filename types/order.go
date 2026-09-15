@@ -22,6 +22,8 @@ const (
 // ⚠️ 但那条证据来自**快期模拟**，不是 CTP 柜台。按 cn-futures-rules.md 的双坐标
 // 证据等级，那一档明确标着「不等于真实柜台」。因此本库在 SimNow 复核之前，
 // 对 `UseHistory` 合约上的裸 `Close` **报错**，不按平昨处理。
+// ⚠️ 2026-09-15 起这句限定为 **CTP 口径**：门面 `futsim.Choices.UndatedCloseOnUseHistory` 零值时报错；
+// 调用方显式选 `UndatedCloseAsYesterday`（快期预设 `KQChoices` 就是）时按平昨校验与记账。`order` 包本身不看口径，直接调 `order.Validate` 仍然拒。
 // **「没测出来」和「测出来是平昨」在代码里长得一模一样**，见 state.md 的
 // simnow_pending#1。
 type Offset uint8
