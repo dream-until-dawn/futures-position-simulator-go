@@ -5597,14 +5597,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "566 裸平挂单的手续费核对形同虚设——任何一种拆法算得出就放行变成算得出任何一种就放行",
+		"name": "566 裸平挂单的手续费核对形同虚设——「某种拆法算得出才放行」变成「随便哪种不报错就放行」",
 		"dir": "",
 		"file": "state.go",
 		"old": "if c, err := s.commission(tr, k); err == nil && c.Equal(o.Frozen.Commission) {",
 		"new": "if c, err := s.commission(tr, k); err == nil || c.Equal(o.Frozen.Commission) {",
 		"pkg": "./",
 		"test": "TestRestoreAcceptsBareCloseAfterPositionChanged",
-		"want": "今昨拆法",
+		"want": "裸平挂单与账户冻结手续费一起 +1 要被拒",
 		"expect": "red"
 	}
 ]
