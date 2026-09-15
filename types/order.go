@@ -73,7 +73,7 @@ var (
 		Open: "OPEN", Close: "CLOSE", CloseToday: "CLOSETODAY",
 	}
 	// ⚠️ 只有**投机**这一个取值是实测的：`"SPECULATION"`，
-	// 交易日 20260908 的成交截面里 417 笔无一例外（probes.md §10.5）。
+	// 交易日 20260908 的成交截面里 417 笔无一例外（silent-risks.md 方法论 33；原先引的是 probes.md 里一个从来不存在的小节）。
 	//
 	// 原先这里写的是 `SPEC`/`ARBI`/`HEDGE`，**三个都没有出处** ——
 	// 不在 probes.md，也没有注释说它们从哪来。而实测把第一个证伪了。
