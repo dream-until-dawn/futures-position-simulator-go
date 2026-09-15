@@ -5474,5 +5474,93 @@
 		"test": "TestFacadePlaceAgainstCTPFrozen",
 		"want": "持仓侧冻住",
 		"expect": "red"
+	},
+	{
+		"name": "555 恢复不核口径——口径改了一项的存档照样恢复",
+		"dir": "",
+		"file": "state.go",
+		"old": "if cfg.Choices != st.Choices {",
+		"new": "if false && cfg.Choices != st.Choices {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "口径改一项",
+		"expect": "red"
+	},
+	{
+		"name": "556 恢复不核规则数据版本",
+		"dir": "",
+		"file": "state.go",
+		"old": "if v := cfg.Rules.Version(); v != st.RulesVersion {",
+		"new": "if v := cfg.Rules.Version(); false && v != st.RulesVersion {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "规则版本",
+		"expect": "red"
+	},
+	{
+		"name": "557 恢复不核昨仓片先于今仓片——「先平昨 ≡ 先开先平」的前提被存档打破",
+		"dir": "",
+		"file": "position/restore.go",
+		"old": "case l.Settled && seenToday:",
+		"new": "case false && l.Settled && seenToday:",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "昨仓片排在今仓片后",
+		"expect": "red"
+	},
+	{
+		"name": "558 恢复不做重算核对——手改了账户占用的存档照样恢复",
+		"dir": "",
+		"file": "state.go",
+		"old": "if !c.got.Equal(c.want) {",
+		"new": "if false && !c.got.Equal(c.want) {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "账户占用被手改",
+		"expect": "red"
+	},
+	{
+		"name": "559 恢复不核挂单冻结合计与账户冻结",
+		"dir": "",
+		"file": "state.go",
+		"old": "if !total.Margin.Equal(st.Account.FrozenMargin) || !total.Commission.Equal(st.Account.FrozenCommission) {",
+		"new": "if false {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "挂单冻结与账户不符",
+		"expect": "red"
+	},
+	{
+		"name": "560 恢复不查明细手数——手数为 0 的片被收下",
+		"dir": "",
+		"file": "position/restore.go",
+		"old": "case l.Volume <= 0:",
+		"new": "case false && l.Volume <= 0:",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "明细手数为 0",
+		"expect": "red"
+	},
+	{
+		"name": "561 恢复不核 PositionDateType 与规则数据一致",
+		"dir": "",
+		"file": "state.go",
+		"old": "if inst.PositionDateType != ps.DateType {",
+		"new": "if false && inst.PositionDateType != ps.DateType {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "PositionDateType 不一致",
+		"expect": "red"
+	},
+	{
+		"name": "562 失效态也能导出存档——恢复等于把失效洗掉",
+		"dir": "",
+		"file": "state.go",
+		"old": "if s.broken != nil {\n\t\treturn State{}",
+		"new": "if false && s.broken != nil {\n\t\treturn State{}",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "失效态导出了存档",
+		"expect": "red"
 	}
 ]
