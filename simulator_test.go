@@ -32,12 +32,18 @@ func simInst(t *testing.T, sym string) types.InstrumentID {
 // ⚠️ 这些数不是任何交易所的真实费率。
 func simRules(t *testing.T) refdata.Provider {
 	t.Helper()
-	m, ag := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702")
+	m, ag, y := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702"), simInst(t, "DCE.y2701")
 	b := refdata.NewBuilder(1).
 		AddInstrument(refdata.Instrument{ID: m, VolumeMultiple: dec("10"), PriceTick: dec("1"),
 			PositionDateType: refdata.NoUseHistory, IsTrading: true}).
 		AddInstrument(refdata.Instrument{ID: ag, VolumeMultiple: dec("15"), PriceTick: dec("1"),
 			PositionDateType: refdata.UseHistory, IsTrading: true}).
+		// y2701：平昨档 = 平今档（两档同费率），给 §13 #21 「超出今仓的部分」那一支用
+		AddInstrument(refdata.Instrument{ID: y, VolumeMultiple: dec("10"), PriceTick: dec("2"),
+			PositionDateType: refdata.NoUseHistory, IsTrading: true}).
+		AddCommissionRates(y, types.Speculation, refdata.CommissionRates{
+			OpenByVolume: dec("2.5"), CloseByVolume: dec("1.1"), CloseTodayByVolume: dec("1.1")}).
+		AddMarginRates(y, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).
 		AddCommissionRates(m, types.Speculation, refdata.CommissionRates{
 			OpenByVolume: dec("1.5"), CloseByVolume: dec("1.2"), CloseTodayByVolume: dec("0.75")}).
 		AddCommissionRates(ag, types.Speculation, refdata.CommissionRates{
@@ -210,6 +216,21 @@ func withHistory(t *testing.T) *Simulator {
 	return s
 }
 
+// withHistoryOn 在 simDay 开多 1 @px、按 px 结算，停在 simNext、计价价 px —— 账上只有 1 手昨仓。
+func withHistoryOn(t *testing.T, sym, px string) *Simulator {
+	t.Helper()
+	s := newSim(t)
+	mark(t, s, sym, px, px)
+	if err := s.ApplyTrade(simDay, trade(t, sym, types.Buy, types.Open, px, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Settle(simDay, settlePx(t, sym, px), simNext); err != nil {
+		t.Fatal(err)
+	}
+	markOn(t, s, simNext, sym, px, px)
+	return s
+}
+
 // TestUndatedCloseFeeTier 钉住 §13 #21：裸 CLOSE 消耗昨仓时的手续费档。
 //
 // 合成费率与 DCE.m2701 的声明同形（平昨 1.2 / 平今 0.75，两档不同），读数照 ctp-slices-20260915-{2,3}：
@@ -256,6 +277,27 @@ func TestUndatedCloseFeeTier(t *testing.T) {
 	}
 	if got := s2.Account().Commission; !got.Equal(dec("1.2")) {
 		t.Errorf("显式平昨应收平昨档 1.2，得到 %s", got)
+	}
+
+	// 两档声明费率相同（y2701，平昨 = 平今 = 1.1）⇒ 超出今仓的部分 a、b 同值 ⇒ 放行并**照收**平昨档（评审 20260915：这一支此前没人守，改成不收费全绿）
+	// 只有昨仓、裸平 1 手 ⇒ 1 手平昨档 1.1
+	sy := withHistoryOn(t, "DCE.y2701", "8000")
+	if err := sy.ApplyTrade(simNext, trade(t, "DCE.y2701", types.Sell, types.Close, "8000", 1)); err != nil {
+		t.Fatalf("两档同费率、只有昨仓裸平1：%v", err)
+	}
+	if got := sy.Account().Commission; !got.Equal(dec("1.1")) || !got.IsPositive() {
+		t.Errorf("⚠️ 两档同费率、只有昨仓裸平1 收了 %s，期望 1.1（少收不报错是这一支坏掉的样子）", got)
+	}
+	// 今 1 昨 1、裸平 2 手 ⇒ 平今 1 手 + 平昨 1 手 = 2.2（开今那一手另收 2.5）
+	sm := withHistoryOn(t, "DCE.y2701", "8000")
+	if err := sm.ApplyTrade(simNext, trade(t, "DCE.y2701", types.Buy, types.Open, "8000", 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := sm.ApplyTrade(simNext, trade(t, "DCE.y2701", types.Sell, types.Close, "8000", 2)); err != nil {
+		t.Fatalf("两档同费率、今1昨1裸平2：%v", err)
+	}
+	if got := sm.Account().Commission.Sub(dec("2.5")); !got.Equal(dec("2.2")) || !got.IsPositive() {
+		t.Errorf("⚠️ 两档同费率、今1昨1裸平2 收了 %s，期望 平今 1.1 + 平昨 1.1 = 2.2", got)
 	}
 }
 

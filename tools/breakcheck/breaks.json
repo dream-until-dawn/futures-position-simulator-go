@@ -5210,5 +5210,16 @@
 		"test": "TestFacadeSettlesM2701AcrossDaysAgainstCTP",
 		"want": "CloseProfit",
 		"expect": "red"
+	},
+	{
+		"name": "531 裸 CLOSE 超出今仓的部分在两档费率相同时不收费——少收且不报错（评审 20260915：此前改成这样全绿）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\treturn charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值",
+		"new": "\treturn nil",
+		"pkg": "./",
+		"test": "TestUndatedCloseFeeTier",
+		"want": "两档同费率",
+		"expect": "red"
 	}
 ]
