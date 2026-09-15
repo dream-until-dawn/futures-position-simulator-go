@@ -6072,14 +6072,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "611 cmd/oracle 的 -carry 接线断了（给了前一日夹具与结算价也结转不了，带昨仓的合约全记成跳过）",
+		"name": "611 cmd/oracle 的 -carry 接线断了（给了前一日夹具与结算价也结转不了；这份截面只剩带昨仓的 rb2701 可比 ⇒ Compare 报「一个合约都没比到」）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/conformance/live.go",
 		"old": "\tsettle, ok := c.Settlement[sym]\n\tif !ok {",
 		"new": "\tsettle, ok := c.Settlement[sym]\n\tif true || !ok {",
 		"pkg": "./conformance/",
 		"test": "TestCompareCarriesThroughFacade",
-		"want": "应当结转后比上",
+		"want": "一个合约都没比到",
 		"expect": "red"
 	},
 	{
