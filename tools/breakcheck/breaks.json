@@ -4868,5 +4868,60 @@
 		"test": "TestYesterdayFirstEqualsFIFO",
 		"want": "两者分开了",
 		"expect": "red"
+	},
+	{
+		"name": "500 只计浮亏也不扣浮盈（回到旧式）——生产 account 的可用与 CTP 正浮盈截面对不上",
+		"dir": "",
+		"file": "account/algorithm.go",
+		"old": "\tif g == AlgorithmOnlyLost {",
+		"new": "\tif false && g == AlgorithmOnlyLost {",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestProductionAccountAvailableAgainstCTP",
+		"want": "可用本库",
+		"expect": "red"
+	},
+	{
+		"name": "501 只计浮亏也不扣浮盈（回到旧式）——account 自己的单测",
+		"dir": "",
+		"file": "account/algorithm.go",
+		"old": "\tif g == AlgorithmOnlyLost {",
+		"new": "\tif false && g == AlgorithmOnlyLost {",
+		"pkg": "./account/",
+		"test": "TestAvailableFollowsAlgorithm",
+		"want": "只计浮亏、持仓盈亏 150",
+		"expect": "red"
+	},
+	{
+		"name": "502 没有观测的 '3'/'4' 也放行开户（第一版改 case 列表撞重复 case，编译红）",
+		"dir": "",
+		"file": "account/algorithm.go",
+		"old": "\tcase AlgorithmOnlyGain, AlgorithmNone:\n\t\treturn fmt.Errorf(",
+		"new": "\tcase AlgorithmOnlyGain, AlgorithmNone:\n\t\treturn nil\n\t\treturn fmt.Errorf(",
+		"pkg": "./account/",
+		"test": "TestNewRefusesUnmeasuredAlgorithm",
+		"want": "把枚举名当成了行为",
+		"expect": "red"
+	},
+	{
+		"name": "503 快期重建改用「只计浮亏」——浮盈 +700 的快期夹具上 available 差 700",
+		"dir": "",
+		"file": "conformance/fixture/rebuild.go",
+		"old": "account.New(\"CNY\", f.TradingDay, pre, account.AlgorithmAll)",
+		"new": "account.New(\"CNY\", f.TradingDay, pre, account.AlgorithmOnlyLost)",
+		"pkg": "./conformance/fixture/",
+		"test": "TestRebuildAccountFieldByField",
+		"want": "available",
+		"expect": "red"
+	},
+	{
+		"name": "504 冻结上限绕过算法——只计浮亏时浮盈被拿去冻结",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "total.GreaterThan(a.Available()) {",
+		"new": "total.GreaterThan(a.Available().Add(a.Algorithm.excluded(a.positionProfit))) {",
+		"pkg": "./account/",
+		"test": "TestFloatingGainCannotFundOrdersUnderOnlyLost",
+		"want": "浮盈被拿去用了",
+		"expect": "red"
 	}
 ]

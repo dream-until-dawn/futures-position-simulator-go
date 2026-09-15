@@ -14,11 +14,15 @@
 //	               + 持仓盈亏 PositionProfit
 //	               − 手续费 Commission
 //
-//	可用资金 Available = Balance − 保证金占用 − 全部冻结
+//	可用资金 Available = Balance − 保证金占用 − 全部冻结 − 不计入可用的持仓盈亏
 //	风险度            = 保证金占用 / Balance
 //
 // ⚠️ 盘中 PositionProfit 是浮动的，于是 Balance 盘中就是**动态权益**；
 // 日终结算把浮盈兑现，Balance 成为静态结存并作为明日的 PreBalance。
+//
+// ⚠️ 「不计入可用的持仓盈亏」由盈亏算法 Algorithm 决定，开户时必填：
+// 快期全部计入、SimNow 只计浮亏（浮盈不计入）。见 Algorithm。
+// 平仓盈亏计入可用（SimNow `AvailIncludeCloseProfit` 实测，§13 #11）只观测到这一种，不开参数。
 //
 // # 报单冻结必须建模
 //
@@ -36,8 +40,9 @@ import (
 
 // Account 是单币种资金账户。v1.0 只做 CNY。
 type Account struct {
-	Currency string
-	Day      types.TradingDay
+	Currency  string
+	Day       types.TradingDay
+	Algorithm Algorithm // 开户时定，此后不变
 
 	preBalance decimal.Decimal // 上一交易日结算后的结存，今日一切计算的基线
 
@@ -58,7 +63,9 @@ type Account struct {
 }
 
 // New 建一个账户。preBalance 是上一交易日结算后的结存；新开户传零。
-func New(currency string, day types.TradingDay, preBalance decimal.Decimal) (*Account, error) {
+//
+// alg 是盈亏算法，必填、无默认值（两个口子实测相反，见 Algorithm）。
+func New(currency string, day types.TradingDay, preBalance decimal.Decimal, alg Algorithm) (*Account, error) {
 	if currency != "CNY" {
 		// ⚠️ 明确拒绝而不是默默当成 CNY：多币种在 v1.0 之外，
 		// 而「默默按 CNY 算」会让一个不支持的场景看起来跑通了。
@@ -70,7 +77,10 @@ func New(currency string, day types.TradingDay, preBalance decimal.Decimal) (*Ac
 	if preBalance.IsNegative() {
 		return nil, fmt.Errorf("上日结存 %s 为负 —— 穿仓账户请显式说明来源，不要静默开户", preBalance)
 	}
-	return &Account{Currency: currency, Day: day, preBalance: preBalance}, nil
+	if err := alg.measured(); err != nil {
+		return nil, fmt.Errorf("开户失败: %w", err)
+	}
+	return &Account{Currency: currency, Day: day, Algorithm: alg, preBalance: preBalance}, nil
 }
 
 func (a *Account) checkDay(day types.TradingDay) error {
@@ -105,12 +115,15 @@ func (a *Account) Balance() decimal.Decimal {
 }
 
 // Available 返回可用资金。
+//
+// ⚠️ 按盈亏算法扣掉不计入可用的那部分持仓盈亏：「只计浮亏」下浮盈不能拿来开仓、出金。
 func (a *Account) Available() decimal.Decimal {
 	return a.Balance().
 		Sub(a.currMargin).
 		Sub(a.frozenMargin).
 		Sub(a.frozenCash).
-		Sub(a.frozenCommission)
+		Sub(a.frozenCommission).
+		Sub(a.Algorithm.excluded(a.positionProfit))
 }
 
 // RiskRatio 返回风险度 = 保证金占用 / 结存。
@@ -332,18 +345,19 @@ func (a *Account) Snapshot() Snapshot {
 //
 // ⚠️ 它是「每次状态变更后都应成立」的那条恒等式的机械形式：
 //
-//	可用 = 结存 − 保证金占用 − 全部冻结
+//	可用 = 结存 − 保证金占用 − 全部冻结 − 不计入可用的持仓盈亏
 //
 // 它抓不到「结存本身算错了」，但能抓到「某处忘了把冻结算进可用」——
 // 而后者正是 silent-risks 第 7 条（报单冻结不建模）的形态。
 func (a *Account) Check() error {
 	want := a.Balance().
 		Sub(a.currMargin).Sub(a.frozenMargin).
-		Sub(a.frozenCash).Sub(a.frozenCommission)
+		Sub(a.frozenCash).Sub(a.frozenCommission).
+		Sub(a.Algorithm.excluded(a.positionProfit))
 	if !a.Available().Equal(want) {
-		return fmt.Errorf("不变量破裂：可用 %s ≠ 结存 %s − 占用 %s − 冻结 %s/%s/%s",
+		return fmt.Errorf("不变量破裂：可用 %s ≠ 结存 %s − 占用 %s − 冻结 %s/%s/%s − 不计入的持仓盈亏（%s）",
 			a.Available(), a.Balance(), a.currMargin,
-			a.frozenMargin, a.frozenCash, a.frozenCommission)
+			a.frozenMargin, a.frozenCash, a.frozenCommission, a.Algorithm)
 	}
 	if a.frozenMargin.IsNegative() || a.frozenCommission.IsNegative() || a.frozenCash.IsNegative() {
 		return fmt.Errorf("冻结额为负：%s / %s / %s",

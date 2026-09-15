@@ -70,7 +70,9 @@ func Rebuild(f *Fixture, specs map[string]Spec) (Rebuilt, error) {
 		return zero, fmt.Errorf("夹具 %s 的账户截面里没有 pre_balance —— "+
 			"⚠️ 那是整条资金链的起点，没有它重建出来的每一个数都是错的", f.Path)
 	}
-	acc, err := account.New("CNY", f.TradingDay, pre)
+	// ⚠️ 快期模拟的盈亏算法是「全部计算」（kq_facts 11）。本批夹具里有浮盈 +700 的样本，
+	// 换成「只计浮亏」时 available 当场差 700 —— 这一格有判别力，不是抄的。
+	acc, err := account.New("CNY", f.TradingDay, pre, account.AlgorithmAll)
 	if err != nil {
 		return zero, err
 	}
