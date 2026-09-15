@@ -155,8 +155,9 @@ func dirOffsetOf(o map[string]Value) (types.Direction, types.Offset, error) {
 // NakedClosePolicy 说明裸 `CLOSE` 的委托按哪种语义解释。
 //
 // ⚠️ 它必须是**调用点的显式选择**，不能由本包定。理由是这个语义
-// **取决于口子**：快期模拟上裸 CLOSE 等于平昨（kq_facts 32，两条独立证据），
-// 而真实 CTP 未裁决（simnow_pending#1）。
+// **取决于口子**：快期模拟上裸 CLOSE 等于平昨（kq_facts 32，两条独立证据）；
+// CTP 上，上期所（UseHistory）的裸 CLOSE 未裁决（simnow_pending#1），大商所（NoUseHistory）成交时先消耗昨仓（§13 #4）
+// 而挂单冻结冻哪一边**未观测**。⚠️ 这里原写「真实 CTP 未裁决」—— 自 #4 收敛起说宽了（评审 20260915 grep 到）。
 //
 // 猜错的后果是把冻结记到另一边 —— 而那**不会以失败的形式出现**：
 // 两边都是「冻了 1 手」，只是冻在了不同的桶里。

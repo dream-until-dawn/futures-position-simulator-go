@@ -237,7 +237,15 @@ func TestSubmitBareCloseOnNoUseHistory(t *testing.T) {
 	_, err := s.Submit(simDay, wall(t, "2026-09-15 10:02"), req(t, "DCE.m2701", types.Sell, types.Close, "3360", 1))
 	var rej *match.RejectedError
 	if !errors.As(err, &rej) || rej.Rejection.Check != order.CheckClosable {
-		t.Errorf("⚠️ 无仓裸平要拒在可平量：%v", err)
+		t.Fatalf("⚠️ 无仓裸平要拒在可平量：%v", err)
+	}
+	// ⚠️ 语料里没有裸 CLOSE 的拒单（只有「账上无仓时显式平昨」那一条，CTP 30）⇒ 拒因必须是 Unknown、不给码。
+	// 期待 30 就是把显式平昨的码外推到裸 CLOSE 上（评审 20260915）
+	if rej.Rejection.Kind != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 无仓裸平给了拒因 %v —— 语料没有裸 CLOSE 的拒单", rej.Rejection.Kind)
+	}
+	if c, ok := rej.Code(); ok {
+		t.Errorf("⚠️ 无仓裸平查到了码 %v —— 那是外推", c)
 	}
 }
 
