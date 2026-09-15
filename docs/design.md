@@ -644,6 +644,37 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 | 存档格式的版本迁移 | v0.9.0 之前格式可以变；`State` 带一个格式版本号，对不上就报错，不迁移 |
 | 跨规则版本恢复 | §4：隐式基线跟规则数据走，跨版本恢复算出来的每个数都可能错 |
 
+#### 10. F6：快期夹具的跨日重建与挂单冻结走门面（2026-09-15，实现之前写；三个决策点使用者同日按实现方倾向拍板）
+
+**为什么**：快期那侧还有两份记账逻辑没收进门面 ——
+跨日持仓 `conformance/fixture.Carry` / `Reconstruct`（前一日成交 `Replay` → `position.Settle` → 当日 `ReplayFrom`），
+挂单冻结 `FrozenOf`（持仓侧手数）/ `FrozenAccountOf`（账户侧金额，自己调 `fee` / `margin` / `order.Book`）。
+它们与门面并存，就是 F1 开头说的「两份实现一起退化时对拍全绿」。
+
+##### 三个决策点（使用者 2026-09-15 拍板：按实现方倾向）
+
+1. **UseHistory 上的裸 `CLOSE`**：`Choices` 加第八项 `UndatedCloseOnUseHistory {Unmeasured, AsYesterday}`。
+   `KQChoices` 填 `AsYesterday`（kq_facts 32，两条独立证据；kq_facts 25 柜台接受），`CTPChoices` **留空**（simnow_pending#1 未裁决）。
+   ⚠️ 与第一至七项不同：它的零值**合法** —— 零值时 UseHistory 上的裸 CLOSE 报错（现状），不是开户就报错；否则 CTP 预设开不了户
+2. **快期上大商所跨结算不滚昨仓**（kq_facts 24），门面按 §13 #20 裁决跟 CTP 滚 ⇒ **迁移只覆盖上期所**；
+   大商所那一格登记为口子差（#20 裁决时的承诺），不为快期再开一个「不滚」的口径
+3. **柜台已接受的挂单走一条不校验的入口** `PlaceAccepted(day, id, req)`：只冻结记簿、不跑八项 —— 与 `ApplyTrade` 之于 `Submit` 同一个关系（§4「两条并存的路径」）。
+   快期的活委托里有本库校验会拒的单（`SHFE.ag2702` 买开 @13009.9，零头 0.9 tick，快期照收，kq_facts 45；快期不查时段，kq_facts 48）。
+   ⚠️ 它仍然守两条：冻住的手数不超过持仓（簿与持仓一致）、冻结额从可用里扣（资金不够就报错 —— 柜台接受了而本库账上钱不够，说明两边账不一致）
+
+##### 分两步
+
+- **F6a（门面能力）**：决策点 1、3 落进门面；裸 CLOSE 在 UseHistory 上 = 平昨 ⇒ 消耗昨仓、冻结昨仓、手续费走平昨档（快期三档同费率，kq_facts 18/34）；单测
+- **F6b（迁移）**：`conformance/fixture` 新增在门面上重放「前一日成交 → 结算 → 当日成交 → 活委托」的辅助，
+  `reconstruct_test` / `crossday_test` / `frozen_account_test` / `order_frozen_test` 逐条改从它取，**每替换一条，替换前后逐字段判定相同**（F1 替换 `Rebuild` 同一条判据），旧函数最后删
+  - ⚠️ 失去的一道检查：`Replay` 的「三种消耗顺序各跑一遍查歧义」在门面上没有对应物（门面按先平昨 / 平昨写死）。快期上消耗顺序「结构性测不出」（kq_facts 40），那道检查在快期夹具上一直在答「分不开」—— 删掉它时在 silent-risks 登记
+
+##### 已核
+
+- 活委托 10 笔，全部带 `insert_date_time`；上期所 `CLOSE` 5 笔、`CLOSETODAY` 2 笔、开仓 3 笔（其中 2 笔大商所）
+- `NakedCloseRefuse` 只在 `frozen_test.go` 四处用（意图「不声明口径就拒」，迁移后由门面口径的零值承担）
+- 费率 / 保证金率：`ratesOf` / `ratesFor`；PositionDateType：`measured-rules-20260909.json`
+
 ### 为什么这样切
 
 **纯函数层与状态层的分界是这套结构的主轴。** `fee` / `margin` / `pnl` 只做计算：
