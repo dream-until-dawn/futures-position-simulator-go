@@ -5789,7 +5789,7 @@
 		"dir": "",
 		"file": "state.go",
 		"old": "if off := s.datedOffset(inst.PositionDateType, req.Offset); off.IsClose() && !off.SpecifiesPositionDate() {",
-		"new": "if off := req.Offset; off.IsClose() && !off.SpecifiesPositionDate() {",
+		"new": "if off := req.Offset; off.IsClose() && !off.SpecifiesPositionDate() && inst.PositionDateType == inst.PositionDateType {",
 		"pkg": "./",
 		"test": "TestRestoreChecksAsYesterdaySplit",
 		"want": "合法存档恢复不了",
