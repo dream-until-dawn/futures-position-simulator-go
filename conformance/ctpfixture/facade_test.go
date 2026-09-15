@@ -44,12 +44,24 @@ func (r oneInstrumentRules) CommissionRates(id types.InstrumentID, _ types.Hedge
 }
 
 func (oneInstrumentRules) ProductInstruments(types.Exchange, string) []types.InstrumentID { return nil }
-func (oneInstrumentRules) Version() int64                                               { return 20260915 }
+func (oneInstrumentRules) Version() int64                                                 { return 20260915 }
 
 // TestFacadeReplaysAg2702AgainstCTP 用**生产的门面**按 CTP 预设重放 SHFE.ag2702 交易日 20260915 的 9 笔成交，
 // 在六份截面的时点逐项比那条持仓记录。
 //
-// 比的全是**同一条持仓记录**里的字段（同一次请求）：手数、OpenCost、UseMargin、PositionProfit、CloseProfit、Commission。
+// 柜台一侧比的全是**同一条持仓记录**里的字段（同一次请求）：手数、OpenCost、UseMargin、PositionProfit、CloseProfit、Commission。
+// ⚠️ 本库一侧，UseMargin / PositionProfit / CloseProfit / Commission 取的是**账户合计**（门面还没有逐持仓的这几项查询）。
+// 它等于 ag2702 这条腿自己的值，**只因为**规则数据只装了这一个合约 —— 门面里结构上不可能有第二条腿。
+// 多腿重放时这里要改取逐持仓的值，否则红得像门面算错了（评审 20260915）。
+//
+// ⚠️ **它钉住 CTPChoices 的哪几格**（评审 20260915 逐格翻过）：
+//
+//	FeeBasis / MarginBasis / Mark   钉住（翻掉分别红在 Commission / UseMargin / PositionProfit）
+//	SideScope                       不钉：单合约单方向，三种范围同值
+//	Algorithm                       不钉：本条不比 Available
+//
+// 后两格靠 TestPresetsLeaveExactlyTheUnmeasuredCellsEmpty 的字面断言，Algorithm 的 CTP 证据在 TestProductionAccountAvailableAgainstCTP。
+// ⇒ 本条**不是**把 CTP 预设整个核过了。
 // ⚠️ 持仓盈亏的计价价取记录自己的 `SettlementPrice`（盘中柜台就用它算持仓盈亏），不取行情快照的最新价 ——
 // 行情与持仓是两次请求，中间价会动（§13 #18；-6 那份记录 15459、行情 15456）。
 //
@@ -61,7 +73,8 @@ func (oneInstrumentRules) Version() int64                                       
 //	昨结算价    行情快照
 //	成交        -9 那份的当日成交（前几份的成交列表是它的前缀）
 //
-// ⚠️ **手续费**：柜台比本库**恰好**多 0.005 × 成交笔数 —— §13 #19（上期所行为里的每手 0.005 声明费率里没有）。
+// ⚠️ **手续费**：柜台比本库**恰好**多 0.005 × 成交**手数** —— §13 #19（上期所行为里的每手 0.005 声明费率里没有）。
+// 本样本每笔 1 手，手数与笔数同值；按笔数累加会在多手成交上少算，而报错会指向 #19（评审 20260915）。
 // 本条钉的是**差恰好是那个常数**，不是「一致」：#19 哪天收敛、或本库手续费算错一分，这一格都会红。
 func TestFacadeReplaysAg2702AgainstCTP(t *testing.T) {
 	fx := loadCTP(t)
@@ -108,7 +121,7 @@ func TestFacadeReplaysAg2702AgainstCTP(t *testing.T) {
 
 	trades := get("-9").Trades
 	sort.Slice(trades, func(i, j int) bool { return flt(t, trades[i], "SequenceNo") < flt(t, trades[j], "SequenceNo") })
-	applied, compared := 0, 0
+	applied, compared, lots := 0, 0, 0
 	for _, suffix := range slices {
 		f := get(suffix)
 		r := f.Positions[rec]
@@ -126,8 +139,10 @@ func TestFacadeReplaysAg2702AgainstCTP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			vol := int(flt(t, tr, "Volume"))
+			lots += vol
 			if err := sim.ApplyTrade(day, match.Trade{Instrument: id, Direction: dir, Offset: off,
-				Hedge: types.Speculation, Price: num(t, tr, "Price"), Volume: int(flt(t, tr, "Volume"))}); err != nil {
+				Hedge: types.Speculation, Price: num(t, tr, "Price"), Volume: vol}); err != nil {
 				t.Fatalf("第 %d 笔成交：%v", applied+1, err)
 			}
 		}
@@ -147,14 +162,14 @@ func TestFacadeReplaysAg2702AgainstCTP(t *testing.T) {
 		lib["UseMargin"], _ = a.CurrMargin.Float64()
 		lib["PositionProfit"], _ = a.PositionProfit.Float64()
 		lib["CloseProfit"], _ = a.CloseProfit.Float64()
-		lib["Commission"], _ = a.Commission.Add(decimal.RequireFromString("0.005").Mul(decimal.NewFromInt(int64(applied)))).Float64()
+		lib["Commission"], _ = a.Commission.Add(decimal.RequireFromString("0.005").Mul(decimal.NewFromInt(int64(lots)))).Float64()
 
 		for _, k := range []string{"Position", "OpenCost", "UseMargin", "PositionProfit", "CloseProfit", "Commission"} {
 			want := flt(t, r, k)
 			if math.Abs(lib[k]-want) > 1e-6 {
 				extra := ""
 				if k == "Commission" {
-					extra = "（本库已加上 0.005 × 成交笔数；差不再是这个常数 ⇒ §13 #19 变了，或本库手续费错了）"
+					extra = "（本库已加上 0.005 × 成交手数；差不再是这个常数 ⇒ §13 #19 变了，或本库手续费错了）"
 				}
 				t.Errorf("⚠️ ctp-slices-20260915%s（已灌 %d 笔）%s：本库 %v，柜台 %v%s", suffix, applied, k, lib[k], want, extra)
 			}
