@@ -534,6 +534,57 @@ F2 之后门面**能**结算了 ⇒ 若有人在这两条路上调 `Settle`，`p
 - **成交之后**：`Submit` 成交的账与 `ApplyTrade` 同一笔成交的账逐字段相同（两条路只在「成交之前」不同）
 - **没查成不成交**：不给限仓 / 不给取整方向 / 不给日历，各自返回 `UncheckedError` 且点名缺什么，状态不动
 
+#### 8. F4：挂单 —— `Place` / `Cancel` / `Fill`（2026-09-15，实现之前写）
+
+F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」这个状态。F4 给**自己撮合的引擎**用：单子先挂上、冻结，何时成交由引擎决定。
+
+    func (s *Simulator) Place(day types.TradingDay, at time.Time, id string, req order.Request) (order.Frozen, error)
+    func (s *Simulator) Cancel(day types.TradingDay, id string) error
+    func (s *Simulator) Fill(day types.TradingDay, id string) (match.Trade, error)
+    func (s *Simulator) Live() []string
+
+##### 语义
+
+- **`Place`**：与 `Submit` 同一套事实组装（抽成一个方法，两处共用）⇒ `order.Validate`；被拒 / 没查成与 `Submit` 同样返回
+  `*match.RejectedError` / `*match.UncheckedError`；通过 ⇒ `FreezeOf` ⇒ `account.Freeze`（保证金 + 手续费）⇒ `order.Book.Insert`。**不成交**
+- **`Cancel`**：`Book.Remove` ⇒ `account.Unfreeze`。不在簿上报错（`Book` 已有这条）
+- **`Fill`**：一笔挂单**全量**成交，**价 = 挂单价**（与 `match` 的裁决同一句：不做盘口、100% 全量；引擎决定的只是「何时」）
+  ⇒ `Book.Remove` ⇒ `Unfreeze` ⇒ `ApplyTrade`。`ApplyTrade` 失败（例如 §13 #21 分歧段）⇒ 挂单与冻结**原样放回**，放不回则失效态
+- ⚠️ **冻结的手续费与成交时收的手续费是两次计算**：挂单价 = 成交价时两者相等；本库成交价恒等于挂单价，所以相等是结构保证的，测试钉一格
+
+##### 要改的地方
+
+1. **`order.checkClosable` 扣掉已挂平仓单冻住的手数** —— 现在不扣，两笔平仓挂单能超出持仓。
+   `order.Facts` 加 `Frozen order.Frozen`（被平那一侧已冻的今 / 昨手数，门面从 `Book.TotalOf` 取）；
+   平今 ≤ 今仓 − 已冻今、平昨 ≤ 昨仓 − 已冻昨、裸 CLOSE ≤ 总仓 − 已冻总。`Submit` 也传它（挂着的平仓单同样占着可平量）
+2. **`Settle` 在簿上有挂单时报错**：`account.Settle` 本来就拒绝带冻结结算；门面在前面先报「先撤单」。
+   ⚠️ CTP 的当日有效单在收盘后由交易所撤销 —— 那是**文档**，本库没有观测；不替调用方自动撤
+3. **`ApplyTrade`（灌成交）不许平掉挂单冻住的手数**：平完之后被平那一侧的剩余今 / 昨仓必须 ≥ 已冻的今 / 昨手数，否则报错、状态不动。
+   灌进来的成交是柜台已接受的事实，柜台不会让它与挂单冲突；冲突只可能是调用方把挂单成交走了 `ApplyTrade` 而不是 `Fill`
+4. **限仓**：挂着的开仓单算不算进限仓 —— **没有观测**。F4 不算（与 `order` 现有 `openVolumeAfter` 一致），登记
+
+##### 验证
+
+- **CTP 冻结三件套**（账户冻结字段 + 持仓记录的冻结手数），门面走 `Place`：
+  - `ctp-frozen-20260910`：空仓，买开 1 @3005 ⇒ `FrozenMargin` 4808、`FrozenCommission` 3.01（本库按声明费率少 0.005，§13 #19）
+  - `ctp-frozen-20260911`：rb2701 昨 1（20260910 开 @3148、按 3147 结算），卖出**平昨** 1 @3304（委托额 33040）
+    ⇒ `FrozenMargin` 0、`FrozenCommission` 3.309（少 0.005）、多头记录 `ShortFrozen` 1（门面：多头侧已冻昨 1）
+  - `ctp-frozen-20260914`：rb2701 今 1（@3105），卖出**平今** 1 @3272（委托额 32720）⇒ `FrozenCommission` 3.277（少 0.005）、`ShortFrozen` 1（已冻今 1）
+  - 每份再比「可用 − 结存」：= −占用 − 冻结（这几份持仓盈亏都不为正，§13 #17 的排除项为 0）—— 冻结确实从可用里扣了，而且扣的是这个数
+- **往返**：`Place` 再 `Cancel` ⇒ 账户快照与挂单前逐字段相同（state.md「报单 → 挂上 → 撤单 → 账户回到起点，差 0」是 CTP 上的观测）
+- **可平量**：持仓 1 手时挂一笔平仓，第二笔平仓（挂单或 `Submit`）拒在可平量；撤掉第一笔后第二笔可以挂
+- **`Fill`**：挂单成交的账 = 同价 `Submit` 的账；`Fill` 撞 #21 报错时挂单与冻结都还在
+- **`Settle` 带挂单报错**、`ApplyTrade` 平掉冻住手数报错
+
+##### 不做（F4 范围外）
+
+| 不做 | 为什么 |
+|---|---|
+| 部分成交 | `match` 的裁决 |
+| 自动撤当日有效单 | 没有观测；调用方显式撤 |
+| 快期侧冻结（`conformance/fixture/frozen.go`）迁到门面 | 快期带委托的夹具全部带昨仓，而 `Rebuild` 不接昨仓 —— 要先让快期那侧的跨日重建走门面（`Settle`），是单独一批 |
+| `State()` / `Restore()` | F5 |
+
 ### 为什么这样切
 
 **纯函数层与状态层的分界是这套结构的主轴。** `fee` / `margin` / `pnl` 只做计算：
