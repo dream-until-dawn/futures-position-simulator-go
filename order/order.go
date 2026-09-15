@@ -401,6 +401,8 @@ func checkClosable(req Request, p *position.Position) *Rejection {
 		// ✅ 裸 Close 在 **NoUseHistory** 上：CTP 实测**接受**、消耗昨仓（§13 #4，大商所），§13 #20 裁决全部 NoUseHistory 跟 CTP。
 		// ⇒ 按**今昨合计**校验可平量；消耗顺序由 position.MeasuredCloseOrder 给（这里只校验量，不挑顺序）。
 		// ⚠️ 超量的拒因不给（ReasonUnknown）：语料里没有裸 Close 的拒单。观测只覆盖大商所，郑商所等为外推。
+		// ⚠️ **形状范围**（评审 20260915）：观测只有「今 1 昨 1、裸平 1 手」—— 未跨过昨仓。
+		// 跨过昨仓时「柜台接受到总量为止」是**推得**；以总量为上限放行，没有观测。
 		if _, measured := position.MeasuredCloseOrder(p.DateType()); measured {
 			if req.Volume > today+his {
 				return &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(

@@ -29,6 +29,8 @@ const (
 	//
 	// ⚠️ **在本库的明细上它与 YesterdayFirst 恒等价**：昨仓必然比今仓先开（结算把当时的全部明细一起标昨），
 	// 而同为昨仓或同为今仓时 YesterdayFirst 也按明细顺序消耗 —— 两者永远消耗同一批。
+	// ⚠️ 前提由**调用约定**保证，**类型本身不保证**：明细只经 Open 按时间追加、Settle 一次标全部。
+	// `Side.Append` 是导出的、`Lot.Settled` 可以随手设 —— 绕开这两条造出来的明细，两者可能分开（评审 20260915）。
 	// 此前这里写「连续两个交易日各建一次种子就能分开」，那不成立。守卫 TestYesterdayFirstEqualsFIFO。
 	FIFO
 )
@@ -37,6 +39,9 @@ const (
 //
 //	NoUseHistory   YesterdayFirst（§13 #4 CTP 实测于大商所；§13 #20 裁决全部 NoUseHistory 跟 CTP，郑商所等为外推）
 //	其余           没有实测 —— UseHistory 上裸 Close 在 CTP 的语义未测（simnow_pending#1），本库对它报错
+//
+// ⚠️ **形状范围**（评审 20260915）：观测只覆盖**今 1 昨 1、通用平 1 手、消耗昨仓**这一个形状 ——
+// 平量**未跨过**昨仓。跨过昨仓时「按先平昨延伸到今仓、以总量为上限」是**推得**，没有观测。
 //
 // ⚠️ 规则只住这一处：order 的可平量校验与将来的门面都从这里取，不各自写一份。
 func MeasuredCloseOrder(dt refdata.PositionDateType) (CloseOrder, bool) {
