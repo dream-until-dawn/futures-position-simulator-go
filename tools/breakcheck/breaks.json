@@ -6114,5 +6114,16 @@
 		"test": "TestDocSectionRefsResolve",
 		"want": "写错的文件名 silent-risk.md 没被报出来",
 		"expect": "red"
+	},
+	{
+		"name": "621 cmd/oracle 的 -carry 结算价接错（+50）：结转接上了、比对计数也不变，只有本库 position_price_long 变了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/conformance/live.go",
+		"old": "\t\tspec.PositionDate, settle, cur.TradingDay)",
+		"new": "\t\tspec.PositionDate, settle.Add(decimal.NewFromInt(50)), cur.TradingDay)",
+		"pkg": "./conformance/",
+		"test": "TestCompareCarriesThroughFacade",
+		"want": "结算价接错了",
+		"expect": "red"
 	}
 ]

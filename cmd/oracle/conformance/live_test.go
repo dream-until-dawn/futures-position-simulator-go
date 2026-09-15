@@ -51,6 +51,24 @@ func TestCompareCarriesThroughFacade(t *testing.T) {
 	if !contains(res.Symbols, "SHFE.rb2701（结转）") {
 		t.Errorf("⚠️ 给了前一日夹具与结算价，rb2701 应当结转后比上：比了 %v，带昨仓跳过 %v", res.Symbols, res.SkippedHistory)
 	}
+	// ⚠️ 参数也要传对，不只是接上（评审 20260915）：结算价接错（例如 +50）时 position_price_long 变了，
+	// 但那个字段对柜台本来就判「失败」（已登记的口子：柜台给收盘价），Report 的计数与 NovelFailures 都不变 ⇒ 直接断言本库的值等于传入的交易所结算价。
+	// 这份截面上只有 rb2701 被比到，字段名唯一。
+	// ⚠️ 两个结构性盲区（这份样本上分不出来，不处理）：dateType 换成 NoUseHistory 结果逐字段不变（门面按 §13 #20 一律滚成昨仓）；
+	// cur 传 nil 结果不变（status-20260909-2 里 rb2701 当天没有成交）
+	found := false
+	for _, fd := range res.Report.Fields {
+		if fd.Name != "position_price_long" {
+			continue
+		}
+		found = true
+		if fd.LibraryAbsent || !fd.Library.Equal(decimal.RequireFromString("3163")) {
+			t.Errorf("⚠️ 结转后本库 position_price_long = %s（无值 %v），应等于传入的交易所结算价 3163 —— 结算价接错了", fd.Library, fd.LibraryAbsent)
+		}
+	}
+	if !found {
+		t.Error("⚠️ Report 里没有 position_price_long —— 断言空转")
+	}
 
 	without, err := Compare(raw, built, nil)
 	if err != nil && !strings.Contains(err.Error(), "一个合约都没比到") {
