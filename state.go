@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/account"
+	"github.com/dream-until-dawn/futures-position-simulator-go/match"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
@@ -12,6 +13,9 @@ import (
 )
 
 // StateFormat 是存档格式的版本。对不上就报错，不迁移（v0.9.0 之前格式可以变）。
+//
+// ⚠️ State 及其嵌套结构没有 json tag，JSON 键就是 Go 字段名：**改字段名、加删字段都要手动把这个数加一**，
+// 它不会自己跟着变（评审 20260915 要求写在这里，不只写在 design 里）。
 const StateFormat = 1
 
 // State 是模拟器的全部状态，全是数据。小数在 JSON 里是字符串（decimal.Decimal 的默认）。
@@ -160,7 +164,14 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 			return nil, fmt.Errorf("存档里的挂单：%w", err)
 		}
 		if _, got, _ := s.book.Get(o.ID); fmt.Sprintf("%+v", got) != fmt.Sprintf("%+v", o.Frozen) {
-			return nil, fmt.Errorf("存档里挂单 %s 的冻结 %+v 与按委托重算的 %+v 不同", o.ID, o.Frozen, got)
+			return nil, fmt.Errorf("存档里挂单 %s 的冻结手数 %+v 与按开平标志重算的 %+v 不同", o.ID, o.Frozen, got)
+		}
+	}
+	// 挂单冻结的**金额**逐笔重算（评审 20260915：上一版只按开平标志重算了手数，金额取的是存档自己的数，
+	// 挂单与账户的冻结手续费一起改就查不出来）。放在计价恢复之后：昨结算价基准要它。
+	for _, o := range st.Orders {
+		if err := s.checkOrderFreeze(st.Day, o); err != nil {
+			return nil, err
 		}
 	}
 	total := s.book.Total()
@@ -195,6 +206,39 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 		}
 	}
 	return s, nil
+}
+
+// checkOrderFreeze 核一笔存档挂单的冻结金额（以及指定了今昨的平仓单的手数）是否就是这笔委托该冻的。
+//
+// ⚠️ 只核**与挂单那一刻的持仓无关**的部分。裸 CLOSE 的今昨拆分与手续费档位依赖挂单时的持仓，而持仓在挂单之后可能变了：
+// 挂一笔裸平（今1昨1 时冻昨 1、按平今档收）之后再成交一笔平今，账上只剩昨 1 —— 这是合法状态，
+// 可在恢复时的持仓上重算那笔挂单会撞 §13 #21 报错。⇒ 裸 CLOSE：手续费只核「今仓部分走平今档、其余走平昨档」的某种拆法
+// （commission(tr, k)，k = 0…手数）能算出存档的数；拆分只核合计与持仓（上面已核）。
+func (s *Simulator) checkOrderFreeze(day types.TradingDay, o OrderState) error {
+	req := o.Request
+	if req.Offset.IsClose() && !req.Offset.SpecifiesPositionDate() {
+		if !o.Frozen.Margin.IsZero() {
+			return fmt.Errorf("存档里挂单 %s 是裸 CLOSE，却冻了保证金 %s", o.ID, o.Frozen.Margin)
+		}
+		tr := match.Trade{Instrument: req.Instrument, Direction: req.Direction, Offset: req.Offset, Hedge: req.Hedge, Price: req.Price, Volume: req.Volume}
+		for k := 0; k <= req.Volume; k++ {
+			if c, err := s.commission(tr, k); err == nil && c.Equal(o.Frozen.Commission) {
+				return nil
+			}
+		}
+		return fmt.Errorf("存档里挂单 %s（裸 CLOSE %d 手）的冻结手续费 %s 不是任何一种今昨拆法能算出来的", o.ID, req.Volume, o.Frozen.Commission)
+	}
+	// 开仓与指定了今昨的平仓：FreezeOf 与持仓无关（保证金按挂单价或昨结算价、手续费按开平标志），整份重算
+	// ⚠️ 此刻这笔挂单已在簿上：FreezeOf 对这两类单不看簿，所以不用先拿下
+	want, err := s.FreezeOf(day, req)
+	if err != nil {
+		return fmt.Errorf("存档里挂单 %s 重算冻结：%w", o.ID, err)
+	}
+	if !want.Margin.Equal(o.Frozen.Margin) || !want.Commission.Equal(o.Frozen.Commission) {
+		return fmt.Errorf("存档里挂单 %s 的冻结（保证金 %s / 手续费 %s）与按委托重算的（%s / %s）不同",
+			o.ID, o.Frozen.Margin, o.Frozen.Commission, want.Margin, want.Commission)
+	}
+	return nil
 }
 
 func sortedInstruments(set map[types.InstrumentID]bool) []types.InstrumentID {

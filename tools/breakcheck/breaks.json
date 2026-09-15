@@ -5584,5 +5584,27 @@
 		"test": "TestBareCloseFillOrderAndSubmitAmongLiveOrders",
 		"want": "先成交冻今的那笔失败",
 		"expect": "red"
+	},
+	{
+		"name": "565 恢复不逐笔重算挂单冻结金额——挂单与账户冻结手续费一起改的存档照样恢复（评审 20260915 找到的原样）",
+		"dir": "",
+		"file": "state.go",
+		"old": "if err := s.checkOrderFreeze(st.Day, o); err != nil {",
+		"new": "if err := s.checkOrderFreeze(st.Day, o); false && err != nil {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "挂单与账户冻结手续费一起 +1",
+		"expect": "red"
+	},
+	{
+		"name": "566 裸平挂单的手续费核对形同虚设——任何一种拆法算得出就放行变成算得出任何一种就放行",
+		"dir": "",
+		"file": "state.go",
+		"old": "if c, err := s.commission(tr, k); err == nil && c.Equal(o.Frozen.Commission) {",
+		"new": "if c, err := s.commission(tr, k); err == nil || c.Equal(o.Frozen.Commission) {",
+		"pkg": "./",
+		"test": "TestRestoreAcceptsBareCloseAfterPositionChanged",
+		"want": "今昨拆法",
+		"expect": "red"
 	}
 ]
