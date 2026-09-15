@@ -686,6 +686,33 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 - `PlaceAccepted` 不做重复编号预检：`book.Insert` 报同一个错，冻结在回滚里解掉 —— 回滚因此有测试走到（破坏 581）
 - 测试用的规则数据加了 `SHFE.rb2701`（UseHistory、开 1 / 平昨 2 / 平今 5 按手，两两不同）：`ag2702` 三档同费率，分不开收哪一档
 
+##### F6b 修订：调用面比设计时看到的大，按两半分（2026-09-15，F6a 之后、F6b 实现之前写）
+
+**设计时漏看的调用面**（上面「已核」只数了四个测试）：
+`Carry` 还在 `carry_test`（守卫单测 5 条）、`carrywire_test`（`carryStartFor`，被 `fixture_test` 的全量持仓对拍用）、`crossday_test`；
+`Reconstruct` 还在 **`cmd/oracle` 的 `live.go`**（`-carry` 实时对拍）；`FrozenOf` 在 `fixture_test` / `frozen_test` / `reconstruct_test`。
+而 `cmd/oracle` 的规格（`BuildSpecs`：字典乘数 + 实测保证金率 + 实测 PositionDateType）**没有手续费率** —— 门面记账必须有它（`ApplyTrade` 每笔都算手续费），填零就是编数。
+
+**探针**（`conformance/fixture/probe_facade_freeze_test.go`，F6b 第一个提交入库，迁移完随旧函数一起删）：
+
+| 半边 | 比什么 | 结果 | 判别力（改一处再跑） |
+|---|---|---|---|
+| 冻结 | 24 份带委托的夹具：`FrozenAccountOf` 合计 ≡ 门面 `FreezeOf` 逐笔之和；每个合约 `FrozenOf` 多空今昨 ≡ 门面逐笔之和 | 0 差异 | 冻结保证金换报单价 → 2 处金额不同；第八项置零 → 5 笔裸 CLOSE 报错 |
+| 跨日 | rb2701：`reconstruct_test` 的 49 组输入 + `carrywire_test` 挑法的 49 组，`Reconstruct` 与门面「前日成交 → `Settle` → 当日成交」逐片明细（开仓价、基线、昨仓标记） | 98 组相同 | 结算价 +1 → 98 组全不同；第八项置零 → 40 组不同 |
+
+⚠️ 语料的覆盖是窄的：带委托的夹具 25 份，凑得齐规格的 24 份（`frozen_account_test` 同一筛法；差的一份 `exp-reject-tick-vs-limit-20260909-3` 缺 `DCE.i2701` 的昨结算价），
+其中活委托 9 笔（rb 平仓 5、平今 2，ag / i 开仓各 1；全语料 10 笔，差的就是那一份里的 1 笔）；跨日只有 rb2701 一个合约（交易所结算价只有上期所 20260908 一天）。
+
+**据此分两半**：
+
+- **F6b-1 冻结：删 `FrozenOf` / `FrozenAccountOf` / `NakedClosePolicy`**。调用方改用门面上的辅助（每份夹具一个模拟器：委托涉及的合约给规格与昨结算价，`PlaceAccepted` 不需要持仓的那部分直接 `FreezeOf`）。
+  `NakedCloseRefuse` 那几格的意图（不声明口径就拒）由第八项的零值承担，`frozen_test` 相应改写。没有非测试调用方
+- **F6b-2 跨日：四个对拍测试（`crossday` / `reconstruct` / `carrywire`→`fixture_test`）改从门面取持仓；`Carry` / `Reconstruct` 暂留**，只剩 `cmd/oracle -carry` 与 `carry_test` 用。
+  ⚠️ 留下的第二份实现用两道守着：对拍在门面上（门面退化 → 对柜台红）；探针的跨日那一半转正为**等价守卫**（`Reconstruct` 漂离门面 → 红）。两份一起同样退化才漏 —— 那正是对拍在门面上要抓的
+  - 删它们要 `cmd/oracle` 有手续费率来源（候选：快期行情的每手手续费反解，`fee_test` 的 `feeRates` 就是这么标定的，只覆盖五个品种）⇒ 登记为 F7，不在 F6 里编
+  - ⚠️ 失去的一道检查（原计划里已写）：对拍测试改走门面后，`ReplayFrom` 的三种消耗顺序歧义检查不再在对拍路径上跑；它仍在 `Reconstruct` 里（`-carry` 路径）。登记 silent-risks
+- 同日重放 `Replay`（`fixture_test` / `margin_test` / `account_test` 的 `ReplayRealized` / `cmd/oracle`）**不在 F6 里** —— 它是 `PositionDateNotNeeded` 上的逐合约重放，与 `closeOffsetOf`（与门面 `datedOffset` 同义的第二处）一起记进 F7
+
 ##### 已核
 
 - 活委托 10 笔，全部带 `insert_date_time`；上期所 `CLOSE` 5 笔、`CLOSETODAY` 2 笔、开仓 3 笔（其中 2 笔大商所）
