@@ -1818,11 +1818,11 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | 文档 | 小节数 |
 |---|---|
 | `README.md` | 6 |
-| `docs/design.md` | 30 |
+| `docs/design.md` | 31 |
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 127 |
-| `docs/roadmap.md` | 39 |
+| `docs/roadmap.md` | 40 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 94 |
