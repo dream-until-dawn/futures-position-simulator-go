@@ -1885,7 +1885,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 
 | # | 等什么 | 谁在等它 | 落在哪个版本 |
 |---|---|---|---|
-| 1 | 裸 `CLOSE` 在 `UseHistory` 交易所上是否真等于平昨 | `order` 的平仓校验；在此之前**报错**而非按平昨处理 | v0.4.0 |
+| 1 | 裸 `CLOSE` 在 `UseHistory` 交易所上是否真等于平昨 | `order` 的平仓校验；在此之前**报错**而非按平昨处理（2026-09-15 F6a 起限定为 **CTP 口径，即门面 `Choices.UndatedCloseOnUseHistory` 零值时**；快期口径由调用方显式选 `UndatedCloseAsYesterday`，按平昨校验与记账 —— design.md「门面的形状」§10） | v0.4.0 |
 | 2 | `CloseProfitByDate` 与 `CloseProfitByTrade` 两套口径 | `pnl` 包。天勤只给一个 `close_profit`，分不开 | v0.2.0 |
 | 3 | 完整的 6 个手续费率 + 4 个保证金率 | `fee` / `margin`。天勤只给「每手」单一数值，**丢掉平今费率这个维度** | v0.1.0 |
 | 4 | 快期模拟与真实 CTP 柜台的口径差 | 全库的措辞。⚠️ 空仓时两口径必然相等，**必须建仓后测** | v0.8.0 |
