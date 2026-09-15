@@ -5794,5 +5794,38 @@
 		"test": "TestRestoreChecksAsYesterdaySplit",
 		"want": "合法存档恢复不了",
 		"expect": "red"
+	},
+	{
+		"name": "598 validate 不按第八项口径改写（快期口径下有昨仓的上期所裸 CLOSE，Submit 照旧拒）",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\tif off := s.datedOffset(inst.PositionDateType, req.Offset); off != req.Offset {",
+		"new": "\t\tif off := s.datedOffset(inst.PositionDateType, req.Offset); false && off != req.Offset {",
+		"pkg": "./",
+		"test": "TestUndatedCloseAsYesterdayInValidation",
+		"want": "Submit 拒了",
+		"expect": "red"
+	},
+	{
+		"name": "599 改写得来的拒单照样给 CTP 拒因码（快期口径下的裸 CLOSE 被配上显式平昨的语料码）",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\tif rewritten {\n\t\t\tr.Kind = ctperr.ReasonUnknown\n\t\t}",
+		"new": "\t\tif rewritten {\n\t\t\t_ = ctperr.ReasonUnknown\n\t\t}",
+		"pkg": "./",
+		"test": "TestUndatedCloseAsYesterdayInValidation",
+		"want": "配上了 CTP 码",
+		"expect": "red"
+	},
+	{
+		"name": "600 Submit 返回的成交带改写后的平昨（成交记录与委托、与快期成交里的 CLOSE 对不上）",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\ttrade.Offset = req.Offset //",
+		"new": "\t_ = req.Offset //",
+		"pkg": "./",
+		"test": "TestUndatedCloseAsYesterdayInValidation",
+		"want": "应保留委托上的 CLOSE",
+		"expect": "red"
 	}
 ]
