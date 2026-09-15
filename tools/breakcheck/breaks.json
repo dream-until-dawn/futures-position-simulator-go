@@ -5057,7 +5057,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "517 平仓按后开先平消耗（LIFO）——样本 B 平今 @15433 的平仓盈亏与剩下那片的 OpenCost 对不上柜台（§13 #13）",
+		"name": "517 平仓按后开先平消耗（LIFO）——样本 A 平今 @15457 先红：LIFO 平掉 15460 那片得 −45，柜台 0（§13 #13）",
 		"dir": "",
 		"file": "position/position.go",
 		"old": "\tfor i := range s.lots {\n\t\tif left == 0 {",
