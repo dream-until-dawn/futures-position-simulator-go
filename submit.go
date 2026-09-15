@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/ctperr"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
@@ -36,6 +37,7 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 		return order.Frozen{}, err
 	}
 	in := order.FreezeInput{}
+	req.Offset = s.datedOffset(inst.PositionDateType, req.Offset) // 冻昨仓，与成交时平昨一致
 	tr := match.Trade{Instrument: req.Instrument, Direction: req.Direction, Offset: req.Offset,
 		Hedge: req.Hedge, Price: req.Price, Volume: req.Volume}
 
@@ -94,13 +96,28 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 // validate 组装八项校验的事实、算这笔单冻结什么，并做校验。Submit 与 Place 共用。
 //
 // 返回：被拒 ⇒ *match.RejectedError；没查成 ⇒ *match.UncheckedError；时刻与交易日矛盾、算不出资金（且没有拒因）⇒ 普通错误。
-// 通过时返回冻结额与（已填好 Need 的）事实。
-func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Request) (order.Frozen, order.Facts, error) {
+// 通过时返回按口径改写过开平标志的请求（见下）、冻结额与（已填好 Need 的）事实。
+//
+// ⚠️ 八项也跟第八项口径（评审 20260915 打回 F6a 后改）：UseHistory 上的裸 CLOSE 在口径为平昨时**按平昨校验**。
+// 上一版只在记账路径改写，于是快期口径下同一笔单 ApplyTrade 收、Submit 拒，而拒因原话说「本库拒绝按平昨处理：只在快期实测过」——
+// 调用方选的恰恰是快期口径，报错对判据的描述与实际行为不一致。
+// 改写得来的拒单**不给 CTP 拒因码**（Kind 清成 ReasonUnknown）：码的语料是 CTP 上显式平昨的拒单，快期口径下的裸 CLOSE 不在里面，不外推。
+func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Request) (order.Request, order.Frozen, order.Facts, error) {
 	var f order.Facts
 
 	inst, err := s.rules.Instrument(req.Instrument)
+	rewritten := false
 	if err == nil {
 		f.Instrument, f.HasInstrument = inst, true
+		if off := s.datedOffset(inst.PositionDateType, req.Offset); off != req.Offset {
+			req.Offset, rewritten = off, true
+		}
+	}
+	reject := func(r order.Rejection) error {
+		if rewritten {
+			r.Kind = ctperr.ReasonUnknown
+		}
+		return &match.RejectedError{Rejection: r, Exchange: req.Instrument.Exchange}
 	}
 	px := s.prices[req.Instrument]
 	f.PreSettlement, f.HasPreSettlement = px.pre, px.hasPre
@@ -127,7 +144,7 @@ func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Reque
 		d, err := s.calendar.TradingDayAt(at, req.Instrument.Exchange, req.Instrument.Product)
 		switch {
 		case err == nil && d != day:
-			return order.Frozen{}, f, fmt.Errorf("报单时刻 %s 属于交易日 %d，而模拟器在交易日 %d —— 时刻与交易日矛盾",
+			return req, order.Frozen{}, f, fmt.Errorf("报单时刻 %s 属于交易日 %d，而模拟器在交易日 %d —— 时刻与交易日矛盾",
 				at.In(refdata.CNZone()).Format("2006-01-02 15:04:05"), d, day)
 		case err == nil:
 			f.InSession, f.HasSession = true, true
@@ -146,21 +163,21 @@ func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Reque
 			// 不塞进「没查成」—— 那里只会说「保证金与手续费」，把真正缺的东西说丢了。
 			// ⚠️ 但先看有没有更高优先级的拒因：无仓裸平这类单该拒在可平量，不该被「算不出资金」盖住
 			if res := order.Validate(req, f); res.Rejected != nil {
-				return order.Frozen{}, f, &match.RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}
+				return req, order.Frozen{}, f, reject(*res.Rejected)
 			}
-			return order.Frozen{}, f, fmt.Errorf("算这笔单要占用的资金：%w", err)
+			return req, order.Frozen{}, f, fmt.Errorf("算这笔单要占用的资金：%w", err)
 		}
 		f.Need, f.HasNeed = fr.Margin.Add(fr.Commission), true
 	}
 
 	res := order.Validate(req, f)
 	if res.Rejected != nil {
-		return order.Frozen{}, f, &match.RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}
+		return req, order.Frozen{}, f, reject(*res.Rejected)
 	}
 	if !res.FullyChecked() {
-		return order.Frozen{}, f, &match.UncheckedError{Unchecked: res.Unchecked}
+		return req, order.Frozen{}, f, &match.UncheckedError{Unchecked: res.Unchecked}
 	}
-	return fr, f, nil
+	return req, fr, f, nil
 }
 
 // Submit 报一笔单：组装八项校验的事实 ⇒ match.Fill（通过即按报价全量成交，裁决）⇒ ApplyTrade。
@@ -171,14 +188,15 @@ func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request
 	if err := s.usable(day); err != nil {
 		return match.Trade{}, err
 	}
-	_, f, err := s.validate(day, at, req)
+	dated, _, f, err := s.validate(day, at, req)
 	if err != nil {
 		return match.Trade{}, err
 	}
-	trade, err := match.Fill(req, f)
+	trade, err := match.Fill(dated, f)
 	if err != nil {
 		return match.Trade{}, err
 	}
+	trade.Offset = req.Offset // 成交记录报的是委托上的开平标志（快期成交里裸 CLOSE 仍记作 CLOSE）；记账时 ApplyTrade 照口径再改写
 	if err := s.ApplyTrade(day, trade); err != nil {
 		return match.Trade{}, err
 	}

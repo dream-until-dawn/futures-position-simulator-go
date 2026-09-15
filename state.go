@@ -179,6 +179,7 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 		return nil, fmt.Errorf("挂单冻结合计（保证金 %s / 手续费 %s）与账户冻结（%s / %s）不同",
 			total.Margin, total.Commission, st.Account.FrozenMargin, st.Account.FrozenCommission)
 	}
+	// ⚠️ 与 PlaceAccepted 的可平量守卫是同一个条件（一个在恢复、一个在入口），没合并 —— 改一处的判据或文案，另一处跟上
 	for key, p := range s.positions {
 		for _, dir := range []types.Direction{types.Buy, types.Sell} {
 			fz := s.book.TotalOf(key.inst, dir)
@@ -216,7 +217,12 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 // （commission(tr, k)，k = 0…手数）能算出存档的数；拆分只核合计与持仓（上面已核）。
 func (s *Simulator) checkOrderFreeze(day types.TradingDay, o OrderState) error {
 	req := o.Request
-	if req.Offset.IsClose() && !req.Offset.SpecifiesPositionDate() {
+	inst, err := s.rules.Instrument(req.Instrument)
+	if err != nil {
+		return fmt.Errorf("存档里的挂单 %s：%w", o.ID, err)
+	}
+	// UseHistory 上按口径记作平昨的裸 CLOSE 与持仓无关（整份冻昨），走下面的整份重算
+	if off := s.datedOffset(inst.PositionDateType, req.Offset); off.IsClose() && !off.SpecifiesPositionDate() {
 		if !o.Frozen.Margin.IsZero() {
 			return fmt.Errorf("存档里挂单 %s 是裸 CLOSE，却冻了保证金 %s", o.ID, o.Frozen.Margin)
 		}
@@ -237,6 +243,11 @@ func (s *Simulator) checkOrderFreeze(day types.TradingDay, o OrderState) error {
 	if !want.Margin.Equal(o.Frozen.Margin) || !want.Commission.Equal(o.Frozen.Commission) {
 		return fmt.Errorf("存档里挂单 %s 的冻结（保证金 %s / 手续费 %s）与按委托重算的（%s / %s）不同",
 			o.ID, o.Frozen.Margin, o.Frozen.Commission, want.Margin, want.Commission)
+	}
+	// ⚠️ 手数也核：簿按开平标志重算手数，而记作平昨的裸 CLOSE 在簿上仍是 Close，手数取的是存档自己的今 / 昨拆分
+	if want.VolumeToday != o.Frozen.VolumeToday || want.VolumeHistory != o.Frozen.VolumeHistory {
+		return fmt.Errorf("存档里挂单 %s 的冻结手数（今 %d / 昨 %d）与按委托重算的（今 %d / 昨 %d）不同",
+			o.ID, o.Frozen.VolumeToday, o.Frozen.VolumeHistory, want.VolumeToday, want.VolumeHistory)
 	}
 	return nil
 }

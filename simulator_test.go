@@ -33,8 +33,15 @@ func simInst(t *testing.T, sym string) types.InstrumentID {
 // ⚠️ 这些数不是任何交易所的真实费率。
 func simRules(t *testing.T) refdata.Provider {
 	t.Helper()
-	m, ag, y := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702"), simInst(t, "DCE.y2701")
+	m, ag, y, rb := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702"), simInst(t, "DCE.y2701"), simInst(t, "SHFE.rb2701")
 	b := refdata.NewBuilder(1).
+		// rb2701：UseHistory 且开 / 平昨 / 平今三档按手费率**两两不同**，给「裸 CLOSE 记作平昨」收哪一档用（ag2702 三档同费率，分不开）
+		AddInstrument(refdata.Instrument{ID: rb, VolumeMultiple: dec("10"), PriceTick: dec("1"),
+			PositionDateType: refdata.UseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.07"), HasPriceLimitRatio: true}).
+		AddCommissionRates(rb, types.Speculation, refdata.CommissionRates{
+			OpenByVolume: dec("1"), CloseByVolume: dec("2"), CloseTodayByVolume: dec("5")}).
+		AddMarginRates(rb, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).
 		// 手数上限与涨跌幅比例给报单路径（Submit）用。m2701 的 6% 按大商所四舍五入对齐后是 3587 / 3181，
 		// 与交易日 20260915 行情里的涨跌停价一致（ctp-slices-20260915.json 的 quotes）。
 		AddInstrument(refdata.Instrument{ID: m, VolumeMultiple: dec("10"), PriceTick: dec("1"),
@@ -99,7 +106,7 @@ func markOn(t *testing.T, s *Simulator, day types.TradingDay, sym, last, pre str
 	}
 }
 
-// TestNewRequiresEveryChoice 钉住六项口径缺哪一项都开不了，且一次报全。
+// TestNewRequiresEveryChoice 钉住前七项口径缺哪一项都开不了，且一次报全（第八项零值合法，见 TestUndatedCloseChoiceZeroValue）。
 func TestNewRequiresEveryChoice(t *testing.T) {
 	rules := simRules(t)
 	_, err := New(Config{Day: simDay, PreBalance: dec("1"), Rules: rules})
@@ -155,6 +162,10 @@ func TestPresetsLeaveExactlyTheUnmeasuredCellsEmpty(t *testing.T) {
 	if ctp.Algorithm != account.AlgorithmOnlyLost || ctp.MarginBasis != margin.OpenTodayPreSettleHistory ||
 		ctp.SideScope != margin.ByProduct || ctp.FeeBasis != fee.TradePrice || ctp.FreezeMargin != order.FreezeAtOrderPrice {
 		t.Errorf("CTP 预设与 §13 #1/#3/#17、手续费基准实测不符：%+v", ctp)
+	}
+	// 第八项零值合法，上面的「未指定」计数数不到它 —— 单独钉：CTP 留空（simnow_pending#1），快期填平昨（kq_facts 32）
+	if ctp.UndatedCloseOnUseHistory != UndatedCloseUnmeasured || kq.UndatedCloseOnUseHistory != UndatedCloseAsYesterday {
+		t.Errorf("⚠️ UseHistory 上裸 CLOSE 的口径：CTP %v（应留空）/ 快期 %v（应为平昨）", ctp.UndatedCloseOnUseHistory, kq.UndatedCloseOnUseHistory)
 	}
 }
 

@@ -19,12 +19,58 @@ func (s *Simulator) Place(day types.TradingDay, at time.Time, id string, req ord
 	if _, _, dup := s.book.Get(id); dup {
 		return order.Frozen{}, fmt.Errorf("委托 %s 已经在簿上", id)
 	}
-	fr, _, err := s.validate(day, at, req)
+	_, fr, _, err := s.validate(day, at, req)
 	if err != nil {
 		return order.Frozen{}, err
 	}
 	if err := s.acc.Freeze(day, fr.Margin, fr.Commission); err != nil {
 		return order.Frozen{}, err
+	}
+	if err := s.book.Insert(id, req, freezeInputOf(fr)); err != nil {
+		if uerr := s.acc.Unfreeze(day, fr.Margin, fr.Commission); uerr != nil {
+			s.broken = uerr
+		}
+		return order.Frozen{}, err
+	}
+	return fr, nil
+}
+
+// PlaceAccepted 把一笔**柜台已经接受**的挂单记进来：冻结、记簿，**不跑八项校验**。
+//
+// 与 ApplyTrade 之于 Submit 同一个关系（design.md §4「两条并存的路径」）：快期接受的单里有本库校验会拒的
+// （零头价位 kq_facts 45、不查时段 kq_facts 48），灌对拍夹具或接外部柜台时走这里。冻结照 FreezeOf（口径跟 Choices）。
+//
+// ⚠️ 不校验不等于不守：两条账必须对得上 ——
+//   - 冻住的手数不超过持仓（扣掉簿上已冻的）：柜台接受了而本库账上没这么多仓，说明两边的持仓不一致
+//   - 冻结额从可用里扣，不够就报错：同理，是资金对不上，不是「柜台允许透支」
+//
+// 任何一条失败，状态不动。
+func (s *Simulator) PlaceAccepted(day types.TradingDay, id string, req order.Request) (order.Frozen, error) {
+	if err := s.usable(day); err != nil {
+		return order.Frozen{}, err
+	}
+	if !req.Price.IsPositive() {
+		return order.Frozen{}, fmt.Errorf("委托 %s 的价格 %s 不为正 —— 簿上的单要能按挂单价成交", id, req.Price)
+	}
+	fr, err := s.FreezeOf(day, req)
+	if err != nil {
+		return order.Frozen{}, fmt.Errorf("委托 %s：%w", id, err)
+	}
+	if req.Offset.IsClose() {
+		held := opposite(req.Direction)
+		today, history := 0, 0
+		if p, ok := s.positions[posKey{req.Instrument, req.Hedge}]; ok {
+			today, history = p.VolumeToday(held), p.VolumeHistory(held)
+		}
+		// ⚠️ 与 Restore 末尾「挂单冻住的手数超过持仓」是同一个条件（一个在入口、一个在恢复），没合并 —— 改一处的判据或文案，另一处跟上
+		fz := s.book.TotalOf(req.Instrument, held)
+		if fz.VolumeToday+fr.VolumeToday > today || fz.VolumeHistory+fr.VolumeHistory > history {
+			return order.Frozen{}, fmt.Errorf("委托 %s 冻住 今 %d / 昨 %d，加上簿上已冻的 今 %d / 昨 %d 超过持仓 今 %d / 昨 %d —— "+
+				"柜台接受了而本库账上没这么多仓，两边持仓不一致", id, fr.VolumeToday, fr.VolumeHistory, fz.VolumeToday, fz.VolumeHistory, today, history)
+		}
+	}
+	if err := s.acc.Freeze(day, fr.Margin, fr.Commission); err != nil {
+		return order.Frozen{}, fmt.Errorf("委托 %s：%w —— 柜台接受了而本库账上钱不够，两边资金不一致", id, err)
 	}
 	if err := s.book.Insert(id, req, freezeInputOf(fr)); err != nil {
 		if uerr := s.acc.Unfreeze(day, fr.Margin, fr.Commission); uerr != nil {

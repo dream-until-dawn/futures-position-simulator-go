@@ -544,6 +544,10 @@ func classify(b Break, text string, green bool) (verdict, detail string) {
 }
 
 // compilerLineRe 认编译器 / vet 的报错行：`[vet: ]路径.go:行:列: 说明`（可带缩进）。测试断言行是 `xxx_test.go:行: 说明`，没有列号。
+//
+// ⚠️ 已知盲区（评审 20260915）：`\S+` 不跨空格，**路径带空格**的编译器报错行（如 `C:\Program Files\p\x.go:4:2: `）认不出、不跳过。
+// 三条同时成立才出假「红对了」：buildFailedRe 因 go 输出格式变了而漏判、路径带空格、want 恰在那一行。不放宽成 `.+?`：
+// 那会让断言续行中间出现 `x.go:1:2: ` 的行也被跳过（方向保守，但会把正常工作的守卫报成红错了理由）。本仓库路径不带空格。
 var compilerLineRe = regexp.MustCompile(`^\s*(vet: )?\S+\.go:\d+:\d+: `)
 
 func gitDirty() (string, error) { return gitDirtyIn(".") }

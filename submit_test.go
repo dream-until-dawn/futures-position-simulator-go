@@ -28,7 +28,10 @@ func submitCalendar(t *testing.T) *refdata.Calendar {
 		Night: []refdata.Session{{Start: refdata.MustClockTime(21, 0, 0), End: refdata.MustClockTime(23, 0, 0)}}}
 	y := m
 	y.Product = "y"
-	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m, y}, nil)
+	// rb2701（上期所）：给第八项口径的报单路径用，时段形状照抄上面（合成，不是上期所时段表的实测）
+	rb := m
+	rb.Exchange, rb.Product = types.SHFE, "rb"
+	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m, y, rb}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +51,8 @@ func submitSim(t *testing.T, ch Choices, pre string) *Simulator {
 	t.Helper()
 	s, err := New(Config{Day: simDay, PreBalance: dec(pre), Rules: simRules(t), Choices: ch,
 		Calendar: submitCalendar(t), TickRounding: MeasuredTickRounding(),
-		PositionLimits: map[types.InstrumentID]int{simInst(t, "DCE.m2701"): 100, simInst(t, "SHFE.ag2702"): 100, simInst(t, "DCE.y2701"): 100}})
+		PositionLimits: map[types.InstrumentID]int{simInst(t, "DCE.m2701"): 100, simInst(t, "SHFE.ag2702"): 100, simInst(t, "DCE.y2701"): 100,
+			simInst(t, "SHFE.rb2701"): 100}})
 	if err != nil {
 		t.Fatal(err)
 	}
