@@ -8,6 +8,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
 	"github.com/dream-until-dawn/futures-position-simulator-go/pnl"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
+	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -181,15 +182,16 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 			}
 			order = o
 		}
+		todayBefore := p.VolumeToday(held)
 		res, err := p.Close(held, tr.Offset, day, tr.Volume, order)
 		if err != nil {
 			return err
 		}
-		// ⚠️ 按实际消耗拆档（推得）：昨仓部分走平仓档、今仓部分走平今档
-		if err := charge(types.CloseYesterday, res.VolumeHistory); err != nil {
-			return err
-		}
-		if err := charge(types.CloseToday, res.VolumeToday); err != nil {
+		if tr.Offset.SpecifiesPositionDate() {
+			if err := charge(tr.Offset, tr.Volume); err != nil {
+				return err
+			}
+		} else if err := chargeUndated(tr, todayBefore, rates, charge); err != nil {
 			return err
 		}
 		legs := make([]pnl.Leg, 0, len(res.Consumed))
@@ -216,6 +218,34 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 	}
 	s.positions = positions
 	return s.commit(day, v, commission, closeProfit)
+}
+
+// chargeUndated 给裸 CLOSE 与强平标志收手续费 —— §13 #21 未收敛，只做两个残余候选一致的那一段。
+//
+// ⚠️ 已被否：「按实际消耗的明细拆档，昨仓部分走平昨档」。DCE.m2701 通用平仓消耗了昨仓，
+// 柜台收的是平今档 0.1 而不是平昨档 0.2（ctp-slices-20260915-{2,3}）。
+//
+//	(a) min(平仓量, 平仓前今仓量) 走平今，其余走平昨
+//	(b) 一律走平今
+//
+// 平仓量 ≤ 平仓前今仓量时两者都是「全走平今」；超出的部分只在两档费率相同时两者同值 —— 不同就报错，不猜。
+func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRates, charge func(types.Offset, int) error) error {
+	todayPart := tr.Volume
+	if todayPart > todayBefore {
+		todayPart = todayBefore
+	}
+	if err := charge(types.CloseToday, todayPart); err != nil {
+		return err
+	}
+	rest := tr.Volume - todayPart
+	if rest == 0 {
+		return nil
+	}
+	if !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) {
+		return fmt.Errorf("%s 的 %v %d 手里有 %d 手超出平仓前的今仓（%d 手），而平今档与平昨档费率不同 —— "+
+			"这一段收哪一档没有观测（§13 #21：按今仓量认定则收平昨，一律平今则收平今）", tr.Instrument, tr.Offset, tr.Volume, rest, todayBefore)
+	}
+	return charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值
 }
 
 // commit 把算好的数写进账户。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。

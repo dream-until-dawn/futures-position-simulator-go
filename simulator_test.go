@@ -10,6 +10,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
+	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -186,6 +187,79 @@ func TestApplyTradeChain(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantAccount(t, s, "裸平 1", "99865.5", "99865.5", "0", "-130", "4.5", "0")
+}
+
+// seedHistory 直接往模拟器里放一片昨仓（F1 没有结算，造不出昨仓）。
+//
+// ⚠️ 白盒：绕过了 ApplyTrade。只用来给 §13 #21 的手续费档造「今昨都有 / 只有昨仓」的状态；
+// 账户里不记这片昨仓的任何钱，所以下面只核手续费与报错，不核结存。
+func seedHistory(t *testing.T, s *Simulator, sym string, dir types.Direction, openPx, basis string, vol int) {
+	t.Helper()
+	key := posKey{simInst(t, sym), types.Speculation}
+	p, ok := s.positions[key]
+	if !ok {
+		inst, err := s.rules.Instrument(key.inst)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p, err = position.New(key.inst, key.hedge, simDay, inst.PositionDateType); err != nil {
+			t.Fatal(err)
+		}
+		s.positions[key] = p
+	}
+	side, err := p.Side(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	side.Append(position.Lot{OpenDay: simDay - 1, OpenPrice: dec(openPx), Volume: vol, Basis: dec(basis), Settled: true})
+}
+
+// TestUndatedCloseFeeTier 钉住 §13 #21：裸 CLOSE 消耗昨仓时的手续费档。
+//
+// 合成费率与 DCE.m2701 的声明同形（平昨 1.2 / 平今 0.75，两档不同），读数照 ctp-slices-20260915-{2,3}：
+// 今 1 + 昨 1、裸平 1 手 ⇒ 按先平昨消耗了昨仓，而收**平今档**。
+func TestUndatedCloseFeeTier(t *testing.T) {
+	s := newSim(t)
+	mark(t, s, "DCE.m2701", "3360", "3384")
+	seedHistory(t, s, "DCE.m2701", types.Buy, "3399", "3384", 1)
+	if err := s.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err != nil {
+		t.Fatal(err)
+	}
+	before := s.Account().Commission // 开仓 1.5
+	if err := s.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Sell, types.Close, "3360", 1)); err != nil {
+		t.Fatalf("今1昨1裸平1：%v", err)
+	}
+	if got := s.Account().Commission.Sub(before); !got.Equal(dec("0.75")) {
+		t.Errorf("⚠️ 今1昨1裸平1 收了 %s，期望平今档 0.75（按消耗拆档会收平昨档 1.2 —— 已被 #4 夹具否掉）", got)
+	}
+	p, _ := s.Position(simInst(t, "DCE.m2701"), types.Speculation)
+	if p.VolumeHistory(types.Buy) != 0 || p.VolumeToday(types.Buy) != 1 {
+		t.Errorf("前提：先平昨应消耗昨仓，剩今 1，得到 今 %d / 昨 %d", p.VolumeToday(types.Buy), p.VolumeHistory(types.Buy))
+	}
+
+	// 只有昨仓、两档费率不同 ⇒ 两候选分歧 ⇒ 报错，状态不动
+	s2 := newSim(t)
+	mark(t, s2, "DCE.m2701", "3360", "3384")
+	seedHistory(t, s2, "DCE.m2701", types.Buy, "3399", "3384", 1)
+	before2 := s2.Account()
+	err := s2.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Sell, types.Close, "3360", 1))
+	if err == nil || !strings.Contains(err.Error(), "#21") {
+		t.Errorf("⚠️ 只有昨仓时裸平、两档费率不同，要报 §13 #21：%v", err)
+	}
+	if !sameSnapshot(s2.Account(), before2) {
+		t.Error("⚠️ 报错之后账户变了")
+	}
+	if p, _ := s2.Position(simInst(t, "DCE.m2701"), types.Speculation); p.VolumeHistory(types.Buy) != 1 {
+		t.Error("⚠️ 报错之后昨仓被消耗了")
+	}
+
+	// 反向：显式平昨照走平昨档（不受 #21 影响）
+	if err := s2.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1)); err != nil {
+		t.Fatal(err)
+	}
+	if got := s2.Account().Commission; !got.Equal(dec("1.2")) {
+		t.Errorf("显式平昨应收平昨档 1.2，得到 %s", got)
+	}
 }
 
 // sameSnapshot 按值比两份账户快照。⚠️ 不能用 ==：decimal 内部带指针，== 比的是指针，同值也不等。

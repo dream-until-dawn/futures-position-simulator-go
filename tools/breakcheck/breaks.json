@@ -4947,11 +4947,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "507 裸 CLOSE 消耗今仓也按平仓档收费（不拆档）",
+		"name": "507 裸 CLOSE 消耗今仓也按平仓档收费（不拆档）（20260915 重锚：拆档被 §13 #21 否掉后改成 chargeUndated）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "charge(types.CloseToday, res.VolumeToday)",
-		"new": "charge(types.CloseYesterday, res.VolumeToday)",
+		"old": "\tif err := charge(types.CloseToday, todayPart); err != nil {",
+		"new": "\tif err := charge(types.CloseYesterday, todayPart); err != nil {",
 		"pkg": "./",
 		"test": "TestApplyTradeChain",
 		"want": "裸平 1 之后手续费",
@@ -5109,6 +5109,28 @@
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestProductionAccountAvailableAgainstCTP",
 		"want": "净额与逐持仓分不开",
+		"expect": "red"
+	},
+	{
+		"name": "522 裸 CLOSE 手续费回到被否的「按消耗拆档」——今1昨1裸平1 消耗昨仓而算平昨档（§13 #21）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "} else if err := chargeUndated(tr, todayBefore, rates, charge); err != nil {",
+		"new": "} else if err := chargeUndated(tr, res.VolumeToday, rates, charge); err != nil {",
+		"pkg": "./",
+		"test": "TestUndatedCloseFeeTier",
+		"want": "今1昨1裸平1",
+		"expect": "red"
+	},
+	{
+		"name": "523 裸 CLOSE 超出今仓的部分在两档费率不同时也放行——替 §13 #21 猜了一个候选",
+		"dir": "",
+		"file": "trade.go",
+		"old": "if !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) {",
+		"new": "if false && !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) && false {",
+		"pkg": "./",
+		"test": "TestUndatedCloseFeeTier",
+		"want": "要报 §13 #21",
 		"expect": "red"
 	}
 ]
