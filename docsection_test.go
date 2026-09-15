@@ -22,6 +22,21 @@ var sectionNumRe = regexp.MustCompile(`^§(\d+(?:\.\d+)*)`)
 
 type sectionRef struct{ doc, num string }
 
+// checkSectionRef 判一条引用：文件名不在 docs/ 与 README 里、或那份文档里没有这个编号的标题，返回原因；解析得了返回空。
+//
+// ⚠️ 文件名不认识也报（评审 20260915）：原先直接放过，于是文件名写错（少个 s）或某份文档改名 / 删掉之后，
+// 所有「旧名.md §N」都静默通过 —— 那正是悬空引用的一种。F7 设计时全仓这类引用 0 条，今天零误报；真要引仓库外的文档，再加白名单。
+func checkSectionRef(heads map[string]map[string]bool, r sectionRef) string {
+	nums, known := heads[r.doc]
+	if !known {
+		return "文件名 " + r.doc + " 不在 docs/ 与 README 里 —— 写错了、改名了，或删了"
+	}
+	if !nums[r.num] {
+		return "那份文档里没有这个编号的标题 —— 改了编号、删了节，或引的是别的分支才有的节"
+	}
+	return ""
+}
+
 // sectionRefs 从一行里取出「文档 + 节号」引用：每个 § 归给它**前面最近**的那个 .md 文件名（24 个字符以内、中间没有别的 §）。
 //
 // ⚠️ 归给最近的那个，不是第一个：「fidelity.md 与 cn-futures-rules.md 第 10 节」那种写法里的节号是 cn-futures-rules 的（第一版脚本就这样误报过三条）。
@@ -83,6 +98,15 @@ func TestDocSectionRefsResolve(t *testing.T) {
 	}
 
 	heads := map[string]map[string]bool{}
+	defer func() {
+		// 判别力：判定函数自己两个方向都过一遍（语料里今天没有写错文件名的引用，只靠全仓扫描的话这一支永远走不到）
+		if why := checkSectionRef(heads, sectionRef{"silent-risk.md", "3"}); !strings.Contains(why, "不在 docs/") {
+			t.Errorf("⚠️ 写错的文件名 silent-risk.md 没被报出来：%q", why)
+		}
+		if why := checkSectionRef(heads, sectionRef{"cn-futures-rules.md", "13"}); why != "" {
+			t.Errorf("反向：cn-futures-rules.md 第 13 节存在，却报了 %q", why)
+		}
+	}()
 	docs, err := filepath.Glob(filepath.Join("docs", "*.md"))
 	if err != nil {
 		t.Fatal(err)
@@ -134,13 +158,9 @@ func TestDocSectionRefsResolve(t *testing.T) {
 		sc.Buffer(make([]byte, 1<<20), 1<<20)
 		for n := 1; sc.Scan(); n++ {
 			for _, r := range sectionRefs(sc.Text()) {
-				nums, known := heads[r.doc]
-				if !known {
-					continue // 不是本仓库 docs 下的文档（或文件名撞了外部的），不查
-				}
 				refs++
-				if !nums[r.num] {
-					bad = append(bad, p+":"+strconv.Itoa(n)+" 引 "+r.doc+" §"+r.num)
+				if why := checkSectionRef(heads, r); why != "" {
+					bad = append(bad, p+":"+strconv.Itoa(n)+" 引 "+r.doc+" §"+r.num+"："+why)
 				}
 			}
 		}
@@ -150,7 +170,7 @@ func TestDocSectionRefsResolve(t *testing.T) {
 		}
 	}
 	for _, b := range bad {
-		t.Errorf("⚠️ %s，那份文档里没有这个编号的标题 —— 改了编号、删了节，或引的是别的分支才有的节", b)
+		t.Errorf("⚠️ %s", b)
 	}
 	t.Logf("节号引用 %d 条，解析不了 %d 条", refs, len(bad))
 	// ⚠️ 扫描没在空转：F7 设计时全仓有两百来条；少到这个量级以下多半是正则或文件列表坏了
