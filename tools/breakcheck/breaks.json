@@ -5331,5 +5331,60 @@
 		"test": "TestSubmitBooksTheSameAsApplyTrade",
 		"want": "报单成交与直接灌成交的账不同",
 		"expect": "red"
+	},
+	{
+		"name": "542 上期所涨跌停取整改成四舍五入——CTP 行情里 rb/ag 五份样本的涨跌停价对不上",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\ttypes.SHFE: refdata.TickFloor,",
+		"new": "\t\ttypes.SHFE: refdata.TickHalfUp,",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "柜台",
+		"expect": "red"
+	},
+	{
+		"name": "543 大商所涨跌停取整改成向下——CTP 行情里 m2701 两份样本的跌停价对不上",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\ttypes.DCE:  refdata.TickHalfUp,",
+		"new": "\t\ttypes.DCE:  refdata.TickFloor,",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "柜台",
+		"expect": "red"
+	},
+	{
+		"name": "544 门面给裸 CLOSE 的冻结改成先冻今——今1昨1裸平1 冻今而不冻昨",
+		"dir": "",
+		"file": "submit.go",
+		"old": "in.UndatedHistory = min(req.Volume, history)",
+		"new": "in.UndatedHistory = 0 * min(req.Volume, history)",
+		"pkg": "./",
+		"test": "TestFreezeOfBareCloseSplitsYesterdayFirst",
+		"want": "今1昨1 裸平 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "545 算不出资金时不先看拒因——无仓裸平报「算不出资金」而不是拒在可平量",
+		"dir": "",
+		"file": "submit.go",
+		"old": "if res := order.Validate(req, f); res.Rejected != nil {",
+		"new": "if res := order.Validate(req, f); false && res.Rejected != nil {",
+		"pkg": "./",
+		"test": "TestSubmitBareCloseOnNoUseHistory",
+		"want": "无仓裸平要拒在可平量",
+		"expect": "red"
+	},
+	{
+		"name": "546 裸 CLOSE 的今昨拆分之和不再核对手数——没给拆分也算出一份零手数的冻结",
+		"dir": "",
+		"file": "order/freeze.go",
+		"old": "in.UndatedToday+in.UndatedHistory != req.Volume {",
+		"new": "in.UndatedToday+in.UndatedHistory != req.Volume && false {",
+		"pkg": "./order/",
+		"test": "TestFreezeNakedCloseNeedsTheSplit",
+		"want": "对不上",
+		"expect": "red"
 	}
 ]

@@ -219,3 +219,51 @@ func TestSubmitFundsCheckFollowsFreezeBasis(t *testing.T) {
 		}
 	}
 }
+
+// TestSubmitBareCloseOnNoUseHistory 钉住大商所裸 CLOSE 走报单路径能成交（20260915 修：F3 合进 main 时一律报「冻结算不出来」）。
+func TestSubmitBareCloseOnNoUseHistory(t *testing.T) {
+	s := submitSim(t, ctpChoices(), "1000000")
+	if _, err := s.Submit(simDay, wall(t, "2026-09-15 10:00"), req(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err != nil {
+		t.Fatal(err)
+	}
+	before := s.Account().Commission
+	if _, err := s.Submit(simDay, wall(t, "2026-09-15 10:01"), req(t, "DCE.m2701", types.Sell, types.Close, "3360", 1)); err != nil {
+		t.Fatalf("⚠️ 大商所今 1 手、裸 CLOSE 1 手的报单要成交：%v", err)
+	}
+	if got := s.Account().Commission.Sub(before); !got.Equal(dec("0.75")) {
+		t.Errorf("裸平消耗今仓收平今档 0.75，得到 %s", got)
+	}
+	// 无仓裸平：要拒在可平量，不许被「算不出资金」盖住
+	_, err := s.Submit(simDay, wall(t, "2026-09-15 10:02"), req(t, "DCE.m2701", types.Sell, types.Close, "3360", 1))
+	var rej *match.RejectedError
+	if !errors.As(err, &rej) || rej.Rejection.Check != order.CheckClosable {
+		t.Fatalf("⚠️ 无仓裸平要拒在可平量：%v", err)
+	}
+	// ⚠️ 语料里没有裸 CLOSE 的拒单（只有「账上无仓时显式平昨」那一条，CTP 30）⇒ 拒因必须是 Unknown、不给码。
+	// 期待 30 就是把显式平昨的码外推到裸 CLOSE 上（评审 20260915）
+	if rej.Rejection.Kind != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 无仓裸平给了拒因 %v —— 语料没有裸 CLOSE 的拒单", rej.Rejection.Kind)
+	}
+	if c, ok := rej.Code(); ok {
+		t.Errorf("⚠️ 无仓裸平查到了码 %v —— 那是外推", c)
+	}
+}
+
+// TestFreezeOfBareCloseSplitsYesterdayFirst 钉住门面给裸 CLOSE 的持仓侧冻结按先平昨拆（与成交时消耗的那一边一致；CTP 上未观测，推得）。
+func TestFreezeOfBareCloseSplitsYesterdayFirst(t *testing.T) {
+	// y2701：平今档 = 平昨档，裸平 2 手（超出今仓）不撞 §13 #21 的分歧段
+	s := withHistoryOn(t, "DCE.y2701", "8000") // 昨 1，停在 simNext
+	if err := s.ApplyTrade(simNext, trade(t, "DCE.y2701", types.Buy, types.Open, "8000", 1)); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ vol, today, his int }{{1, 0, 1}, {2, 1, 1}} {
+		fr, err := s.FreezeOf(simNext, req(t, "DCE.y2701", types.Sell, types.Close, "8000", c.vol))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fr.VolumeToday != c.today || fr.VolumeHistory != c.his || !fr.Margin.IsZero() {
+			t.Errorf("⚠️ 今1昨1 裸平 %d 手：冻 今 %d / 昨 %d（保证金 %s），期望 今 %d / 昨 %d、不冻保证金",
+				c.vol, fr.VolumeToday, fr.VolumeHistory, fr.Margin, c.today, c.his)
+		}
+	}
+}

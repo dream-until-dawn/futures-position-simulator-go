@@ -21,9 +21,8 @@ import (
 type Frozen struct {
 	// Margin 是冻结保证金。
 	//
-	// ⚠️ 按**昨结算价**算，不按委托价（kq_facts 8 实测：
-	// 跌停挂单的冻结额等于该合约每手持仓保证金）。
-	// 按委托价算会在跌停挂单上少冻一大截，而那看起来只是「便宜」。
+	// ⚠️ 按哪个价算两个口子相反（FreezeMarginBasis）：快期按昨结算价（kq_facts 8：跌停挂单的冻结额等于每手持仓保证金），
+	// SimNow 按挂单价（ctp-frozen-20260910）。这里原写「按昨结算价算，不按委托价」—— 只量过快期时的话。
 	Margin decimal.Decimal
 	// Commission 是冻结手续费。
 	Commission decimal.Decimal
@@ -61,19 +60,22 @@ func (f Frozen) IsZero() bool {
 type FreezeInput struct {
 	// Margin 是这笔**开仓**单要冻的保证金；平仓单应当为零。
 	//
-	// ⚠️ 它的基准是**昨结算价**，不是报单价 —— 20260909 两次独立实测
-	// （kq_facts 46）：SHFE.ag2702 昨结 16262 × 乘数 15 × 22% = 53664.6、
-	// DCE.i2701 昨结 740 × 乘数 100 × 11% = 8140，与账户 frozen_margin
-	// 分毫不差；而两笔的报单价（13009.9 / 673.95）都远低于昨结算价，
-	// 按报单价会算出 42932.67 与 7413.45。
-	//
-	// ⚠️ 写在这里是因为**按报单价算是最自然的猜法**：调用方手上正好有报单价，
-	// 而昨结算价要另外去取。猜错的方向是「挂在远离市价处的单冻得太少」——
-	// 那不会报错，只会让可用资金显得比实际多。
+	// ⚠️ 按哪个价算**两个口子相反**，见 FreezeMarginBasis：快期按昨结算价（kq_facts 46：
+	// SHFE.ag2702 昨结 16262 × 15 × 22% = 53664.6，报单价 13009.9 会算出 42932.67），
+	// SimNow 按挂单价（ctp-frozen-20260910）。
+	// ⚠️ 这里原写「基准是昨结算价，不是报单价」—— 那是只量过快期时的话，20260915 在 CTP 上被否。
 	Margin decimal.Decimal
 	// Commission 是这笔单要冻的手续费。⚠️ 开平都冻：
 	// 平仓一样要收手续费，而它同样在成交前就从 Available 扣。
 	Commission decimal.Decimal
+
+	// UndatedToday / UndatedHistory 只给**裸 CLOSE**（不指定今昨的平仓）用：这笔单会消耗的今仓与昨仓手数，
+	// 由调用方按实测的消耗顺序拆好（position.MeasuredCloseOrder），两者之和必须等于委托手数。
+	//
+	// ⚠️ 本包不知道持仓，也不知道消耗顺序 —— 猜一边冻会让另一边的可平量凭空多出来。
+	// 指定了今昨的平仓单不看这两个字段。
+	UndatedToday   int
+	UndatedHistory int
 }
 
 // FreezeOf 算一笔委托冻结什么。
@@ -130,11 +132,18 @@ func FreezeOf(req Request, in FreezeInput) (Frozen, error) {
 			f.VolumeHistory = req.Volume
 		}
 	case types.Close:
-		// ⚠️ 裸 CLOSE 在本库是**被拒**的（见 checkClosable）。
-		// 走到这里说明调用方绕过了校验 —— 报错而不是猜一边冻。
-		return Frozen{}, fmt.Errorf("裸 CLOSE 的冻结算不出来：" +
-			"不知道该冻今仓还是昨仓。⚠️ 本库对裸 CLOSE 报错" +
-			"（simnow_pending#1 未裁决），走到这里说明校验被绕过了")
+		// ⚠️ 裸 CLOSE 冻今还是冻昨，取决于它会消耗哪一边 —— 那要持仓与实测的消耗顺序，由调用方拆好传入。
+		// 这里原写「裸 CLOSE 在本库是被拒的，走到这里说明校验被绕过」：自 #4 接进本库（NoUseHistory 接受裸 CLOSE）起就过期，
+		// 20260915 由此让门面 F3 的 Submit 在大商所裸 CLOSE 上一律报错。
+		if in.UndatedToday < 0 || in.UndatedHistory < 0 || in.UndatedToday+in.UndatedHistory != req.Volume {
+			return Frozen{}, fmt.Errorf("裸 CLOSE %d 手的冻结要调用方给出今 / 昨拆分（两者之和等于手数），得到 今 %d / 昨 %d —— "+
+				"本包不知道持仓与消耗顺序，不猜", req.Volume, in.UndatedToday, in.UndatedHistory)
+		}
+		if !in.Margin.IsZero() {
+			return Frozen{}, fmt.Errorf("平仓单带着 %s 的冻结保证金 —— 平仓不额外冻（%s %d 手）",
+				in.Margin, req.Instrument.Canonical(), req.Volume)
+		}
+		f.VolumeToday, f.VolumeHistory = in.UndatedToday, in.UndatedHistory
 	default:
 		return Frozen{}, fmt.Errorf("开平标志 %v 不认识", req.Offset)
 	}
@@ -250,7 +259,8 @@ func (b *Book) Live() []string {
 // ⚠️ **两个口子实测相反**，零值即「未实测」：
 //
 //	CTP / SimNow  挂单价     ctp-frozen-20260910：LongFrozenAmount 30050 ⇒ 挂单价 3005；FrozenMargin 4808 = 3005 × 10 × 0.16，
-//	                          按昨结算价 3164 会是 5062.4（否）；同一份的 FrozenCommission 3.01 也指向挂单价
+//	                          按昨结算价 3164 会是 5062.4（否）；按同一条记录的计价价 SettlementPrice 3146 会是 5033.6（否，评审 20260915 补）；
+//	                          同一份的 FrozenCommission 3.01 也指向挂单价
 //	快期模拟      昨结算价   kq_facts 46：ag2702 昨结 16262 × 15 × 22% = 53664.6、i2701 昨结 740 × 100 × 11% = 8140
 //
 // 本包不算金额（见 FreezeInput）；这个类型只是让「按哪个价」有一个不许默认的名字。
