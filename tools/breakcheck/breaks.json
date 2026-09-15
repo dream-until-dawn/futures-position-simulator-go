@@ -5995,14 +5995,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "602 实测规则不要求显式写 classified（缺省成 false，按额按手是否判过悄悄变成「没判过」）",
+		"name": "602 实测规则不先查 classified 有没有写（没写时对空指针解引用、整个读取 panic —— 这道检查是承重的；最初以为会缺省成 false，跑出来不是）",
 		"dir": "",
 		"file": "conformance/fixture/measured.go",
 		"old": "\t\tif c.Classified == nil {",
 		"new": "\t\tif false && c.Classified == nil {",
 		"pkg": "./conformance/fixture/",
 		"test": "TestMeasuredRulesRefuseMalformed",
-		"want": "手续费没写 classified：应当报错",
+		"want": "nil pointer dereference",
 		"expect": "red"
 	},
 	{
