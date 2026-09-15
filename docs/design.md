@@ -510,7 +510,8 @@ F2 之后门面**能**结算了 ⇒ 若有人在这两条路上调 `Settle`，`p
 开仓单冻的保证金按哪个价算，**两个口子实测相反**：
 
     CTP / SimNow  挂单价     ctp-frozen-20260910：LongFrozenAmount 30050 ⇒ 挂单价 3005；FrozenMargin 4808 = 3005 × 10 × 0.16
-                              （按昨结算价 3164 会是 5062.4，否）；同一份的 FrozenCommission 3.01 = 3005 × 10 × 0.0001 + 0.005，也指向挂单价
+                              （按昨结算价 3164 会是 5062.4，否；按记录里的计价价 SettlementPrice 3146 会是 5033.6，也否 —— 评审 20260915 补）；
+                              同一份的 FrozenCommission 3.01 = 3005 × 10 × 0.0001 + 0.005，也指向挂单价
     快期模拟      昨结算价   kq_facts 46：ag2702 昨结 16262 × 15 × 22% = 53664.6、i2701 昨结 740 × 100 × 11% = 8140，报单价都远低于昨结算价
 
 ⇒ `order.FreezeMarginBasis{Unmeasured, OrderPrice, PreSettlement}`，进 `Choices`，两个预设各填各的。

@@ -1,8 +1,11 @@
 package ctpfixture
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 
@@ -378,4 +381,99 @@ func TestFacadeFreezeRb2701AgainstCTP(t *testing.T) {
 	if want := flt(t, f.Account, "FrozenCommission"); math.Abs(gotC-want) > 1e-6 {
 		t.Errorf("⚠️ 冻结手续费：本库（已加 0.005 × 1 手）%v，柜台 %v —— 差不再是 §13 #19 那个常数", gotC, want)
 	}
+}
+
+// TestMeasuredTickRoundingAgainstCTPQuotes 拿 CTP 夹具行情里的涨跌停价，复现 futsim.MeasuredTickRounding 那张表（评审 20260915 建议）。
+//
+// 表的出处是 probes.md §12（**快期**行情反解，七个合约）；这里的样本是 **CTP** 行情（柜台自己下发的涨跌停价），两个独立来源。
+// 涨跌幅比例同样取自 §12（rb 5% / m 6% / ag 20%），最小变动价位取自 specs-20260908.json —— 都不从这批 CTP 行情里反解。
+//
+// ⚠️ 判别力：只有「昨结 × 比例」不是 tick 整数倍的样本才分得开取整方向（§12 后两行就是没判别力的样本）。
+// 每个交易所至少要有一份「换成另一个方向就对不上」的样本，否则本条只是在复述。
+func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
+	ratios := map[string]string{"rb": "0.05", "m": "0.06", "ag": "0.20"} // probes.md §12
+	other := map[types.Exchange]refdata.TickRounding{types.SHFE: refdata.TickHalfUp, types.DCE: refdata.TickFloor}
+	table := futsim.MeasuredTickRounding()
+
+	type sample struct{ sym, day string }
+	seen := map[sample]bool{}
+	discriminating := map[types.Exchange]int{}
+	n := 0
+	for name, f := range loadCTP(t) {
+		for sym, q := range f.Quotes {
+			day, _ := q["TradingDay"].(string)
+			k := sample{sym, day}
+			if seen[k] {
+				continue
+			}
+			seen[k] = true
+			td, err := types.ParseTradingDay(day)
+			if err != nil {
+				t.Fatalf("%s %s：%v", name, sym, err)
+			}
+			id, err := types.ParseSymbol(sym, td)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ratio, ok := ratios[id.Product]
+			if !ok {
+				t.Errorf("⚠️ 行情里出现了 %s，而 probes.md §12 没有它的涨跌幅比例 —— 新样本要先登记比例，不许从这批行情反解", sym)
+				continue
+			}
+			rounding, ok := table[id.Exchange]
+			if !ok {
+				t.Errorf("⚠️ %s 的交易所 %s 不在 MeasuredTickRounding 里", sym, id.Exchange)
+				continue
+			}
+			tick := specTick(t, sym)
+			inst := refdata.Instrument{ID: id, PriceTick: tick, PriceLimitRatio: decimal.RequireFromString(ratio), HasPriceLimitRatio: true}
+			pre := num(t, q, "PreSettlementPrice")
+			up, lo, ok := inst.PriceLimits(pre, true, rounding)
+			if !ok {
+				t.Fatalf("%s：PriceLimits 没给出结果", sym)
+			}
+			wantUp, wantLo := num(t, q, "UpperLimitPrice"), num(t, q, "LowerLimitPrice")
+			if !up.Equal(wantUp) || !lo.Equal(wantLo) {
+				t.Errorf("⚠️ %s 交易日 %s：昨结 %s × %s 按 %v 得 %s / %s，柜台 %s / %s", sym, day, pre, ratio, rounding, up, lo, wantUp, wantLo)
+			}
+			if u2, l2, _ := inst.PriceLimits(pre, true, other[id.Exchange]); !u2.Equal(wantUp) || !l2.Equal(wantLo) {
+				discriminating[id.Exchange]++
+			}
+			n++
+		}
+	}
+	if n < 7 {
+		t.Fatalf("⚠️ 只找到 %d 份不重复的行情样本（下界 7）—— 夹具或读法变了", n)
+	}
+	for _, ex := range []types.Exchange{types.SHFE, types.DCE} {
+		if discriminating[ex] == 0 {
+			t.Errorf("⚠️ %s 没有一份样本在另一个取整方向下对不上 —— 本条对它的取整方向没有判别力", ex)
+		}
+	}
+	t.Logf("ⓘ %d 份行情样本；有判别力的：上期所 %d、大商所 %d", n, discriminating[types.SHFE], discriminating[types.DCE])
+}
+
+// specTick 从天勤规格快照取最小变动价位。
+func specTick(t *testing.T, symbol string) decimal.Decimal {
+	t.Helper()
+	b, err := os.ReadFile(filepath.FromSlash("../../testdata/refdata/specs-20260908.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Specs []struct {
+			Instrument string          `json:"instrument"`
+			PriceTick  json.RawMessage `json:"price_tick"`
+		} `json:"specs"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	for _, sp := range doc.Specs {
+		if sp.Instrument == symbol {
+			return decimal.RequireFromString(string(sp.PriceTick))
+		}
+	}
+	t.Fatalf("⚠️ 规格快照里没有 %s 的最小变动价位", symbol)
+	return decimal.Zero
 }

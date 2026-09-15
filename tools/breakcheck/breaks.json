@@ -5331,5 +5331,27 @@
 		"test": "TestSubmitBooksTheSameAsApplyTrade",
 		"want": "报单成交与直接灌成交的账不同",
 		"expect": "red"
+	},
+	{
+		"name": "542 上期所涨跌停取整改成四舍五入——CTP 行情里 rb/ag 五份样本的涨跌停价对不上",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\ttypes.SHFE: refdata.TickFloor,",
+		"new": "\t\ttypes.SHFE: refdata.TickHalfUp,",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "柜台",
+		"expect": "red"
+	},
+	{
+		"name": "543 大商所涨跌停取整改成向下——CTP 行情里 m2701 两份样本的跌停价对不上",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\ttypes.DCE:  refdata.TickHalfUp,",
+		"new": "\t\ttypes.DCE:  refdata.TickFloor,",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "柜台",
+		"expect": "red"
 	}
 ]
