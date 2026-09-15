@@ -88,7 +88,7 @@ type Result struct {
 //
 // ⚠️ 带昨仓的方向一律跳过并记数，理由与离线那条一样：
 // 实时截面里只有**当日**成交，昨仓那几手的开仓单在前一交易日。
-// 要比它们得先有前一日的夹具走 Carry —— 那是 `-carry` 的事，本函数不猜。
+// 要比它们得先有前一日的夹具结转（ReconstructOnFacade）—— 那是 `-carry` 的事，本函数不猜。
 func Compare(raw []byte, specs map[string]Spec, carry *Carry) (Result, error) {
 	var res Result
 	f, err := fixture.Load(strings.NewReader(string(raw)), "（实时截面）")
@@ -156,7 +156,7 @@ func Compare(raw []byte, specs map[string]Spec, carry *Carry) (Result, error) {
 		return res, fmt.Errorf("⚠️ 一个合约都没比到 —— "+
 			"没登记规则数据 %d 个、有昨仓 %d 个、有持仓但当日无成交 %d 个。"+
 			"本次对拍**什么都没验**，不要把它读成通过。"+
-			"⚠️ 后两类都要前一日的夹具走 Carry 才比得了（见 -carry）",
+			"⚠️ 后两类都要前一日的夹具结转才比得了（见 -carry）",
 			len(res.SkippedNoSpec), len(res.SkippedHistory), len(res.SkippedNoTrades))
 	}
 	res.Report = libconf.Classify("实时截面",
@@ -303,6 +303,8 @@ func (c *Carry) reconstruct(cur *fixture.Fixture, sym string, spec Spec) (*posit
 	if !ok {
 		return nil, fmt.Errorf("没有该合约的**交易所**结算价（不拿柜台的顶替）")
 	}
-	return fixture.Reconstruct(c.Prev, cur, sym, types.Speculation,
-		spec.PositionDate, settle)
+	// F7b：在门面上结转（规格自 F7a 起带手续费率）；Reconstruct 删了
+	return fixture.ReconstructOnFacade(c.Prev, cur, sym,
+		fixture.Spec{Multiplier: spec.Multiplier, Commission: spec.Commission, Margin: spec.Margin},
+		spec.PositionDate, settle, cur.TradingDay)
 }

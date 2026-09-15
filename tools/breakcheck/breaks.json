@@ -308,58 +308,36 @@
 		"expect": "red"
 	},
 	{
-		"name": "348 结算也动逐笔对冲基线（UseHistory 路）",
+		"name": "348 结算也动逐笔对冲基线（UseHistory 路）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "position/lot.go",
 		"old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"new": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCarrySplitsTheTwoBaselines",
+		"test": "TestReconstructOnFacadeSplitsTheTwoBaselines",
 		"want": "不受结算影响",
 		"expect": "red"
 	},
 	{
-		"name": "349 今仓不滚成昨仓",
+		"name": "349 今仓不滚成昨仓（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "position/lot.go",
 		"old": "\t\ts.lots[i].Settled = true",
 		"new": "\t\t_ = i",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCarrySplitsTheTwoBaselines",
-		"want": "3 手昨仓",
+		"test": "TestReconstructOnFacadeSplitsTheTwoBaselines",
+		"want": "应为 今 0 / 昨",
 		"expect": "red"
 	},
 	{
-		"name": "350 结转空仓合约不报错",
-		"dir": "",
-		"file": "conformance/fixture/carry.go",
-		"old": "\tif p.IsFlat() {",
-		"new": "\tif false {",
-		"pkg": "./conformance/fixture/",
-		"test": "TestCarryRefusesFlatAndMissing",
-		"want": "应当报错",
-		"expect": "red"
-	},
-	{
-		"name": "351 判别力守卫恒说「分开了」",
+		"name": "351 判别力守卫恒说「分开了」（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\treturn o, b, !o.Equal(b), nil",
 		"new": "\treturn o, b, true, nil",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCarryRefusesWhenBaselinesWouldCoincide",
+		"test": "TestSplitSaysSameWhenBaselinesCoincide",
 		"want": "判据在看别的东西",
-		"expect": "red"
-	},
-	{
-		"name": "352 没成交也照结转",
-		"dir": "",
-		"file": "conformance/fixture/carry.go",
-		"old": "\ttrades := f.TradesOf(symbol)\n\tif len(trades) == 0 {",
-		"new": "\ttrades := f.TradesOf(symbol)\n\tif false && len(trades) == 0 {",
-		"pkg": "./conformance/fixture/",
-		"test": "TestCarryRefusesFlatAndMissing",
-		"want": "应当报错",
 		"expect": "red"
 	},
 	{
@@ -1065,13 +1043,13 @@
 		"why": "⚠️ 手数不可能为负，所以把判据从「>0」改成「<0」之后计数照样是 0，本条照样绿。**声明的盲区**：这条测试断言的是「没有反例」，而一个恒假的判据与一个真的没有反例**长得一模一样**。真正能守住它的只有「大商所哪天出现昨仓」——那时正确的判据会红，而这个改坏的不会。破坏验证在这里只能演示盲区，不能消除它。"
 	},
 	{
-		"name": "97 重放不再把 UseHistory 的裸 CLOSE 翻成平昨（F6b：reconstruct_test 改走门面，由 Reconstruct ≡ 门面的等价守卫接住）",
+		"name": "97 重放不再把 UseHistory 的裸 CLOSE 翻成平昨（F6b：reconstruct_test 改走门面，由 Reconstruct ≡ 门面的等价守卫接住）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\tif offset == types.Close && dateType == refdata.UseHistory {\n\t\treturn types.CloseYesterday\n\t}",
 		"new": "",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade",
+		"test": "TestReplayTranslatesUseHistoryBareClose",
 		"want": "重放有歧义",
 		"expect": "red"
 	},
@@ -5918,36 +5896,36 @@
 		"expect": "red"
 	},
 	{
-		"name": "595 ReconstructOnFacade 不把实测 PositionDateType 交给门面（落回 PositionDateNotNeeded，结算拒收）",
+		"name": "595 ReconstructOnFacade 不把实测 PositionDateType 交给门面（落回 PositionDateNotNeeded，结算拒收）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\t\tdates: map[types.InstrumentID]refdata.PositionDateType{inst: dateType}}",
 		"new": "\t\tdates: map[types.InstrumentID]refdata.PositionDateType{}}",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade|TestReconstructCoversCarriedSides",
-		"want": "两边都该算得出",
+		"test": "TestReconstructCoversCarriedSides",
+		"want": "重建失败",
 		"expect": "red"
 	},
 	{
-		"name": "596 ReconstructOnFacade 结算用前一日的昨结算价而不是交易所结算价（逐日盯市基线错一天）",
+		"name": "596 ReconstructOnFacade 结算用前一日的昨结算价而不是交易所结算价（逐日盯市基线错一天）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\tif err := sim.Settle(prev.TradingDay, map[types.InstrumentID]decimal.Decimal{inst: settlement}, nextDay); err != nil {",
 		"new": "\tif err := sim.Settle(prev.TradingDay, map[types.InstrumentID]decimal.Decimal{inst: pre}, nextDay); err != nil {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade",
-		"want": "两份实现分岔了",
+		"test": "TestReconstructOnFacadeSplitsTheTwoBaselines",
+		"want": "逐日盯市基线",
 		"expect": "red"
 	},
 	{
-		"name": "597 ReconstructOnFacade 不灌当日成交（只剩结转那一段）",
+		"name": "597 ReconstructOnFacade 不灌当日成交（只剩结转那一段）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\t\tif err := apply(nextDay, cur.TradesOf(symbol)); err != nil {",
 		"new": "\t\tif err := apply(nextDay, nil); err != nil {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade",
-		"want": "两份实现分岔了",
+		"test": "TestReconstructCoversCarriedSides",
+		"want": "个字段对不上",
 		"expect": "red"
 	},
 	{
@@ -6091,6 +6069,17 @@
 		"pkg": "./conformance/",
 		"test": "TestBuildSpecsNeedsEveryMeasuredPiece",
 		"want": "规格没照实带上实测规则",
+		"expect": "red"
+	},
+	{
+		"name": "611 cmd/oracle 的 -carry 接线断了（给了前一日夹具与结算价也结转不了，带昨仓的合约全记成跳过）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/conformance/live.go",
+		"old": "\tsettle, ok := c.Settlement[sym]\n\tif !ok {",
+		"new": "\tsettle, ok := c.Settlement[sym]\n\tif true || !ok {",
+		"pkg": "./conformance/",
+		"test": "TestCompareCarriesThroughFacade",
+		"want": "应当结转后比上",
 		"expect": "red"
 	},
 	{

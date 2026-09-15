@@ -90,6 +90,30 @@ func TestReplayDetectsAmbiguity(t *testing.T) {
 	t.Logf("歧义被抓住：%v", err)
 }
 
+// TestReplayTranslatesUseHistoryBareClose 钉住 closeOffsetOf：UseHistory 上柜台成交的裸 CLOSE 按平昨重放。
+//
+// ⚠️ F7b 之前它由 TestReconstructMatchesFacade 间接接住（Reconstruct 走 ReplayFrom）；Reconstruct 删了，
+// 而 `cmd/oracle` 的同日重放仍把实测 PositionDateType（可能是 UseHistory）交给 Replay ⇒ 这里直接钉。F7c 删 closeOffsetOf 时一并删。
+// 与上面那条同一个起始持仓：不翻就会像上面那样报歧义；翻了则吃掉两手昨仓、今仓 3300 原样留下。
+func TestReplayTranslatesUseHistoryBareClose(t *testing.T) {
+	trades := []Trade{{
+		TradeID: "t1", Instrument: testInst,
+		Direction: types.Sell, Offset: types.Close,
+		Hedge: types.Speculation, Price: dd("3250"), Volume: 2, At: 1,
+	}}
+	p, err := ReplayFrom(seeded(t), testInst, types.Speculation, refdata.UseHistory, dayD1, trades)
+	if err != nil {
+		t.Fatalf("⚠️ UseHistory 上的裸 CLOSE 按平昨重放不该有歧义：%v", err)
+	}
+	s, err := p.Side(types.Buy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.VolumeHistory() != 0 || s.VolumeToday() != 1 {
+		t.Errorf("⚠️ 裸 CLOSE 2 手之后 今 %d / 昨 %d，应为 今 1 / 昨 0（平昨）", s.VolumeToday(), s.VolumeHistory())
+	}
+}
+
 // TestReplayIsFineWhenOrderCannotMatter 是上一条的对照组。
 //
 // ⚠️ 没有它，上一条可以靠「一律报歧义」通过 ——

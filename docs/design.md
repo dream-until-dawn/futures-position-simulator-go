@@ -693,7 +693,7 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 `Reconstruct` 还在 **`cmd/oracle` 的 `live.go`**（`-carry` 实时对拍）；`FrozenOf` 在 `fixture_test` / `frozen_test` / `reconstruct_test`。
 而 `cmd/oracle` 的规格（`BuildSpecs`：字典乘数 + 实测保证金率 + 实测 PositionDateType）**没有手续费率** —— 门面记账必须有它（`ApplyTrade` 每笔都算手续费），填零就是编数。
 
-**探针**（F6b 第一个提交入库；冻结那一半随旧函数删，跨日那一半转正为 `conformance/fixture/carry_equivalence_test.go`）：
+**探针**（F6b 第一个提交入库；冻结那一半随旧函数删，跨日那一半转正为等价守卫 TestReconstructMatchesFacade —— F7b 删 `Reconstruct` 时连文件一起删了）：
 
 | 半边 | 比什么 | 结果 | 判别力（改一处再跑） |
 |---|---|---|---|
@@ -761,6 +761,14 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 - 此前加载器与 `BuildSpecs` 一条单测都没有，补上（`measured_test` / `cmd/oracle/conformance/rules_test`）
 - 替换前后 `conformance/fixture` 全包 -v 日志逐行相同（两行差异来自 `TestOrdersAcceptedOutsideSession` 遍历 map 的示例输出，重跑三次三个结果）
 - 破坏 357/362/363/93/180 改指到 json（93 原为删行，json 删行会留尾逗号读不成，改成把 m2701 改成同一型）、171/173 改指到 measured.go；新增 602–610（602 预判错：没写 classified 是空指针 panic，不是缺省成 false）
+
+##### F7b 落地（2026-09-15）
+
+- `cmd/oracle -carry` 改走 `ReconstructOnFacade`（`Spec` 自 F7a 起带手续费率）；删 `Carry` / `Reconstruct`、等价守卫 `TestReconstructMatchesFacade`
+- `Carry` 注释里「为什么非结转不可」「三个前提」并进 `ReconstructOnFacade` 的注释；`carry_test` 里与门面测试重复的三条删掉，基线重合那条改在门面结转的结果上跑（`TestSplitSaysSameWhenBaselinesCoincide`）
+- ⚠️ 此前 `-carry` 那条路一条测试都没有 —— 换实现时没有任何东西会红 ⇒ 补 `TestCompareCarriesThroughFacade`（入库夹具当实时截面，给 / 不给 `-carry` 两种）
+- `closeOffsetOf` 仍在 `cmd/oracle` 的同日重放上起作用（传实测 PositionDateType）⇒ 补 `TestReplayTranslatesUseHistoryBareClose` 直接钉它，F7c 一起删
+- 破坏：348 / 349 / 351 / 97 / 595–597 改由门面上的测试接；350 / 352 删掉（锚的 `Carry` 守卫没了，门面同一道守卫是 591 / 590）；新增 611（`-carry` 接线）
 
 ##### 决策点（实现方倾向，F7c 之前定）
 
