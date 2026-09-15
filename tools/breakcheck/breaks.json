@@ -5796,14 +5796,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "584 FrozenBook 不拒没有规格的合约（零值规格进门面：平仓单手续费静默为 0）",
+		"name": "584 FrozenBook 不先拒没有规格的合约（零值规格进门面：报的是「合约乘数必须为正」，没说到缺规格；最初以为会静默算出 0，跑出来不是）",
 		"dir": "",
 		"file": "conformance/fixture/frozen.go",
 		"old": "\t\tspec, ok := specs[sym]\n\t\tif !ok {",
 		"new": "\t\tspec, ok := specs[sym]\n\t\tif false && !ok {",
 		"pkg": "./conformance/fixture/",
 		"test": "TestFrozenBookRefusesAmbiguousOrMissing",
-		"want": "没有规格：本该报错",
+		"want": "没有规格：报错了但没说到点上",
 		"expect": "red"
 	},
 	{
