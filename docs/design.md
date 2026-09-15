@@ -727,6 +727,40 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 - `NakedCloseRefuse` 只在 `frozen_test.go` 四处用（意图「不声明口径就拒」，迁移后由门面口径的零值承担）
 - 费率 / 保证金率：`ratesOf` / `ratesFor`；PositionDateType：`measured-rules-20260909.json`
 
+#### 11. F7：快期夹具的同日重放、`-carry` 与实测规则数据收进一处（2026-09-15，实现之前写）
+
+**为什么**：F6b 之后快期那侧还剩三样与门面并存的东西（F6b 修订里登记的），外加一处之前没登记的：
+
+- 结转：`Carry` / `Reconstruct` / `ReplayFrom`（`cmd/oracle -carry` 与 `carry_test` 在用），靠 `TestReconstructMatchesFacade` 钉等价
+- 同日重放：`Replay` / `ReplayRealized` / `closeOffsetOf`（与门面 `datedOffset` 同义的第二处）
+- ⚠️ **新发现、之前没登记**：实测规则数据有两个家 —— `testdata/refdata/measured-rules-20260909.json`（`cmd/oracle` 读，保证金率 + PositionDateType）与 `conformance/fixture` 测试里的 `marginRates` / `positionDates` / `feeRates` 变量（对拍读）。
+  两份**没有任何东西比过**；手续费率只在测试变量里有，这正是 `cmd/oracle -carry` 拿不到手续费率、F6b 删不掉 `Reconstruct` 的原因
+
+##### 已核（20260915）
+
+- `cmd/oracle` 的 `BuildSpecs` 只给**有实测保证金率**的品种出规格：json 里是 rb / m / i / cu / ag 五个；`feeRates` 恰好也是这五个 ⇒ 手续费率进 json 之后，`-carry` 的覆盖**不变小**
+- json 与测试变量现值一致：保证金率五个品种逐个相同（rb .07 / m .07 / i .11 / cu .11 / ag .22），PositionDateType 两个合约相同（rb2701 UseHistory / m2701 NoUseHistory）
+- 同日 `Replay` 的调用点：`fixture_test`（`TestReplayIsUnambiguous` / `TestReplayMatchesOracleVolumeAndPrice` / `TestPositionViewAgainstFixtureShowsTheGap` / `TestPositionViewAcrossAllFixtures` 的当日样本）、`margin_test`（`TestMarginAgainstFixturePositions`）、`account_test`（`ReplayRealized`）、`cmd/oracle` 的 `live.go`；`replay_test` 是它自己的单测
+- `account_test`（`TestAccountAggregatesFromTrades`）与 `TestRebuildAccountFieldByField` **同一份夹具**（`status-20260908-7`）、比**同样两个字段**（commission / close_profit）：前者自己调 `fee.Compute` + `ReplayRealized`，后者走门面。
+  前者独有的是三道守卫（平仓 ≥ 10 笔、柜台 close_profit 非零、手续费残差上界 1e-5）与一行**只打日志**的逐笔对冲口径 —— 本批全是今仓，两条口径必然相等，没有断言
+- `cmd/oracle` 的 `compareOne` 还调 `fixture.MarginOf` 自己算保证金（与门面 `value` 同义）—— 记为候选，不进 F7
+
+##### 分三步
+
+- **F7a（数据一处）**：`feeRates` 的五个品种（按额 / 按手、标定合约、有无第二个月份可预测）进 json（新段 `commission_rate_by_product`，每行带出处 probes.md §10.2）；
+  读 json 的函数从 `cmd/oracle/conformance` 挪到 `conformance/fixture`（主模块；`cmd/oracle` 本来就 import 它）；对拍测试的三个变量改从 json 读、删掉。
+  判据：替换前后 `conformance/fixture` 全部测试的 -v 日志（去行号与耗时）逐行相同
+- **F7b（结转一处）**：`cmd/oracle -carry` 改走 `ReconstructOnFacade`（规格有了手续费率）；删 `Carry` / `Reconstruct` 与等价守卫；`carry_test` 里 `Carry` 的守卫单测由 `carry_facade_test` 接（已有：拆两条基线、没成交、收盘空仓、结算价为零；缺的补齐：基线重合时 `Split` 说相同。`TestTonightSeedDiscriminatingPower` 直接用 `position`，不依赖 `Carry`，留着）
+- **F7c（重放一处）**：同日样本改走门面（一个合约一个模拟器，`PositionDateNotNeeded` 即 `specRules` 的默认）；删 `Replay` / `ReplayFrom` / `ReplayRealized` / `closeOffsetOf` / `replay_test`
+  - ⚠️ 失去的检查：`TestReplayIsUnambiguous`（三种消耗顺序在全部当日样本上一致）。当日样本全是今仓，三种顺序**结构上**消耗同一批（`ReplayFrom` 注释自己写着「start 为 nil 时结构上不可能触发」）⇒ 它一直在答「一致」，删掉登记 silent-risks
+
+##### 决策点（实现方倾向，F7c 之前定）
+
+1. **`account_test` 怎么办**。候选：
+   - (a) **删掉，三道守卫挪进 `TestRebuildAccountFieldByField`**（倾向）：两条测试比的是同一件事，留着就是第二份实现；逐笔对冲口径那一行没有断言，挪不挪都不损失验证
+   - (b) 门面的 `ApplyTrade` 返回这笔成交的已实现结果（逐日盯市 / 逐笔对冲两个口径），`account_test` 改从它取 —— 导出面变大，而快期上两个口径分不开（本批全今仓；昨仓样本上柜台 close_profit 只给逐日盯市一个数），新增的导出字段在快期对拍里没有判别力
+2. **`fixture.MarginOf`**（`cmd/oracle` 与 `crossday` / `reconstruct` 在用）：不进 F7，登记。它是「持仓 → 保证金」的第二份实现，但调用方要的是**逐方向**的数（view 的 `margin_long` / `margin_short`），门面只给合计 —— 要它就得先定门面给不给逐合约逐方向的占用
+
 ### 为什么这样切
 
 **纯函数层与状态层的分界是这套结构的主轴。** `fee` / `margin` / `pnl` 只做计算：
