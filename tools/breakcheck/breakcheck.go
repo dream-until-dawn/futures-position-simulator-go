@@ -10,12 +10,14 @@
 //	go run ./tools/breakcheck            # 全跑
 //	go run ./tools/breakcheck -only 无值  # 只跑名字含「无值」的
 //	go run ./tools/breakcheck -list      # 只列，不跑
+//	go run ./tools/breakcheck -compile   # 只试编译：逐条施加破坏、编译测试包、还原（不跑测试）
 //
 // # 四层，本命令覆盖前三层
 //
 //	零层  先确认**破坏本身发生了** —— 锚点必须恰好出现一次，否则报「零层未成立」
 //	一层  要红
-//	二层  要红在**断言**上，不是编译失败
+//	二层  要红在**断言**上，不是编译失败 —— 编译失败单独判「破坏编译不过」（破坏本身写错了，改 new），
+//	      不与「红错了理由」（守卫红在别处）混在一个判定里
 //	三层  要红在**被测的那个性质**上 —— 靠 want 片段核对
 //
 // ⚠️ 第四层（红的理由与破坏的因果）机器判不了，靠 want 逼近，靠人看。
@@ -108,6 +110,8 @@ func main() {
 		"⇒ 与给本工具加红/绿分解那次同形：**数据本来就有，缺的只是留下来**。"+
 		"⚠️ 只持久化，**不建模**：「红的是哪句话」要结构化表达是另一件事，先别做")
 	list := flag.Bool("list", false, "只列出，不跑")
+	compileOnly := flag.Bool("compile", false, "只试编译：逐条施加破坏、`go test -run '^$'` 编译测试包、还原，不跑测试。"+
+		"⚠️ 它抓的是「破坏本身写错了」（455 / 502 / 522 / 550 那种替换后变量没用上），**不替代**全量 —— 编译通过的破坏仍可能红错理由")
 	flag.Parse()
 
 	var breaks []Break
@@ -202,7 +206,12 @@ func main() {
 			continue
 		}
 		ran++
-		verdict, detail := run(b)
+		verdict, detail := "", ""
+		if *compileOnly {
+			verdict, detail = tryCompile(b)
+		} else {
+			verdict, detail = run(b)
+		}
 		results = append(results, result{Name: b.Name, Pkg: b.Pkg, Test: b.Test,
 			Expect: b.Expect, Want: b.Want, Verdict: verdict, Detail: detail})
 		dump()
@@ -211,7 +220,7 @@ func main() {
 			fmt.Printf("    %s\n", strings.ReplaceAll(detail, "\n", "\n    "))
 		}
 		switch verdict {
-		case "红对了":
+		case "红对了", "编译通过":
 			red++
 		case "如预期仍然绿":
 			green++
@@ -294,8 +303,12 @@ func main() {
 	//
 	// ⇒ 打出来之后，「编一个分解」这件事就没有空间了 ——
 	// **这是把一次纪律失败换成结构**（silent-risks.md 66：验证防这一次，结构防每一次）。
-	fmt.Printf("\n跑了 %d 条：红对了 %d / 如预期仍然绿 %d / **未按预期 %d**\n",
-		ran, red, green, bad)
+	if *compileOnly {
+		fmt.Printf("\n试编译 %d 条：编译通过 %d / **编译不过或零层未成立 %d**\n", ran, red, bad)
+	} else {
+		fmt.Printf("\n跑了 %d 条：红对了 %d / 如预期仍然绿 %d / **未按预期 %d**\n",
+			ran, red, green, bad)
+	}
 
 	dump()
 	if *out != "" {
@@ -368,6 +381,37 @@ type AlsoEdit struct {
 }
 
 func run(b Break) (verdict, detail string) {
+	return withBreak(b, func() (string, string) {
+		// ⚠️ 括号不是装饰：`^A|B$` 在正则里是 `(^A)|(B$)` —— **前缀或后缀**，
+		// 不是「A 或 B 的全名」。清单里有 5 条用 `A|B` 写多个测试名，
+		// 它们此前选对了人纯属侥幸：恰好没有别的测试名以 A 开头、以 B 结尾。
+		cmd := exec.Command("go", "test", b.Pkg, "-run", "^("+b.Test+")$", "-v")
+		cmd.Dir = b.Dir // 空串表示当前目录
+		out, runErr := cmd.CombinedOutput()
+		return classify(b, string(out), runErr == nil)
+	})
+}
+
+// tryCompile 施加破坏后只编译测试包（`go test -run '^$'`：与跑测试时编译的是同一份东西，含 go test 自带的 vet 子集），然后还原。
+func tryCompile(b Break) (verdict, detail string) {
+	return withBreak(b, func() (string, string) {
+		cmd := exec.Command("go", "test", b.Pkg, "-run", "^$", "-count=1")
+		cmd.Dir = b.Dir
+		out, runErr := cmd.CombinedOutput()
+		if runErr != nil {
+			return "破坏编译不过", "施加破坏之后测试包编译不过 —— 破坏本身写错了（多半是替换后某个变量或导入没用上），改 new：\n" + tail(string(out), 500)
+		}
+		return "编译通过", ""
+	})
+}
+
+// buildFailed 报告 go test 的输出是不是「没编译成」而不是「跑了、断言失败」。
+func buildFailed(text string) bool {
+	return strings.Contains(text, "[build failed]") || strings.Contains(text, "[setup failed]")
+}
+
+// withBreak 施加一条破坏、跑 body、无论如何还原；零层（锚点）不成立时不跑 body。
+func withBreak(b Break, body func() (string, string)) (verdict, detail string) {
 	// ⚠️ File 一律相对**仓库根**，而 go test 在 Dir 里跑。
 	// 两者的基准不同是刻意的：破坏改的是源码（按仓库定位），
 	// 测试跑的是模块（按模块定位）。混成一个会在嵌套模块上错。
@@ -429,15 +473,11 @@ func run(b Break) (verdict, detail string) {
 			return "零层未成立", err.Error()
 		}
 	}
+	return body()
+}
 
-	// ⚠️ 括号不是装饰：`^A|B$` 在正则里是 `(^A)|(B$)` —— **前缀或后缀**，
-	// 不是「A 或 B 的全名」。清单里有 5 条用 `A|B` 写多个测试名，
-	// 它们此前选对了人纯属侥幸：恰好没有别的测试名以 A 开头、以 B 结尾。
-	cmd := exec.Command("go", "test", b.Pkg, "-run", "^("+b.Test+")$", "-v")
-	cmd.Dir = b.Dir // 空串表示当前目录
-	out, runErr := cmd.CombinedOutput()
-	text := string(out)
-	green := runErr == nil
+// classify 按 go test 的输出与退出码给一条破坏定判定。纯函数，单测直接喂输出文本。
+func classify(b Break, text string, green bool) (verdict, detail string) {
 
 	// ⚠️ **跑了零条测试，也是退出 0。**
 	//
@@ -463,6 +503,12 @@ func run(b Break) (verdict, detail string) {
 				"跑了零条，说明不了任何事。", b.Test, b.Pkg)
 	}
 
+	// ⚠️ 编译失败排在期望分支**之前**：expect=green 的破坏编译不过时，原来报「⚠️ 竟然红了」——
+	// 读起来像「盲区消失了」，是个假好消息；expect=red 的原来报「红错了理由」，与「守卫红在别处」共用一个判定。
+	// 两者真正的意思都是「破坏本身写错了」（455 / 502 / 522 / 550 四次同形）。
+	if !green && buildFailed(text) {
+		return "破坏编译不过", "施加破坏之后编译失败（第二层不成立）—— 破坏本身写错了，多半是替换后某个变量或导入没用上，改 new：\n" + tail(text, 500)
+	}
 	if b.Expect == "green" {
 		if green {
 			return "如预期仍然绿", "盲区：" + b.Why
@@ -472,9 +518,6 @@ func run(b Break) (verdict, detail string) {
 	}
 	if green {
 		return "仍然绿", "破坏后照样通过 —— 这条测试没在测它声称测的东西"
-	}
-	if strings.Contains(text, "build failed") {
-		return "红错了理由", "编译失败，不是断言失败（第二层不成立）：\n" + tail(text, 500)
 	}
 	if !strings.Contains(text, b.Want) {
 		return "红错了理由", fmt.Sprintf(

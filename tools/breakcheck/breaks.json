@@ -5606,5 +5606,27 @@
 		"test": "TestRestoreAcceptsBareCloseAfterPositionChanged",
 		"want": "裸平挂单与账户冻结手续费一起 +1 要被拒",
 		"expect": "red"
+	},
+	{
+		"name": "567 编译失败不再单独判——期望绿的破坏编译不过又报成「竟然红了」",
+		"dir": "",
+		"file": "tools/breakcheck/breakcheck.go",
+		"old": "if !green && buildFailed(text) {",
+		"new": "if false && !green && buildFailed(text) {",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestCompileFailureIsItsOwnVerdict",
+		"want": "的破坏编译不过，判定却是",
+		"expect": "red"
+	},
+	{
+		"name": "568 -compile 模式看不见编译失败——编译不过的破坏也报「编译通过」",
+		"dir": "",
+		"file": "tools/breakcheck/breakcheck.go",
+		"old": "\t\tif runErr != nil {\n\t\t\treturn \"破坏编译不过\"",
+		"new": "\t\tif false && runErr != nil {\n\t\t\treturn \"破坏编译不过\"",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestCompileFailureIsItsOwnVerdict",
+		"want": "-compile 模式没把编译不过的破坏报出来",
+		"expect": "red"
 	}
 ]
