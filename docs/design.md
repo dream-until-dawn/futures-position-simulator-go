@@ -693,7 +693,7 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 `Reconstruct` 还在 **`cmd/oracle` 的 `live.go`**（`-carry` 实时对拍）；`FrozenOf` 在 `fixture_test` / `frozen_test` / `reconstruct_test`。
 而 `cmd/oracle` 的规格（`BuildSpecs`：字典乘数 + 实测保证金率 + 实测 PositionDateType）**没有手续费率** —— 门面记账必须有它（`ApplyTrade` 每笔都算手续费），填零就是编数。
 
-**探针**（`conformance/fixture/probe_facade_freeze_test.go`，F6b 第一个提交入库，迁移完随旧函数一起删）：
+**探针**（F6b 第一个提交入库；冻结那一半随旧函数删，跨日那一半转正为 `conformance/fixture/carry_equivalence_test.go`）：
 
 | 半边 | 比什么 | 结果 | 判别力（改一处再跑） |
 |---|---|---|---|
@@ -712,6 +712,14 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
   - 删它们要 `cmd/oracle` 有手续费率来源（候选：快期行情的每手手续费反解，`fee_test` 的 `feeRates` 就是这么标定的，只覆盖五个品种）⇒ 登记为 F7，不在 F6 里编
   - ⚠️ 失去的一道检查（原计划里已写）：对拍测试改走门面后，`ReplayFrom` 的三种消耗顺序歧义检查不再在对拍路径上跑；它仍在 `Reconstruct` 里（`-carry` 路径）。登记 silent-risks
 - 同日重放 `Replay`（`fixture_test` / `margin_test` / `account_test` 的 `ReplayRealized` / `cmd/oracle`）**不在 F6 里** —— 它是 `PositionDateNotNeeded` 上的逐合约重放，与 `closeOffsetOf`（与门面 `datedOffset` 同义的第二处）一起记进 F7
+
+##### F6b 落地（2026-09-15）
+
+- **F6b-1**：`FrozenBook`（读委托 → 门面 `FreezeOf` → `order.Book`）替掉 `FrozenOf` / `FrozenAccountOf` / `NakedClosePolicy`；`specRules` 带实测 PositionDateType，`Rebuild` 与 `FrozenBook` 共用 `fixtureChoices`。
+  指向旧函数的 8 条破坏改指到门面与 `FrozenBook`（132/133/137/139/140/143/151/152），新增 584–589。覆盖变化见 silent-risks「冻结对拍要规格与昨结算价」
+- **F6b-2**：`ReconstructOnFacade` 接 `crossday` / `reconstruct` / `carryStartFor`→`fixture_test`；三条对拍迁移前后日志（去行号与耗时）逐行相同。
+  `Carry` / `Reconstruct` 暂留，`TestReconstructMatchesFacade` 钉等价；破坏 97 改由它接住，新增 590–597
+- F6 的收尾（删 `Carry` / `Reconstruct`、同日 `Replay` 与 `closeOffsetOf` 收进门面）登记为 F7，前提是 `cmd/oracle` 有手续费率来源
 
 ##### 已核
 

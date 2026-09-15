@@ -4,12 +4,42 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
+	"github.com/shopspring/decimal"
 )
 
-// carryStartFor 为一份**带昨仓**的截面找出它的起始持仓：
-// 取上一交易日的收盘态夹具，按交易所结算价结转过来。
+// carrySource 是结转一个合约要的三样：上一交易日的收盘态夹具、规格、交易所结算价。
+type carrySource struct {
+	prev   *Fixture
+	spec   Spec
+	settle decimal.Decimal
+}
+
+// specForSymbol 凑一个合约的规格（乘数、手续费率、保证金率），没登记就报 false —— 不 Fatal：调用方计数跳过。
+func specForSymbol(t *testing.T, f *Fixture, sym string) (Spec, bool) {
+	t.Helper()
+	mult, ok := multipliers[sym]
+	if !ok {
+		return Spec{}, false
+	}
+	inst, err := types.ParseSymbol(sym, f.TradingDay)
+	if err != nil {
+		return Spec{}, false
+	}
+	product, _ := splitProduct(inst.Product)
+	comm, _, ok := ratesOf(product)
+	if !ok {
+		return Spec{}, false
+	}
+	mg, ok := ratesFor(product)
+	if !ok {
+		return Spec{}, false
+	}
+	return Spec{Multiplier: decimal.RequireFromString(mult), Commission: comm, Margin: mg}, true
+}
+
+// carryStartFor 为一份**带昨仓**的截面找出结转它的来源：
+// 取上一交易日的收盘态夹具，按交易所结算价在门面上结转得通（ReconstructOnFacade，F6b）才算数。
 //
 // # ⚠️ 挑哪一份上一日夹具，是这段代码里最容易出错的一步
 //
@@ -27,7 +57,7 @@ import (
 // **再核一次**：选中那份的成交笔数必须是当天同合约的**最大值**。
 // 不是的话就报错而不是将就 —— 那说明「越晚看到越多」这个前提不成立，
 // 而前提不成立时 ② 挑出来的那份是错的。
-func carryStartFor(t *testing.T, all []*Fixture, f *Fixture, sym string) (*position.Position, bool, string) {
+func carryStartFor(t *testing.T, all []*Fixture, f *Fixture, sym string) (*carrySource, bool, string) {
 	t.Helper()
 	today := f.TradingDay.String()
 
@@ -85,9 +115,12 @@ func carryStartFor(t *testing.T, all []*Fixture, f *Fixture, sym string) (*posit
 		// 那会把独立来源悄悄换成同源，而同源核对是同义反复。
 		return nil, false, "交易所日行情里没有该合约的结算价（大商所 412 未打通）"
 	}
-	p, err := Carry(pick.f, sym, types.Speculation, positionDateOf(t, sym), settle, f.TradingDay)
-	if err != nil {
+	spec, ok := specForSymbol(t, pick.f, sym)
+	if !ok {
+		return nil, false, "该合约没有登记规格（乘数 / 手续费率 / 保证金率）"
+	}
+	if _, err := ReconstructOnFacade(pick.f, nil, sym, spec, positionDateOf(t, sym), settle, f.TradingDay); err != nil {
 		return nil, false, "结转失败：" + err.Error()
 	}
-	return p, true, ""
+	return &carrySource{prev: pick.f, spec: spec, settle: settle}, true, ""
 }

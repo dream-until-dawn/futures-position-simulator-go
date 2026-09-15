@@ -506,9 +506,9 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			// 结转不了才跳过，并把**为什么**记下来。
 			// 20260909 之前这里是无条件 continue —— 而那 26 份里有 19 份记了委托，
 			// 持仓侧冻结那三个字段因此一个样本都没接上。
-			var carriedStart *position.Position
+			var carrySrc *carrySource
 			if f.HasHistoryPosition(sym) {
-				start, ok, why := carryStartFor(t, all, f, sym)
+				src, ok, why := carryStartFor(t, all, f, sym)
 				if !ok {
 					skippedHistory++
 					if len(f.Orders) > 0 {
@@ -517,7 +517,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 					skipWhy[why]++
 					continue
 				}
-				carriedStart = start
+				carrySrc = src
 				carried++
 			}
 			multStr, ok := multipliers[sym]
@@ -527,11 +527,11 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 			}
 			var p *position.Position
 			var err error
-			if carriedStart != nil {
-				// ⚠️ 结转过来的起始持仓要带上该合约**实测的** PositionDateType：
-				// 今昨仓滚不滚由它定，而 PositionDateNotNeeded 在这条路径上是错的。
-				p, err = ReplayFrom(carriedStart, trades[0].Instrument, types.Speculation,
-					positionDateOf(t, sym), f.TradingDay, trades)
+			if carrySrc != nil {
+				// ⚠️ 结转过来的持仓在门面上重建（F6b）：前一日成交 → 按交易所结算价结算 → 当日成交，
+				// 带该合约**实测的** PositionDateType（今昨仓滚不滚由它定）。
+				p, err = ReconstructOnFacade(carrySrc.prev, f, sym, carrySrc.spec,
+					positionDateOf(t, sym), carrySrc.settle, f.TradingDay)
 			} else {
 				p, err = Replay(trades[0].Instrument, types.Speculation,
 					refdata.PositionDateNotNeeded, f.TradingDay, trades)
@@ -609,7 +609,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 				// 合在一个桶里的话，只能二选一：要么给当日样本的表加进几条
 				// 它永远用不到的豁免，要么让跨日样本撑爆「不许有第三类」——
 				// **两条都是把两群不同的东西按一把尺子量**。
-				if carriedStart != nil {
+				if carrySrc != nil {
 					carriedFailed[name]++
 				} else {
 					failedFields[name]++

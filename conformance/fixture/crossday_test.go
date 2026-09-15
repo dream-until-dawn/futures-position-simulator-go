@@ -10,7 +10,6 @@ import (
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
-	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
 	"github.com/shopspring/decimal"
 )
@@ -98,7 +97,7 @@ func TestCrossDayConformance(t *testing.T) {
 			continue
 		}
 		spec := specs[sym]
-		p, err := Carry(prev, sym, types.Speculation, positionDateOf(t, sym), settle, next.TradingDay)
+		p, err := ReconstructOnFacade(prev, nil, sym, spec, positionDateOf(t, sym), settle, next.TradingDay)
 		if err != nil {
 			t.Errorf("⚠️ 结转 %s 失败：%v", sym, err)
 			continue
