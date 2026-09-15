@@ -45,7 +45,8 @@ func simRules(t *testing.T) refdata.Provider {
 			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.09"), HasPriceLimitRatio: true}).
 		// y2701：平昨档 = 平今档（两档同费率），给 §13 #21 「超出今仓的部分」那一支用
 		AddInstrument(refdata.Instrument{ID: y, VolumeMultiple: dec("10"), PriceTick: dec("2"),
-			PositionDateType: refdata.NoUseHistory, IsTrading: true}).
+			PositionDateType: refdata.NoUseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.06"), HasPriceLimitRatio: true}).
 		AddCommissionRates(y, types.Speculation, refdata.CommissionRates{
 			OpenByVolume: dec("2.5"), CloseByVolume: dec("1.1"), CloseTodayByVolume: dec("1.1")}).
 		AddMarginRates(y, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).

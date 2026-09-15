@@ -71,6 +71,8 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			today, history = p.VolumeToday(opposite(req.Direction)), p.VolumeHistory(opposite(req.Direction))
 			dt = p.DateType()
 		}
+		// ⚠️ 冻结手续费的档位按**持有的**今仓算（与此刻成交时 ApplyTrade 看的「平仓前今仓」一致），不扣挂单冻住的 ——
+		// 挂单阶段用持有还是可用，§13 #21 的候选都没说，是推得
 		if in.Commission, err = s.commission(tr, today); err != nil {
 			return order.Frozen{}, err
 		}
@@ -79,8 +81,11 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			if ord, ok := position.MeasuredCloseOrder(dt); !ok || ord != position.YesterdayFirst {
 				return order.Frozen{}, fmt.Errorf("%s 上的裸 CLOSE 没有实测的消耗顺序（PositionDateType %v）—— 显式给平今或平昨", req.Instrument, dt)
 			}
-			in.UndatedHistory = min(req.Volume, history)
-			in.UndatedToday = req.Volume - in.UndatedHistory
+			// 合计超了可平量时 undatedSplit 报错：校验会拒在可平量（validate 先让拒因说话），这里不猜一份冻结
+			if in.UndatedToday, in.UndatedHistory, err = undatedSplit(req.Instrument, req.Volume, today, history,
+				s.book.TotalOf(req.Instrument, opposite(req.Direction))); err != nil {
+				return order.Frozen{}, err
+			}
 		}
 	}
 	return order.FreezeOf(req, in)
