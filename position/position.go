@@ -333,7 +333,8 @@ func (p *Position) Settle(day types.TradingDay, settlementPrice decimal.Decimal,
 	}
 	// ⚠️ 结算时今仓一律变昨仓、基线推进到结算价 —— **两种 PositionDateType 相同**。
 	//
-	// ✅ 2026-09-15 使用者裁决（cn-futures-rules.md §13 #20）：大商所（NoUseHistory）**跟 CTP**。
+	// ✅ 2026-09-15 使用者裁决（cn-futures-rules.md §13 #20）：**全部 NoUseHistory 交易所跟 CTP**（范围由使用者在评审会话中裁定）。
+	// ⚠️ 观测只覆盖大商所（下面那一行）；郑商所及其他报 NoUseHistory 的交易所是**外推、无观测**。
 	//
 	//	CTP / SimNow  DCE.m2701 一手跨结算：Position 1 / TodayPosition 0 / YdPosition 1，平昨被接受（#4 夹具 ①、§13 #16）
 	//	快期          同一种仓结算后 today=3 / his=0 —— 持仓永远记今仓（kq_facts 24）

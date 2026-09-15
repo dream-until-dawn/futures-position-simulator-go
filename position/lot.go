@@ -118,7 +118,8 @@ func (s *Side) weightedAvg(pick func(Lot) decimal.Decimal) (decimal.Decimal, boo
 // 漏掉或重复执行，后续每一天的平今/平昨判定、手续费、保证金基线全部错位，
 // 而且不会报错。
 //
-// ⚠️ **两种 PositionDateType 都走这里**（2026-09-15 使用者裁决跟 CTP，§13 #20）。
+// ⚠️ **两种 PositionDateType 都走这里**（2026-09-15 使用者裁决跟 CTP，范围全部 NoUseHistory 交易所，§13 #20；
+// 观测只覆盖大商所，郑商所等是外推）。
 // 此前 `NoUseHistory` 走一个只推基线、不标昨仓的 RebaseAll（快期口径），已删除 —— 理由见 Position.Settle。
 func (s *Side) SettleAll(settlementPrice decimal.Decimal) {
 	for i := range s.lots {
