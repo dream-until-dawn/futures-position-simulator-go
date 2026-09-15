@@ -180,3 +180,132 @@ func TestFacadeReplaysAg2702AgainstCTP(t *testing.T) {
 		t.Fatalf("⚠️ 灌了 %d 笔、比了 %d 份（期望 9 / %d）—— 成交列表或截面变了", applied, compared, len(slices))
 	}
 }
+
+// TestFacadeSettlesM2701AcrossDaysAgainstCTP 用**生产的门面**按 CTP 预设走完 #4 夹具的跨日：
+// DCE.m2701 交易日 20260914 开多 1 @3399 → 按 3384 结算 → 20260915 开今 1 @3360 → OF_Close 1 @3360，
+// 在四个时点比那条持仓记录（`DCE.m2701/2/1`，今昨合在一条里）。
+//
+// 它钉住：结算滚仓、基线推进（PositionCost 33840）、昨仓保证金按昨结算价（4737.6，CTP 预设的 MarginBasis 第一次在昨仓上被判别）、
+// 今昨混合占用（9441.6）、裸 CLOSE 先平昨（#4，CloseProfit −240）、以及 §13 #21 那一笔手续费 0.1。
+// ⚠️ #21 三个候选都预言 0.1，这一格不判别候选，只钉「本库在收敛前的做法与这一笔一致」。
+//
+// ⚠️ 输入来源：乘数 specs-20260908.json；手续费率 ctp-commission-rates-20260915.txt（DCE.m2701 每手 0.2 / 0.2 / 0.1，按额 0）；
+// 保证金率取 -2 那条记录的 MarginRateByMoney（昨仓单独时记录报 0，§13 #1）；PositionDateType 取 measured-rules-20260909.json
+// （快期结算行为实测 no_use_history）；结算价 = 次日行情的 PreSettlementPrice。
+// ⚠️ 本库一侧取账户合计：规则数据只装 m2701，门面里结构上不可能有第二条腿。
+// ⚠️ 账户级跨日（上日结存）不比：两对跨日截面都有未归因的正差（§13 #5）。
+func TestFacadeSettlesM2701AcrossDaysAgainstCTP(t *testing.T) {
+	fx := loadCTP(t)
+	get := func(name string) ctpFixture {
+		f, ok := fx[name]
+		if !ok {
+			t.Fatalf("⚠️ 缺夹具 %s", name)
+		}
+		return f
+	}
+	const sym, rec = "DCE.m2701", "DCE.m2701/2/1"
+	d1, d2 := types.TradingDay(20260914), types.TradingDay(20260915)
+	id, err := types.ParseSymbol(sym, d1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mult, ok := specMultiplier(t, sym, id)
+	if !ok {
+		t.Fatal("⚠️ 规格快照里没有 m 的乘数")
+	}
+	dayEnd := get("ctp-status-20260914-10.json")
+	s0, s2, s3 := get("ctp-slices-20260915.json"), get("ctp-slices-20260915-2.json"), get("ctp-slices-20260915-3.json")
+	rate := num(t, s2.Positions[rec], "MarginRateByMoney")
+	if !rate.IsPositive() {
+		t.Fatal("⚠️ -2 那条记录没给保证金率")
+	}
+	d := decimal.RequireFromString
+	rules := oneInstrumentRules{
+		inst: refdata.Instrument{ID: id, VolumeMultiple: mult, PriceTick: decimal.NewFromInt(1),
+			PositionDateType: refdata.NoUseHistory},
+		commission: refdata.CommissionRates{OpenByVolume: d("0.2"), CloseByVolume: d("0.2"), CloseTodayByVolume: d("0.1")},
+		margin:     refdata.MarginRates{LongByMoney: rate, ShortByMoney: rate},
+	}
+	ch := futsim.CTPChoices()
+	ch.FeeRounding = fee.NoRounding // §13 #5 未收敛；按手收费，取整口径不起作用
+	sim, err := futsim.New(futsim.Config{Day: d1, PreBalance: decimal.NewFromInt(20000000), Rules: rules, Choices: ch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	markRec := func(day types.TradingDay, f ctpFixture) {
+		t.Helper()
+		r := f.Positions[rec]
+		if err := sim.Mark(day, futsim.Quote{Instrument: id,
+			Last: num(t, r, "SettlementPrice"), HasLast: true,
+			PreSettlement: num(t, r, "PreSettlementPrice"), HasPreSettlement: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	apply := func(day types.TradingDay, tr map[string]any) {
+		t.Helper()
+		dir, err := types.DirectionFromCTP(tr["Direction"].(string))
+		if err != nil {
+			t.Fatal(err)
+		}
+		off, err := types.OffsetFromCTP(tr["OffsetFlag"].(string))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := sim.ApplyTrade(day, match.Trade{Instrument: id, Direction: dir, Offset: off,
+			Hedge: types.Speculation, Price: num(t, tr, "Price"), Volume: int(flt(t, tr, "Volume"))}); err != nil {
+			t.Fatalf("成交 %v：%v", tr["TradeID"], err)
+		}
+	}
+	compare := func(label string, f ctpFixture) {
+		t.Helper()
+		r := f.Positions[rec]
+		p, ok := sim.Position(id, types.Speculation)
+		if !ok {
+			t.Fatalf("%s：门面里没有 m2701 持仓", label)
+		}
+		side, _ := p.Side(types.Buy)
+		openCost, posCost := decimal.Zero, decimal.Zero
+		for _, l := range side.Lots() {
+			v := decimal.NewFromInt(int64(l.Volume)).Mul(mult)
+			openCost = openCost.Add(l.OpenPrice.Mul(v))
+			posCost = posCost.Add(l.Basis.Mul(v))
+		}
+		a := sim.Account()
+		lib := map[string]decimal.Decimal{
+			"Position": decimal.NewFromInt(int64(side.Volume())), "TodayPosition": decimal.NewFromInt(int64(side.VolumeToday())),
+			"OpenCost": openCost, "PositionCost": posCost,
+			"UseMargin": a.CurrMargin, "PositionProfit": a.PositionProfit, "CloseProfit": a.CloseProfit, "Commission": a.Commission,
+		}
+		for _, k := range []string{"Position", "TodayPosition", "OpenCost", "PositionCost", "UseMargin", "PositionProfit", "CloseProfit", "Commission"} {
+			got, _ := lib[k].Float64()
+			if want := flt(t, r, k); math.Abs(got-want) > 1e-6 {
+				t.Errorf("⚠️ %s %s：本库 %v，柜台 %v", label, k, got, want)
+			}
+		}
+	}
+
+	// 20260914：开多 1 @3399（记录 OpenCost 33990）
+	markRec(d1, dayEnd)
+	apply(d1, map[string]any{"TradeID": "20260914 开仓（由 OpenCost 33990 反推）", "Direction": "0", "OffsetFlag": "0", "Price": 3399.0, "Volume": 1.0})
+	compare("20260914 14:00", dayEnd)
+
+	// 结算：今结算价 = 次日行情的昨结算价
+	settle := num(t, s0.Quotes[sym], "PreSettlementPrice")
+	if err := sim.Settle(d1, map[types.InstrumentID]decimal.Decimal{id: settle}, d2); err != nil {
+		t.Fatal(err)
+	}
+	markRec(d2, s0)
+	compare("20260915 开盘前（-）", s0)
+
+	trades := s3.Trades
+	sort.Slice(trades, func(i, j int) bool { return flt(t, trades[i], "SequenceNo") < flt(t, trades[j], "SequenceNo") })
+	if len(trades) != 2 || len(s2.Trades) != 1 {
+		t.Fatalf("⚠️ -2/-3 的成交数 %d/%d，期望 1/2 —— 夹具变了", len(s2.Trades), len(trades))
+	}
+	markRec(d2, s2)
+	apply(d2, trades[0])
+	compare("-2 开今之后", s2)
+	markRec(d2, s3)
+	apply(d2, trades[1])
+	compare("-3 通用平仓之后", s3)
+}
