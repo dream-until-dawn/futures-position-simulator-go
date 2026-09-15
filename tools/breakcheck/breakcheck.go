@@ -58,6 +58,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -405,10 +406,14 @@ func tryCompile(b Break) (verdict, detail string) {
 	})
 }
 
+// buildFailedRe 认 go test 自己打的「这个包没编译成」那一行：**顶格**的 `FAIL<Tab>包路径 [build failed]`。
+//
+// ⚠️ 不能按子串找：被测的测试若在日志里引用了别的 go test 输出（breakcheck 自己的测试就会），
+// 那一行会以缩进的形式出现在输出里 —— 按子串找会把「测试红了」误判成「破坏编译不过」（破坏 567 第一次跑就撞上）。
+var buildFailedRe = regexp.MustCompile(`(?m)^FAIL\t\S+ \[(build|setup) failed\]`)
+
 // buildFailed 报告 go test 的输出是不是「没编译成」而不是「跑了、断言失败」。
-func buildFailed(text string) bool {
-	return strings.Contains(text, "[build failed]") || strings.Contains(text, "[setup failed]")
-}
+func buildFailed(text string) bool { return buildFailedRe.MatchString(text) }
 
 // withBreak 施加一条破坏、跑 body、无论如何还原；零层（锚点）不成立时不跑 body。
 func withBreak(b Break, body func() (string, string)) (verdict, detail string) {

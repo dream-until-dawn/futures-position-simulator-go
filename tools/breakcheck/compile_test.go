@@ -57,6 +57,25 @@ func TestCompileFailureIsItsOwnVerdict(t *testing.T) {
 	if v, d := tryCompile(realBreak); v != "编译通过" {
 		t.Errorf("反向：-compile 模式对编译得过的破坏要报编译通过，得到 %q（%s）", v, d)
 	}
+	// ⚠️ 被测测试的日志里引用了别的 go test 输出（带缩进）⇒ 不是编译失败（567 第一次跑撞上的误报）
+	quoted := `=== RUN   TestX
+    x_test.go:9: 内层输出：
+        FAIL	tmpprobe [build failed]
+--- FAIL: TestX (0.01s)
+FAIL
+FAIL	some/pkg	0.3s
+`
+	if buildFailed(quoted) {
+		t.Error("⚠️ 日志里缩进引用的 [build failed] 被当成了编译失败")
+	}
+	if !buildFailed(`# some/pkg [some/pkg.test]
+.\x.go:4:2: declared and not used: v
+FAIL	some/pkg [build failed]
+FAIL
+`) {
+		t.Error("反向：顶格的 FAIL<Tab>包 [build failed] 要认出来")
+	}
+
 	// 还原：两次都要把 x.go 放回原样
 	if b, _ := os.ReadFile(target); !strings.Contains(string(b), "\treturn v\n") {
 		t.Errorf("⚠️ 跑完之后 x.go 没还原：%q", b)
