@@ -5628,5 +5628,16 @@
 		"test": "TestCompileFailureIsItsOwnVerdict",
 		"want": "-compile 模式没把编译不过的破坏报出来",
 		"expect": "red"
+	},
+	{
+		"name": "569 want 匹配不再跳过编译器报错行——正则漏判的编译失败而 want 恰是变量名时判成红对了（评审 20260915 指出的假好消息）",
+		"dir": "",
+		"file": "tools/breakcheck/breakcheck.go",
+		"old": "\t\tif compilerLineRe.MatchString(line) {\n\t\t\tcontinue\n\t\t}",
+		"new": "\t\tif false && compilerLineRe.MatchString(line) {\n\t\t\tcontinue\n\t\t}",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestCompileFailureIsItsOwnVerdict",
+		"want": "假好消息",
+		"expect": "red"
 	}
 ]
