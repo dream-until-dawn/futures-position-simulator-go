@@ -743,7 +743,7 @@ func assertCountMatchesTable(t *testing.T, key, path, sectionPrefix string) {
 	}
 }
 
-// TestRulesPendingMatchesTable 断言 state.md 的 rules_pending 与 §13 表实际在册的条数一致。
+// TestRulesPendingMatchesTable 断言 state.md 的 rules_pending 与 cn-futures-rules.md §13 表实际在册的条数一致。
 //
 // ⚠️ 这条守卫针对的正是 state.md 存在的理由。计数类复述栽过两次，
 // 而两次都躲过了禁语扫描——**计数不是状态词，人眼扫过去根本不会停**。
@@ -1267,7 +1267,7 @@ func TestRulesListedMatchesTable(t *testing.T) {
 	pending := numberedTableRows(t, path, "## 13.")
 
 	if got := declaredCount(t, "rules_listed"); got != len(all) {
-		t.Errorf("⚠️ state.md 的 rules_listed = %d，而 §13 一共 %d 条编号行（含已收敛 %d 条）",
+		t.Errorf("⚠️ state.md 的 rules_listed = %d，而 cn-futures-rules.md §13 一共 %d 条编号行（含已收敛 %d 条）",
 			got, len(all), len(struck))
 	}
 	// ⚠️ 恒等式：一共问过的 = 还欠着的 + 已收敛的。

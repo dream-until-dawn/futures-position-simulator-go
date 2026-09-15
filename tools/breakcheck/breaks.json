@@ -5993,5 +5993,27 @@
 		"test": "TestUndatedCloseAsYesterdayInValidation",
 		"want": "撞零头价位配上了 CTP 码",
 		"expect": "red"
+	},
+	{
+		"name": "612 Go 注释里的节号引用悬空（types.Offset 旁那条改回 probes.md 里从来不存在的 10.5 小节）",
+		"dir": "",
+		"file": "types/order.go",
+		"old": "（silent-risks.md 方法论 33；原先引的是 probes.md 里一个从来不存在的小节）",
+		"new": "（probes.md §10.5）",
+		"pkg": "./",
+		"test": "TestDocSectionRefsResolve",
+		"want": "引 probes.md §10.5",
+		"expect": "red"
+	},
+	{
+		"name": "613 节号归给行里第一个 .md 而不是最近的那个（「fidelity.md 与 cn-futures-rules.md 第 10 节」误报成 fidelity）",
+		"dir": "",
+		"file": "docsection_test.go",
+		"old": "\t\t\tif d[1] <= i {\n\t\t\t\tbest = j\n\t\t\t}",
+		"new": "\t\t\tif d[1] <= i && best < 0 {\n\t\t\t\tbest = j\n\t\t\t}",
+		"pkg": "./",
+		"test": "TestDocSectionRefsResolve",
+		"want": "sectionRefs(",
+		"expect": "red"
 	}
 ]
