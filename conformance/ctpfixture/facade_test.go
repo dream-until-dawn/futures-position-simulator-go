@@ -189,6 +189,14 @@ func TestFacadeReplaysAg2702AgainstCTP(t *testing.T) {
 // 今昨混合占用（9441.6）、裸 CLOSE 先平昨（#4，CloseProfit −240）、以及 §13 #21 那一笔手续费 0.1。
 // ⚠️ #21 三个候选都预言 0.1，这一格不判别候选，只钉「本库在收敛前的做法与这一笔一致」。
 //
+// ⚠️ **它钉住 CTPChoices 的哪几格**（评审 20260915 逐格翻过）：
+//
+//	MarginBasis  钉住。昨仓「按昨结算价」相对「按最新价」在「开盘前」那一格判别（LastAll 给 4704、柜台 4737.6）；
+//	             相对 PreSettleAll 的判别只来自今仓腿（14:00 / -2 / -3）—— 只有昨仓时两者同值
+//	Mark         钉住（PositionProfit 四格）
+//	FeeBasis     不钉：m2701 按手收费（按额 0），计价口径不影响手续费 —— 这条钉的是手续费**档位**（#21 那笔），不是计价
+//	SideScope / Algorithm  不钉：单合约、不比 Available
+//
 // ⚠️ 输入来源：乘数 specs-20260908.json；手续费率 ctp-commission-rates-20260915.txt（DCE.m2701 每手 0.2 / 0.2 / 0.1，按额 0）；
 // 保证金率取 -2 那条记录的 MarginRateByMoney（昨仓单独时记录报 0，§13 #1）；PositionDateType 取 measured-rules-20260909.json
 // （快期结算行为实测 no_use_history）；结算价 = 次日行情的 PreSettlementPrice。
