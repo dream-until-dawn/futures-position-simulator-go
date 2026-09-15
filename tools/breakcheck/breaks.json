@@ -4793,14 +4793,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "493 平昨给拒因只看昨仓不看今仓——大商所跨结算后（本库今 1 / 昨 0）给柜台会接受的单配上 CTP 30（评审 20260915 打回的原样）",
+		"name": "493 平昨给拒因只看昨仓不看今仓——今 1 / 昨 0 平昨被配上码（评审 20260915 打回的原样；§13 #20 裁决后大商所跨结算已是昨仓，不再是那一格）",
 		"dir": "",
 		"file": "order/order.go",
 		"old": "\t\t\tif today == 0 && his == 0 {\n",
 		"new": "\t\t\tif his == 0 {\n",
 		"pkg": "./order/",
 		"test": "TestKindStaysUnknownOutsideCorpus",
-		"want": "柜台会接受这笔单",
+		"want": "今 1 / 昨 0 平昨的拒因是",
 		"expect": "red"
 	},
 	{
