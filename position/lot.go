@@ -118,31 +118,13 @@ func (s *Side) weightedAvg(pick func(Lot) decimal.Decimal) (decimal.Decimal, boo
 // 漏掉或重复执行，后续每一天的平今/平昨判定、手续费、保证金基线全部错位，
 // 而且不会报错。
 //
-// ⚠️ 只有 `UseHistory` 的合约走这里。`NoUseHistory` 走 RebaseAll ——
-// 那类合约的持仓**不变成昨仓**，实测见 state.md 的 kq_facts 24。
-// 由 Position.Settle 按合约的 PositionDateType 分派，此处不判。
+// ⚠️ **两种 PositionDateType 都走这里**（2026-09-15 使用者裁决跟 CTP，范围全部 NoUseHistory 交易所，§13 #20；
+// 观测只覆盖大商所，郑商所等是外推）。
+// 此前 `NoUseHistory` 走一个只推基线、不标昨仓的 RebaseAll（快期口径），已删除 —— 理由见 Position.Settle。
 func (s *Side) SettleAll(settlementPrice decimal.Decimal) {
 	for i := range s.lots {
 		s.lots[i].Basis = settlementPrice
 		s.lots[i].Settled = true
-	}
-}
-
-// RebaseAll 只把基线推进到结算价，**不**把明细标成昨仓。
-//
-// 这是 `NoUseHistory` 合约（DCE / CZCE）的结算形态：
-// 那类合约不区分今昨，持仓永远记在今仓上（kq_facts 24 实测），
-// 但**逐日盯市照样发生** —— 结算是资金层面的事，与今昨划分是两回事。
-//
-// ⚠️ **声明的盲区**：「NoUseHistory 上基线到底推没推进」在现有样本上
-// **分不开**。唯一的 NoUseHistory 样本 `DCE.m2701` 的开仓均价 3415
-// 恰好**等于**昨结算价 3415（2 手 @3411 + 1 手 @3423），
-// 于是「推进了」与「没推进」给出同一个数。
-// 这里按规则实现（逐日盯市对所有合约成立），而不是按样本 ——
-// 因为样本在这一点上什么都没说。要一个开仓价 ≠ 结算价的 NoUseHistory 样本。
-func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {
-	for i := range s.lots {
-		s.lots[i].Basis = settlementPrice
 	}
 }
 

@@ -975,33 +975,33 @@
 		"expect": "red"
 	},
 	{
-		"name": "89 结算对 NoUseHistory 也滚今昨（回到分岔之前）",
+		"name": "89 结算对 NoUseHistory 退回不滚今昨（快期口径）——§13 #20 裁决跟 CTP 之前的原样",
 		"dir": "",
 		"file": "position/position.go",
-		"old": "\tcase refdata.NoUseHistory:\n\t\tp.long.RebaseAll(settlementPrice)\n\t\tp.short.RebaseAll(settlementPrice)",
-		"new": "\tcase refdata.NoUseHistory:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)",
+		"old": "\tcase refdata.UseHistory, refdata.NoUseHistory:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)\n",
+		"new": "\tcase refdata.UseHistory:\n\t\tp.long.SettleAll(settlementPrice)\n\t\tp.short.SettleAll(settlementPrice)\n\tcase refdata.NoUseHistory:\n",
 		"pkg": "./position/",
 		"test": "TestSettleRespectsPositionDateType",
-		"want": "那类合约的持仓**留在今仓**",
+		"want": "今仓没变成昨仓",
 		"expect": "red"
 	},
 	{
-		"name": "90 NoUseHistory 结算时不推进基线",
+		"name": "90 结算时不推进基线（两种 PositionDateType 共用 SettleAll 之后）",
 		"dir": "",
 		"file": "position/lot.go",
-		"old": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {\n\tfor i := range s.lots {\n\t\ts.lots[i].Basis = settlementPrice\n\t}\n}",
-		"new": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {}",
+		"old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
+		"new": "\t\ts.lots[i].Settled = true",
 		"pkg": "./position/",
 		"test": "TestSettleRespectsPositionDateType",
-		"want": "逐日盯市对**所有**合约成立",
+		"want": "逐日盯市对所有合约成立",
 		"expect": "red"
 	},
 	{
 		"name": "91 结算把 NotNeeded 当成 NoUseHistory 处理",
 		"dir": "",
 		"file": "position/position.go",
-		"old": "\tcase refdata.NoUseHistory:\n\t\tp.long.RebaseAll(settlementPrice)",
-		"new": "\tcase refdata.NoUseHistory, refdata.PositionDateNotNeeded:\n\t\tp.long.RebaseAll(settlementPrice)",
+		"old": "\tcase refdata.UseHistory, refdata.NoUseHistory:\n",
+		"new": "\tcase refdata.UseHistory, refdata.NoUseHistory, refdata.PositionDateNotNeeded:\n",
 		"pkg": "./position/",
 		"test": "TestSettleRefusesNotNeeded",
 		"want": "却结算成功了",
@@ -1030,11 +1030,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "94 结算也动逐笔对冲基线（NoUseHistory 路）",
+		"name": "94 结算也动逐笔对冲基线（RebaseAll 删除后锚到共用的 SettleAll）",
 		"dir": "",
 		"file": "position/lot.go",
-		"old": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {\n\tfor i := range s.lots {\n\t\ts.lots[i].Basis = settlementPrice\n\t}",
-		"new": "func (s *Side) RebaseAll(settlementPrice decimal.Decimal) {\n\tfor i := range s.lots {\n\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice\n\t}",
+		"old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
+		"new": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"pkg": "./position/",
 		"test": "TestSettleRespectsPositionDateType",
 		"want": "它是逐笔对冲的基线，**永不改变**",
@@ -4793,14 +4793,25 @@
 		"expect": "red"
 	},
 	{
-		"name": "493 平昨给拒因只看昨仓不看今仓——大商所跨结算后（本库今 1 / 昨 0）给柜台会接受的单配上 CTP 30（评审 20260915 打回的原样）",
+		"name": "493 平昨给拒因只看昨仓不看今仓——今 1 / 昨 0 平昨被配上码（评审 20260915 打回的原样；§13 #20 裁决后大商所跨结算已是昨仓，不再是那一格）",
 		"dir": "",
 		"file": "order/order.go",
 		"old": "\t\t\tif today == 0 && his == 0 {\n",
 		"new": "\t\t\tif his == 0 {\n",
 		"pkg": "./order/",
 		"test": "TestKindStaysUnknownOutsideCorpus",
-		"want": "柜台会接受这笔单",
+		"want": "今 1 / 昨 0 平昨的拒因是",
+		"expect": "red"
+	},
+	{
+		"name": "494 #4 夹具 ① 的 PositionCost 改成开仓成本 33990——大商所结算没推进基线，TestNoUseHistoryBasisAdvancesOnCTP 要红",
+		"dir": "",
+		"file": "testdata/ctp/ctp-slices-20260915.json",
+		"old": "\"PositionCost\": 33840",
+		"new": "\"PositionCost\": 33990",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestNoUseHistoryBasisAdvancesOnCTP",
+		"want": "基线没有推进到结算价",
 		"expect": "red"
 	}
 ]

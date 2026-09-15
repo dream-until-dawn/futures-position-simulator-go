@@ -160,8 +160,8 @@ func TestKindStaysUnknownOutsideCorpus(t *testing.T) {
 		t.Errorf("⚠️ 今 1 / 昨 0 平昨的拒因是 %s —— 语料只测过账上无仓，不许推过来", k)
 	}
 
-	// ⚠️⚠️ 大商所（NoUseHistory）开 1 手跨过结算再平昨 ⇒ 不给。本库仍记作今仓，而 CTP 实测记作昨仓且接受平昨
-	// （#4 夹具 ①）—— 这里给码就是给一笔柜台会接受的单配上一个看起来测过的码。
+	// ⚠️⚠️ 大商所（NoUseHistory）开 1 手跨过结算再平昨 ⇒ **不拒**。CTP 实测记作昨仓且接受平昨（#4 夹具 ①）；
+	// 本库此前仍记作今仓而拒绝 —— 20260915 评审发现那一版还会配上 CTP 30。§13 #20 使用者裁决跟 CTP 之后，它是昨仓、可平。
 	h := factsOn(t, "DCE", "m2701")
 	if err := h.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
 		t.Fatal(err)
@@ -169,8 +169,8 @@ func TestKindStaysUnknownOutsideCorpus(t *testing.T) {
 	if err := h.Position.Settle(day, d("3000"), next); err != nil {
 		t.Fatal(err)
 	}
-	if k := kindOf(t, "大商所跨结算平昨", closeYd(h, 1), h, CheckClosable); k != ctperr.ReasonUnknown {
-		t.Errorf("⚠️ 大商所跨结算后平昨的拒因是 %s —— 柜台会接受这笔单（#4 夹具 ①），不许配码", k)
+	if res := Validate(closeYd(h, 1), h); res.Rejected != nil {
+		t.Errorf("⚠️ 大商所跨结算后平昨 1 手被拒了：%v —— 柜台会接受这笔单（#4 夹具 ①，§13 #20 跟 CTP）", res.Rejected)
 	}
 
 	// ⚠️ 有昨仓但不够：结算出 1 手昨仓再平昨 2 手 ⇒ 不给

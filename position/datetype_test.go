@@ -26,74 +26,50 @@ func dt(t *testing.T, kind refdata.PositionDateType) *Position {
 	return p
 }
 
-// TestSettleRespectsPositionDateType 断言结算**按合约的类型分岔**，
-// 而且两条路**给出不同的结果**。
+// TestSettleRespectsPositionDateType 断言结算对两种 PositionDateType **都**把今仓滚成昨仓、基线推进到结算价，
+// 而零值与 NotNeeded **不许结算**。
 //
-// ⚠️ 后半句才是判据。只断言 UseHistory 那条，NoUseHistory 的分支
-// 写成什么样都能通过；而两条路若碰巧给出同一个结果，
-// 这个改动就等于没做，测试却是绿的。
+// ⚠️ 2026-09-15 使用者裁决跟 CTP（cn-futures-rules.md §13 #20）：大商所一手跨结算，CTP 记作昨仓、接受平昨
+// （#4 夹具 ①）；快期记作今仓（kq_facts 24）。本条此前钉的是快期那一版（「两条路必须**不同**」）。
 //
-// 实测依据 kq_facts 24（20260909 结算）：同一次结算之后
-// `SHFE.rb2701` 多今0/多昨3，而 `DCE.m2701` 多今3/多昨0，
-// 且账户层结算**已完成** —— 所以「大商所还没结算」被否掉了。
+// ⚠️ 判别力换到这里：只断言 UseHistory 的话，NoUseHistory 退回「不滚」照样绿 —— 所以两条路**都**要断言昨仓 3 手；
+// 而为了不让「谁都不滚」也能过，今仓必须同时是 0。
 func TestSettleRespectsPositionDateType(t *testing.T) {
 	d8 := types.NewTradingDay(2026, 9, 8)
 	d9 := types.NewTradingDay(2026, 9, 9)
 	settle := decimal.RequireFromString("3163")
 
-	useHist := dt(t, refdata.UseHistory)
-	noHist := dt(t, refdata.NoUseHistory)
-	for _, p := range []*Position{useHist, noHist} {
+	for _, kind := range []refdata.PositionDateType{refdata.UseHistory, refdata.NoUseHistory} {
+		p := dt(t, kind)
 		if err := p.Settle(d8, settle, d9); err != nil {
-			t.Fatalf("%v 结算失败：%v", p.DateType(), err)
+			t.Fatalf("%v 结算失败：%v", kind, err)
 		}
-	}
-
-	// —— 今昨划分：两条路必须**不同** ——
-	if got := useHist.VolumeHistory(types.Buy); got != 3 {
-		t.Errorf("UseHistory 结算后昨仓 %d 手，应为 3 —— 今仓没变成昨仓", got)
-	}
-	if got := useHist.VolumeToday(types.Buy); got != 0 {
-		t.Errorf("UseHistory 结算后今仓 %d 手，应为 0", got)
-	}
-	if got := noHist.VolumeHistory(types.Buy); got != 0 {
-		t.Errorf("⚠️ NoUseHistory 结算后昨仓 %d 手，应为 0 —— "+
-			"那类合约的持仓**留在今仓**（kq_facts 24 实测）", got)
-	}
-	if got := noHist.VolumeToday(types.Buy); got != 3 {
-		t.Errorf("⚠️ NoUseHistory 结算后今仓 %d 手，应为 3", got)
-	}
-	// ⚠️ 判别力：两条路给出的今昨划分必须真的不一样。
-	if useHist.VolumeHistory(types.Buy) == noHist.VolumeHistory(types.Buy) {
-		t.Fatal("⚠️ 两种 PositionDateType 结算后昨仓手数**相同** —— " +
-			"分岔等于没分，而上面每一条断言都能被同一段代码满足")
-	}
-
-	// —— 基线：两条路必须**相同**，都推进到结算价 ——
-	//
-	// ⚠️ 逐日盯市是资金层面的事，与今昨划分是两回事。
-	// 混为一谈会让 NoUseHistory 合约的持仓盈亏永远以开仓价为基线，
-	// 而那与结算单对不上。
-	for _, c := range []struct {
-		name string
-		p    *Position
-	}{{"UseHistory", useHist}, {"NoUseHistory", noHist}} {
-		s, err := c.p.Side(types.Buy)
+		if got := p.VolumeHistory(types.Buy); got != 3 {
+			t.Errorf("⚠️ %v 结算后昨仓 %d 手，应为 3 —— 今仓没变成昨仓（NoUseHistory 按 §13 #20 裁决跟 CTP）", kind, got)
+		}
+		if got := p.VolumeToday(types.Buy); got != 0 {
+			t.Errorf("⚠️ %v 结算后今仓 %d 手，应为 0", kind, got)
+		}
+		s, err := p.Side(types.Buy)
 		if err != nil {
 			t.Fatal(err)
 		}
 		for i, l := range s.Lots() {
 			if !l.Basis.Equal(settle) {
-				t.Errorf("⚠️ %s 第 %d 笔的基线是 %s，应推进到结算价 %s —— "+
-					"逐日盯市对**所有**合约成立，与今昨划分是两回事",
-					c.name, i, l.Basis, settle)
+				t.Errorf("⚠️ %v 第 %d 笔的基线是 %s，应推进到结算价 %s —— 逐日盯市对所有合约成立", kind, i, l.Basis, settle)
 			}
-			// 逐笔对冲基线永不改变。
 			if !l.OpenPrice.Equal(decimal.RequireFromString("3150")) {
-				t.Errorf("⚠️ %s 第 %d 笔的 OpenPrice 被改成了 %s —— "+
-					"它是逐笔对冲的基线，**永不改变**", c.name, i, l.OpenPrice)
+				t.Errorf("⚠️ %v 第 %d 笔的 OpenPrice 被改成了 %s —— 它是逐笔对冲的基线，**永不改变**", kind, i, l.OpenPrice)
 			}
 		}
+	}
+	// ⚠️ 结算上 PositionDateType 只剩的作用：零值与 NotNeeded 不许结算。
+	np, err := New(dt(t, refdata.UseHistory).Instrument, types.Speculation, d8, refdata.PositionDateNotNeeded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := np.Settle(d8, settle, d9); err == nil {
+		t.Error("⚠️ PositionDateNotNeeded 的持仓结算成功了 —— 声明了「不结算」的持仓不许结算")
 	}
 }
 

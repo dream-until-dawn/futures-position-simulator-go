@@ -331,26 +331,25 @@ func (p *Position) Settle(day types.TradingDay, settlementPrice decimal.Decimal,
 	if err := nextDay.Validate(); err != nil {
 		return fmt.Errorf("下一交易日不合法: %w", err)
 	}
-	// ⚠️ 今仓变不变昨仓，**逐合约**由 PositionDateType 决定。
+	// ⚠️ 结算时今仓一律变昨仓、基线推进到结算价 —— **两种 PositionDateType 相同**。
 	//
-	//	UseHistory     今仓 → 昨仓，基线推进到结算价（SHFE / INE / CFFEX）
-	//	NoUseHistory   持仓**留在今仓**，基线照样推进（DCE / CZCE）
+	// ✅ 2026-09-15 使用者裁决（cn-futures-rules.md §13 #20）：**全部 NoUseHistory 交易所跟 CTP**（范围由使用者在评审会话中裁定）。
+	// ⚠️ 观测只覆盖大商所（下面那一行）；郑商所及其他报 NoUseHistory 的交易所是**外推、无观测**。
 	//
-	// 实测（kq_facts 24，20260909 结算）：同一次结算之后
-	// `SHFE.rb2701` 多今0/多昨3，而 `DCE.m2701` 多今3/多昨0，
-	// 且账户层结算**已完成**（pre_balance 推进、close_profit 归零）——
-	// 所以「大商所还没结算」被否掉了。
+	//	CTP / SimNow  DCE.m2701 一手跨结算：Position 1 / TodayPosition 0 / YdPosition 1，平昨被接受（#4 夹具 ①、§13 #16）
+	//	快期          同一种仓结算后 today=3 / his=0 —— 持仓永远记今仓（kq_facts 24）
 	//
-	// ⚠️ 基线在两条路上**都**推进：逐日盯市是资金层面的事，
-	// 与今昨划分是两回事。混为一谈会让 NoUseHistory 合约的持仓盈亏
-	// 永远以开仓价为基线，而那与结算单对不上。
+	// 两个口子各自成立，本库选 CTP（design.md §5：CTP 权威裁决）。此前这里对 NoUseHistory 走 RebaseAll（只推基线、
+	// 不标昨仓），与快期一致、与 CTP 相反 —— 后果是大商所跨结算后平昨，柜台接受而本库拒绝。
+	// ⚠️ 与快期的分岔是**有意的口子差**：跨日结转对拍一旦接上 DCE，类 B「NoUseHistory 不滚」会出现，按口子差登记。
+	//
+	// ⚠️ 基线推进这一半两个口子一致，且有 CTP 判别样本（开仓 3399 ≠ 昨结 3384，TestNoUseHistoryBasisAdvancesOnCTP）。
+	//
+	// ⚠️ PositionDateType 在这里**只剩一个作用**：零值 / NotNeeded 不许结算（下面的 default）。
 	switch p.dateType {
-	case refdata.UseHistory:
+	case refdata.UseHistory, refdata.NoUseHistory:
 		p.long.SettleAll(settlementPrice)
 		p.short.SettleAll(settlementPrice)
-	case refdata.NoUseHistory:
-		p.long.RebaseAll(settlementPrice)
-		p.short.RebaseAll(settlementPrice)
 	default:
 		// ⚠️ 这里是**唯一**的关口，New 刻意不拦（理由见 New 的注释）。
 		return fmt.Errorf("合约 %s 的 PositionDateType 未指定，**无法结算** —— "+
