@@ -808,11 +808,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "80 重放对拍不跳过带昨仓的方向",
+		"name": "80 重放对拍对带昨仓、平过仓的方向不按已知口子归类 open_price（F7c nit 改指：原先是「不跳过带昨仓的方向」，那道跳过删了，带昨仓的方向照比）",
 		"dir": "",
 		"file": "conformance/fixture/fixture_test.go",
-		"old": "\t\t\t\tif h := oracle[\"volume_\"+side.name+\"_his\"]; !h.Absent && !h.IsText &&\n\t\t\t\t\th.Number.IsPositive() {\n\t\t\t\t\tskippedHistory++\n\t\t\t\t\tcontinue\n\t\t\t\t}",
-		"new": "",
+		"old": "\t\t\t\tif history && closedOnSide(f, sym, side.dir) {",
+		"new": "\t\t\t\tif false {",
 		"pkg": "./conformance/fixture/",
 		"test": "TestReplayMatchesOracleVolumeAndPrice",
 		"want": "重放出来的持仓与柜台不符",
@@ -6114,5 +6114,17 @@
 		"test": "TestCompareCarriesThroughFacade",
 		"want": "结算价接错了",
 		"expect": "red"
+	},
+	{
+		"name": "622 【期望仍然绿】positionOf 取不到门面前提而跳过的样本数只打日志、不报错",
+		"dir": "",
+		"file": "conformance/fixture/fixture_test.go",
+		"old": "\tif len(noPre) > 0 {",
+		"new": "\tif false && len(noPre) > 0 {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestReplayMatchesOracleVolumeAndPrice",
+		"want": "",
+		"expect": "green",
+		"why": "迁移时这个跳过数是 0，今天的语料走不到它；它守的是将来 —— 出现别的交易日的昨仓样本（交易所结算价只有 20260908 一份）时走 errNoCarrySource 跳过。评审 20260915 提的棘轮，登记为盲区而不是造一份假语料"
 	}
 ]

@@ -115,7 +115,7 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 	all := loadAll(t)
 	var fields []conformance.Field
 	checked, withPosition, multiPrice := 0, 0, 0
-	skippedHistory := 0
+	historySides := 0
 	// borrowedPre 是昨结算价借自同日兄弟夹具的样本数（只当门面的计价前提，这里比的手数与开仓均价不依赖它；design.md §11 决策点 3）
 	borrowedPre := 0
 	var noPre []string
@@ -143,22 +143,13 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 				name string
 				dir  types.Direction
 			}{{"long", types.Buy}, {"short", types.Sell}} {
-				// ⚠️ 这一侧有昨仓就跳过，**并且记数**。
-				//
-				// 重放只回放**当日**成交，而昨仓那几手的开仓单在前一交易日的
-				// 夹具里 —— 这一侧的手数与均价重放本来就凑不出来，
-				// 那是夹具的边界，不是本库算错。要重建它得走 Carry。
-				//
-				// ⚠️ 20260909 夜盘第一次出现「同一合约既有昨仓、又有当日成交」
-				// 的截面，这条测试当场红了 14 个字段 —— 在那之前样本里
-				// 要么全是今仓、要么昨仓那天没有成交，所以这个洞一直没露头。
-				//
-				// ⚠️ 按**方向**跳而不是按合约跳：rb2701 空头只有今仓，
-				// 那一侧是能验的，整个合约跳掉会白丢一批判别力。
-				if h := oracle["volume_"+side.name+"_his"]; !h.Absent && !h.IsText &&
-					h.Number.IsPositive() {
-					skippedHistory++
-					continue
+				// ⚠️ F7c 之前这里「这一侧有昨仓就跳过并记数」：旧重放只回放当日成交，昨仓那几手凑不出来。
+				// F7c 起带昨仓的合约走结转（positionOf），持仓完整 ⇒ 照比（评审 20260915：去掉跳过后 26 个方向手数全对，
+				// 失败的 20 个全是平过仓那一侧的 open_price —— 已登记的口子 simnow_pending#10，按口子归类，不当失败）
+				h := oracle["volume_"+side.name+"_his"]
+				history := !h.Absent && !h.IsText && h.Number.IsPositive()
+				if history {
+					historySides++
 				}
 				s, err := p.Side(side.dir)
 				if err != nil {
@@ -186,14 +177,18 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 				})
 				avg, has := s.AvgOpenPrice()
 				o := oracle["open_price_"+side.name]
-				fields = append(fields, conformance.Field{
+				opField := conformance.Field{
 					Name:          key + ".open_price",
 					Library:       avg,
 					LibraryAbsent: !has,
 					Oracle:        o.Number,
 					OracleAbsent:  o.Absent,
 					Triggered:     vol > 0,
-				})
+				}
+				if history && closedOnSide(f, sym, side.dir) {
+					opField.Deviation = openPriceAfterCloseDeviation(f)
+				}
+				fields = append(fields, opField)
 			}
 		}
 	}
@@ -214,26 +209,23 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 			"单笔样本上均价恒等于那一笔的价，加权平均这条逻辑一次都没走到")
 	}
 	t.Logf("有持仓的方向 %d 个，其中多笔不同价的 %d 个；昨结算价借自同日兄弟夹具的合约样本 %d 个", withPosition, multiPrice, borrowedPre)
-	t.Logf("ⓘ 取不到门面前提（没有昨结算价且同日无唯一值 / 带昨仓而结转不了）而跳过的合约样本 %d 个：%v", len(noPre), noPre)
-	// ⚠️ 跳掉的那些要**报出来**：一个悄悄增长的跳过数，
-	// 会让这条测试在覆盖越来越小的同时一直保持绿色。
-	t.Logf("ⓘ 因该侧有昨仓而跳过 %d 个方向 —— 重放只回放当日成交，"+
-		"昨仓那几手的开仓单在前一交易日的夹具里，要重建得走 Carry", skippedHistory)
-	// ⚠️ 棘轮不卡绝对值：明天结算之后昨仓会**合法地**变多，
-	// 一个卡死的数字只会天天要人去调，调着调着就没人看了。
-	// 卡的是不变式：**跳过的不许多过真比过的**。
-	// 越过这条线时，这条测试已经主要在跳过而不是在比对了。
-	if skippedHistory > checked {
-		t.Errorf("⚠️ 跳过 %d 个方向，而真正比过的只有 %d 个 —— "+
-			"这条测试已经主要在跳过而不是在对拍。"+
-			"该给带昨仓的方向接上 Carry 了", skippedHistory, checked)
+	// ⚠️ 取不到门面前提就跳过 —— 迁移时是 0 个。非零时不许安静（评审 20260915）：
+	// 以后出现别的交易日的昨仓样本（交易所结算价只有 20260908 一份）会走到这里，一个只打日志的跳过数会让覆盖悄悄变小
+	if len(noPre) > 0 {
+		t.Errorf("⚠️ 取不到门面前提（没有昨结算价且同日无唯一值 / 带昨仓而结转不了）而跳过的合约样本 %d 个：%v —— "+
+			"迁移时是 0 个；补结转来源（交易所结算价、上一日夹具）或登记跳过的理由", len(noPre), noPre)
 	}
+	t.Logf("ⓘ 带昨仓的方向 %d 个（F7c 起走结转照比；平过仓那一侧的 open_price 按已知口子 simnow_pending#10 归类）", historySides)
 	r := conformance.Classify("全部带成交的夹具", fields, decimal.RequireFromString("0.0000001"))
 	t.Logf("比对 %d 个方向、%d 个字段", checked, len(fields))
 	for _, v := range []conformance.Verdict{
-		conformance.Matched, conformance.Untriggered, conformance.Failed,
+		conformance.Matched, conformance.Untriggered, conformance.KnownDeviation, conformance.Failed,
 	} {
 		t.Logf("  %-16s %d", v.String(), r.Counts[v])
+	}
+	// ⚠️ 声明了口子就必须真被用到：带昨仓的方向比进来了、而一处口子都没判出来，说明声明没挂上或判据坏了
+	if historySides > 0 && r.Counts[conformance.KnownDeviation] == 0 {
+		t.Error("⚠️ 比了带昨仓的方向，却一处「已知口子差异」都没判出来 —— open_price 那条声明没被触发过")
 	}
 
 	// ⚠️ 这里**不要求** r.Passed()，而这不是放宽，是把判据说准。
