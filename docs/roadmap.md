@@ -974,6 +974,41 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### 2026-09-15：`account` 接上 §13 #17 —— 浮盈算不算进可用，由盈亏算法决定（实现之前写）
+
+**为什么现在做**：门面（`futsim`）的报单路径要把 `account.Available()` 喂给 `order.Facts.Available`。
+而 `Available()` 此刻是 `结存 − 占用 − 冻结`，即 CTP `Algorithm='1'`（浮盈浮亏都计入）——
+**SimNow 上已被否**（§13 #17：`Algorithm='2'`，浮盈 +150 时可用恰好少 150，浮亏 −40 时分毫不差）。
+照这个接门面，回测**赢着的时候以为自己比真实账户有钱**，而那正是会加仓的时候。
+
+**影响实验（本地临时改、跑完还原）**：把 `Available()` 与 `Check()` 同时改成减 `max(持仓盈亏, 0)`：
+
+	红   TestRebuildAccountFieldByField    快期夹具浮盈 +700，available 本库 984635.1227 / 柜台 985335.1227
+	绿   account 包全部                     ⚠️ 单测不钉算法，两种写法都过
+	绿   conformance/ctpfixture 全部        ⚠️ 那边的恒等式是 float64 独立重写的，**不经过 account**
+
+⇒ 快期那一侧（`'1'`，kq_facts 11）有夹具钉着；CTP 那一侧（`'2'`）**生产代码没有任何测试拿它去比柜台**。
+
+**改动**
+
+- `account.Algorithm`，取值**照 CTP 的枚举列**（`margin.PriceBasis` 那次的教训：想出来的候选集会漏掉柜台的取值）：
+
+		AlgorithmUnset     零值 —— New 报错
+		AlgorithmAll       '1' 浮盈浮亏都计入可用   快期行为实测（kq_facts 11，浮盈 6 份 + 浮亏 6 份）
+		AlgorithmOnlyLost  '2' 只计浮亏             SimNow 行为实测（§13 #17，+150 / −40 两侧）
+		AlgorithmOnlyGain  '3' 只计浮盈             ⚠️ 从枚举名推得，无观测 —— New 报错
+		AlgorithmNone      '4' 都不计               ⚠️ 同上 —— New 报错
+
+  ⚠️ `'3'` / `'4'` **定义但拒绝**：表达得了、不许用。只定义两个会让「柜台还有两种配置」从类型上消失；
+  定义了而放行，就是把枚举名读成了行为（ctpfixture `excludedUnrealized` 那三支推得分支的同一个问题）
+- `account.New(currency, day, preBalance, alg)`：第四个参数必填，**不给默认值** —— 两个柜台实测的取值相反
+- `Available()` 与 `Check()` 按算法扣掉不计入的那部分；`Withdraw` / `Freeze` 经 `Available()` 自动跟上
+- `conformance/fixture.Rebuild` 显式传 `AlgorithmAll`（快期）
+- 新增 CTP 对拍：用**生产的 `account`** 按 CTP 截面的各分量（上日结存、出入金、平仓盈亏、手续费、持仓盈亏、占用、冻结）
+  重建一个账户，按截面自己声明的 `Algorithm` 选取值，拿 `Available()` 比柜台。判别力守卫：没有正浮盈的截面时 Fatal
+  （那时 `'1'` 与 `'2'` 给同一个数）。容差：柜台是 float64，比较用 float64 的差 ≤ 1e-6（与该包既有做法对齐，实现时核）
+- ⚠️ **不动**：`AvailIncludeCloseProfit`（§13 #11，SimNow 实测包含平仓盈利，与现行式子一致）只有一个取值被观测，不开参数
+
 ### 2026-09-15：#4 接进本库 —— NoUseHistory 上的裸 `CLOSE` 接受、按先平昨消耗（实现之前写）
 
 §13 #4：大商所上通用平仓 `OF_Close` **被接受**且消耗昨仓（CTP，#4 夹具 ①–③）；§13 #20 裁决 NoUseHistory 全部跟 CTP。
