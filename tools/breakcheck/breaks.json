@@ -5201,14 +5201,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "530 NoUseHistory 的裸 CLOSE 改成先平今——#4 夹具 -3 的平仓盈亏与剩下那片的 PositionCost 对不上柜台",
+		"name": "530 NoUseHistory 的裸 CLOSE 改成先平今——门面成交时先报「本库只按先平昨拆」（20260915 F4 修复后门面显式要求先平昨，拦在 CTP 对拍的平仓盈亏之前）",
 		"dir": "",
 		"file": "position/position.go",
 		"old": "\tif dt == refdata.NoUseHistory {\n\t\treturn YesterdayFirst, true",
 		"new": "\tif dt == refdata.NoUseHistory {\n\t\treturn TodayFirst, true",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeSettlesM2701AcrossDaysAgainstCTP",
-		"want": "CloseProfit",
+		"want": "本库只按先平昨拆",
 		"expect": "red"
 	},
 	{
