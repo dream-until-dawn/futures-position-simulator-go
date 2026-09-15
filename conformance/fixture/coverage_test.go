@@ -261,7 +261,6 @@ func fieldsNeverNonZero(all []*Fixture) map[string]bool {
 	return out
 }
 
-
 // positionDateOf 取某合约的 PositionDateType，**没实测过就报错**。
 //
 // ⚠️ 返回零值让调用方自己判是不行的：零值会一路传到 position.New，

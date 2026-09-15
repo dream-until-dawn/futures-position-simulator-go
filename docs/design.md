@@ -798,6 +798,21 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 
 ⚠️ 倾向 (a) 的理由也有代价：一个「能让门面在缺输入时跑起来」的辅助，是将来被顺手拿去比保证金的那种东西 —— 所以它的返回类型必须窄。
 
+✅ **使用者 2026-09-15 选 (a)**（经 AskUserQuestion：「借同日值，只当前提」）。它碰到的是本仓库的一条原则，所以没有按实现方倾向自定。
+决策点 1（`account_test` 删掉、三道守卫挪进 `TestRebuildAccountFieldByField`）与 2（`MarginOf` 不进 F7）按实现方倾向做，评审可以提异议。
+
+##### F7c 落地（2026-09-15）
+
+- 删 `Replay` / `ReplayFrom` / `ReplayRealized` / `closeOffsetOf` / `copyLots` / `signature`、`replay_test`、`account_test`；新增 `ReplayOnFacade`（只返回持仓，昨结算价由调用方显式给）
+- 对拍测试的取持仓统一走 `positionOf`：**带昨仓就结转**（`carryStartFor` + `ReconstructOnFacade`），否则当日重放、昨结算价按 `sameDayPre`（自己有用自己的，没有借同日同合约唯一值）
+  - ⚠️ **实现中撞出的旧错**：旧 `Replay` 对带昨仓的合约也只重放当日成交。20260909 那批 rb2701 有一笔裸 CLOSE —— 柜台平的是昨仓，旧重放手里只有今仓就拿今仓去平，量上恰好对得上、不报错；
+    对拍只比没有昨仓的那一侧，于是一直没露头。门面在 `PositionDateNotNeeded` 下拒绝裸 CLOSE，不将错就错 ⇒ 这类合约改走结转。探针第一步把带昨仓的合约整个跳过了，所以没数到它们
+- `cmd/oracle` 同日重放走 `ReplayOnFacade`，昨结算价只用实时截面自己的，缺就报错
+- 判据：迁移前后 `conformance/fixture` 全包与 `cmd/oracle/conformance` 的 -v 日志（去行号与耗时、排序）—— 所有比对的判定计数不变；`cmd/oracle` 逐行相同；
+  差异只有被删测试的日志、新测试、借值计数（98）、`margin_test` 的「多手持仓」诊断计数 14 → 31（带昨仓的合约现在拿到的持仓含昨仓明细；保证金那一行「对得上 31 / 未触发 14 / 失败 0」不变）
+- `account_test` 的三道守卫（平仓 ≥ 10、柜台 close_profit 非零、手续费残差 ≤ 1e-5）挪进 `TestRebuildAccountFieldByField`
+- 破坏：337 / 338 / 339 / 366 / 97 / 101 删（锚的旧重放代码没了）；341 / 365 / 367 改指门面（平仓方向、平仓盈亏方向、快期手续费基准）；368 改由 pnl 单测接、从「如预期仍然绿」变成期望红
+
 ##### 决策点（实现方倾向，F7c 之前定）
 
 1. **`account_test` 怎么办**。候选：

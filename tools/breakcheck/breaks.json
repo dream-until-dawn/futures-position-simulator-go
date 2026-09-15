@@ -187,39 +187,6 @@
 		"expect": "red"
 	},
 	{
-		"name": "337 歧义检查被绕过",
-		"dir": "",
-		"file": "conformance/fixture/replay.go",
-		"old": "\t\tif sig != firstSig {",
-		"new": "\t\tif false {\n\t\t\t_ = sig",
-		"pkg": "./conformance/fixture/",
-		"test": "TestReplayDetectsAmbiguity",
-		"want": "却没报歧义",
-		"expect": "red"
-	},
-	{
-		"name": "338 拷贝昨仓走 Open（今仓化）",
-		"dir": "",
-		"file": "conformance/fixture/replay.go",
-		"old": "\t\tfor _, l := range from.Lots() {\n\t\t\tto.Append(l)\n\t\t}",
-		"new": "\t\t_ = to\n\t\tfor _, l := range from.Lots() {\n\t\t\tif err := dst.Open(d, dst.Day, l.OpenPrice, l.Volume); err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t}",
-		"pkg": "./conformance/fixture/",
-		"test": "TestReplayFromCarriesHistoryLots",
-		"want": "昨仓 2 手没带过来",
-		"expect": "red"
-	},
-	{
-		"name": "339 摘要只看均价",
-		"dir": "",
-		"file": "conformance/fixture/replay.go",
-		"old": "\t\ts += fmt.Sprintf(\"|%v:\", d)\n\t\tfor _, l := range side.Lots() {\n\t\t\ts += fmt.Sprintf(\"(%s×%d,基线%s,昨仓%t)\", l.OpenPrice, l.Volume, l.Basis, l.Settled)\n\t\t}",
-		"new": "\t\tavg, _ := side.AvgOpenPrice()\n\t\ts += fmt.Sprintf(\"|%v:%s×%d\", d, avg, side.Volume())",
-		"pkg": "./conformance/fixture/",
-		"test": "TestSignatureSeesLotLevelDifference",
-		"want": "判成了相同",
-		"expect": "red"
-	},
-	{
 		"name": "340 未实现项填 0 再比（旧 bug）",
 		"dir": "",
 		"file": "conformance/fixture/compare.go",
@@ -231,14 +198,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "341 平仓方向不取反",
+		"name": "341 平仓方向不取反（F7c 改指：旧重放删了，门面上的同一处）",
 		"dir": "",
-		"file": "conformance/fixture/replay.go",
-		"old": "\t\t\tclosing := opposite(t.Direction)",
-		"new": "\t\t\tclosing := t.Direction",
+		"file": "trade.go",
+		"old": "\t\theld := opposite(tr.Direction)                              // 卖出平仓平的是多头",
+		"new": "\t\theld := tr.Direction                                        // 卖出平仓平的是多头",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReplayMatchesOracleVolumeAndPrice",
-		"want": "有持仓的方向",
+		"test": "TestReplayOnFacadeClosesOnTheRightSide",
+		"want": "开多 2、卖出平今 1 之后",
 		"expect": "red"
 	},
 	{
@@ -475,49 +442,37 @@
 		"expect": "red"
 	},
 	{
-		"name": "365 平仓盈亏的方向搞反",
+		"name": "365 平仓盈亏的方向搞反（F7c 改指：旧重放删了，门面上的同一处）",
 		"dir": "",
-		"file": "conformance/fixture/replay.go",
-		"old": "\t\t\t\t\tTradeID: t.TradeID, Instrument: inst, Direction: closing,",
-		"new": "\t\t\t\t\tTradeID: t.TradeID, Instrument: inst, Direction: t.Direction,",
+		"file": "trade.go",
+		"old": "\t\tcp, err := pnl.CloseProfit(legs, held, tr.Price, inst.VolumeMultiple)",
+		"new": "\t\tcp, err := pnl.CloseProfit(legs, opposite(held), tr.Price, inst.VolumeMultiple)",
 		"pkg": "./conformance/fixture/",
-		"test": "TestAccountAggregatesFromTrades",
-		"want": "账户层对不上",
+		"test": "TestRebuildAccountFieldByField",
+		"want": "close_profit",
 		"expect": "red"
 	},
 	{
-		"name": "366 已实现片段只取第一片",
+		"name": "367 手续费基准换成成交价（F7c 改指：旧重放删了，门面上的同一处）",
 		"dir": "",
-		"file": "conformance/fixture/replay.go",
-		"old": "\t\t\t\t\tOffset: t.Offset, ClosePrice: t.Price, Consumed: res.Consumed,",
-		"new": "\t\t\t\t\tOffset: t.Offset, ClosePrice: t.Price, Consumed: res.Consumed[:1],",
+		"file": "choices.go",
+		"old": "\t\tFeeBasis:     fee.PreSettlement,           // kq_facts 4",
+		"new": "\t\tFeeBasis:     fee.TradePrice,              // kq_facts 4",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReplayRealizedKeepsEveryConsumedLot",
-		"want": "只留下 1 个",
+		"test": "TestRebuildAccountFieldByField",
+		"want": "commission",
 		"expect": "red"
 	},
 	{
-		"name": "367 手续费基准换成成交价",
-		"dir": "",
-		"file": "conformance/fixture/account_test.go",
-		"old": "\t\t\tc, err := fee.Compute(rates, tr.Offset, pre, mult, tr.Volume, decimalx.NoRounding)",
-		"new": "\t\t\t_ = pre\n\t\t\tc, err := fee.Compute(rates, tr.Offset, tr.Price, mult, tr.Volume, decimalx.NoRounding)",
-		"pkg": "./conformance/fixture/",
-		"test": "TestAccountAggregatesFromTrades",
-		"want": "账户层对不上",
-		"expect": "red"
-	},
-	{
-		"name": "368 逐笔对冲基线改用 Basis",
+		"name": "368 逐笔对冲基线改用 Basis（F7c：account_test 删了，改由 pnl 单测接；那里两条基线分得开，不再是盲区）",
 		"dir": "",
 		"file": "pnl/pnl.go",
 		"old": "\t\tr.ByTrade = r.ByTrade.Add(closePrice.Sub(l.OpenPrice).Mul(q))",
 		"new": "\t\tr.ByTrade = r.ByTrade.Add(closePrice.Sub(l.Basis).Mul(q))",
-		"pkg": "./conformance/fixture/",
-		"test": "TestAccountAggregatesFromTrades",
-		"want": "",
-		"expect": "green",
-		"why": "本批夹具全是今仓，两条基线（开仓价 / 逐日盯市基线）本就相同，所以两套盈亏口径必然同值。要等昨仓样本才分得开。"
+		"pkg": "./pnl/",
+		"test": "TestCloseProfitTwoStandardsDiffer",
+		"want": "逐笔对冲应为 700",
+		"expect": "red"
 	},
 	{
 		"name": "369 手续费不进账户（20260915 重锚：Rebuild 改调门面，记账链条搬进 trade.go）",
@@ -1043,17 +998,6 @@
 		"why": "⚠️ 手数不可能为负，所以把判据从「>0」改成「<0」之后计数照样是 0，本条照样绿。**声明的盲区**：这条测试断言的是「没有反例」，而一个恒假的判据与一个真的没有反例**长得一模一样**。真正能守住它的只有「大商所哪天出现昨仓」——那时正确的判据会红，而这个改坏的不会。破坏验证在这里只能演示盲区，不能消除它。"
 	},
 	{
-		"name": "97 重放不再把 UseHistory 的裸 CLOSE 翻成平昨（F6b：reconstruct_test 改走门面，由 Reconstruct ≡ 门面的等价守卫接住）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
-		"dir": "",
-		"file": "conformance/fixture/replay.go",
-		"old": "\tif offset == types.Close && dateType == refdata.UseHistory {\n\t\treturn types.CloseYesterday\n\t}",
-		"new": "",
-		"pkg": "./conformance/fixture/",
-		"test": "TestReplayTranslatesUseHistoryBareClose",
-		"want": "重放有歧义",
-		"expect": "red"
-	},
-	{
 		"name": "98 结转+重放的「今昨并存」判别力要求去掉",
 		"dir": "",
 		"file": "conformance/fixture/reconstruct_test.go",
@@ -1084,17 +1028,6 @@
 		"pkg": "./",
 		"test": "TestSimnowRefsResolve",
 		"want": "而 state.md 的表里没有这一条",
-		"expect": "red"
-	},
-	{
-		"name": "101 歧义检查的用例改回 UseHistory（于是永远绿）",
-		"dir": "",
-		"file": "conformance/fixture/replay_test.go",
-		"old": "\t_, err := ReplayFrom(seeded(t), testInst, types.Speculation,\n\t\trefdata.PositionDateNotNeeded, dayD1, trades)",
-		"new": "\t_, err := ReplayFrom(seeded(t), testInst, types.Speculation,\n\t\trefdata.UseHistory, dayD1, trades)",
-		"pkg": "./conformance/fixture/",
-		"test": "TestReplayDetectsAmbiguity",
-		"want": "重放却没报歧义",
 		"expect": "red"
 	},
 	{

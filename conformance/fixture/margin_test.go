@@ -12,7 +12,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-
 func ratesFor(product string) (refdata.MarginRates, bool) {
 	r, ok := marginRates[product]
 	if !ok {
@@ -56,8 +55,11 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 				continue
 			}
 			withQuote++
-			p, err := Replay(trades[0].Instrument, types.Speculation, refdata.PositionDateNotNeeded, f.TradingDay, trades)
+			// ⚠️ 保证金用夹具**自己**报的昨结算价（上面缺就跳过了）；持仓走 positionOf（带昨仓结转、否则当日重放）——
+			// 当日重放那一支若借了同日兄弟夹具的昨结算价，也只当门面前提，这里算保证金用的仍是上面的 pre（design.md §11 决策点 3）
+			p, _, err := positionOf(t, all, f, sym)
 			if err != nil {
+				t.Errorf("⚠️ %s %s 重放失败：%v", f.Path, sym, err)
 				continue
 			}
 			product, _ := splitProduct(trades[0].Instrument.Product)
