@@ -974,6 +974,16 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### 2026-09-15：门面 F3 —— `Submit`（实现之前写）
+
+设计见 design.md「门面的形状」§7。要点：
+
+- `Submit(day, at, req)`：组装 `order.Facts` ⇒ `match.Fill` ⇒ `ApplyTrade`；「没查成不成交」不改，F3 的工作是让门面能补齐八项事实
+- 新增输入：`Config.Calendar`（时段）、`Config.TickRounding`（按交易所，`MeasuredTickRounding()` 只给上期所 / 大商所）、`Config.PositionLimits`（调用方给，不给不成交）
+- 新增口径 `order.FreezeMarginBasis`（第七项）：CTP 按挂单价（`ctp-frozen-20260910`：委托额 30050、冻结 4808 = 3005 × 10 × 0.16），快期按昨结算价（kq_facts 46）
+- `refdata.ErrOutsideSession` 哨兵：「时段之外」（拒）与「查不了」（没查成）分开
+- 不做：挂单 / 撤单 / 冻结记账（F4）；快期侧冻结的第二份实现（`conformance/fixture/frozen.go`）迁到门面也是 F4
+
 ### 2026-09-15：门面 F2 —— `Settle`（实现之前写）
 
 设计见 design.md「门面的形状」§6。要点：
