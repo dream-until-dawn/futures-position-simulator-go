@@ -239,6 +239,23 @@ func TestUndatedCloseAsYesterdayInValidation(t *testing.T) {
 		t.Errorf("⚠️ 改写得来的裸 CLOSE 拒单配上了 CTP 码 %v —— 语料里是显式平昨，不外推", code)
 	}
 
+	// ③b **所有**拒因都不给码，不只是可平量（评审 20260915 实测：收窄成只清可平量，行为测试全绿）：
+	// 零头价位 3010.5（有昨仓，可平量过得去）⇒ 显式平昨给码、裸 CLOSE 不给。上期所裸 CLOSE 在 CTP 上整笔怎么回没测过（simnow_pending#1），
+	// 连先查价位还是先查开平都不知道，给哪个码都是外推
+	h := submitRb(t, kqChoices())
+	_, errOddDated := h.Submit(simNext, at, req(t, "SHFE.rb2701", types.Sell, types.CloseYesterday, "3010.5", 1))
+	_, errOddBare := h.Submit(simNext, at, req(t, "SHFE.rb2701", types.Sell, types.Close, "3010.5", 1))
+	var od, ob *match.RejectedError
+	if !errors.As(errOddDated, &od) || !errors.As(errOddBare, &ob) || od.Rejection.Check != order.CheckPriceTick || ob.Rejection.Check != order.CheckPriceTick {
+		t.Fatalf("前提：零头价位两笔都拒在最小变动价位：%v / %v", errOddDated, errOddBare)
+	}
+	if _, ok := od.Code(); !ok {
+		t.Errorf("前提：显式平昨撞零头价位在上期所有语料码：%v", errOddDated)
+	}
+	if code, ok := ob.Code(); ok {
+		t.Errorf("⚠️ 改写得来的裸 CLOSE 撞零头价位配上了 CTP 码 %v —— 清码只清了可平量那一种？这种单整笔都不在 CTP 语料里", code)
+	}
+
 	// ④ 零值口径（CTP）：照旧拒，原话照旧
 	e := submitRb(t, ctpChoices())
 	if _, err := e.Submit(simNext, at, bare); err == nil || !strings.Contains(err.Error(), "收到裸 CLOSE") {

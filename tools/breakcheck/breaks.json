@@ -5982,5 +5982,16 @@
 		"test": "TestUndatedCloseAsYesterdayInValidation",
 		"want": "应保留委托上的 CLOSE",
 		"expect": "red"
+	},
+	{
+		"name": "601 改写得来的拒单只在可平量上清码（撞零头价位 / 涨跌停的裸 CLOSE 又配上 CTP 码；评审 20260915 实测收窄后行为测试全绿）",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\tif rewritten {\n\t\t\tr.Kind = ctperr.ReasonUnknown",
+		"new": "\t\tif rewritten && r.Check == order.CheckClosable {\n\t\t\tr.Kind = ctperr.ReasonUnknown",
+		"pkg": "./",
+		"test": "TestUndatedCloseAsYesterdayInValidation",
+		"want": "撞零头价位配上了 CTP 码",
+		"expect": "red"
 	}
 ]
