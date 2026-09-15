@@ -2394,7 +2394,7 @@
 		"new": "\t\tif strings.HasPrefix(strings.TrimSpace(cells[2]), \"~~\") {\n\t\t\tstruck = append(struck, trimmed)\n\t\t\tcontinue\n\t\t}\n\t\tall = append(all, trimmed)",
 		"pkg": "./",
 		"test": "TestRulesListedMatchesTable",
-		"want": "而 §13 一共",
+		"want": "cn-futures-rules.md §13 一共",
 		"expect": "red"
 	},
 	{
