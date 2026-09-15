@@ -669,6 +669,17 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
   `reconstruct_test` / `crossday_test` / `frozen_account_test` / `order_frozen_test` 逐条改从它取，**每替换一条，替换前后逐字段判定相同**（F1 替换 `Rebuild` 同一条判据），旧函数最后删
   - ⚠️ 失去的一道检查：`Replay` 的「三种消耗顺序各跑一遍查歧义」在门面上没有对应物（门面按先平昨 / 平昨写死）。快期上消耗顺序「结构性测不出」（kq_facts 40），那道检查在快期夹具上一直在答「分不开」—— 删掉它时在 silent-risks 登记
 
+##### F6a 实现时定下的边界（2026-09-15）
+
+- **八项校验不跟第八项口径**：`Submit` / `Place` 照旧拒 UseHistory 上的裸 CLOSE（`order.checkClosable` 的拒因原话不动）。
+  口径只管记账路径（`ApplyTrade` / `Fill` / `FreezeOf` / `PlaceAccepted`）—— 八项是本库的规则，快期柜台接受的这种单与零头价位单走同一条路（`PlaceAccepted`）。
+  ⚠️ 也就是说快期口径下同一笔上期所裸 CLOSE，`Submit` 拒、`ApplyTrade` 收；守卫 `TestUndatedCloseAsYesterdayStaysOutOfValidation`，要改先改这里
+- 改写只在入口做一次（`datedOffset`：`ApplyTrade` 进平仓分支、`FreezeOf` 进门）；`commission` 收到的已是改写后的，不再各判一次（写了第三处，破坏验证会是如预期仍然绿）
+- 只改 `types.Close`：强平标志也不指定今昨，但 kq_facts 32 只观测过 CLOSE ⇒ 破坏 574 如预期仍然绿，盲区如实登记
+- `Restore` 核挂单时**手数也核**：记作平昨的裸 CLOSE 在簿上仍是 `Close`，簿取的是存档自己的今 / 昨拆分；金额核对分不开（平昨档与拆分无关）
+- `PlaceAccepted` 不做重复编号预检：`book.Insert` 报同一个错，冻结在回滚里解掉 —— 回滚因此有测试走到（破坏 581）
+- 测试用的规则数据加了 `SHFE.rb2701`（UseHistory、开 1 / 平昨 2 / 平今 5 按手，两两不同）：`ag2702` 三档同费率，分不开收哪一档
+
 ##### 已核
 
 - 活委托 10 笔，全部带 `insert_date_time`；上期所 `CLOSE` 5 笔、`CLOSETODAY` 2 笔、开仓 3 笔（其中 2 笔大商所）
