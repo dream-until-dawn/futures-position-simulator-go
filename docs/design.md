@@ -317,6 +317,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
         SideScope   margin.SideScope    // 单向大边的合并范围
         Mark        pnl.Mark            // 盘中持仓盈亏的计价价
         Algorithm   account.Algorithm   // 浮盈算不算进可用
+        FreezeMargin order.FreezeMarginBasis // 开仓挂单冻结保证金按哪个价（F3 加，见 §7）
     }
 
 | 项 | CTP / SimNow 实测 | 快期模拟实测 |
@@ -327,6 +328,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 | `SideScope` | `ByProduct`（§13 #3） | ⚠️ 快期**没实现大边**（simnow_pending#6）—— 这一项在那个口子上测不了 |
 | `Mark` | `MarkLast`，基线是结算推进后的 `Basis`（§13 #2） | `MarkLast`（`Rebuild` 现用；换成昨结算价时 position_profit 700 → −320，破坏 519） |
 | `Algorithm` | `AlgorithmOnlyLost`（§13 #17） | `AlgorithmAll`（kq_facts 11） |
+| `FreezeMargin`（F3 加） | `FreezeAtOrderPrice`（`ctp-frozen-20260910`，见 §7） | `FreezeAtPreSettlement`（kq_facts 46） |
 
 ⇒ 提供两个**预设** `CTPChoices()` / `KQChoices()`，**只填实测过的格**；`FeeRounding` 在两个预设里都留零值，
 `New` 因此报错，调用方必须自己写一行 `c.FeeRounding = …` —— **那一行就是「我知道这一项没实测」的签字**。
@@ -493,7 +495,7 @@ F2 之后门面**能**结算了 ⇒ 若有人在这两条路上调 `Settle`，`p
 | 涨跌停 | 昨结算价 × `PriceLimitRatio`，按取整方向对齐 | `Mark` 给的昨结算价；**新增** `Config.TickRounding`（按交易所） | 没给该交易所 ⇒ 没查成 |
 | 手数上下限 | `Instrument.Min/MaxLimitOrderVolume` | `Rules` | 上限为 0 ⇒ 没查成（`order` 现有处理：免费行情不下发） |
 | 可平量 | 门面自己的持仓（没仓就给一个**空**持仓，不给 nil —— nil 在 `order` 里是「不知道」） | 门面 | — |
-| 资金 | `Available` = `account.Available()`；`Need` = `FreezeOf` 的保证金 + 手续费 | 门面 | 算不出 ⇒ 没查成 |
+| 资金 | `Available` = `account.Available()`；`Need` = `FreezeOf` 的保证金 + 手续费 | 门面 | 规格在而算不出（缺昨结算价、§13 #21 分歧段）⇒ **直接报这个原因**（实现时改：塞进「没查成」只会说「保证金与手续费」，把真正缺的东西说丢了） |
 | 限仓 | **新增** `Config.PositionLimits map[InstrumentID]int` | 调用方 | 没给该合约 ⇒ 没查成 |
 
 - **时段**：`TradingDayAt(at, …)` 成功且等于 `day` ⇒ 在时段内；成功而不等于 `day` ⇒ **报错**（时刻与交易日互相矛盾，是调用方的错，不是拒单）；

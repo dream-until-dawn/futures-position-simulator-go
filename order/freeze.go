@@ -244,3 +244,35 @@ func (b *Book) Live() []string {
 	sort.Strings(ids)
 	return ids
 }
+
+// FreezeMarginBasis 是开仓挂单冻结的保证金按哪个价算。
+//
+// ⚠️ **两个口子实测相反**，零值即「未实测」：
+//
+//	CTP / SimNow  挂单价     ctp-frozen-20260910：LongFrozenAmount 30050 ⇒ 挂单价 3005；FrozenMargin 4808 = 3005 × 10 × 0.16，
+//	                          按昨结算价 3164 会是 5062.4（否）；同一份的 FrozenCommission 3.01 也指向挂单价
+//	快期模拟      昨结算价   kq_facts 46：ag2702 昨结 16262 × 15 × 22% = 53664.6、i2701 昨结 740 × 100 × 11% = 8140
+//
+// 本包不算金额（见 FreezeInput）；这个类型只是让「按哪个价」有一个不许默认的名字。
+type FreezeMarginBasis uint8
+
+const (
+	// FreezeMarginUnmeasured 是零值：使用即报错。
+	FreezeMarginUnmeasured FreezeMarginBasis = iota
+	// FreezeAtOrderPrice 按挂单价。✅ SimNow 实测。
+	FreezeAtOrderPrice
+	// FreezeAtPreSettlement 按昨结算价。✅ 快期模拟实测。
+	FreezeAtPreSettlement
+)
+
+func (b FreezeMarginBasis) String() string {
+	switch b {
+	case FreezeMarginUnmeasured:
+		return "未实测"
+	case FreezeAtOrderPrice:
+		return "挂单价"
+	case FreezeAtPreSettlement:
+		return "昨结算价"
+	}
+	return fmt.Sprintf("FreezeMarginBasis(%d)", uint8(b))
+}

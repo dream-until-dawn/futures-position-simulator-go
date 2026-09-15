@@ -5035,22 +5035,22 @@
 		"expect": "red"
 	},
 	{
-		"name": "515 CTP 预设的保证金基准写成昨结算价——ag2702 今仓 UseMargin 对不上柜台",
+		"name": "515 CTP 预设的保证金基准写成昨结算价——ag2702 今仓 UseMargin 对不上柜台（20260915 重锚：Choices 加 FreezeMargin 后 gofmt 重排了对齐）",
 		"dir": "",
 		"file": "choices.go",
-		"old": "MarginBasis: margin.OpenTodayPreSettleHistory,",
-		"new": "MarginBasis: margin.PreSettleAll,",
+		"old": "MarginBasis:  margin.OpenTodayPreSettleHistory,",
+		"new": "MarginBasis:  margin.PreSettleAll,",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeReplaysAg2702AgainstCTP",
 		"want": "UseMargin",
 		"expect": "red"
 	},
 	{
-		"name": "516 CTP 预设的手续费基准写成昨结算价——ag2702 的 Commission 差不再恰好是 0.005/笔",
+		"name": "516 CTP 预设的手续费基准写成昨结算价——ag2702 的 Commission 差不再恰好是 0.005/笔（20260915 重锚：Choices 加 FreezeMargin 后 gofmt 重排了对齐）",
 		"dir": "",
 		"file": "choices.go",
-		"old": "FeeBasis:    fee.TradePrice,",
-		"new": "FeeBasis:    fee.PreSettlement,",
+		"old": "FeeBasis:     fee.TradePrice,",
+		"new": "FeeBasis:     fee.PreSettlement,",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeReplaysAg2702AgainstCTP",
 		"want": "Commission",
@@ -5068,22 +5068,22 @@
 		"expect": "red"
 	},
 	{
-		"name": "518 快期预设的保证金基准写成今仓按开仓价——status-20260908-7 的 margin 对不上",
+		"name": "518 快期预设的保证金基准写成今仓按开仓价——status-20260908-7 的 margin 对不上（20260915 重锚：Choices 加 FreezeMargin 后 gofmt 重排了对齐）",
 		"dir": "",
 		"file": "choices.go",
-		"old": "MarginBasis: margin.PreSettleAll,  // 快期",
-		"new": "MarginBasis: margin.OpenTodayPreSettleHistory, // 快期",
+		"old": "MarginBasis:  margin.PreSettleAll,",
+		"new": "MarginBasis:  margin.OpenTodayPreSettleHistory,",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
 		"want": "❌ margin",
 		"expect": "red"
 	},
 	{
-		"name": "519 快期预设的计价价写成昨结算价——position_profit 700 → −320",
+		"name": "519 快期预设的计价价写成昨结算价——position_profit 700 → −320（20260915 重锚：Choices 加 FreezeMargin 后 gofmt 重排了对齐）",
 		"dir": "",
 		"file": "choices.go",
-		"old": "Mark:        pnl.MarkLast,         // 快期",
-		"new": "Mark:        pnl.MarkPreSettlement, // 快期",
+		"old": "Mark:         pnl.MarkLast,                // 快期",
+		"new": "Mark:         pnl.MarkPreSettlement,       // 快期",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
 		"want": "❌ position_profit",
@@ -5231,6 +5231,105 @@
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "两档同费率",
+		"expect": "red"
+	},
+	{
+		"name": "533 门面不认「时段之外」的哨兵——时段外的单变成没查成而不是拒",
+		"dir": "",
+		"file": "submit.go",
+		"old": "case errors.Is(err, refdata.ErrOutsideSession):",
+		"new": "case false && errors.Is(err, refdata.ErrOutsideSession):",
+		"pkg": "./",
+		"test": "TestSubmitSession",
+		"want": "16:00 不在任何时段内",
+		"expect": "red"
+	},
+	{
+		"name": "534 日历不包哨兵（%w → %v）——「不在时段内」与「答不了」混了",
+		"dir": "",
+		"file": "refdata/calendar.go",
+		"old": "不是待填的空缺：%w\",",
+		"new": "不是待填的空缺：%v\",",
+		"pkg": "./refdata/",
+		"test": "TestTradingDayAtRefusesToGuess",
+		"want": "混了",
+		"expect": "red"
+	},
+	{
+		"name": "535 没仓时给 nil 持仓——无仓平昨从「拒」变成「没查成」",
+		"dir": "",
+		"file": "submit.go",
+		"old": "\t\t\tf.Position = empty\n",
+		"new": "\t\t\t_ = empty\n",
+		"pkg": "./",
+		"test": "TestSubmitRejectsWithCorpusCodes",
+		"want": "要被拒",
+		"expect": "red"
+	},
+	{
+		"name": "536 CTP 预设的冻结保证金改按昨结算价——rb2701 挂单冻结对不上柜台 4808",
+		"dir": "",
+		"file": "submit.go",
+		"old": "leg.OpenPrice, basis = req.Price, margin.OpenTodayPreSettleHistory",
+		"new": "leg.PreSettlement, leg.HasPreSettlement, basis = s.prices[req.Instrument].pre, true, margin.PreSettleAll",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeFreezeRb2701AgainstCTP",
+		"want": "冻结保证金",
+		"expect": "red"
+	},
+	{
+		"name": "537 涨跌停取整方向不传给校验——涨跌停那一项永远没查成",
+		"dir": "",
+		"file": "submit.go",
+		"old": "f.Rounding = s.tickRounding[req.Instrument.Exchange]",
+		"new": "f.Rounding = refdata.TickRoundingUnknown",
+		"pkg": "./",
+		"test": "TestSubmitRejectsWithCorpusCodes",
+		"want": "要被拒",
+		"expect": "red"
+	},
+	{
+		"name": "538 时刻与交易日矛盾也放行——夜盘时刻按日盘交易日成交",
+		"dir": "",
+		"file": "submit.go",
+		"old": "case err == nil && d != day:",
+		"new": "case false && err == nil && d != day:",
+		"pkg": "./",
+		"test": "TestSubmitSession",
+		"want": "要报矛盾",
+		"expect": "red"
+	},
+	{
+		"name": "539 资金校验只算手续费不算冻结保证金",
+		"dir": "",
+		"file": "submit.go",
+		"old": "f.Need, f.HasNeed = fr.Margin.Add(fr.Commission), true",
+		"new": "f.Need, f.HasNeed = fr.Commission, true",
+		"pkg": "./",
+		"test": "TestSubmitFundsCheckFollowsFreezeBasis",
+		"want": "要拒在资金",
+		"expect": "red"
+	},
+	{
+		"name": "540 限仓不传给校验——每一笔都没查成",
+		"dir": "",
+		"file": "submit.go",
+		"old": "f.PositionLimit, f.HasPositionLimit = limit, true",
+		"new": "_ = limit",
+		"pkg": "./",
+		"test": "TestSubmitBooksTheSameAsApplyTrade",
+		"want": "应当成交",
+		"expect": "red"
+	},
+	{
+		"name": "541 成交之后不记账",
+		"dir": "",
+		"file": "submit.go",
+		"old": "if err := s.ApplyTrade(day, trade); err != nil {",
+		"new": "if err := error(nil); err != nil {",
+		"pkg": "./",
+		"test": "TestSubmitBooksTheSameAsApplyTrade",
+		"want": "报单成交与直接灌成交的账不同",
 		"expect": "red"
 	}
 ]

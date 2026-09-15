@@ -132,11 +132,6 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 	if err != nil {
 		return err
 	}
-	rates, err := s.rules.CommissionRates(tr.Instrument, tr.Hedge)
-	if err != nil {
-		return err
-	}
-	px := s.prices[tr.Instrument]
 	key := posKey{tr.Instrument, tr.Hedge}
 
 	var p *position.Position
@@ -146,29 +141,14 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 		return err
 	}
 
-	feePrice, err := fee.BasisPrice(s.choices.FeeBasis, tr.Price, px.pre, px.hasPre)
-	if err != nil {
-		return fmt.Errorf("%s：%w", tr.Instrument, err)
-	}
 	commission, closeProfit := decimal.Zero, decimal.Zero
-	charge := func(off types.Offset, vol int) error {
-		if vol == 0 {
-			return nil
-		}
-		c, err := fee.Compute(rates, off, feePrice, inst.VolumeMultiple, vol, s.choices.FeeRounding)
-		if err != nil {
-			return fmt.Errorf("%s 手续费：%w", tr.Instrument, err)
-		}
-		commission = commission.Add(c)
-		return nil
-	}
 
 	switch {
 	case tr.Offset == types.Open:
 		if err := p.Open(tr.Direction, day, tr.Price, tr.Volume); err != nil {
 			return err
 		}
-		if err := charge(types.Open, tr.Volume); err != nil {
+		if commission, err = s.commission(tr, 0); err != nil {
 			return err
 		}
 	case tr.Offset.IsClose():
@@ -187,11 +167,7 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 		if err != nil {
 			return err
 		}
-		if tr.Offset.SpecifiesPositionDate() {
-			if err := charge(tr.Offset, tr.Volume); err != nil {
-				return err
-			}
-		} else if err := chargeUndated(tr, todayBefore, rates, charge); err != nil {
+		if commission, err = s.commission(tr, todayBefore); err != nil {
 			return err
 		}
 		legs := make([]pnl.Leg, 0, len(res.Consumed))
@@ -218,6 +194,46 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 	}
 	s.positions = positions
 	return s.commit(day, v, commission, closeProfit)
+}
+
+// commission 算一笔成交（或一笔报单按报价成交时）的手续费。
+//
+// todayBefore 是**平仓前**这一侧的今仓手数（开仓传 0）—— 裸 CLOSE 的档位由它定（§13 #21）。
+// ApplyTrade 与 FreezeOf 共用它：「这一笔收多少」只有一份定义。
+func (s *Simulator) commission(tr match.Trade, todayBefore int) (decimal.Decimal, error) {
+	inst, err := s.rules.Instrument(tr.Instrument)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	rates, err := s.rules.CommissionRates(tr.Instrument, tr.Hedge)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	px := s.prices[tr.Instrument]
+	feePrice, err := fee.BasisPrice(s.choices.FeeBasis, tr.Price, px.pre, px.hasPre)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("%s：%w", tr.Instrument, err)
+	}
+	total := decimal.Zero
+	charge := func(off types.Offset, vol int) error {
+		if vol == 0 {
+			return nil
+		}
+		c, err := fee.Compute(rates, off, feePrice, inst.VolumeMultiple, vol, s.choices.FeeRounding)
+		if err != nil {
+			return fmt.Errorf("%s 手续费：%w", tr.Instrument, err)
+		}
+		total = total.Add(c)
+		return nil
+	}
+	if tr.Offset == types.Open {
+		err = charge(types.Open, tr.Volume)
+	} else if tr.Offset.SpecifiesPositionDate() {
+		err = charge(tr.Offset, tr.Volume)
+	} else if err := chargeUndated(tr, todayBefore, rates, charge); err != nil {
+		return decimal.Zero, err
+	}
+	return total, err
 }
 
 // chargeUndated 给裸 CLOSE 与强平标志收手续费 —— §13 #21 未收敛，只做两个残余候选一致的那一段。

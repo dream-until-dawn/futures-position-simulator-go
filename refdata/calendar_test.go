@@ -1,6 +1,7 @@
 package refdata
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -129,6 +130,10 @@ func TestTradingDayAtRefusesToGuess(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), cs.msgHas) {
 			t.Errorf("%s：错误信息里没有 %q：%v", cs.name, cs.msgHas, err)
+		}
+		// ⚠️ 只有「确实不在任何时段内」带哨兵：其余是「答不了」—— 报单校验对前者拒单、对后者报没查成（design.md 门面 §7）
+		if outside := cs.msgHas == "不落在"; errors.Is(err, ErrOutsideSession) != outside {
+			t.Errorf("⚠️ %s：errors.Is(ErrOutsideSession) = %v，期望 %v —— 「不在时段内」与「答不了」混了", cs.name, !outside, outside)
 		}
 	}
 }

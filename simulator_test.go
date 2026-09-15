@@ -10,6 +10,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
+	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -34,10 +35,14 @@ func simRules(t *testing.T) refdata.Provider {
 	t.Helper()
 	m, ag, y := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702"), simInst(t, "DCE.y2701")
 	b := refdata.NewBuilder(1).
+		// 手数上限与涨跌幅比例给报单路径（Submit）用。m2701 的 6% 按大商所四舍五入对齐后是 3587 / 3181，
+		// 与交易日 20260915 行情里的涨跌停价一致（ctp-slices-20260915.json 的 quotes）。
 		AddInstrument(refdata.Instrument{ID: m, VolumeMultiple: dec("10"), PriceTick: dec("1"),
-			PositionDateType: refdata.NoUseHistory, IsTrading: true}).
+			PositionDateType: refdata.NoUseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.06"), HasPriceLimitRatio: true}).
 		AddInstrument(refdata.Instrument{ID: ag, VolumeMultiple: dec("15"), PriceTick: dec("1"),
-			PositionDateType: refdata.UseHistory, IsTrading: true}).
+			PositionDateType: refdata.UseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.09"), HasPriceLimitRatio: true}).
 		// y2701：平昨档 = 平今档（两档同费率），给 §13 #21 「超出今仓的部分」那一支用
 		AddInstrument(refdata.Instrument{ID: y, VolumeMultiple: dec("10"), PriceTick: dec("2"),
 			PositionDateType: refdata.NoUseHistory, IsTrading: true}).
@@ -100,7 +105,7 @@ func TestNewRequiresEveryChoice(t *testing.T) {
 	if err == nil {
 		t.Fatal("⚠️ 零值口径开户成功了")
 	}
-	for _, name := range []string{"FeeBasis", "FeeRounding", "MarginBasis", "SideScope", "Mark", "Algorithm"} {
+	for _, name := range []string{"FeeBasis", "FeeRounding", "MarginBasis", "SideScope", "Mark", "Algorithm", "FreezeMargin"} {
 		if !strings.Contains(err.Error(), name) {
 			t.Errorf("零值口径的报错里没点名 %s —— 要一次报全：%v", name, err)
 		}
@@ -143,11 +148,11 @@ func TestPresetsLeaveExactlyTheUnmeasuredCellsEmpty(t *testing.T) {
 	}
 	// 两个口子量到相反值的三项，两个预设必须不同 —— 抄成一样的预设会让「选口子」失去意义。
 	ctp, kq := CTPChoices(), KQChoices()
-	if ctp.FeeBasis == kq.FeeBasis || ctp.MarginBasis == kq.MarginBasis || ctp.Algorithm == kq.Algorithm {
+	if ctp.FeeBasis == kq.FeeBasis || ctp.MarginBasis == kq.MarginBasis || ctp.Algorithm == kq.Algorithm || ctp.FreezeMargin == kq.FreezeMargin {
 		t.Errorf("⚠️ 两个预设在实测相反的三项上有相同的：%+v / %+v", ctp, kq)
 	}
 	if ctp.Algorithm != account.AlgorithmOnlyLost || ctp.MarginBasis != margin.OpenTodayPreSettleHistory ||
-		ctp.SideScope != margin.ByProduct || ctp.FeeBasis != fee.TradePrice {
+		ctp.SideScope != margin.ByProduct || ctp.FeeBasis != fee.TradePrice || ctp.FreezeMargin != order.FreezeAtOrderPrice {
 		t.Errorf("CTP 预设与 §13 #1/#3/#17、手续费基准实测不符：%+v", ctp)
 	}
 }

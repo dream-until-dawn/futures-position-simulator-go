@@ -9,6 +9,7 @@ import (
 	futsim "github.com/dream-until-dawn/futures-position-simulator-go"
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
+	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -316,4 +317,65 @@ func TestFacadeSettlesM2701AcrossDaysAgainstCTP(t *testing.T) {
 	markRec(d2, s3)
 	apply(d2, trades[1])
 	compare("-3 通用平仓之后", s3)
+}
+
+// TestFacadeFreezeRb2701AgainstCTP 用门面的 FreezeOf 按 CTP 预设算一笔开仓挂单的冻结，比 ctp-frozen-20260910 的账户冻结字段。
+//
+// 那一刻账上只挂着这一笔：SHFE.rb2701 买开 1 手，记录的 LongFrozenAmount 30050 ⇒ 挂单价 3005。
+//
+//	FrozenMargin      4808 = 3005 × 10 × 0.16（挂单价）；按昨结算价 3164 会是 5062.4 —— 钉住 CTPChoices.FreezeMargin
+//	FrozenCommission  3.01 = 3005 × 10 × 0.0001 + 0.005 —— 声明费率里没有每手 0.005（§13 #19），本库按声明算得 3.005，差恰好 0.005 × 手数
+//
+// ⚠️ 挂单价是从委托额反推的（夹具不带委托明细）；昨结算价取同一条记录的 PreSettlementPrice。
+func TestFacadeFreezeRb2701AgainstCTP(t *testing.T) {
+	f, ok := loadCTP(t)["ctp-frozen-20260910.json"]
+	if !ok {
+		t.Fatal("⚠️ 缺夹具 ctp-frozen-20260910.json")
+	}
+	const sym, rec = "SHFE.rb2701", "SHFE.rb2701/1"
+	day := types.TradingDay(20260910)
+	id, err := types.ParseSymbol(sym, day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mult, ok := specMultiplier(t, sym, id)
+	if !ok {
+		t.Fatal("⚠️ 规格快照里没有 rb 的乘数")
+	}
+	r := f.Positions[rec]
+	amount, frozenVol := num(t, r, "LongFrozenAmount"), int64(flt(t, r, "LongFrozen"))
+	if frozenVol != 1 {
+		t.Fatalf("⚠️ 前提：只挂一手，得到 LongFrozen %d", frozenVol)
+	}
+	price := amount.Div(mult)
+	d := decimal.RequireFromString
+	rules := oneInstrumentRules{
+		inst: refdata.Instrument{ID: id, VolumeMultiple: mult, PriceTick: decimal.NewFromInt(1),
+			PositionDateType: refdata.PositionDateNotNeeded},
+		// ctp-commission-rates-20260915.txt：SHFE.rb2701 三档按额 0.0001、每手 0（声明）
+		commission: refdata.CommissionRates{OpenByMoney: d("0.0001"), CloseByMoney: d("0.0001"), CloseTodayByMoney: d("0.0001")},
+		margin:     refdata.MarginRates{LongByMoney: num(t, r, "MarginRateByMoney"), ShortByMoney: num(t, r, "MarginRateByMoney")},
+	}
+	ch := futsim.CTPChoices()
+	ch.FeeRounding = fee.NoRounding
+	sim, err := futsim.New(futsim.Config{Day: day, PreBalance: decimal.NewFromInt(20000000), Rules: rules, Choices: ch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sim.Mark(day, futsim.Quote{Instrument: id, PreSettlement: num(t, r, "PreSettlementPrice"), HasPreSettlement: true}); err != nil {
+		t.Fatal(err)
+	}
+	fr, err := sim.FreezeOf(day, order.Request{Instrument: id, Direction: types.Buy, Offset: types.Open,
+		Hedge: types.Speculation, Price: price, Volume: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotM, _ := fr.Margin.Float64()
+	if want := flt(t, f.Account, "FrozenMargin"); math.Abs(gotM-want) > 1e-6 {
+		t.Errorf("⚠️ 冻结保证金：本库 %v，柜台 %v（挂单价 %s、昨结算价 %v）", gotM, want, price, flt(t, r, "PreSettlementPrice"))
+	}
+	gotC, _ := fr.Commission.Add(d("0.005")).Float64()
+	if want := flt(t, f.Account, "FrozenCommission"); math.Abs(gotC-want) > 1e-6 {
+		t.Errorf("⚠️ 冻结手续费：本库（已加 0.005 × 1 手）%v，柜台 %v —— 差不再是 §13 #19 那个常数", gotC, want)
+	}
 }
