@@ -974,6 +974,18 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### 2026-09-15：`order` / `match` 接上 `ctperr` —— 被拒的单能说出柜台会给的码（语料粒度内）
+
+设计先行：docs/design.md「ctperr 的形状」第 6 条。导出面（门禁④）：
+
+    字段   order.Rejection.Kind（ctperr.Reason）；match.RejectedError.Exchange（types.Exchange）
+    方法   (*match.RejectedError).Code() (ctperr.Code, bool)
+
+- 拒因在 `Validate` **拒绝的那一刻**写：最小变动价位 / 高于涨停 / 低于跌停 / **昨仓为 0 时**平昨；其余一律 `ReasonUnknown`
+- `TestRejectionCodesMatchCorpus`：语料 12 条拒单，本库拒在同一项、码一致 —— **v0.4.0 验收「被拒报单的错误码一致」在已拍的三个交易所上成立**。
+  ⚠️ 码值与 ctperr 同源（同一份语料），独立的只是「拒因挑得对不对」那一半；郑商所 / 广期所没有语料，那一半验收仍开着
+- `TestKindStaysUnknownOutsideCorpus`：平今、资金、不可交易、「有昨仓但不够的平昨」都不给拒因
+
 ### 2026-09-15：`ctperr` 落地 —— 表只收探针语料，与语料双向钉死
 
 设计先行：docs/design.md「ctperr 的形状」（同日先提交）。导出面（门禁④，**含枚举取值**）：

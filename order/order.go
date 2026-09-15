@@ -43,6 +43,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/ctperr"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
@@ -177,6 +178,13 @@ type Facts struct {
 type Rejection struct {
 	Check  Check
 	Reason string
+	// Kind 是这次拒绝在 ctperr 里的拒因，用来查柜台会给的码（ctperr.Lookup）。
+	//
+	// ⚠️ **在拒绝的那一刻写**，不由调用方从 Reason 的中文里拆：那一刻 Validate 手里有涨停价与跌停价、
+	// 开平标志、今昨手数；调用方手里只剩一句中文。
+	// ⚠️ **粒度只到语料**：只有最小变动价位、涨停、跌停、「昨仓为 0 时平昨」四种有值，其余一律 ReasonUnknown ——
+	// 语料没测过的拒绝，不假装知道柜台给什么码。
+	Kind ctperr.Reason
 }
 
 // Unchecked 是一项**没能查**的校验。
@@ -237,7 +245,7 @@ func Validate(req Request, f Facts) Result {
 	var res Result
 	var rejections []Rejection
 	add := func(c Check, format string, a ...any) {
-		rejections = append(rejections, Rejection{c, fmt.Sprintf(format, a...)})
+		rejections = append(rejections, Rejection{Check: c, Reason: fmt.Sprintf(format, a...)})
 	}
 	skip := func(c Check, missing string) {
 		res.Unchecked = append(res.Unchecked, Unchecked{c, missing})
@@ -246,8 +254,7 @@ func Validate(req Request, f Facts) Result {
 	if req.Volume <= 0 {
 		// ⚠️ 这一条不属于八项，它是**输入本身不合法**。
 		// 混进手数上下限那一项会让「本库拒了」与「交易所会拒」分不开。
-		return Result{Rejected: &Rejection{CheckVolumeRange,
-			fmt.Sprintf("报单手数必须为正，得到 %d —— 这不是交易所的限制，是输入不合法", req.Volume)}}
+		return Result{Rejected: &Rejection{Check: CheckVolumeRange, Reason: fmt.Sprintf("报单手数必须为正，得到 %d —— 这不是交易所的限制，是输入不合法", req.Volume)}}
 	}
 
 	// —— 1 合约可交易 ——
@@ -271,8 +278,8 @@ func Validate(req Request, f Facts) Result {
 	case !f.Instrument.PriceTick.IsPositive():
 		skip(CheckPriceTick, "PriceTick 非正 —— 那是规则数据缺失，不是「不用校验」")
 	case !req.Price.Mod(f.Instrument.PriceTick).IsZero():
-		add(CheckPriceTick, "价格 %s 不是最小变动价位 %s 的整数倍",
-			req.Price, f.Instrument.PriceTick)
+		rejections = append(rejections, Rejection{Check: CheckPriceTick, Kind: ctperr.ReasonPriceTick,
+			Reason: fmt.Sprintf("价格 %s 不是最小变动价位 %s 的整数倍", req.Price, f.Instrument.PriceTick)})
 	}
 
 	// —— 4 涨跌停 ——
@@ -287,9 +294,11 @@ func Validate(req Request, f Facts) Result {
 	case !ok:
 		skip(CheckPriceLimit, "涨跌幅比例（规则数据里没有）")
 	case req.Price.GreaterThan(up):
-		add(CheckPriceLimit, "价格 %s 高于涨停价 %s", req.Price, up)
+		rejections = append(rejections, Rejection{Check: CheckPriceLimit, Kind: ctperr.ReasonAboveUpperLimit,
+			Reason: fmt.Sprintf("价格 %s 高于涨停价 %s", req.Price, up)})
 	case req.Price.LessThan(lo):
-		add(CheckPriceLimit, "价格 %s 低于跌停价 %s", req.Price, lo)
+		rejections = append(rejections, Rejection{Check: CheckPriceLimit, Kind: ctperr.ReasonBelowLowerLimit,
+			Reason: fmt.Sprintf("价格 %s 低于跌停价 %s", req.Price, lo)})
 	}
 
 	// —— 5 手数上下限 ——
@@ -363,32 +372,36 @@ func checkClosable(req Request, p *position.Position) *Rejection {
 	}
 	s, err := p.Side(dir)
 	if err != nil {
-		return &Rejection{CheckClosable, err.Error()}
+		return &Rejection{Check: CheckClosable, Reason: err.Error()}
 	}
 	today, his := s.VolumeToday(), s.VolumeHistory()
 	switch req.Offset {
 	case types.CloseToday:
 		if req.Volume > today {
-			return &Rejection{CheckClosable, fmt.Sprintf(
+			return &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
 				"平今 %d 手超过今仓 %d 手（昨仓另有 %d 手，**不可用于平今**）",
 				req.Volume, today, his)}
 		}
 	case types.CloseYesterday:
 		if req.Volume > his {
-			return &Rejection{CheckClosable, fmt.Sprintf(
+			r := &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
 				"平昨 %d 手超过昨仓 %d 手（今仓另有 %d 手，**不可用于平昨**）",
 				req.Volume, his, today)}
+			// ⚠️ 只在昨仓为 0 时给拒因：语料里那条是「账上无仓时平昨」，「有昨仓但不够」没有观测。
+			if his == 0 {
+				r.Kind = ctperr.ReasonCloseYesterdayExceeds
+			}
+			return r
 		}
 	default:
 		// 裸 Close：⚠️ 本库按 cn-futures-rules.md §4 **报错而不是猜**。
 		// 快期模拟把它解释成平昨（kq_facts 32，两条独立证据），
 		// 但那是**一个口子**的行为，simnow_pending#1 未裁决。
 		// 猜错的代价是平错一边的仓，而显式声明本来就是要求。
-		return &Rejection{CheckClosable,
-			"收到裸 CLOSE（未声明平今还是平昨）—— " +
-				"⚠️ 本库**拒绝**而不是按平昨处理：那个语义只在快期模拟上实测过" +
-				"（kq_facts 32），真实柜台未裁决（simnow_pending#1）。" +
-				"显式声明本来就是要求，报错的代价近乎为零，猜错的代价是平错一边的仓"}
+		return &Rejection{Check: CheckClosable, Reason: "收到裸 CLOSE（未声明平今还是平昨）—— " +
+			"⚠️ 本库**拒绝**而不是按平昨处理：那个语义只在快期模拟上实测过" +
+			"（kq_facts 32），真实柜台未裁决（simnow_pending#1）。" +
+			"显式声明本来就是要求，报错的代价近乎为零，猜错的代价是平错一边的仓"}
 	}
 	return nil
 }

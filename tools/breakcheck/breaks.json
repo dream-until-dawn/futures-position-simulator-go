@@ -1335,8 +1335,8 @@
 		"name": "120 裸 CLOSE 改成按平昨处理",
 		"dir": "",
 		"file": "order/order.go",
-		"old": "\t\treturn &Rejection{CheckClosable,\n\t\t\t\"收到裸 CLOSE（未声明平今还是平昨）—— \" +",
-		"new": "\t\tif req.Volume > his {\n\t\t\treturn &Rejection{CheckClosable, \"平昨超量\"}\n\t\t}\n\t\treturn nil\n\t\t//nolint\n\t\treturn &Rejection{CheckClosable,\n\t\t\t\"收到裸 CLOSE（未声明平今还是平昨）—— \" +",
+		"old": "\t\treturn &Rejection{Check: CheckClosable, Reason: \"收到裸 CLOSE（未声明平今还是平昨）—— \" +",
+		"new": "\t\tif req.Volume > his {\n\t\t\treturn &Rejection{Check: CheckClosable, Reason: \"平昨超量\"}\n\t\t}\n\t\treturn nil\n\t\t//nolint\n\t\treturn &Rejection{Check: CheckClosable, Reason: \"收到裸 CLOSE（未声明平今还是平昨）—— \" +",
 		"pkg": "./order/",
 		"test": "TestRejections",
 		"want": "裸 CLOSE",
@@ -4576,7 +4576,7 @@
 		"name": "473 被拒的单报成「没查成」——调用方分不出该改单还是该补事实",
 		"dir": "",
 		"file": "match/match.go",
-		"old": "\t\treturn Trade{}, &RejectedError{Rejection: *res.Rejected}\n",
+		"old": "\t\treturn Trade{}, &RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}\n",
 		"new": "\t\treturn Trade{}, &UncheckedError{}\n",
 		"pkg": "./match/",
 		"test": "TestFillRefusesRejectedAndUncheckedDifferently",
@@ -4746,6 +4746,50 @@
 		"pkg": "./ctperr/",
 		"test": "TestLookupDoesNotFallBack",
 		"want": "这个交易所一条语料都没有",
+		"expect": "red"
+	},
+	{
+		"name": "489 价位拒单不写 ctperr 拒因——被拒的单说不出柜台会给 48",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "Rejection{Check: CheckPriceTick, Kind: ctperr.ReasonPriceTick,",
+		"new": "Rejection{Check: CheckPriceTick,",
+		"pkg": "./order/",
+		"test": "TestRejectionCodesMatchCorpus",
+		"want": "最小变动价位",
+		"expect": "red"
+	},
+	{
+		"name": "490 平昨超量不看昨仓是否为 0 就给拒因——把「账上无仓」的码推给「有昨仓但不够」",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t\t\tif his == 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"new": "\t\t\tif his >= 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"pkg": "./order/",
+		"test": "TestKindStaysUnknownOutsideCorpus",
+		"want": "不许推过来",
+		"expect": "red"
+	},
+	{
+		"name": "491 RejectedError 不带交易所——同一拒因的码随交易所变，查不了",
+		"dir": "",
+		"file": "match/match.go",
+		"old": "&RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}",
+		"new": "&RejectedError{Rejection: *res.Rejected}",
+		"pkg": "./match/",
+		"test": "TestRejectedErrorCarriesCode",
+		"want": "没带上交易所",
+		"expect": "red"
+	},
+	{
+		"name": "492 涨停拒单写成跌停的拒因——码 49 与 50 对调而两边都「被拒」",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "Rejection{Check: CheckPriceLimit, Kind: ctperr.ReasonAboveUpperLimit,",
+		"new": "Rejection{Check: CheckPriceLimit, Kind: ctperr.ReasonBelowLowerLimit,",
+		"pkg": "./order/",
+		"test": "TestRejectionCodesMatchCorpus",
+		"want": "高于涨停",
 		"expect": "red"
 	}
 ]

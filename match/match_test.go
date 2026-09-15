@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dream-until-dawn/futures-position-simulator-go/ctperr"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
@@ -191,5 +192,29 @@ func TestMatchDoesNotTouchState(t *testing.T) {
 				t.Errorf("⚠️ match 直接 import 了 %s —— 撮合规则与记账规则会长进同一个函数", path)
 			}
 		}
+	}
+}
+
+// TestRejectedErrorCarriesCode 钉住被拒的成交错误能说出柜台会给的码，没有观测时说查不到。
+func TestRejectedErrorCarriesCode(t *testing.T) {
+	_, err := Fill(req(t, types.Buy, types.Open, "3163.5", 1), facts(t))
+	var rej *RejectedError
+	if !errors.As(err, &rej) {
+		t.Fatalf("前提：非整数倍价格要被拒，得到 %v", err)
+	}
+	if rej.Exchange != types.SHFE {
+		t.Errorf("⚠️ RejectedError 没带上交易所：%q —— 同一拒因的码随交易所变，查不了", rej.Exchange)
+	}
+	if c, ok := rej.Code(); !ok || c != (ctperr.Code{Space: ctperr.SpaceStatusPrefix, Value: 48}) {
+		t.Errorf("⚠️ 上期所最小变动价位要查到前缀码 48，得到 %v ok=%v", c, ok)
+	}
+	// ⚠️ 反向：没拍过的交易所、没有语料粒度的拒因，都要查不到。
+	czce := &RejectedError{Rejection: order.Rejection{Kind: ctperr.ReasonPriceTick}, Exchange: types.CZCE}
+	if c, ok := czce.Code(); ok {
+		t.Errorf("⚠️ 郑商所查到了 %v —— 一条语料都没有", c)
+	}
+	funds := &RejectedError{Rejection: order.Rejection{Check: order.CheckFunds}, Exchange: types.SHFE}
+	if c, ok := funds.Code(); ok {
+		t.Errorf("⚠️ 资金不足查到了 %v —— 它没有语料", c)
 	}
 }
