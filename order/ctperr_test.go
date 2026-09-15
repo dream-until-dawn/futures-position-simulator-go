@@ -26,19 +26,26 @@ type corpusObs struct {
 }
 
 // factsOn 是某交易所上一个合成合约的**八项全都查得了**的输入：tick 1、昨结 3000、涨跌幅 5%，多头空仓。
+//
+// ⚠️ PositionDateType **按交易所给**（评审 20260915）：大商所 NoUseHistory，上期所 / 能源中心 UseHistory ——
+// 上一版一律 UseHistory，于是「大商所」那几行其实是按上期所的今昨模型跑的。
 func factsOn(t *testing.T, ex, inst string) Facts {
 	t.Helper()
 	id, err := types.ParseSymbol(ex+"."+inst, types.NewTradingDay(2026, 9, 15))
 	if err != nil {
 		t.Fatal(err)
 	}
+	pdt := refdata.UseHistory
+	if types.Exchange(ex) == types.DCE || types.Exchange(ex) == types.CZCE {
+		pdt = refdata.NoUseHistory
+	}
 	spec := refdata.Instrument{
 		ID: id, VolumeMultiple: d("10"), PriceTick: d("1"),
-		PositionDateType: refdata.UseHistory, IsTrading: true,
+		PositionDateType: pdt, IsTrading: true,
 		MinLimitOrderVolume: 1, MaxLimitOrderVolume: 500,
 		PriceLimitRatio: d("0.05"), HasPriceLimitRatio: true,
 	}
-	p, err := position.New(id, types.Speculation, types.NewTradingDay(2026, 9, 15), refdata.UseHistory)
+	p, err := position.New(id, types.Speculation, types.NewTradingDay(2026, 9, 15), pdt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +59,8 @@ func factsOn(t *testing.T, ex, inst string) Facts {
 	}
 }
 
-// TestRejectionCodesMatchCorpus 是 v0.4.0 验收「被拒报单的错误码一致」在**已拍语料**上的那一行。
+// TestRejectionCodesMatchCorpus 是 v0.4.0 验收「被拒报单的错误码一致」在**已拍语料**上的那一行：
+// **对语料中 4 种拒因、账上无仓的情形成立**（评审 20260915 要求把范围写准）。
 //
 // 对语料里每一条单一违反的拒单，在本库构造**同一种违反**，断言 Validate 拒在同一项、
 // 且 Rejection.Kind 查出来的码与柜台给的码一致。
@@ -118,57 +126,78 @@ func TestRejectionCodesMatchCorpus(t *testing.T) {
 	t.Logf("ⓘ 语料里 %d 条拒单，本库拒在同一项、码一致", checked)
 }
 
-// TestKindStaysUnknownOutsideCorpus 钉住语料没测过的拒绝**不给拒因**，而测过的给。
+// TestKindStaysUnknownOutsideCorpus 钉住语料没测过的拒绝**不给拒因**，而语料那一条（账上无仓时平昨）给。
+//
+// ⚠️ 20260915 评审打回：上一版把「语料那一条」建在一个已经开了 1 手今仓的持仓上，测的其实是「今 1 / 昨 0」——
+// 外推被标成了语料。本版每条用例各自从空仓起步。
 func TestKindStaysUnknownOutsideCorpus(t *testing.T) {
+	day, next := types.NewTradingDay(2026, 9, 15), types.NewTradingDay(2026, 9, 16)
+	closeYd := func(f Facts, vol int) Request {
+		return Request{Instrument: f.Instrument.ID, Direction: types.Sell, Offset: types.CloseYesterday,
+			Hedge: types.Speculation, Price: d("3000"), Volume: vol}
+	}
+	kindOf := func(t *testing.T, name string, r Request, f Facts, wantCheck Check) ctperr.Reason {
+		t.Helper()
+		res := Validate(r, f)
+		if res.Rejected == nil || res.Rejected.Check != wantCheck {
+			t.Fatalf("%s：前提是拒在 %s，得到 %v", name, wantCheck, res)
+		}
+		return res.Rejected.Kind
+	}
+
+	// 语料那一条：账上无仓时平昨 ⇒ 给拒因
 	f := factsOn(t, "SHFE", "rb2701")
-	day := types.NewTradingDay(2026, 9, 15)
-	if err := f.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
-		t.Fatal(err)
+	if k := kindOf(t, "无仓平昨", closeYd(f, 1), f, CheckClosable); k != ctperr.ReasonCloseYesterdayExceeds {
+		t.Errorf("⚠️ 账上无仓时平昨（语料那一条）拒因是 %s，要 %s", k, ctperr.ReasonCloseYesterdayExceeds)
 	}
-	base := Request{Instrument: f.Instrument.ID, Hedge: types.Speculation, Price: d("3000"), Volume: 2}
-	cases := []struct {
-		name string
-		mut  func(*Request, *Facts)
-		want ctperr.Reason
-	}{
-		{"平今 2 手而今仓 1 手（平今没有语料）", func(r *Request, _ *Facts) { r.Direction, r.Offset = types.Sell, types.CloseToday }, ctperr.ReasonUnknown},
-		{"资金不够（没有语料）", func(r *Request, f *Facts) {
-			r.Direction, r.Offset, r.Volume = types.Buy, types.Open, 1
-			f.Available = d("0")
-		}, ctperr.ReasonUnknown},
-		{"合约不可交易（没有语料）", func(r *Request, f *Facts) {
-			r.Direction, r.Offset, r.Volume = types.Buy, types.Open, 1
-			f.Instrument.IsTrading = false
-		}, ctperr.ReasonUnknown},
-		{"平昨而昨仓为 0（语料那一条）", func(r *Request, _ *Facts) { r.Direction, r.Offset = types.Sell, types.CloseYesterday }, ctperr.ReasonCloseYesterdayExceeds},
-	}
-	for _, c := range cases {
-		r, ff := base, f
-		c.mut(&r, &ff)
-		res := Validate(r, ff)
-		if res.Rejected == nil {
-			t.Errorf("%s：没拒（%v）", c.name, res)
-			continue
-		}
-		if res.Rejected.Kind != c.want {
-			t.Errorf("⚠️ %s：拒因是 %s，要 %s", c.name, res.Rejected.Kind, c.want)
-		}
-	}
-	// ⚠️ 「有昨仓但不够」：结算出 1 手昨仓再平昨 2 手 —— 语料只测过昨仓为 0，这里必须不给拒因。
+
+	// ⚠️ 今 1 / 昨 0 平昨 ⇒ 不给（语料只测过无仓）
 	g := factsOn(t, "SHFE", "rb2701")
 	if err := g.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
 		t.Fatal(err)
 	}
-	if err := g.Position.Settle(day, d("3000"), types.NewTradingDay(2026, 9, 16)); err != nil {
+	if k := kindOf(t, "今1昨0平昨", closeYd(g, 1), g, CheckClosable); k != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 今 1 / 昨 0 平昨的拒因是 %s —— 语料只测过账上无仓，不许推过来", k)
+	}
+
+	// ⚠️⚠️ 大商所（NoUseHistory）开 1 手跨过结算再平昨 ⇒ 不给。本库仍记作今仓，而 CTP 实测记作昨仓且接受平昨
+	// （#4 夹具 ①）—— 这里给码就是给一笔柜台会接受的单配上一个看起来测过的码。
+	h := factsOn(t, "DCE", "m2701")
+	if err := h.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
 		t.Fatal(err)
 	}
-	r := Request{Instrument: g.Instrument.ID, Direction: types.Sell, Offset: types.CloseYesterday,
-		Hedge: types.Speculation, Price: d("3000"), Volume: 2}
-	res := Validate(r, g)
-	if res.Rejected == nil || res.Rejected.Check != CheckClosable {
-		t.Fatalf("前提：平昨 2 手而昨仓 1 手要拒在可平量，得到 %v", res)
+	if err := h.Position.Settle(day, d("3000"), next); err != nil {
+		t.Fatal(err)
 	}
-	if res.Rejected.Kind != ctperr.ReasonUnknown {
-		t.Errorf("⚠️ 昨仓有 1 手、平昨 2 手时拒因是 %s —— 语料只测过昨仓为 0，不许推过来", res.Rejected.Kind)
+	if k := kindOf(t, "大商所跨结算平昨", closeYd(h, 1), h, CheckClosable); k != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 大商所跨结算后平昨的拒因是 %s —— 柜台会接受这笔单（#4 夹具 ①），不许配码", k)
+	}
+
+	// ⚠️ 有昨仓但不够：结算出 1 手昨仓再平昨 2 手 ⇒ 不给
+	m := factsOn(t, "SHFE", "rb2701")
+	if err := m.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Position.Settle(day, d("3000"), next); err != nil {
+		t.Fatal(err)
+	}
+	if k := kindOf(t, "昨1平昨2", closeYd(m, 2), m, CheckClosable); k != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 昨仓有 1 手、平昨 2 手时拒因是 %s —— 语料只测过账上无仓，不许推过来", k)
+	}
+
+	// 其余几种没有语料的拒绝 ⇒ 不给
+	n := factsOn(t, "SHFE", "rb2701")
+	if err := n.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
+		t.Fatal(err)
+	}
+	ct := Request{Instrument: n.Instrument.ID, Direction: types.Sell, Offset: types.CloseToday, Hedge: types.Speculation, Price: d("3000"), Volume: 2}
+	if k := kindOf(t, "平今超量", ct, n, CheckClosable); k != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 平今超量的拒因是 %s —— 平今没有语料", k)
+	}
+	o := factsOn(t, "SHFE", "rb2701")
+	o.Available = d("0")
+	op := Request{Instrument: o.Instrument.ID, Direction: types.Buy, Offset: types.Open, Hedge: types.Speculation, Price: d("3000"), Volume: 1}
+	if k := kindOf(t, "资金不够", op, o, CheckFunds); k != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 资金不够的拒因是 %s —— 没有语料", k)
 	}
 }

@@ -387,8 +387,12 @@ func checkClosable(req Request, p *position.Position) *Rejection {
 			r := &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
 				"平昨 %d 手超过昨仓 %d 手（今仓另有 %d 手，**不可用于平昨**）",
 				req.Volume, his, today)}
-			// ⚠️ 只在昨仓为 0 时给拒因：语料里那条是「账上无仓时平昨」，「有昨仓但不够」没有观测。
-			if his == 0 {
+			// ⚠️ 只在**账上无仓**（今 0 且昨 0）时给拒因：语料那一条就是这个形状。
+			// 20260915 评审打回的上一版只看昨仓为 0 —— 于是「今 1 / 昨 0」也给了码，而更要紧的是：
+			// 大商所（NoUseHistory）一手跨过结算，本库仍记作今仓（今 1 / 昨 0），CTP 实测却是昨仓且接受平昨
+			// （#4 夹具 ①、§13 #16）⇒ 柜台接受、本库拒绝，**还配上一个看起来测过的 CTP 30**。
+			// ⇒ 有今仓的情形一律不给拒因：那个模型分歧存在时，诚实的答案是「不知道」。
+			if today == 0 && his == 0 {
 				r.Kind = ctperr.ReasonCloseYesterdayExceeds
 			}
 			return r

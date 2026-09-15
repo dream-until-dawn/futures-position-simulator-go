@@ -293,8 +293,9 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
   调用方拿到的只剩一个 `Check` 与一句中文 —— 从中文里解析涨停还是跌停，就是在拿自由文本做判断。
 - **粒度仍只到语料**：
   - `CheckPriceTick` ⇒ `ReasonPriceTick`；`CheckPriceLimit` 高于 / 低于 ⇒ `ReasonAboveUpperLimit` / `ReasonBelowLowerLimit`
-  - `CheckClosable` **平昨、且昨仓为 0** ⇒ `ReasonCloseYesterdayExceeds`
-  - ⚠️ 平昨而昨仓**有但不够**、平今、裸 `CLOSE`，以及其余五项 ⇒ `ReasonUnknown`（语料只测过「账上无仓时平昨」）
+  - `CheckClosable` **平昨、且账上无仓（今 0 且昨 0）** ⇒ `ReasonCloseYesterdayExceeds`
+  - ⚠️ 平昨而有今仓、昨仓**有但不够**、平今、裸 `CLOSE`，以及其余五项 ⇒ `ReasonUnknown`（语料只测过「账上无仓时平昨」）
+  - ⚠️ 评审 20260915 打回过「只看昨仓为 0」：大商所跨结算后本库记作今仓、CTP 却接受平昨，那一版会给柜台接受的单配上码
 - **验收那一行怎么核**（「被拒报单的错误码一致」）：对语料里每一条单一违反的拒单，在 `order` 这边构造同一种违反，
   断言 `Validate` 拒在同一项、`Kind` 查出来的码与语料的码一致。⚠️ 它核的是「本库给这一种违反挑的拒因」与柜台对得上 ——
   ctperr 的表本身来自同一份语料，所以**码值**这一半是同源的，不是独立验证；独立的是「拒因挑得对不对」那一半。

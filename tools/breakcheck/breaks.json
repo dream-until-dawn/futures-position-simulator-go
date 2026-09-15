@@ -4763,8 +4763,8 @@
 		"name": "490 平昨超量不看昨仓是否为 0 就给拒因——把「账上无仓」的码推给「有昨仓但不够」",
 		"dir": "",
 		"file": "order/order.go",
-		"old": "\t\t\tif his == 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
-		"new": "\t\t\tif his >= 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"old": "\t\t\tif today == 0 && his == 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"new": "\t\t\tif today >= 0 && his >= 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
 		"pkg": "./order/",
 		"test": "TestKindStaysUnknownOutsideCorpus",
 		"want": "不许推过来",
@@ -4790,6 +4790,17 @@
 		"pkg": "./order/",
 		"test": "TestRejectionCodesMatchCorpus",
 		"want": "高于涨停",
+		"expect": "red"
+	},
+	{
+		"name": "493 平昨给拒因只看昨仓不看今仓——大商所跨结算后（本库今 1 / 昨 0）给柜台会接受的单配上 CTP 30（评审 20260915 打回的原样）",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t\t\tif today == 0 && his == 0 {\n",
+		"new": "\t\t\tif his == 0 {\n",
+		"pkg": "./order/",
+		"test": "TestKindStaysUnknownOutsideCorpus",
+		"want": "柜台会接受这笔单",
 		"expect": "red"
 	}
 ]

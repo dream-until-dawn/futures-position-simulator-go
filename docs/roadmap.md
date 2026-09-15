@@ -981,10 +981,11 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
     字段   order.Rejection.Kind（ctperr.Reason）；match.RejectedError.Exchange（types.Exchange）
     方法   (*match.RejectedError).Code() (ctperr.Code, bool)
 
-- 拒因在 `Validate` **拒绝的那一刻**写：最小变动价位 / 高于涨停 / 低于跌停 / **昨仓为 0 时**平昨；其余一律 `ReasonUnknown`
-- `TestRejectionCodesMatchCorpus`：语料 12 条拒单，本库拒在同一项、码一致 —— **v0.4.0 验收「被拒报单的错误码一致」在已拍的三个交易所上成立**。
+- 拒因在 `Validate` **拒绝的那一刻**写：最小变动价位 / 高于涨停 / 低于跌停 / **账上无仓（今 0 且昨 0）时**平昨；其余一律 `ReasonUnknown`
+  ⚠️ 评审 20260915 打回过一版「只看昨仓为 0」：大商所跨结算后本库记作今仓（今 1 / 昨 0），CTP 却接受平昨 —— 那一版会给一笔柜台接受的单配上 CTP 30
+- `TestRejectionCodesMatchCorpus`：语料 12 条拒单，本库拒在同一项、码一致 —— v0.4.0 验收「被拒报单的错误码一致」**对语料中 4 种拒因、账上无仓的情形成立**（大商所 / 上期所 / 能源中心，合成合约按各所的今昨模型）。
   ⚠️ 码值与 ctperr 同源（同一份语料），独立的只是「拒因挑得对不对」那一半；郑商所 / 广期所没有语料，那一半验收仍开着
-- `TestKindStaysUnknownOutsideCorpus`：平今、资金、不可交易、「有昨仓但不够的平昨」都不给拒因
+- `TestKindStaysUnknownOutsideCorpus`：「今 1 / 昨 0 平昨」「大商所开 1 手跨结算后平昨」「有昨仓但不够的平昨」、平今、资金都不给拒因；语料那一条建在空仓上
 
 ### 2026-09-15：`ctperr` 落地 —— 表只收探针语料，与语料双向钉死
 
