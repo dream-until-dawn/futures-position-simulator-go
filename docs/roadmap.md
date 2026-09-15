@@ -974,6 +974,22 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### 2026-09-15：#4 接进本库 —— NoUseHistory 上的裸 `CLOSE` 接受、按先平昨消耗（实现之前写）
+
+§13 #4：大商所上通用平仓 `OF_Close` **被接受**且消耗昨仓（CTP，#4 夹具 ①–③）；§13 #20 裁决 NoUseHistory 全部跟 CTP。
+而本库此刻：`order` 对**所有**交易所的裸 `CLOSE` 一律拒绝，`position.CloseOrder` 零值「未实测、使用即报错」。
+
+**改动**
+
+- `position.MeasuredCloseOrder(refdata.PositionDateType) (CloseOrder, bool)`：`NoUseHistory` ⇒ `YesterdayFirst, true`；其余 ⇒ `CloseOrderUnmeasured, false`。
+  规则只住这一处；`position.Close` 的零值照旧报错（调用方拿这个函数的结果传入）
+- `order.checkClosable` 的裸 `CLOSE`：持仓是 `NoUseHistory` ⇒ 按**今昨合计**校验可平量（超量拒、拒因 `ReasonUnknown`，没有语料）；
+  `UseHistory` ⇒ **照旧拒绝**（`simnow_pending#1`：上期所裸 `CLOSE` 在 CTP 上的语义未测，roadmap v0.4.0 那一行要求报错）；其余 ⇒ 拒
+- ⚠️ **`YesterdayFirst` 与 `FIFO` 在本库的明细上恒等价**：昨仓必然比今仓先开（结算把当时的全部明细一起标昨），
+  两者消耗同一批 —— 原注释「连续两天各建一次种子就能分开」不成立（同为昨仓时 `YesterdayFirst` 也按明细顺序消耗）。
+  ⇒ 一条性质测试钉住等价；`TodayFirst` 注明在大商所 CTP 上被否
+- 观测范围同 #20：只有大商所；郑商所等是外推
+
 ### ✅ 已裁决：`NoUseHistory` 交易所跨过结算即记作**昨仓**，跟 CTP（2026-09-15，使用者裁决）
 
 §13 #20：快期结算后大商所持仓仍记今仓（kq_facts 24），CTP 实测记作昨仓且接受平昨（#4 夹具 ①、§13 #16）。
