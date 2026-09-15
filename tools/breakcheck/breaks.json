@@ -5421,11 +5421,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "550 撤单不解冻——挂撤往返之后可用少了一截",
+		"name": "550 撤单不解冻——挂撤往返之后可用少了一截（第一版替换后 fr 未使用、编译红）",
 		"dir": "",
 		"file": "place.go",
 		"old": "\tif err := s.acc.Unfreeze(day, fr.Margin, fr.Commission); err != nil {\n\t\treturn err\n\t}",
-		"new": "\tif err := error(nil); err != nil {\n\t\treturn err\n\t}",
+		"new": "\tif err := s.acc.Unfreeze(day, fr.Margin.Sub(fr.Margin), fr.Commission.Sub(fr.Commission)); err != nil {\n\t\treturn err\n\t}",
 		"pkg": "./",
 		"test": "TestPlaceFreezesAndCancelRestores",
 		"want": "挂撤往返之后账户没回到起点",
