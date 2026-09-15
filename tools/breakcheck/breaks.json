@@ -4859,11 +4859,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "499 结算只把第一片标成昨仓——今昨与开仓先后脱钩，先平昨与先开先平分开",
+		"name": "499 结算只把最后开的那片标成昨仓——较新的成了昨仓、较早的还是今仓，先平昨与先开先平分开（第一版只标第一片，恰好与 FIFO 同序而仍绿）",
 		"dir": "",
 		"file": "position/lot.go",
 		"old": "\t\ts.lots[i].Settled = true",
-		"new": "\t\ts.lots[i].Settled = i == 0",
+		"new": "\t\ts.lots[i].Settled = i == len(s.lots)-1",
 		"pkg": "./position/",
 		"test": "TestYesterdayFirstEqualsFIFO",
 		"want": "两者分开了",
