@@ -974,6 +974,21 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### 2026-09-15：`ctperr` 落地 —— 表只收探针语料，与语料双向钉死
+
+设计先行：docs/design.md「ctperr 的形状」（同日先提交）。导出面（门禁④，**含枚举取值**）：
+
+    函数   Lookup(ex types.Exchange, r Reason) (Code, bool)；New(ex, r) (*Error, bool)
+    类型   Space（枚举）/ Code / Reason（枚举）/ Error
+    枚举   Space：SpaceUnknown=0 / SpaceCTP / SpaceStatusPrefix
+           Reason：ReasonUnknown=0 / ReasonPriceTick / ReasonAboveUpperLimit / ReasonBelowLowerLimit / ReasonCloseYesterdayExceeds
+    字段   Code.Space / Value；Error.Exchange / Reason / Code
+    方法   Space.String / Code.String / Reason.String / (*Error).Error
+
+- 值：大商所 / 上期所 / 能源中心各 4 格（前缀码 48 / 49 / 50；平昨超量 CTP 30 / 51 / 51），出处 testdata/refdata/ctp-reject-codes.json
+- `TestTableMatchesCorpus` 双向核对；`TestLookupDoesNotFallBack`；`TestCodeSpacesKeepCollidingNumbersApart`
+- ⚠️ v0.4.0 验收「被拒报单的错误码一致」**仍未达成**：还差 `order.Result` → `(交易所, Reason)` 的映射，以及郑商所 / 广期所的语料
+
 ### 2026-09-14：`match` 落地（v0.4.0 的另一半）—— 按裁决实现，**不可验证**的那一行写在导出面上
 
 设计先行：docs/design.md「match 的形状」（同日先提交）。导出面（门禁④）：

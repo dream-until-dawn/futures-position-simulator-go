@@ -50,6 +50,10 @@ func TestOpenCostFromRefusesZeroOnQueryError(t *testing.T) {
 //	不许再出现 mustPositions（把错误变成 nil 的那个辅助）
 //	openCostOf / c.Positions 的错误返回值不许赋给 `_`
 //	flattenLongToday 经 flattenStep 判
+//
+// ⚠️ 局限（评审 20260915 登记，**不再加固本条**）：它只认两个字面形状 —— mustPositions 这个名字、
+// 错误赋给 `_`。原 bug 的一般形状是「接住 err → 打日志 → 当成空的继续走」，换个函数名或写在别的收尾里就抓不到。
+// 真正起保护作用的是 flattenStep / openCostFrom 两个纯判定，外加评审逐一核过的 19 处调用点现状。
 func TestNoPositionQueryErrorIsSwallowed(t *testing.T) {
 	_, files := parsePkgMain(t)
 	calls := 0
