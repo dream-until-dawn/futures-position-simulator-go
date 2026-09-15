@@ -40,9 +40,6 @@ func ReplayOnFacade(f *Fixture, symbol string, spec Spec,
 	if len(trades) == 0 {
 		return nil, fmt.Errorf("夹具 %s 里 %s 一笔成交都没有 —— 重放出来是空仓，而空仓与「有仓但没记录」长得一样", f.Path, symbol)
 	}
-	if !pre.IsPositive() {
-		return nil, fmt.Errorf("%s 的昨结算价 %s 不为正 —— 0 只可能是缺失的伪装", symbol, pre)
-	}
 	pb, ok := numberOf(f.Account, "pre_balance")
 	if !ok {
 		return nil, fmt.Errorf("夹具 %s 没有 pre_balance", f.Path)

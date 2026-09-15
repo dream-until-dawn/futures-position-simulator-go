@@ -6049,6 +6049,73 @@
 		"expect": "red"
 	},
 	{
+		"name": "615 同日借昨结算价时不要求唯一（兄弟夹具报了两个值也随手借一个——20260909 行情侧未滚那种 3158 / 3163）",
+		"dir": "",
+		"file": "conformance/fixture/replay_facade_test.go",
+		"old": "\tif len(vals) != 1 {\n\t\treturn decimal.Zero, false, false",
+		"new": "\tif len(vals) == 0 {\n\t\treturn decimal.Zero, false, false",
+		"pkg": "./conformance/fixture/",
+		"test": "TestSameDayPreBorrowsOnlyAUniqueValue",
+		"want": "报了两个不同的昨结算价",
+		"expect": "red"
+	},
+	{
+		"name": "616 同日借昨结算价时不看交易日（借到别的交易日的昨结算价）",
+		"dir": "",
+		"file": "conformance/fixture/replay_facade_test.go",
+		"old": "\t\tif o.TradingDay != f.TradingDay {\n\t\t\tcontinue",
+		"new": "\t\tif false && o.TradingDay != f.TradingDay {\n\t\t\tcontinue",
+		"pkg": "./conformance/fixture/",
+		"test": "TestSameDayPreBorrowsOnlyAUniqueValue",
+		"want": "同日唯一值要借到 3158",
+		"expect": "red"
+	},
+	{
+		"name": "617 带昨仓的合约不走结转、只重放当日成交（F7c 撞出的旧错：拿今仓去平柜台平的昨仓）",
+		"dir": "",
+		"file": "conformance/fixture/replay_facade_test.go",
+		"old": "\tif f.HasHistoryPosition(sym) {\n\t\tsrc, ok, why := carryStartFor(t, all, f, sym)",
+		"new": "\tif false && f.HasHistoryPosition(sym) {\n\t\tsrc, ok, why := carryStartFor(t, all, f, sym)",
+		"pkg": "./conformance/fixture/",
+		"test": "TestReplayMatchesOracleVolumeAndPrice",
+		"want": "重放 / 结转失败",
+		"expect": "red"
+	},
+	{
+		"name": "618 ReplayOnFacade 缺最新价时拿零顶",
+		"dir": "",
+		"file": "conformance/fixture/replay.go",
+		"old": "\tlast, ok := f.Positions[symbol][\"last_price\"]\n\tif !ok || last.Absent || last.IsText || !last.Number.IsPositive() {",
+		"new": "\tlast, ok := f.Positions[symbol][\"last_price\"]\n\tif false && (!ok || last.Absent || last.IsText || !last.Number.IsPositive()) {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestReplayOnFacadeRefuses",
+		"want": "没有最新价：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "619 ReplayOnFacade 缺 pre_balance 时拿零起账",
+		"dir": "",
+		"file": "conformance/fixture/replay.go",
+		"old": "\tpb, ok := numberOf(f.Account, \"pre_balance\")\n\tif !ok {",
+		"new": "\tpb, ok := numberOf(f.Account, \"pre_balance\")\n\tif false && !ok {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestReplayOnFacadeRefuses",
+		"want": "没有 pre_balance：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "620 【期望仍然绿】保证金对拍改用借来的昨结算价（缺行情的截面也算保证金）",
+		"dir": "",
+		"file": "conformance/fixture/margin_test.go",
+		"old": "\t\t\tpre, hasPre := f.PreSettlement(sym)",
+		"new": "\t\t\tpre, _, hasPre := sameDayPre(all, f, sym)",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMarginAgainstFixturePositions",
+		"want": "",
+		"expect": "green",
+		"why": "这正是 F7c 决策点 3 要防的那一步，而它**不会红**：20260908 那批借来的昨结算价（同日唯一值）恰好就是真值，借来算保证金照样对得上，只是比对的截面变多、「因缺行情跳过」变少 —— 那两个数只打日志不断言。守法落在结构上（ReplayOnFacade 只返回持仓、借值辅助写明只当前提）与本条登记，不在测试上。换一批借来的值不是真值的语料，它才会红"
+	},
+	{
 		"name": "621 cmd/oracle 的 -carry 结算价接错（+50）：结转接上了、比对计数也不变，只有本库 position_price_long 变了",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/conformance/live.go",
