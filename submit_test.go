@@ -26,7 +26,9 @@ func submitCalendar(t *testing.T) *refdata.Calendar {
 	}
 	m := refdata.SessionTable{Exchange: types.DCE, Product: "m", Day: day,
 		Night: []refdata.Session{{Start: refdata.MustClockTime(21, 0, 0), End: refdata.MustClockTime(23, 0, 0)}}}
-	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m}, nil)
+	y := m
+	y.Product = "y"
+	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m, y}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,12 +48,13 @@ func submitSim(t *testing.T, ch Choices, pre string) *Simulator {
 	t.Helper()
 	s, err := New(Config{Day: simDay, PreBalance: dec(pre), Rules: simRules(t), Choices: ch,
 		Calendar: submitCalendar(t), TickRounding: MeasuredTickRounding(),
-		PositionLimits: map[types.InstrumentID]int{simInst(t, "DCE.m2701"): 100, simInst(t, "SHFE.ag2702"): 100}})
+		PositionLimits: map[types.InstrumentID]int{simInst(t, "DCE.m2701"): 100, simInst(t, "SHFE.ag2702"): 100, simInst(t, "DCE.y2701"): 100}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	mark(t, s, "DCE.m2701", "3361", "3384")
 	mark(t, s, "SHFE.ag2702", "15460", "15785")
+	mark(t, s, "DCE.y2701", "8000", "8000")
 	return s
 }
 

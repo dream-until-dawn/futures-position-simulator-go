@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/account"
+	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
@@ -58,6 +59,7 @@ type Simulator struct {
 	positions map[posKey]*position.Position
 	prices    map[types.InstrumentID]priceState
 
+	book           *order.Book // 挂着的委托（F4）
 	calendar       *refdata.Calendar
 	tickRounding   map[types.Exchange]refdata.TickRounding
 	positionLimits map[types.InstrumentID]int
@@ -83,6 +85,7 @@ func New(cfg Config) (*Simulator, error) {
 		positions: map[posKey]*position.Position{},
 		prices:    map[types.InstrumentID]priceState{},
 		calendar:  cfg.Calendar, tickRounding: cfg.TickRounding, positionLimits: cfg.PositionLimits,
+		book: order.NewBook(),
 	}, nil
 }
 

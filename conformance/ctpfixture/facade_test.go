@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+	"time"
 
 	futsim "github.com/dream-until-dawn/futures-position-simulator-go"
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
@@ -476,4 +477,147 @@ func specTick(t *testing.T, symbol string) decimal.Decimal {
 	}
 	t.Fatalf("⚠️ 规格快照里没有 %s 的最小变动价位", symbol)
 	return decimal.Zero
+}
+
+// TestFacadePlaceAgainstCTPFrozen 用门面的 Place 按 CTP 预设复现三份「挂着时」的截面：开仓挂单、平昨挂单、平今挂单。
+//
+// 每份比：账户 FrozenMargin、FrozenCommission，以及「可用 − 结存」（= −占用 − 冻结；这几份持仓盈亏都不为正，§13 #17 的排除项为 0）。
+// 平仓挂单另比持仓侧冻住的手数（门面 Place 返回的 Frozen）与多头记录的 ShortFrozen。
+// ⚠️ 手续费与「可用 − 结存」都按声明费率算，比柜台少恰好 0.005 × 手数（§13 #19）—— 钉的是这个差。
+// ⚠️ 挂单价从记录的委托额反推（夹具不带委托明细）；涨跌幅比例 5% 取 probes §12；报单时刻取截面的 captured_at。
+func TestFacadePlaceAgainstCTPFrozen(t *testing.T) {
+	fx := loadCTP(t)
+	const sym = "SHFE.rb2701"
+	d := decimal.RequireFromString
+	day := func(s string) types.TradingDay {
+		td, err := types.ParseTradingDay(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return td
+	}
+	id, err := types.ParseSymbol(sym, day("20260910"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mult, _ := specMultiplier(t, sym, id)
+	sessions := []refdata.Session{
+		{Start: refdata.MustClockTime(9, 0, 0), End: refdata.MustClockTime(10, 15, 0)},
+		{Start: refdata.MustClockTime(10, 30, 0), End: refdata.MustClockTime(11, 30, 0)},
+		{Start: refdata.MustClockTime(13, 30, 0), End: refdata.MustClockTime(15, 0, 0)},
+	}
+	cal, err := refdata.NewCalendar([]types.TradingDay{day("20260909"), day("20260910"), day("20260911"), day("20260914")},
+		[]refdata.SessionTable{{Exchange: types.SHFE, Product: "rb", Day: sessions,
+			Night: []refdata.Session{{Start: refdata.MustClockTime(21, 0, 0), End: refdata.MustClockTime(23, 0, 0)}}}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rules := oneInstrumentRules{
+		inst: refdata.Instrument{ID: id, VolumeMultiple: mult, PriceTick: decimal.NewFromInt(1), IsTrading: true,
+			PositionDateType:    refdata.UseHistory, // measured-rules-20260909.json（快期结算行为）；平今 / 平昨两笔都显式给了今昨
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 500, PriceLimitRatio: d("0.05"), HasPriceLimitRatio: true},
+		commission: refdata.CommissionRates{OpenByMoney: d("0.0001"), CloseByMoney: d("0.0001"), CloseTodayByMoney: d("0.0001")},
+		margin:     refdata.MarginRates{LongByMoney: d("0.16"), ShortByMoney: d("0.16")},
+	}
+	newSim := func(td types.TradingDay) *futsim.Simulator {
+		ch := futsim.CTPChoices()
+		ch.FeeRounding = fee.NoRounding
+		s, err := futsim.New(futsim.Config{Day: td, PreBalance: decimal.NewFromInt(20000000), Rules: rules, Choices: ch,
+			Calendar: cal, TickRounding: futsim.MeasuredTickRounding(), PositionLimits: map[types.InstrumentID]int{id: 100}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	mark := func(s *futsim.Simulator, td types.TradingDay, last, pre float64) {
+		t.Helper()
+		if err := s.Mark(td, futsim.Quote{Instrument: id, Last: decimal.NewFromFloat(last), HasLast: true,
+			PreSettlement: decimal.NewFromFloat(pre), HasPreSettlement: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	at := func(f ctpFixture) time.Time {
+		tm, err := time.Parse(time.RFC3339, f.CapturedAt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tm
+	}
+	near := func(a, b float64) bool { return math.Abs(a-b) <= 1e-6 }
+
+	for _, c := range []struct {
+		file, rec string
+		dir       types.Direction
+		off       types.Offset
+		amountKey string
+		frozenKey string // 持仓记录里冻住手数的字段；开仓挂单不比
+		wantToday int
+		wantHis   int
+		setup     func() (*futsim.Simulator, types.TradingDay)
+	}{
+		{"ctp-frozen-20260910.json", "SHFE.rb2701/1", types.Buy, types.Open, "LongFrozenAmount", "", 0, 0,
+			func() (*futsim.Simulator, types.TradingDay) {
+				s := newSim(day("20260910"))
+				mark(s, day("20260910"), 3146, 3164)
+				return s, day("20260910")
+			}},
+		{"ctp-frozen-20260911.json", "SHFE.rb2701/2", types.Sell, types.CloseYesterday, "ShortFrozenAmount", "ShortFrozen", 0, 1,
+			func() (*futsim.Simulator, types.TradingDay) {
+				// 20260910 开多 1 @3148（ctp-status-20260910-7 的 OpenCost 31480），按 3147 结算（次日记录的 PreSettlementPrice）
+				s := newSim(day("20260910"))
+				mark(s, day("20260910"), 3148, 3164)
+				if err := s.ApplyTrade(day("20260910"), match.Trade{Instrument: id, Direction: types.Buy, Offset: types.Open,
+					Hedge: types.Speculation, Price: d("3148"), Volume: 1}); err != nil {
+					t.Fatal(err)
+				}
+				if err := s.Settle(day("20260910"), map[types.InstrumentID]decimal.Decimal{id: d("3147")}, day("20260911")); err != nil {
+					t.Fatal(err)
+				}
+				mark(s, day("20260911"), 3137, 3147)
+				return s, day("20260911")
+			}},
+		{"ctp-frozen-20260914.json", "SHFE.rb2701/2/1", types.Sell, types.CloseToday, "ShortFrozenAmount", "ShortFrozen", 1, 0,
+			func() (*futsim.Simulator, types.TradingDay) {
+				// 当日开多 1 @3105（记录 OpenCost 31050）
+				s := newSim(day("20260914"))
+				mark(s, day("20260914"), 3105, 3117)
+				if err := s.ApplyTrade(day("20260914"), match.Trade{Instrument: id, Direction: types.Buy, Offset: types.Open,
+					Hedge: types.Speculation, Price: d("3105"), Volume: 1}); err != nil {
+					t.Fatal(err)
+				}
+				return s, day("20260914")
+			}},
+	} {
+		f, ok := fx[c.file]
+		if !ok {
+			t.Fatalf("⚠️ 缺夹具 %s", c.file)
+		}
+		r := f.Positions[c.rec]
+		price := num(t, r, c.amountKey).Div(mult)
+		s, td := c.setup()
+		fr, err := s.Place(td, at(f), "o", order.Request{Instrument: id, Direction: c.dir, Offset: c.off,
+			Hedge: types.Speculation, Price: price, Volume: 1})
+		if err != nil {
+			t.Errorf("%s：挂单 %s @%s 失败：%v", c.file, c.off, price, err)
+			continue
+		}
+		a := s.Account()
+		gotM, _ := a.FrozenMargin.Float64()
+		gotC, _ := a.FrozenCommission.Add(d("0.005")).Float64()
+		if want := flt(t, f.Account, "FrozenMargin"); !near(gotM, want) {
+			t.Errorf("⚠️ %s 冻结保证金：本库 %v，柜台 %v", c.file, gotM, want)
+		}
+		if want := flt(t, f.Account, "FrozenCommission"); !near(gotC, want) {
+			t.Errorf("⚠️ %s 冻结手续费（已加 0.005）：本库 %v，柜台 %v", c.file, gotC, want)
+		}
+		gotGap, _ := a.Available.Sub(a.Balance).Sub(d("0.005")).Float64()
+		if want := flt(t, f.Account, "Available") - flt(t, f.Account, "Balance"); !near(gotGap, want) {
+			t.Errorf("⚠️ %s 可用 − 结存（已减 0.005）：本库 %v，柜台 %v", c.file, gotGap, want)
+		}
+		if c.frozenKey != "" {
+			if fr.VolumeToday != c.wantToday || fr.VolumeHistory != c.wantHis || int(flt(t, r, c.frozenKey)) != c.wantToday+c.wantHis {
+				t.Errorf("⚠️ %s 持仓侧冻住：本库 今 %d / 昨 %d，柜台 %s = %v", c.file, fr.VolumeToday, fr.VolumeHistory, c.frozenKey, flt(t, r, c.frozenKey))
+			}
+		}
+	}
 }

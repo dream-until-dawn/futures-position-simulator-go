@@ -71,6 +71,8 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			today, history = p.VolumeToday(opposite(req.Direction)), p.VolumeHistory(opposite(req.Direction))
 			dt = p.DateType()
 		}
+		// ⚠️ 冻结手续费的档位按**持有的**今仓算（与此刻成交时 ApplyTrade 看的「平仓前今仓」一致），不扣挂单冻住的 ——
+		// 挂单阶段用持有还是可用，§13 #21 的候选都没说，是推得
 		if in.Commission, err = s.commission(tr, today); err != nil {
 			return order.Frozen{}, err
 		}
@@ -79,21 +81,21 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			if ord, ok := position.MeasuredCloseOrder(dt); !ok || ord != position.YesterdayFirst {
 				return order.Frozen{}, fmt.Errorf("%s 上的裸 CLOSE 没有实测的消耗顺序（PositionDateType %v）—— 显式给平今或平昨", req.Instrument, dt)
 			}
-			in.UndatedHistory = min(req.Volume, history)
-			in.UndatedToday = req.Volume - in.UndatedHistory
+			// 合计超了可平量时 undatedSplit 报错：校验会拒在可平量（validate 先让拒因说话），这里不猜一份冻结
+			if in.UndatedToday, in.UndatedHistory, err = undatedSplit(req.Instrument, req.Volume, today, history,
+				s.book.TotalOf(req.Instrument, opposite(req.Direction))); err != nil {
+				return order.Frozen{}, err
+			}
 		}
 	}
 	return order.FreezeOf(req, in)
 }
 
-// Submit 报一笔单：组装八项校验的事实 ⇒ match.Fill（通过即按报价全量成交，裁决）⇒ ApplyTrade。
+// validate 组装八项校验的事实、算这笔单冻结什么，并做校验。Submit 与 Place 共用。
 //
-// at 是报单时刻，查交易时段用。被拒返回 *match.RejectedError（带 Code()），没查成返回 *match.UncheckedError ——
-// 调用方用 errors.As 分：被拒要改单，没查成要补事实（取行情、给限仓、给日历）。两种都不动状态。
-func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request) (match.Trade, error) {
-	if err := s.usable(day); err != nil {
-		return match.Trade{}, err
-	}
+// 返回：被拒 ⇒ *match.RejectedError；没查成 ⇒ *match.UncheckedError；时刻与交易日矛盾、算不出资金（且没有拒因）⇒ 普通错误。
+// 通过时返回冻结额与（已填好 Need 的）事实。
+func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Request) (order.Frozen, order.Facts, error) {
 	var f order.Facts
 
 	inst, err := s.rules.Instrument(req.Instrument)
@@ -112,20 +114,9 @@ func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request
 			f.Position = empty
 		}
 	}
-
-	f.Available, f.HasAvailable = s.acc.Available(), true
-	if f.HasInstrument {
-		fr, err := s.FreezeOf(day, req)
-		if err != nil {
-			// ⚠️ 规格在、却算不出要占用多少（缺昨结算价、§13 #21 分歧段……）：直接报这个原因，
-			// 不塞进「没查成」—— 那里只会说「保证金与手续费」，把真正缺的东西说丢了。
-			// ⚠️ 但先看有没有更高优先级的拒因：无仓裸平这类单该拒在可平量，不该被「算不出资金」盖住
-			if res := order.Validate(req, f); res.Rejected != nil {
-				return match.Trade{}, &match.RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}
-			}
-			return match.Trade{}, fmt.Errorf("算这笔单要占用的资金：%w", err)
-		}
-		f.Need, f.HasNeed = fr.Margin.Add(fr.Commission), true
+	// 挂着的平仓单占着可平量（F4）
+	if req.Offset.IsClose() {
+		f.FrozenClose = s.book.TotalOf(req.Instrument, opposite(req.Direction))
 	}
 
 	if limit, ok := s.positionLimits[req.Instrument]; ok {
@@ -136,7 +127,7 @@ func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request
 		d, err := s.calendar.TradingDayAt(at, req.Instrument.Exchange, req.Instrument.Product)
 		switch {
 		case err == nil && d != day:
-			return match.Trade{}, fmt.Errorf("报单时刻 %s 属于交易日 %d，而模拟器在交易日 %d —— 时刻与交易日矛盾",
+			return order.Frozen{}, f, fmt.Errorf("报单时刻 %s 属于交易日 %d，而模拟器在交易日 %d —— 时刻与交易日矛盾",
 				at.In(refdata.CNZone()).Format("2006-01-02 15:04:05"), d, day)
 		case err == nil:
 			f.InSession, f.HasSession = true, true
@@ -146,6 +137,44 @@ func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request
 		// 其余报错（没有时段表、日历矛盾）⇒ HasSession 为假 ⇒ 没查成
 	}
 
+	f.Available, f.HasAvailable = s.acc.Available(), true
+	var fr order.Frozen
+	if f.HasInstrument {
+		fr, err = s.FreezeOf(day, req)
+		if err != nil {
+			// ⚠️ 规格在、却算不出要占用多少（缺昨结算价、§13 #21 分歧段……）：直接报这个原因，
+			// 不塞进「没查成」—— 那里只会说「保证金与手续费」，把真正缺的东西说丢了。
+			// ⚠️ 但先看有没有更高优先级的拒因：无仓裸平这类单该拒在可平量，不该被「算不出资金」盖住
+			if res := order.Validate(req, f); res.Rejected != nil {
+				return order.Frozen{}, f, &match.RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}
+			}
+			return order.Frozen{}, f, fmt.Errorf("算这笔单要占用的资金：%w", err)
+		}
+		f.Need, f.HasNeed = fr.Margin.Add(fr.Commission), true
+	}
+
+	res := order.Validate(req, f)
+	if res.Rejected != nil {
+		return order.Frozen{}, f, &match.RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}
+	}
+	if !res.FullyChecked() {
+		return order.Frozen{}, f, &match.UncheckedError{Unchecked: res.Unchecked}
+	}
+	return fr, f, nil
+}
+
+// Submit 报一笔单：组装八项校验的事实 ⇒ match.Fill（通过即按报价全量成交，裁决）⇒ ApplyTrade。
+//
+// at 是报单时刻，查交易时段用。被拒返回 *match.RejectedError（带 Code()），没查成返回 *match.UncheckedError ——
+// 调用方用 errors.As 分：被拒要改单，没查成要补事实（取行情、给限仓、给日历）。两种都不动状态。
+func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request) (match.Trade, error) {
+	if err := s.usable(day); err != nil {
+		return match.Trade{}, err
+	}
+	_, f, err := s.validate(day, at, req)
+	if err != nil {
+		return match.Trade{}, err
+	}
 	trade, err := match.Fill(req, f)
 	if err != nil {
 		return match.Trade{}, err

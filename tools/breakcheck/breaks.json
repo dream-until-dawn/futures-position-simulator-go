@@ -4760,11 +4760,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "490 平昨超量不看昨仓是否为 0 就给拒因——把「账上无仓」的码推给「有昨仓但不够」",
+		"name": "490 平昨超量不看昨仓是否为 0 就给拒因——把「账上无仓」的码推给「有昨仓但不够」（20260915 F4 重锚：可平量扣冻结后判「账上无仓」改看持仓本身）",
 		"dir": "",
 		"file": "order/order.go",
-		"old": "\t\t\tif today == 0 && his == 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
-		"new": "\t\t\tif today >= 0 && his >= 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"old": "\t\t\tif heldToday == 0 && heldHis == 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"new": "\t\t\tif heldToday >= 0 && heldHis >= 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
 		"pkg": "./order/",
 		"test": "TestKindStaysUnknownOutsideCorpus",
 		"want": "不许推过来",
@@ -4793,11 +4793,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "493 平昨给拒因只看昨仓不看今仓——今 1 / 昨 0 平昨被配上码（评审 20260915 打回的原样；§13 #20 裁决后大商所跨结算已是昨仓，不再是那一格）",
+		"name": "493 平昨给拒因只看昨仓不看今仓——今 1 / 昨 0 平昨被配上码（评审 20260915 打回的原样；§13 #20 裁决后大商所跨结算已是昨仓，不再是那一格）（20260915 F4 重锚）",
 		"dir": "",
 		"file": "order/order.go",
-		"old": "\t\t\tif today == 0 && his == 0 {\n",
-		"new": "\t\t\tif his == 0 {\n",
+		"old": "\t\t\tif heldToday == 0 && heldHis == 0 {\n",
+		"new": "\t\t\tif heldHis == 0 {\n",
 		"pkg": "./order/",
 		"test": "TestKindStaysUnknownOutsideCorpus",
 		"want": "今 1 / 昨 0 平昨的拒因是",
@@ -5201,14 +5201,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "530 NoUseHistory 的裸 CLOSE 改成先平今——#4 夹具 -3 的平仓盈亏与剩下那片的 PositionCost 对不上柜台",
+		"name": "530 NoUseHistory 的裸 CLOSE 改成先平今——门面成交时先报「本库只按先平昨拆」（20260915 F4 修复后门面显式要求先平昨，拦在 CTP 对拍的平仓盈亏之前）",
 		"dir": "",
 		"file": "position/position.go",
 		"old": "\tif dt == refdata.NoUseHistory {\n\t\treturn YesterdayFirst, true",
 		"new": "\tif dt == refdata.NoUseHistory {\n\t\treturn TodayFirst, true",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeSettlesM2701AcrossDaysAgainstCTP",
-		"want": "CloseProfit",
+		"want": "本库只按先平昨拆",
 		"expect": "red"
 	},
 	{
@@ -5355,11 +5355,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "544 门面给裸 CLOSE 的冻结改成先冻今——今1昨1裸平1 冻今而不冻昨",
+		"name": "544 门面给裸 CLOSE 的冻结改成先冻今——今1昨1裸平1 冻今而不冻昨（20260915 F4 打回后重锚：拆分改用扣掉簿上已冻的昨仓）（再重锚：拆分抽成 undatedSplit）",
 		"dir": "",
-		"file": "submit.go",
-		"old": "in.UndatedHistory = min(req.Volume, history)",
-		"new": "in.UndatedHistory = 0 * min(req.Volume, history)",
+		"file": "trade.go",
+		"old": "toHistory = min(volume, max(freeHistory, 0))",
+		"new": "toHistory = 0 * min(volume, max(freeHistory, 0))",
 		"pkg": "./",
 		"test": "TestFreezeOfBareCloseSplitsYesterdayFirst",
 		"want": "今1昨1 裸平 1 手",
@@ -5385,6 +5385,226 @@
 		"pkg": "./order/",
 		"test": "TestFreezeNakedCloseNeedsTheSplit",
 		"want": "对不上",
+		"expect": "red"
+	},
+	{
+		"name": "547 可平量不扣挂单冻住的手数——两笔平仓挂单能超出持仓",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "today, his := heldToday-frozen.VolumeToday, heldHis-frozen.VolumeHistory",
+		"new": "today, his := heldToday-0*frozen.VolumeToday, heldHis-0*frozen.VolumeHistory",
+		"pkg": "./order/",
+		"test": "TestClosableSubtractsFrozenClose",
+		"want": "冻昨 1 平昨 2",
+		"expect": "red"
+	},
+	{
+		"name": "548 门面不把挂单冻住的手数交给校验——第二笔平今挂单通过",
+		"dir": "",
+		"file": "submit.go",
+		"old": "f.FrozenClose = s.book.TotalOf(req.Instrument, opposite(req.Direction))",
+		"new": "_ = s.book.TotalOf(req.Instrument, opposite(req.Direction))",
+		"pkg": "./",
+		"test": "TestPlacedCloseHoldsClosable",
+		"want": "第二笔平今挂单要拒在可平量",
+		"expect": "red"
+	},
+	{
+		"name": "549 挂单不冻结账户——可用资金不扣",
+		"dir": "",
+		"file": "place.go",
+		"old": "if err := s.acc.Freeze(day, fr.Margin, fr.Commission); err != nil {\n\t\treturn order.Frozen{}, err",
+		"new": "if err := error(nil); err != nil {\n\t\treturn order.Frozen{}, err",
+		"pkg": "./",
+		"test": "TestPlaceFreezesAndCancelRestores",
+		"want": "挂单冻结 保证金",
+		"expect": "red"
+	},
+	{
+		"name": "550 撤单不解冻——挂撤往返之后可用少了一截（第一版替换后 fr 未使用、编译红）",
+		"dir": "",
+		"file": "place.go",
+		"old": "\tif err := s.acc.Unfreeze(day, fr.Margin, fr.Commission); err != nil {\n\t\treturn err\n\t}",
+		"new": "\tif err := s.acc.Unfreeze(day, fr.Margin.Sub(fr.Margin), fr.Commission.Sub(fr.Commission)); err != nil {\n\t\treturn err\n\t}",
+		"pkg": "./",
+		"test": "TestPlaceFreezesAndCancelRestores",
+		"want": "挂撤往返之后账户没回到起点",
+		"expect": "red"
+	},
+	{
+		"name": "551 成交记账失败时不把冻结放回——挂单还在簿上而冻结没了",
+		"dir": "",
+		"file": "place.go",
+		"old": "if ferr := s.acc.Freeze(day, fr.Margin, fr.Commission); ferr != nil {",
+		"new": "if ferr := error(nil); ferr != nil {",
+		"pkg": "./",
+		"test": "TestFillRestoresOnFailure",
+		"want": "没放回",
+		"expect": "red"
+	},
+	{
+		"name": "552 结算不先查挂单簿——报的是账户层「仍有冻结额」而不是「先撤单」",
+		"dir": "",
+		"file": "settle.go",
+		"old": "if live := s.book.Live(); len(live) > 0 {",
+		"new": "if live := s.book.Live(); false && len(live) > 0 {",
+		"pkg": "./",
+		"test": "TestSettleAndApplyTradeRespectLiveOrders",
+		"want": "先撤单",
+		"expect": "red"
+	},
+	{
+		"name": "553 灌成交可以平掉挂单冻住的手数",
+		"dir": "",
+		"file": "trade.go",
+		"old": "if fz := s.book.TotalOf(tr.Instrument, held); p.VolumeToday(held) < fz.VolumeToday || p.VolumeHistory(held) < fz.VolumeHistory {",
+		"new": "if fz := s.book.TotalOf(tr.Instrument, held); false {",
+		"pkg": "./",
+		"test": "TestSettleAndApplyTradeRespectLiveOrders",
+		"want": "灌成交平掉了",
+		"expect": "red"
+	},
+	{
+		"name": "554 平昨挂单冻的是今仓手数——CTP 20260911 平昨挂单的持仓侧冻结对不上",
+		"dir": "",
+		"file": "order/freeze.go",
+		"old": "\t\t} else {\n\t\t\tf.VolumeHistory = req.Volume\n\t\t}",
+		"new": "\t\t} else {\n\t\t\tf.VolumeToday = req.Volume\n\t\t}",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadePlaceAgainstCTPFrozen",
+		"want": "持仓侧冻住",
+		"expect": "red"
+	},
+	{
+		"name": "555 恢复不核口径——口径改了一项的存档照样恢复",
+		"dir": "",
+		"file": "state.go",
+		"old": "if cfg.Choices != st.Choices {",
+		"new": "if false && cfg.Choices != st.Choices {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "口径改一项",
+		"expect": "red"
+	},
+	{
+		"name": "556 恢复不核规则数据版本",
+		"dir": "",
+		"file": "state.go",
+		"old": "if v := cfg.Rules.Version(); v != st.RulesVersion {",
+		"new": "if v := cfg.Rules.Version(); false && v != st.RulesVersion {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "规则版本",
+		"expect": "red"
+	},
+	{
+		"name": "557 恢复不核昨仓片先于今仓片——「先平昨 ≡ 先开先平」的前提被存档打破",
+		"dir": "",
+		"file": "position/restore.go",
+		"old": "case l.Settled && seenToday:",
+		"new": "case false && l.Settled && seenToday:",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "昨仓片排在今仓片后",
+		"expect": "red"
+	},
+	{
+		"name": "558 恢复不做重算核对——手改了账户占用的存档照样恢复",
+		"dir": "",
+		"file": "state.go",
+		"old": "if !c.got.Equal(c.want) {",
+		"new": "if false && !c.got.Equal(c.want) {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "账户占用被手改",
+		"expect": "red"
+	},
+	{
+		"name": "559 恢复不核挂单冻结合计与账户冻结",
+		"dir": "",
+		"file": "state.go",
+		"old": "if !total.Margin.Equal(st.Account.FrozenMargin) || !total.Commission.Equal(st.Account.FrozenCommission) {",
+		"new": "if false {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "挂单冻结与账户不符",
+		"expect": "red"
+	},
+	{
+		"name": "560 恢复不查明细手数——手数为 0 的片被收下",
+		"dir": "",
+		"file": "position/restore.go",
+		"old": "case l.Volume <= 0:",
+		"new": "case false && l.Volume <= 0:",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "明细手数为 0",
+		"expect": "red"
+	},
+	{
+		"name": "561 恢复不核 PositionDateType 与规则数据一致",
+		"dir": "",
+		"file": "state.go",
+		"old": "if inst.PositionDateType != ps.DateType {",
+		"new": "if false && inst.PositionDateType != ps.DateType {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "PositionDateType 不一致",
+		"expect": "red"
+	},
+	{
+		"name": "562 失效态也能导出存档——恢复等于把失效洗掉",
+		"dir": "",
+		"file": "state.go",
+		"old": "if s.broken != nil {\n\t\treturn State{}",
+		"new": "if false && s.broken != nil {\n\t\treturn State{}",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "失效态导出了存档",
+		"expect": "red"
+	},
+	{
+		"name": "563 裸 CLOSE 拆分拿持有的今昨、不扣簿上已冻——今1昨1 挂两笔裸平都冻昨 1，谁都成交不了（评审 20260915 打回的原样）（再重锚：拆分抽成 undatedSplit）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "freeToday, freeHistory := today-frozen.VolumeToday, history-frozen.VolumeHistory",
+		"new": "freeToday, freeHistory := today-0*frozen.VolumeToday, history-0*frozen.VolumeHistory",
+		"pkg": "./",
+		"test": "TestTwoPlacedClosesSplitAcrossFreeVolumes",
+		"want": "两笔抢了同一手昨仓",
+		"expect": "red"
+	},
+	{
+		"name": "564 成交时裸 CLOSE 的拆分不扣挂单冻住的手数——先成交冻今的那笔会去平另一笔冻住的昨仓",
+		"dir": "",
+		"file": "trade.go",
+		"old": "p.VolumeHistory(held), s.book.TotalOf(tr.Instrument, held))",
+		"new": "p.VolumeHistory(held), s.book.TotalOf(types.InstrumentID{}, held))",
+		"pkg": "./",
+		"test": "TestBareCloseFillOrderAndSubmitAmongLiveOrders",
+		"want": "先成交冻今的那笔失败",
+		"expect": "red"
+	},
+	{
+		"name": "565 恢复不逐笔重算挂单冻结金额——挂单与账户冻结手续费一起改的存档照样恢复（评审 20260915 找到的原样）",
+		"dir": "",
+		"file": "state.go",
+		"old": "if err := s.checkOrderFreeze(st.Day, o); err != nil {",
+		"new": "if err := s.checkOrderFreeze(st.Day, o); false && err != nil {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedState",
+		"want": "挂单与账户冻结手续费一起 +1",
+		"expect": "red"
+	},
+	{
+		"name": "566 裸平挂单的手续费核对形同虚设——「某种拆法算得出才放行」变成「随便哪种不报错就放行」",
+		"dir": "",
+		"file": "state.go",
+		"old": "if c, err := s.commission(tr, k); err == nil && c.Equal(o.Frozen.Commission) {",
+		"new": "if c, err := s.commission(tr, k); err == nil || c.Equal(o.Frozen.Commission) {",
+		"pkg": "./",
+		"test": "TestRestoreAcceptsBareCloseAfterPositionChanged",
+		"want": "裸平挂单与账户冻结手续费一起 +1 要被拒",
 		"expect": "red"
 	}
 ]

@@ -6,6 +6,7 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/fee"
 	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
+	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/pnl"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
@@ -163,9 +164,46 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 			order = o
 		}
 		todayBefore := p.VolumeToday(held)
-		res, err := p.Close(held, tr.Offset, day, tr.Volume, order)
-		if err != nil {
-			return err
+		var res position.CloseResult
+		if tr.Offset.SpecifiesPositionDate() {
+			if res, err = p.Close(held, tr.Offset, day, tr.Volume, order); err != nil {
+				return err
+			}
+		} else {
+			// ⚠️ 裸 CLOSE：在**没被挂单冻住**的今昨里先平昨 —— 与冻结时的拆分同一个 undatedSplit（评审 20260915 打回后改）。
+			// 原来按 MeasuredCloseOrder 在整份持仓上消耗：已有挂单冻住昨仓时，这一笔会去平那手昨仓、被下面的守卫拒掉，
+			// 于是「今1昨1 挂两笔裸平、先成交冻今的那笔」成交不了。没有挂单时与先平昨逐片相同（§13 #4）。
+			if order != position.YesterdayFirst {
+				return fmt.Errorf("%s 上裸 CLOSE 的实测消耗顺序是 %v，本库只按先平昨拆", tr.Instrument, order)
+			}
+			if _, err := p.Side(held); err != nil {
+				return err
+			}
+			t, h, err := undatedSplit(tr.Instrument, tr.Volume, p.VolumeToday(held), p.VolumeHistory(held), s.book.TotalOf(tr.Instrument, held))
+			if err != nil {
+				return err
+			}
+			for _, part := range []struct {
+				off types.Offset
+				vol int
+			}{{types.CloseYesterday, h}, {types.CloseToday, t}} {
+				if part.vol == 0 {
+					continue
+				}
+				r, err := p.Close(held, part.off, day, part.vol, position.CloseOrderUnmeasured)
+				if err != nil {
+					return err
+				}
+				res.Consumed = append(res.Consumed, r.Consumed...)
+				res.VolumeToday += r.VolumeToday
+				res.VolumeHistory += r.VolumeHistory
+			}
+		}
+		// ⚠️ 平完之后剩下的今 / 昨仓不能少于挂着的平仓单冻住的手数（F4）：
+		// 柜台不会让一笔成交与挂单冲突；冲突只可能是调用方把挂单的成交走了 ApplyTrade 而不是 Fill
+		if fz := s.book.TotalOf(tr.Instrument, held); p.VolumeToday(held) < fz.VolumeToday || p.VolumeHistory(held) < fz.VolumeHistory {
+			return fmt.Errorf("%s 这笔平仓会平掉挂单冻住的手数（平后 今 %d / 昨 %d，挂单冻住 今 %d / 昨 %d）—— 挂单的成交走 Fill",
+				tr.Instrument, p.VolumeToday(held), p.VolumeHistory(held), fz.VolumeToday, fz.VolumeHistory)
 		}
 		if commission, err = s.commission(tr, todayBefore); err != nil {
 			return err
@@ -194,6 +232,22 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 	}
 	s.positions = positions
 	return s.commit(day, v, commission, closeProfit)
+}
+
+// undatedSplit 把一笔裸 CLOSE 拆成今 / 昨手数：在**扣掉挂单冻住之后**的今昨里先平昨。
+//
+// 冻结（FreezeOf）与成交（ApplyTrade）共用它 —— 两处各拆各的，挂着的单就会冻一边、成交时平另一边
+// （评审 20260915 打回 F4 的两处缺陷都是这个形状）。合计超过可平量报错。
+// ⚠️ 「先平昨」只在 NoUseHistory 上有实测（§13 #4，且只观测过没有挂单时）；有挂单时在可平量里先平昨是推得。
+func undatedSplit(inst types.InstrumentID, volume, today, history int, frozen order.Frozen) (toToday, toHistory int, err error) {
+	freeToday, freeHistory := today-frozen.VolumeToday, history-frozen.VolumeHistory
+	toHistory = min(volume, max(freeHistory, 0))
+	toToday = volume - toHistory
+	if toToday > max(freeToday, 0) {
+		return 0, 0, fmt.Errorf("%s 裸 CLOSE %d 手超过可平今 %d / 昨 %d（已扣挂单冻住的 今 %d / 昨 %d）",
+			inst, volume, max(freeToday, 0), max(freeHistory, 0), frozen.VolumeToday, frozen.VolumeHistory)
+	}
+	return toToday, toHistory, nil
 }
 
 // commission 算一笔成交（或一笔报单按报价成交时）的手续费。

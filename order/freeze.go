@@ -203,6 +203,12 @@ func (b *Book) Remove(id string) (Frozen, error) {
 	return e.frozen, nil
 }
 
+// Get 取簿上一笔委托与它冻住的东西；不在簿上返回 false。
+func (b *Book) Get(id string) (Request, Frozen, bool) {
+	e, ok := b.live[id]
+	return e.req, e.frozen, ok
+}
+
 // Total 是簿上全部委托的冻结合计。
 func (b *Book) Total() Frozen {
 	var t Frozen
