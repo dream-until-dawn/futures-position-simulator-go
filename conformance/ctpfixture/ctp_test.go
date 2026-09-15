@@ -470,15 +470,15 @@ func specMultiplier(t *testing.T, symbol string, id types.InstrumentID) (decimal
 	return byProduct, byProduct.IsPositive()
 }
 
-// TestNoUseHistoryBasisAdvancesOnCTP 还掉 position/lot.go RebaseAll 注释里登记的盲区：
+// TestNoUseHistoryBasisAdvancesOnCTP 还掉原 position/lot.go RebaseAll 注释里登记的盲区（该函数已随 §13 #20 裁决删除）：
 // 「NoUseHistory 上基线到底推没推进」—— 此前唯一的样本开仓价恰好等于结算价，两个答案同值。
 //
 // 判别样本是 #4 夹具 ①（交易日 20260915，DCE.m2701 多头一手跨结算）：开仓 3399、昨结 3384。
 // ⇒ 若基线推进了，PositionCost = 昨结 × 乘数 = 33840；若没推进，PositionCost = OpenCost = 33990。
 // 昨结取自行情快照、乘数取自天勤规格，都与持仓记录本身独立。
 //
-// ⚠️ 它只证实**基线推进**这一半（与 RebaseAll 一致）。同一条记录 TodayPosition 0 / YdPosition 1 ——
-// CTP 把它记作**昨仓**，而 RebaseAll 不标昨仓：那是 §13 #20，待使用者裁决，本条不管。
+// ⚠️ 它只证实**基线推进**这一半。同一条记录 TodayPosition 0 / YdPosition 1 —— CTP 把它记作**昨仓**：
+// 那一半是 §13 #20，2026-09-15 使用者裁决跟 CTP，本库结算已改为同样滚成昨仓（position.Settle）。
 func TestNoUseHistoryBasisAdvancesOnCTP(t *testing.T) {
 	fx := loadCTP(t)
 	f, ok := fx["ctp-slices-20260915.json"]

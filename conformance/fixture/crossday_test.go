@@ -230,8 +230,8 @@ func TestCrossDayConformance(t *testing.T) {
 	if seen["跨日-B"] > 0 {
 		t.Errorf("⚠️ 类 B（NoUseHistory 不滚）出现了 %d 次 —— "+
 			"本条此前观测不到它（DCE 拿不到结算价被跳过）。"+
-			"若是大商所日行情打通了，**去核对本库的 NoUseHistory 结算分支**"+
-			"（position.Settle 的 RebaseAll 那一支）并更新本清单", seen["跨日-B"])
+			"若是大商所日行情打通了：⚠️ 本库已按 §13 #20 裁决跟 CTP（跨结算即昨仓），"+
+			"与快期在这一类上**有意分岔** —— 按口子差登记，**不回退本库**", seen["跨日-B"])
 	}
 	t.Logf("失败归类：A（结算价 vs 收盘价）%d、B（NoUseHistory 不滚，本条观测不到）%d、"+
 		"C（行情侧未滚到新交易日）%d、D（今昨拆分柜台不填）%d、?（样本区分不了）%d",
