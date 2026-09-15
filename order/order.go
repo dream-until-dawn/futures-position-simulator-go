@@ -398,7 +398,19 @@ func checkClosable(req Request, p *position.Position) *Rejection {
 			return r
 		}
 	default:
-		// 裸 Close：⚠️ 本库按 cn-futures-rules.md §4 **报错而不是猜**。
+		// ✅ 裸 Close 在 **NoUseHistory** 上：CTP 实测**接受**、消耗昨仓（§13 #4，大商所），§13 #20 裁决全部 NoUseHistory 跟 CTP。
+		// ⇒ 按**今昨合计**校验可平量；消耗顺序由 position.MeasuredCloseOrder 给（这里只校验量，不挑顺序）。
+		// ⚠️ 超量的拒因不给（ReasonUnknown）：语料里没有裸 Close 的拒单。观测只覆盖大商所，郑商所等为外推。
+		// ⚠️ **形状范围**（评审 20260915）：观测只有「今 1 昨 1、裸平 1 手」—— 未跨过昨仓。
+		// 跨过昨仓时「柜台接受到总量为止」是**推得**；以总量为上限放行，没有观测。
+		if _, measured := position.MeasuredCloseOrder(p.DateType()); measured {
+			if req.Volume > today+his {
+				return &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
+					"平仓 %d 手超过总持仓 %d 手（今 %d / 昨 %d）", req.Volume, today+his, today, his)}
+			}
+			return nil
+		}
+		// 裸 Close 在 UseHistory（及未指定 PositionDateType）上：⚠️ 本库按 cn-futures-rules.md §4 **报错而不是猜**。
 		// 快期模拟把它解释成平昨（kq_facts 32，两条独立证据），
 		// 但那是**一个口子**的行为，simnow_pending#1 未裁决。
 		// 猜错的代价是平错一边的仓，而显式声明本来就是要求。

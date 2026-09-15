@@ -8,15 +8,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// CloseOrder 是「平仓消耗今昨仓的顺序」。
+// CloseOrder 是「裸 Close（未声明平今还是平昨）消耗今昨仓的顺序」。
 //
-// ⚠️ **它是判别实验 4 的产物，而实验 4 尚未收敛。**
-// 见 docs/cn-futures-rules.md §13 与 docs/state.md 的 rules_pending。
+// ✅ **判别实验 4 已在 CTP 上收敛（2026-09-14 夜盘，cn-futures-rules.md §13 #4）**：大商所上通用平仓消耗**昨仓**。
+// 按 §13 #20 使用者裁决，全部 NoUseHistory 交易所跟 CTP ⇒ 用 [MeasuredCloseOrder] 取值，不要自己挑。
+// ⚠️ 观测只覆盖大商所；UseHistory 交易所的裸 Close 在 CTP 上**没测过**（simnow_pending#1），那里仍然没有实测值。
 //
 // 零值是「未实测」，用它会**报错**——不是回退到某个「合理的默认」。
-// 三个候选在「平满」的样本上给出同一个结果，所以一个错的默认值可以长期不被发现；
-// 而它错了，平仓盈亏的基线（平昨用昨结算价 / 平今用开仓价）跟着错，
-// 当日盈亏与结存链条一并受影响。
+// 而它错了，平仓盈亏的基线（平昨用昨结算价 / 平今用开仓价）跟着错，当日盈亏与结存链条一并受影响。
 type CloseOrder uint8
 
 const (
@@ -24,14 +23,33 @@ const (
 	CloseOrderUnmeasured CloseOrder = iota
 	// YesterdayFirst 先平昨、后平今。
 	YesterdayFirst
-	// TodayFirst 先平今、后平昨。
+	// TodayFirst 先平今、后平昨。⚠️ 在大商所 CTP 上被否（§13 #4：今 1 昨 1 通用平仓一手，消耗的是昨仓）。
 	TodayFirst
 	// FIFO 先开先平。
 	//
-	// ⚠️ 在「昨仓都比今仓早开」的样本上，它与 YesterdayFirst **给出同一个结果**。
-	// 要把两者分开，需要两笔开仓时间不同的昨仓，即连续两个交易日各建一次种子。
+	// ⚠️ **在本库的明细上它与 YesterdayFirst 恒等价**：昨仓必然比今仓先开（结算把当时的全部明细一起标昨），
+	// 而同为昨仓或同为今仓时 YesterdayFirst 也按明细顺序消耗 —— 两者永远消耗同一批。
+	// ⚠️ 前提由**调用约定**保证，**类型本身不保证**：明细只经 Open 按时间追加、Settle 一次标全部。
+	// `Side.Append` 是导出的、`Lot.Settled` 可以随手设 —— 绕开这两条造出来的明细，两者可能分开（评审 20260915）。
+	// 此前这里写「连续两个交易日各建一次种子就能分开」，那不成立。守卫 TestYesterdayFirstEqualsFIFO。
 	FIFO
 )
+
+// MeasuredCloseOrder 给出某种 PositionDateType 上裸 Close 的**实测**消耗顺序；第二个返回值为 false 表示没有实测。
+//
+//	NoUseHistory   YesterdayFirst（§13 #4 CTP 实测于大商所；§13 #20 裁决全部 NoUseHistory 跟 CTP，郑商所等为外推）
+//	其余           没有实测 —— UseHistory 上裸 Close 在 CTP 的语义未测（simnow_pending#1），本库对它报错
+//
+// ⚠️ **形状范围**（评审 20260915）：观测只覆盖**今 1 昨 1、通用平 1 手、消耗昨仓**这一个形状 ——
+// 平量**未跨过**昨仓。跨过昨仓时「按先平昨延伸到今仓、以总量为上限」是**推得**，没有观测。
+//
+// ⚠️ 规则只住这一处：order 的可平量校验与将来的门面都从这里取，不各自写一份。
+func MeasuredCloseOrder(dt refdata.PositionDateType) (CloseOrder, bool) {
+	if dt == refdata.NoUseHistory {
+		return YesterdayFirst, true
+	}
+	return CloseOrderUnmeasured, false
+}
 
 func (c CloseOrder) String() string {
 	switch c {
@@ -180,7 +198,7 @@ type CloseResult struct {
 //
 //	CloseToday      只平今仓
 //	CloseYesterday  只平昨仓
-//	Close           由 order 决定顺序 —— ⚠️ 见 CloseOrder，实验 4 未收敛
+//	Close           由 order 决定顺序 —— 用 MeasuredCloseOrder 取（只有 NoUseHistory 有实测值）
 //
 // ⚠️ **超量平仓一律报错，绝不反手。** 中国期货不存在「平过头就变成反向仓位」这回事。
 // 参照仓库在这里栽过：拿 10 张去平 4 张多头得到 6 张多头，
@@ -278,9 +296,9 @@ func (s *Side) consumeByOrder(volume int, order CloseOrder) ([]Lot, error) {
 	case CloseOrderUnmeasured:
 		// ⚠️ 不回退到任何「合理的默认」。三个候选在平满的样本上同值，
 		// 一个错的默认可以长期不被发现。
-		return nil, fmt.Errorf("平仓消耗顺序未指定：判别实验 4 尚未收敛，"+
-			"本库不提供默认值。见 docs/state.md 的 rules_pending。"+
-			"（候选：%v / %v / %v）", YesterdayFirst, TodayFirst, FIFO)
+		return nil, fmt.Errorf("平仓消耗顺序未指定：本库不提供默认值 —— 用 MeasuredCloseOrder 按合约的 PositionDateType 取"+
+			"（实验 4 只在 NoUseHistory 上有实测值：先平昨；UseHistory 上裸 Close 未测，simnow_pending#1）"+
+			"。候选：%v / %v / %v", YesterdayFirst, TodayFirst, FIFO)
 
 	case YesterdayFirst:
 		out := s.consume(volume, func(l Lot) bool { return l.Settled })
