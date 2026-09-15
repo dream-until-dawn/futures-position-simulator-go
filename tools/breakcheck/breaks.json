@@ -4703,5 +4703,49 @@
 		"test": "TestObserveRecordsOrderSysIDPresence",
 		"want": "新拍的每一条都要明确记",
 		"expect": "red"
+	},
+	{
+		"name": "485 ctperr 表里手打一格郑商所——没有语料的码被当成实测（「取值不许先填」要防的正是这个）",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\t{types.INE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 51},\n}",
+		"new": "\t{types.INE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 51},\n\t{types.CZCE, ReasonPriceTick}:            {SpaceStatusPrefix, 48},\n}",
+		"pkg": "./ctperr/",
+		"test": "TestTableMatchesCorpus",
+		"want": "这一格是填的",
+		"expect": "red"
+	},
+	{
+		"name": "486 ctperr 表里大商所平昨超量写成 51——照着上期所类推，而大商所实测是 30",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\t{types.DCE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 30},",
+		"new": "\t{types.DCE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 51},",
+		"pkg": "./ctperr/",
+		"test": "TestTableMatchesCorpus",
+		"want": "以语料为准",
+		"expect": "red"
+	},
+	{
+		"name": "487 ctperr 表漏了大商所最小变动价位那一格——语料有、表没有",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\t{types.DCE, ReasonPriceTick}:             {SpaceStatusPrefix, 48},\n",
+		"new": "\t// 漏了一格\n",
+		"pkg": "./ctperr/",
+		"test": "TestTableMatchesCorpus",
+		"want": "漏填",
+		"expect": "red"
+	},
+	{
+		"name": "488 Lookup 查不到时回落到上期所的码——郑商所从没观测过的码看起来和测过的一样",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\tc, ok := measured[key{ex, r}]\n\treturn c, ok",
+		"new": "\tc, ok := measured[key{ex, r}]\n\tif !ok {\n\t\tc, ok = measured[key{types.SHFE, r}]\n\t}\n\treturn c, ok",
+		"pkg": "./ctperr/",
+		"test": "TestLookupDoesNotFallBack",
+		"want": "这个交易所一条语料都没有",
+		"expect": "red"
 	}
 ]
