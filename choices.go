@@ -43,8 +43,8 @@ func CTPChoices() Choices {
 func KQChoices() Choices {
 	return Choices{
 		FeeBasis:    fee.PreSettlement,    // kq_facts 4
-		MarginBasis: margin.PreSettleAll,  // Rebuild 现用
-		Mark:        pnl.MarkLast,         // Rebuild 现用
+		MarginBasis: margin.PreSettleAll,  // 快期对拍有判别力：换成今仓按开仓价，status-20260908-7 的 margin 差 22.4（破坏 518）
+		Mark:        pnl.MarkLast,         // 快期对拍有判别力：换成昨结算价，position_profit 700 → −320（破坏 519）
 		Algorithm:   account.AlgorithmAll, // kq_facts 11
 	}
 }

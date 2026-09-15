@@ -323,9 +323,9 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 |---|---|---|
 | `FeeBasis` | **成交价**：平昨 @3137 收 3.142（昨结算 3147 ⇒ 3.152，否）。⚠️ 以行为费率「按额 0.0001 + 每手 0.005」为前提，而那个 0.005 声明里没有（§13 #19，开着） | **昨结算价**（kq_facts 4，`cu2701` 八个成交价一个费额） |
 | `FeeRounding` | ⚠️ **未收敛**（§13 #5：两边都排除了「到分」，剩下两个候选在现有费率结构下给同一个数） | 同左 |
-| `MarginBasis` | `OpenTodayPreSettleHistory`（§13 #1） | `PreSettleAll`（`Rebuild` 现用；⚠️ 判别力实现时用破坏验证核，核不出就不进预设） |
+| `MarginBasis` | `OpenTodayPreSettleHistory`（§13 #1） | `PreSettleAll`（`Rebuild` 现用；实现时核过判别力：换成今仓按开仓价，快期夹具 margin 差 22.4，破坏 518） |
 | `SideScope` | `ByProduct`（§13 #3） | ⚠️ 快期**没实现大边**（simnow_pending#6）—— 这一项在那个口子上测不了 |
-| `Mark` | `MarkLast`，基线是结算推进后的 `Basis`（§13 #2） | `MarkLast`（`Rebuild` 现用；判别力同左核） |
+| `Mark` | `MarkLast`，基线是结算推进后的 `Basis`（§13 #2） | `MarkLast`（`Rebuild` 现用；换成昨结算价时 position_profit 700 → −320，破坏 519） |
 | `Algorithm` | `AlgorithmOnlyLost`（§13 #17） | `AlgorithmAll`（kq_facts 11） |
 
 ⇒ 提供两个**预设** `CTPChoices()` / `KQChoices()`，**只填实测过的格**；`FeeRounding` 在两个预设里都留零值，
@@ -343,7 +343,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
     func (s *Simulator) Mark(day, Quote) error    // Quote{Instrument, Last/HasLast, PreSettlement/HasPreSettlement}
     func (s *Simulator) ApplyTrade(day, match.Trade) error
     func (s *Simulator) Account() account.Snapshot
-    func (s *Simulator) Position(types.InstrumentID) (*position.Position, bool)
+    func (s *Simulator) Position(types.InstrumentID, types.HedgeFlag) (*position.Position, bool)   // 返回副本
 
 `ApplyTrade` 一步之内：
 

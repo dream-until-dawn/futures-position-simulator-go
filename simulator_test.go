@@ -339,3 +339,33 @@ func TestChoicesReachTheLedger(t *testing.T) {
 		t.Errorf("⚠️ 浮盈算法没传到：结存−占用−可用 CTP %s（期望 45）/ 快期 %s（期望 0）", ctpGap, kqGap)
 	}
 }
+
+// TestApplyTradeShortSide 手算一段空头：开空、行情上涨、买入平今。
+//
+// ⚠️ 两条对拍（快期 Rebuild、CTP ag2702）里的持仓都只有多头 —— 方向写反在那里一格都不会红。
+func TestApplyTradeShortSide(t *testing.T) {
+	s := newSim(t)
+	mark(t, s, "DCE.m2701", "3361", "3384")
+
+	// 开空 2 @3360：手续费 1.5×2；占用 3360×10×2×0.1；持仓盈亏 (3360−3361)×10×2 = −20（浮亏，两种算法都扣）
+	if err := s.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Sell, types.Open, "3360", 2)); err != nil {
+		t.Fatal(err)
+	}
+	wantAccount(t, s, "开空 2", "99977", "93257", "6720", "0", "3", "-20")
+
+	// 最新价跌到 3340：空头浮盈 (3360−3340)×10×2 = +400 —— CTP 预设下不计入可用
+	mark(t, s, "DCE.m2701", "3340", "")
+	wantAccount(t, s, "最新价到 3340", "100397", "93277", "6720", "0", "3", "400")
+
+	// 买入平今 1 @3345：平今档 0.75；平仓盈亏 (3360−3345)×10 = +150；剩 1 手浮盈 (3360−3340)×10 = 200
+	if err := s.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Buy, types.CloseToday, "3345", 1)); err != nil {
+		t.Fatal(err)
+	}
+	wantAccount(t, s, "买平今 1", "100346.25", "96786.25", "3360", "150", "3.75", "200")
+
+	// 买入平仓平的是空头：多头一直是 0
+	p, _ := s.Position(simInst(t, "DCE.m2701"), types.Speculation)
+	if p.VolumeToday(types.Buy) != 0 || p.VolumeToday(types.Sell) != 1 {
+		t.Errorf("⚠️ 买平今之后多 %d / 空 %d，期望 0 / 1", p.VolumeToday(types.Buy), p.VolumeToday(types.Sell))
+	}
+}

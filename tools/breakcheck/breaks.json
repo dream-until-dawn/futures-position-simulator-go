@@ -5066,5 +5066,49 @@
 		"test": "TestFacadeReplaysAg2702AgainstCTP",
 		"want": "CloseProfit",
 		"expect": "red"
+	},
+	{
+		"name": "518 快期预设的保证金基准写成今仓按开仓价——status-20260908-7 的 margin 对不上",
+		"dir": "",
+		"file": "choices.go",
+		"old": "MarginBasis: margin.PreSettleAll,  // 快期",
+		"new": "MarginBasis: margin.OpenTodayPreSettleHistory, // 快期",
+		"pkg": "./conformance/fixture/",
+		"test": "TestRebuildAccountFieldByField",
+		"want": "❌ margin",
+		"expect": "red"
+	},
+	{
+		"name": "519 快期预设的计价价写成昨结算价——position_profit 700 → −320",
+		"dir": "",
+		"file": "choices.go",
+		"old": "Mark:        pnl.MarkLast,         // 快期",
+		"new": "Mark:        pnl.MarkPreSettlement, // 快期",
+		"pkg": "./conformance/fixture/",
+		"test": "TestRebuildAccountFieldByField",
+		"want": "❌ position_profit",
+		"expect": "red"
+	},
+	{
+		"name": "520 门面空头平仓去平多头——买入平今找不到多头",
+		"dir": "",
+		"file": "trade.go",
+		"old": "held := opposite(tr.Direction)",
+		"new": "held := tr.Direction",
+		"pkg": "./",
+		"test": "TestApplyTradeShortSide",
+		"want": "买平今",
+		"expect": "red"
+	},
+	{
+		"name": "521 净额改成逐持仓扣正浮盈的反空转被拆——有赚有赔的截面不计数",
+		"dir": "",
+		"file": "conformance/ctpfixture/account_test.go",
+		"old": "\t\tif hasGainAndLoss(f.Positions) {\n\t\t\tmixed++\n\t\t}",
+		"new": "\t\t_ = hasGainAndLoss",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestProductionAccountAvailableAgainstCTP",
+		"want": "净额与逐持仓分不开",
+		"expect": "red"
 	}
 ]
