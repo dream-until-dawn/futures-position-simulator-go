@@ -6015,5 +6015,16 @@
 		"test": "TestDocSectionRefsResolve",
 		"want": "sectionRefs(",
 		"expect": "red"
+	},
+	{
+		"name": "614 节号守卫放过不认识的文件名（写错成 silent-risk.md、或文档改名之后，「旧名.md §N」静默通过）",
+		"dir": "",
+		"file": "docsection_test.go",
+		"old": "\tif !known {\n\t\treturn \"文件名 \"",
+		"new": "\tif false && !known {\n\t\treturn \"文件名 \"",
+		"pkg": "./",
+		"test": "TestDocSectionRefsResolve",
+		"want": "写错的文件名 silent-risk.md 没被报出来",
+		"expect": "red"
 	}
 ]
