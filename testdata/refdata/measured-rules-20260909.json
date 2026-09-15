@@ -1,13 +1,20 @@
 {
  "source": "实测（快期模拟这个口子），不是上游字典",
  "trading_day": "20260909",
- "note": "⚠️ 这份文件里的每一项**都只能来自实测**：上游合约字典不给保证金率，也不给 PositionDateType（见 cmd/refdata-sync 的说明）。⚠️ 它与 specs-*.json 是两回事——那份来自字典，这份来自柜台行为。合成一份会让「查过的」和「量出来的」在同一张表里分不开。⚠️ 保证金率见 state.md 的 kq_facts 2（八合约两交易所，三档）；PositionDateType 见 kq_facts 24（20260909 结算：SHFE.rb2701 多今0/多昨3 而 DCE.m2701 多今3/多昨0，且账户层结算已完成）。⚠️ 没实测过的合约**一个都不填**：填一个「按交易所推出来的」值，会让今昨仓在那个合约上悄悄不滚动。",
+ "note": "⚠️ 这份文件里的每一项**都只能来自实测**：上游合约字典不给保证金率，也不给 PositionDateType（见 cmd/refdata-sync 的说明）。⚠️ 它与 specs-*.json 是两回事——那份来自字典，这份来自柜台行为。合成一份会让「查过的」和「量出来的」在同一张表里分不开。⚠️ 保证金率见 state.md 的 kq_facts 2（八合约两交易所，三档）；PositionDateType 见 kq_facts 24（20260909 结算：SHFE.rb2701 多今0/多昨3 而 DCE.m2701 多今3/多昨0，且账户层结算已完成）。⚠️ 手续费率见 probes.md §10.2（F7a 从对拍测试的 feeRates 挪进来，平今 / 平昨与开仓同费率，kq_facts 18）；classified=false 的品种只有一个月份、按额按手判不了。⚠️ 没实测过的合约**一个都不填**：填一个「按交易所推出来的」值，会让今昨仓在那个合约上悄悄不滚动。",
  "margin_rate_by_product": [
   {"product": "rb", "rate": "0.07", "evidence": "kq_facts 2"},
   {"product": "m", "rate": "0.07", "evidence": "kq_facts 2"},
   {"product": "i", "rate": "0.11", "evidence": "kq_facts 2"},
   {"product": "cu", "rate": "0.11", "evidence": "kq_facts 2"},
   {"product": "ag", "rate": "0.22", "evidence": "kq_facts 2"}
+ ],
+ "commission_rate_by_product": [
+  {"product": "rb", "by_money": "0.00001", "by_volume": "0", "classified": true, "calibrated_on": "SHFE.rb2701", "evidence": "probes.md §10.2：rb 三个月份费额各不相同而费额÷昨结恒定 ⇒ 按额；rb2701 标定、预测 rb2610 / rb2705 命中"},
+  {"product": "m", "by_money": "0", "by_volume": "1.5", "classified": true, "calibrated_on": "DCE.m2701", "evidence": "probes.md §10.2：m 三个月份昨结各不相同而费额恒定 1.5 ⇒ 按手"},
+  {"product": "i", "by_money": "0.0001", "by_volume": "0", "classified": false, "calibrated_on": "DCE.i2701", "evidence": "probes.md §10.2：只有 i2701 一个月份，按额按手判不了 ⇒ classified=false：这一行只在标定那个昨结算价上成立，换了昨结算价按额就是猜"},
+  {"product": "cu", "by_money": "0.00005", "by_volume": "0", "classified": false, "calibrated_on": "SHFE.cu2701", "evidence": "probes.md §10.2：只有 cu2701 一个月份，按额按手判不了（classified=false 同上）"},
+  {"product": "ag", "by_money": "0.00005", "by_volume": "0", "classified": false, "calibrated_on": "SHFE.ag2702", "evidence": "probes.md §10.2：只有 ag2702 一个月份，按额按手判不了（classified=false 同上）"}
  ],
  "position_date_type": [
   {"instrument": "SHFE.rb2701", "type": "use_history", "evidence": "kq_facts 24：20260909 结算后今仓→昨仓"},

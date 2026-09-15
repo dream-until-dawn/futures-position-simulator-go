@@ -308,58 +308,36 @@
 		"expect": "red"
 	},
 	{
-		"name": "348 结算也动逐笔对冲基线（UseHistory 路）",
+		"name": "348 结算也动逐笔对冲基线（UseHistory 路）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "position/lot.go",
 		"old": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"new": "\t\ts.lots[i].Basis = settlementPrice\n\t\ts.lots[i].OpenPrice = settlementPrice\n\t\ts.lots[i].Settled = true",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCarrySplitsTheTwoBaselines",
+		"test": "TestReconstructOnFacadeSplitsTheTwoBaselines",
 		"want": "不受结算影响",
 		"expect": "red"
 	},
 	{
-		"name": "349 今仓不滚成昨仓",
+		"name": "349 今仓不滚成昨仓（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "position/lot.go",
 		"old": "\t\ts.lots[i].Settled = true",
 		"new": "\t\t_ = i",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCarrySplitsTheTwoBaselines",
-		"want": "3 手昨仓",
+		"test": "TestReconstructOnFacadeSplitsTheTwoBaselines",
+		"want": "应为 今 0 / 昨",
 		"expect": "red"
 	},
 	{
-		"name": "350 结转空仓合约不报错",
-		"dir": "",
-		"file": "conformance/fixture/carry.go",
-		"old": "\tif p.IsFlat() {",
-		"new": "\tif false {",
-		"pkg": "./conformance/fixture/",
-		"test": "TestCarryRefusesFlatAndMissing",
-		"want": "应当报错",
-		"expect": "red"
-	},
-	{
-		"name": "351 判别力守卫恒说「分开了」",
+		"name": "351 判别力守卫恒说「分开了」（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\treturn o, b, !o.Equal(b), nil",
 		"new": "\treturn o, b, true, nil",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCarryRefusesWhenBaselinesWouldCoincide",
+		"test": "TestSplitSaysSameWhenBaselinesCoincide",
 		"want": "判据在看别的东西",
-		"expect": "red"
-	},
-	{
-		"name": "352 没成交也照结转",
-		"dir": "",
-		"file": "conformance/fixture/carry.go",
-		"old": "\ttrades := f.TradesOf(symbol)\n\tif len(trades) == 0 {",
-		"new": "\ttrades := f.TradesOf(symbol)\n\tif false && len(trades) == 0 {",
-		"pkg": "./conformance/fixture/",
-		"test": "TestCarryRefusesFlatAndMissing",
-		"want": "应当报错",
 		"expect": "red"
 	},
 	{
@@ -407,11 +385,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "357 rb 的标定费率改错一位",
+		"name": "357 rb 的标定费率改错一位（F7a 改指：实测规则的唯一出处改成 json，原锚点随测试变量删掉）",
 		"dir": "",
-		"file": "conformance/fixture/fee_test.go",
-		"old": "{product: \"rb\", byMoney: \"0.00001\"",
-		"new": "{product: \"rb\", byMoney: \"0.0001\"",
+		"file": "testdata/refdata/measured-rules-20260909.json",
+		"old": "{\"product\": \"rb\", \"by_money\": \"0.00001\"",
+		"new": "{\"product\": \"rb\", \"by_money\": \"0.0001\"",
 		"pkg": "./conformance/fixture/",
 		"test": "TestFeeAgainstEveryTrade",
 		"want": "以昨结算价为基准仍有",
@@ -464,22 +442,22 @@
 		"expect": "red"
 	},
 	{
-		"name": "362 rb 的保证金率改错",
+		"name": "362 rb 的保证金率改错（F7a 改指：实测规则的唯一出处改成 json，原锚点随测试变量删掉）",
 		"dir": "",
-		"file": "conformance/fixture/margin_test.go",
-		"old": "\"rb\": \"0.07\", \"m\": \"0.07\",",
-		"new": "\"rb\": \"0.08\", \"m\": \"0.07\",",
+		"file": "testdata/refdata/measured-rules-20260909.json",
+		"old": "{\"product\": \"rb\", \"rate\": \"0.07\"",
+		"new": "{\"product\": \"rb\", \"rate\": \"0.08\"",
 		"pkg": "./conformance/fixture/",
 		"test": "TestMarginAgainstFixturePositions",
 		"want": "保证金对不上",
 		"expect": "red"
 	},
 	{
-		"name": "363 费率表塌成一档",
+		"name": "363 费率表塌成一档（F7a 改指：实测规则的唯一出处改成 json，原锚点随测试变量删掉）",
 		"dir": "",
-		"file": "conformance/fixture/margin_test.go",
-		"old": "\t\"i\": \"0.11\", \"cu\": \"0.11\",\n\t\"ag\": \"0.22\",",
-		"new": "\t\"i\": \"0.07\", \"cu\": \"0.07\",\n\t\"ag\": \"0.07\",",
+		"file": "testdata/refdata/measured-rules-20260909.json",
+		"old": "{\"product\": \"i\", \"rate\": \"0.11\", \"evidence\": \"kq_facts 2\"},\n  {\"product\": \"cu\", \"rate\": \"0.11\", \"evidence\": \"kq_facts 2\"},\n  {\"product\": \"ag\", \"rate\": \"0.22\",",
+		"new": "{\"product\": \"i\", \"rate\": \"0.07\", \"evidence\": \"kq_facts 2\"},\n  {\"product\": \"cu\", \"rate\": \"0.07\", \"evidence\": \"kq_facts 2\"},\n  {\"product\": \"ag\", \"rate\": \"0.07\",",
 		"pkg": "./conformance/fixture/",
 		"test": "TestMarginRatesHaveMoreThanOneTier",
 		"want": "只有 1 档",
@@ -1019,11 +997,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "93 实测过的 PositionDateType 表只留一型",
+		"name": "93 实测过的 PositionDateType 表只留一型（F7a 改指：实测规则的唯一出处改成 json，原锚点随测试变量删掉）（json 里删行会留尾逗号读不成，改成把 m2701 改成同一型）",
 		"dir": "",
-		"file": "conformance/fixture/coverage_test.go",
-		"old": "\t\"DCE.m2701\":   refdata.NoUseHistory, // 实测：结算后仍是今仓",
-		"new": "",
+		"file": "testdata/refdata/measured-rules-20260909.json",
+		"old": "{\"instrument\": \"DCE.m2701\", \"type\": \"no_use_history\"",
+		"new": "{\"instrument\": \"DCE.m2701\", \"type\": \"use_history\"",
 		"pkg": "./conformance/fixture/",
 		"test": "TestPositionDatesAreAllMeasured",
 		"want": "两型必须都有实测样本",
@@ -1065,13 +1043,13 @@
 		"why": "⚠️ 手数不可能为负，所以把判据从「>0」改成「<0」之后计数照样是 0，本条照样绿。**声明的盲区**：这条测试断言的是「没有反例」，而一个恒假的判据与一个真的没有反例**长得一模一样**。真正能守住它的只有「大商所哪天出现昨仓」——那时正确的判据会红，而这个改坏的不会。破坏验证在这里只能演示盲区，不能消除它。"
 	},
 	{
-		"name": "97 重放不再把 UseHistory 的裸 CLOSE 翻成平昨（F6b：reconstruct_test 改走门面，由 Reconstruct ≡ 门面的等价守卫接住）",
+		"name": "97 重放不再把 UseHistory 的裸 CLOSE 翻成平昨（F6b：reconstruct_test 改走门面，由 Reconstruct ≡ 门面的等价守卫接住）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/replay.go",
 		"old": "\tif offset == types.Close && dateType == refdata.UseHistory {\n\t\treturn types.CloseYesterday\n\t}",
 		"new": "",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade",
+		"test": "TestReplayTranslatesUseHistoryBareClose",
 		"want": "重放有歧义",
 		"expect": "red"
 	},
@@ -1895,9 +1873,9 @@
 		"expect": "red"
 	},
 	{
-		"name": "171 引用一条已被推翻的事实（kq_facts 14）",
+		"name": "171 引用一条已被推翻的事实（kq_facts 14）（F7a 改指：实测规则的唯一出处改成 json，原锚点随测试变量删掉）",
 		"dir": "",
-		"file": "cmd/oracle/conformance/rules.go",
+		"file": "conformance/fixture/measured.go",
 		"old": "// MarginByProduct 是按**品种**的保证金率（kq_facts 2）。",
 		"new": "// MarginByProduct 是按**品种**的保证金率（kq_facts 14）。",
 		"pkg": "./",
@@ -1917,9 +1895,9 @@
 		"expect": "red"
 	},
 	{
-		"name": "173 【期望仍然绿】引被推翻的事实、但**说明了它被推翻**（豁免内侧，配 171）",
+		"name": "173 【期望仍然绿】引被推翻的事实、但**说明了它被推翻**（豁免内侧，配 171）（F7a 改指：实测规则的唯一出处改成 json，原锚点随测试变量删掉）",
 		"dir": "",
-		"file": "cmd/oracle/conformance/rules.go",
+		"file": "conformance/fixture/measured.go",
 		"old": "// MarginByProduct 是按**品种**的保证金率（kq_facts 2）。",
 		"new": "// MarginByProduct 是按**品种**的保证金率（kq_facts 14）。\n// ⚠️ 第 14 条已被第 28 条推翻，这里是在讲它。",
 		"pkg": "./",
@@ -1996,11 +1974,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "180 拆分侧的 PositionDateType 判反：UseHistory 说成 NoUseHistory",
+		"name": "180 拆分侧的 PositionDateType 判反：UseHistory 说成 NoUseHistory（F7a 改指：实测规则的唯一出处改成 json，原锚点随测试变量删掉）",
 		"dir": "",
-		"file": "conformance/fixture/coverage_test.go",
-		"old": "\"SHFE.rb2701\": refdata.UseHistory,",
-		"new": "\"SHFE.rb2701\": refdata.NoUseHistory,",
+		"file": "testdata/refdata/measured-rules-20260909.json",
+		"old": "{\"instrument\": \"SHFE.rb2701\", \"type\": \"use_history\"",
+		"new": "{\"instrument\": \"SHFE.rb2701\", \"type\": \"no_use_history\"",
 		"pkg": "./conformance/fixture/",
 		"test": "TestCostSplitAbsentSideFollowsPositionDateType",
 		"want": "二者必须一致",
@@ -2416,7 +2394,7 @@
 		"new": "\t\tif strings.HasPrefix(strings.TrimSpace(cells[2]), \"~~\") {\n\t\t\tstruck = append(struck, trimmed)\n\t\t\tcontinue\n\t\t}\n\t\tall = append(all, trimmed)",
 		"pkg": "./",
 		"test": "TestRulesListedMatchesTable",
-		"want": "而 §13 一共",
+		"want": "cn-futures-rules.md §13 一共",
 		"expect": "red"
 	},
 	{
@@ -5918,36 +5896,36 @@
 		"expect": "red"
 	},
 	{
-		"name": "595 ReconstructOnFacade 不把实测 PositionDateType 交给门面（落回 PositionDateNotNeeded，结算拒收）",
+		"name": "595 ReconstructOnFacade 不把实测 PositionDateType 交给门面（落回 PositionDateNotNeeded，结算拒收）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\t\tdates: map[types.InstrumentID]refdata.PositionDateType{inst: dateType}}",
 		"new": "\t\tdates: map[types.InstrumentID]refdata.PositionDateType{}}",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade|TestReconstructCoversCarriedSides",
-		"want": "两边都该算得出",
+		"test": "TestReconstructCoversCarriedSides",
+		"want": "重建失败",
 		"expect": "red"
 	},
 	{
-		"name": "596 ReconstructOnFacade 结算用前一日的昨结算价而不是交易所结算价（逐日盯市基线错一天）",
+		"name": "596 ReconstructOnFacade 结算用前一日的昨结算价而不是交易所结算价（逐日盯市基线错一天）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\tif err := sim.Settle(prev.TradingDay, map[types.InstrumentID]decimal.Decimal{inst: settlement}, nextDay); err != nil {",
 		"new": "\tif err := sim.Settle(prev.TradingDay, map[types.InstrumentID]decimal.Decimal{inst: pre}, nextDay); err != nil {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade",
-		"want": "两份实现分岔了",
+		"test": "TestReconstructOnFacadeSplitsTheTwoBaselines",
+		"want": "逐日盯市基线",
 		"expect": "red"
 	},
 	{
-		"name": "597 ReconstructOnFacade 不灌当日成交（只剩结转那一段）",
+		"name": "597 ReconstructOnFacade 不灌当日成交（只剩结转那一段）（F7b：Carry / Reconstruct 与等价守卫删掉，改由门面上的测试接）",
 		"dir": "",
 		"file": "conformance/fixture/carry.go",
 		"old": "\t\tif err := apply(nextDay, cur.TradesOf(symbol)); err != nil {",
 		"new": "\t\tif err := apply(nextDay, nil); err != nil {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructMatchesFacade",
-		"want": "两份实现分岔了",
+		"test": "TestReconstructCoversCarriedSides",
+		"want": "个字段对不上",
 		"expect": "red"
 	},
 	{
@@ -5995,6 +5973,116 @@
 		"expect": "red"
 	},
 	{
+		"name": "602 实测规则不先查 classified 有没有写（没写时对空指针解引用、整个读取 panic —— 这道检查是承重的；最初以为会缺省成 false，跑出来不是）",
+		"dir": "",
+		"file": "conformance/fixture/measured.go",
+		"old": "\t\tif c.Classified == nil {",
+		"new": "\t\tif false && c.Classified == nil {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMeasuredRulesRefuseMalformed",
+		"want": "nil pointer dereference",
+		"expect": "red"
+	},
+	{
+		"name": "603 实测手续费率不查按额按手二选一（两者都非零 / 都为零的记录照收）",
+		"dir": "",
+		"file": "conformance/fixture/measured.go",
+		"old": "\t\tif money.IsZero() == volume.IsZero() {",
+		"new": "\t\tif false && money.IsZero() == volume.IsZero() {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMeasuredRulesRefuseMalformed",
+		"want": "按额按手都非零：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "604 实测手续费率的品种重复时后一行悄悄覆盖前一行",
+		"dir": "",
+		"file": "conformance/fixture/measured.go",
+		"old": "\t\tif _, dup := out.CommissionByProduct[c.Product]; dup {",
+		"new": "\t\tif _, dup := out.CommissionByProduct[c.Product]; false && dup {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMeasuredRulesRefuseMalformed",
+		"want": "手续费品种出现两次：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "605 实测保证金率的品种重复时后一行悄悄覆盖前一行",
+		"dir": "",
+		"file": "conformance/fixture/measured.go",
+		"old": "\t\tif _, dup := out.MarginByProduct[m.Product]; dup {",
+		"new": "\t\tif _, dup := out.MarginByProduct[m.Product]; false && dup {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMeasuredRulesRefuseMalformed",
+		"want": "保证金品种出现两次：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "606 实测 PositionDateType 的合约重复时后一行悄悄覆盖前一行（同一合约两型）",
+		"dir": "",
+		"file": "conformance/fixture/measured.go",
+		"old": "\t\tif _, dup := out.PositionDate[p.Instrument]; dup {",
+		"new": "\t\tif _, dup := out.PositionDate[p.Instrument]; false && dup {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMeasuredRulesRefuseMalformed",
+		"want": "PositionDateType 出现两次：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "607 实测规则文件没有手续费段也读得成（cmd/oracle 全部合约静默跳过）",
+		"dir": "",
+		"file": "conformance/fixture/measured.go",
+		"old": "\tif len(out.MarginByProduct) == 0 || len(out.CommissionByProduct) == 0 || len(out.PositionDate) == 0 {",
+		"new": "\tif len(out.MarginByProduct) == 0 || len(out.PositionDate) == 0 {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMeasuredRulesRefuseMalformed",
+		"want": "没有手续费段：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "608 实测手续费率不要求标定合约（分不出哪些预测是循环的）",
+		"dir": "",
+		"file": "conformance/fixture/measured.go",
+		"old": "\t\tif strings.TrimSpace(c.CalibratedOn) == \"\" {",
+		"new": "\t\tif false && strings.TrimSpace(c.CalibratedOn) == \"\" {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestMeasuredRulesRefuseMalformed",
+		"want": "手续费没写标定合约：应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "609 BuildSpecs 不要求手续费率（没有手续费率的合约照给规格，门面记账拿零费率顶）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/conformance/rules.go",
+		"old": "\t\tcomm, ok := rules.CommissionByProduct[productOf(cs)]\n\t\tif !ok {\n\t\t\tcontinue\n\t\t}",
+		"new": "\t\tcomm := rules.CommissionByProduct[productOf(cs)]",
+		"pkg": "./conformance/",
+		"test": "TestBuildSpecsNeedsEveryMeasuredPiece",
+		"want": "只有 rb2701 齐全",
+		"expect": "red"
+	},
+	{
+		"name": "610 BuildSpecs 不把手续费率带进规格（规格齐全、费率为零）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/conformance/rules.go",
+		"old": "\t\t\tCommission:   comm.Rates,",
+		"new": "\t\t\tCommission:   refdata.CommissionRates{OpenByMoney: comm.Rates.OpenByMoney.Sub(comm.Rates.OpenByMoney)},",
+		"pkg": "./conformance/",
+		"test": "TestBuildSpecsNeedsEveryMeasuredPiece",
+		"want": "规格没照实带上实测规则",
+		"expect": "red"
+	},
+	{
+		"name": "611 cmd/oracle 的 -carry 接线断了（给了前一日夹具与结算价也结转不了；这份截面只剩带昨仓的 rb2701 可比 ⇒ Compare 报「一个合约都没比到」）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/conformance/live.go",
+		"old": "\tsettle, ok := c.Settlement[sym]\n\tif !ok {",
+		"new": "\tsettle, ok := c.Settlement[sym]\n\tif true || !ok {",
+		"pkg": "./conformance/",
+		"test": "TestCompareCarriesThroughFacade",
+		"want": "一个合约都没比到",
+		"expect": "red"
+	},
+	{
 		"name": "612 Go 注释里的节号引用悬空（types.Offset 旁那条改回 probes.md 里从来不存在的 10.5 小节）",
 		"dir": "",
 		"file": "types/order.go",
@@ -6025,6 +6113,17 @@
 		"pkg": "./",
 		"test": "TestDocSectionRefsResolve",
 		"want": "写错的文件名 silent-risk.md 没被报出来",
+		"expect": "red"
+	},
+	{
+		"name": "621 cmd/oracle 的 -carry 结算价接错（+50）：结转接上了、比对计数也不变，只有本库 position_price_long 变了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/conformance/live.go",
+		"old": "\t\tspec.PositionDate, settle, cur.TradingDay)",
+		"new": "\t\tspec.PositionDate, settle.Add(decimal.NewFromInt(50)), cur.TradingDay)",
+		"pkg": "./conformance/",
+		"test": "TestCompareCarriesThroughFacade",
+		"want": "结算价接错了",
 		"expect": "red"
 	}
 ]

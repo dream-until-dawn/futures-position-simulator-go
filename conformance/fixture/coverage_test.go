@@ -261,22 +261,6 @@ func fieldsNeverNonZero(all []*Fixture) map[string]bool {
 	return out
 }
 
-// positionDates 是**实测过的** PositionDateType，逐合约。
-//
-// ⚠️ 刻意不按交易所推。CTP 里 PositionDateType 是**逐合约**的字段，
-// 而「同一交易所的合约一定同型」是个看起来对、且在这批样本上也确实对的猜测 ——
-// 猜对的猜测与查过的事实在结果上长得一模一样，直到某个合约不一样为止。
-//
-// ⚠️ 天勤的合约字典**不给**这个字段（cmd/refdata-sync 的说明），
-// 所以这里的每一条都只能来自实测：kq_facts 24（20260909 结算，
-// SHFE.rb2701 多今0/多昨3 而 DCE.m2701 多今3/多昨0，且账户层结算已完成）。
-//
-// 没实测过的合约**一个都不填**。要用到时会报错，而报错正是要的 ——
-// 填一个「按交易所推出来的」值，会让今昨仓在那个合约上悄悄不滚动。
-var positionDates = map[string]refdata.PositionDateType{
-	"SHFE.rb2701": refdata.UseHistory,   // 实测：结算后今仓→昨仓
-	"DCE.m2701":   refdata.NoUseHistory, // 实测：结算后仍是今仓
-}
 
 // positionDateOf 取某合约的 PositionDateType，**没实测过就报错**。
 //

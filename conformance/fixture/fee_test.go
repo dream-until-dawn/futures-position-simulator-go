@@ -28,20 +28,6 @@ type feeRate struct {
 	predictive bool
 }
 
-// feeRates 是从 fee-predict 实验的分类结果来的（probes.md §10.2）。
-//
-// ⚠️ 数值来自实测反解，但**分类**（按额 / 按手）是跨月份判出来的：
-// rb 三个月份费额各不相同而费额÷昨结恒定 → 按额；
-// m  三个月份费额恒定而昨结各不相同     → 按手。
-// i / cu / ag 各只有一个月份 —— **判不了**，这里照实标 predictive=false。
-var feeRates = []feeRate{
-	{product: "rb", byMoney: "0.00001", byVolume: "0", calibratedOn: "SHFE.rb2701", predictive: true},
-	{product: "m", byMoney: "0", byVolume: "1.5", calibratedOn: "DCE.m2701", predictive: true},
-	// 下面三个只有一个月份，标定与预测是同一个合约 —— 循环，不进预测断言。
-	{product: "i", byMoney: "0.0001", byVolume: "0", calibratedOn: "DCE.i2701"},
-	{product: "cu", byMoney: "0.00005", byVolume: "0", calibratedOn: "SHFE.cu2701"},
-	{product: "ag", byMoney: "0.00005", byVolume: "0", calibratedOn: "SHFE.ag2702"},
-}
 
 func ratesOf(product string) (refdata.CommissionRates, feeRate, bool) {
 	for _, r := range feeRates {

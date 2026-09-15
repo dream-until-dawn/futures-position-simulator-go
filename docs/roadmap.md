@@ -998,10 +998,15 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
 ⚠️ 实现中错的两处，都是单跑破坏抓到的：584 以为零值规格会静默算出 0，跑出来是门面报「合约乘数必须为正」（红错了理由）⇒ 改名与 want 如实写；
 225 改锚点时顺手把 `new` 的形状也改了（原为「跳过并计数」，误写成「照常计数但不用」）⇒ 红错了理由，恢复原形状。**改指一条破坏只该动锚点，不该动它破坏的是什么。**
 
-### F7（登记，未排期）：快期夹具的同日重放与 `-carry` 收进门面
+### F7：快期夹具的同日重放、`-carry` 与实测规则数据收进一处（2026-09-15 设计，实现之前写）
 
-前提：`cmd/oracle` 的规格有手续费率来源（候选：快期行情的每手手续费反解，`fee_test` 的 `feeRates` 就是这样标定的，只覆盖五个品种）。
-范围：删 `Carry` / `Reconstruct` / `ReplayFrom` / `closeOffsetOf`；同日 `Replay`（`fixture_test` / `margin_test` / `account_test` / `cmd/oracle`）改走门面。
+设计见 design.md「门面的形状」§11。前提问题有了答案：`cmd/oracle` 只给有实测保证金率的五个品种出规格，`feeRates` 正是这五个 ⇒ 手续费率进实测规则 json 即可。
+顺带登记一处之前没发现的：实测规则数据有两个家（json 与对拍测试变量），从没比过。
+分 F7a（数据一处）/ F7b（结转一处）/ F7c（重放一处）；F7c 前定两个决策点（`account_test` 去留、`MarginOf` 不进 F7）。
+
+**F7b 落地**：`-carry` 走门面，`Carry` / `Reconstruct` 与等价守卫删掉；补上 `-carry` 此前没有的测试。见 design.md §11「F7b 落地」。
+
+**F7a 落地**：手续费率进 json（带 `classified`，i / cu / ag 如实标「判不了」）、读取收进 `conformance/fixture`、对拍测试变量删掉；加载器与 `BuildSpecs` 补上此前没有的单测；破坏改指 7 条、新增 602–610。见 design.md §11「F7a 落地」。
 
 ### 2026-09-15：breakcheck 把「破坏编译不过」单独判出来，加 `-compile` 模式（实现之前写）
 
