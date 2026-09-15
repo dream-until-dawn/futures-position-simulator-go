@@ -166,6 +166,12 @@ type Facts struct {
 	PositionLimit    int
 	HasPositionLimit bool
 
+	// FrozenClose 是**被平那一侧**已经被挂着的平仓单冻住的今 / 昨手数（Book.TotalOf(合约, 被平方向)）。
+	//
+	// ⚠️ 可平量 = 持仓 − 它。不扣的话两笔平仓挂单能超出持仓（20260915 写门面 F4 设计时发现）。
+	// 零值就是「没有挂着的平仓单」—— 不用挂单簿的调用方不必管它。
+	FrozenClose Frozen
+
 	// InSession 报告此刻在不在交易时段内；HasSession 为假表示查不了。
 	//
 	// ⚠️ 本库的 Calendar 比柜台保守（kq_facts 23）：时段之外它拒答。
@@ -317,7 +323,7 @@ func Validate(req Request, f Facts) Result {
 	if req.Offset.IsClose() {
 		if f.Position == nil {
 			skip(CheckClosable, "持仓（nil 表示**不知道**，不是「空仓」）")
-		} else if r := checkClosable(req, f.Position); r != nil {
+		} else if r := checkClosable(req, f.Position, f.FrozenClose); r != nil {
 			rejections = append(rejections, *r)
 		}
 	}
@@ -364,7 +370,7 @@ func Validate(req Request, f Facts) Result {
 // 然后在结算时算出一个不存在的持仓。参照仓库在这里栽过：
 // 超量平仓被当成反手，10 张平 4 张多头得到 6 张多头，全程不报错。
 // 中国期货不允许反手，所以这里只有一个正确答案：**拒绝**。
-func checkClosable(req Request, p *position.Position) *Rejection {
+func checkClosable(req Request, p *position.Position, frozen Frozen) *Rejection {
 	// 平仓的持仓方向与下单方向**相反**。
 	dir := types.Sell
 	if req.Direction == types.Sell {
@@ -374,26 +380,38 @@ func checkClosable(req Request, p *position.Position) *Rejection {
 	if err != nil {
 		return &Rejection{Check: CheckClosable, Reason: err.Error()}
 	}
-	today, his := s.VolumeToday(), s.VolumeHistory()
+	heldToday, heldHis := s.VolumeToday(), s.VolumeHistory()
+	// 可平量 = 持仓 − 挂着的平仓单冻住的手数
+	today, his := heldToday-frozen.VolumeToday, heldHis-frozen.VolumeHistory
+	if today < 0 || his < 0 {
+		return &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
+			"挂单冻住的手数（今 %d / 昨 %d）超过持仓（今 %d / 昨 %d）—— 挂单簿与持仓不一致",
+			frozen.VolumeToday, frozen.VolumeHistory, heldToday, heldHis)}
+	}
+	frozenNote := ""
+	if frozen.VolumeToday+frozen.VolumeHistory > 0 {
+		frozenNote = fmt.Sprintf("；上面的手数已扣掉挂着的平仓单冻住的今 %d / 昨 %d 手", frozen.VolumeToday, frozen.VolumeHistory)
+	}
 	switch req.Offset {
 	case types.CloseToday:
 		if req.Volume > today {
 			return &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
-				"平今 %d 手超过今仓 %d 手（昨仓另有 %d 手，**不可用于平今**）",
-				req.Volume, today, his)}
+				"平今 %d 手超过今仓 %d 手（昨仓另有 %d 手，**不可用于平今**%s）",
+				req.Volume, today, his, frozenNote)}
 		}
 	case types.CloseYesterday:
 		if req.Volume > his {
 			r := &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
-				"平昨 %d 手超过昨仓 %d 手（今仓另有 %d 手，**不可用于平昨**）",
-				req.Volume, his, today)}
+				"平昨 %d 手超过昨仓 %d 手（今仓另有 %d 手，**不可用于平昨**%s）",
+				req.Volume, his, today, frozenNote)}
 			// ⚠️ 只在**账上无仓**（今 0 且昨 0）时给拒因：语料那一条就是这个形状。
 			// 20260915 评审打回的上一版只看昨仓为 0 —— 于是「今 1 / 昨 0」也给了码。当时的要害是：
 			// 大商所（NoUseHistory）一手跨过结算，本库那时记作今仓（今 1 / 昨 0），CTP 实测却是昨仓且接受平昨
 			// （#4 夹具 ①、§13 #16）⇒ 柜台接受、本库拒绝，**还配上一个看起来测过的 CTP 30**。
 			// （§13 #20 裁决后本库已记作昨仓，那一格的分歧不在了；而语料仍只有「账上无仓」这一个形状。）
 			// ⇒ 有今仓的情形一律不给拒因：语料之外，诚实的答案是「不知道」。
-			if today == 0 && his == 0 {
+			// ⚠️ 判的是**账上**无仓（持仓本身），不是「可平量为零」：有仓而全被挂单冻住，柜台给什么码没有语料
+			if heldToday == 0 && heldHis == 0 {
 				r.Kind = ctperr.ReasonCloseYesterdayExceeds
 			}
 			return r
@@ -407,7 +425,7 @@ func checkClosable(req Request, p *position.Position) *Rejection {
 		if _, measured := position.MeasuredCloseOrder(p.DateType()); measured {
 			if req.Volume > today+his {
 				return &Rejection{Check: CheckClosable, Reason: fmt.Sprintf(
-					"平仓 %d 手超过总持仓 %d 手（今 %d / 昨 %d）", req.Volume, today+his, today, his)}
+					"平仓 %d 手超过总持仓 %d 手（今 %d / 昨 %d%s）", req.Volume, today+his, today, his, frozenNote)}
 			}
 			return nil
 		}

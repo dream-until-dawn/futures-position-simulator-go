@@ -167,6 +167,12 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 		if err != nil {
 			return err
 		}
+		// ⚠️ 平完之后剩下的今 / 昨仓不能少于挂着的平仓单冻住的手数（F4）：
+		// 柜台不会让一笔成交与挂单冲突；冲突只可能是调用方把挂单的成交走了 ApplyTrade 而不是 Fill
+		if fz := s.book.TotalOf(tr.Instrument, held); p.VolumeToday(held) < fz.VolumeToday || p.VolumeHistory(held) < fz.VolumeHistory {
+			return fmt.Errorf("%s 这笔平仓会平掉挂单冻住的手数（平后 今 %d / 昨 %d，挂单冻住 今 %d / 昨 %d）—— 挂单的成交走 Fill",
+				tr.Instrument, p.VolumeToday(held), p.VolumeHistory(held), fz.VolumeToday, fz.VolumeHistory)
+		}
 		if commission, err = s.commission(tr, todayBefore); err != nil {
 			return err
 		}

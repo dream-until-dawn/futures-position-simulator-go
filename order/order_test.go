@@ -311,3 +311,48 @@ func TestAllChecksAreListed(t *testing.T) {
 			len(allChecks), int(CheckPositionLimit))
 	}
 }
+
+// TestClosableSubtractsFrozenClose 钉住可平量扣掉挂着的平仓单冻住的手数（今昨分别扣）。
+//
+// ⚠️ 不扣的话两笔平仓挂单能超出持仓（20260915 写门面 F4 设计时发现）。
+func TestClosableSubtractsFrozenClose(t *testing.T) {
+	day, next := types.NewTradingDay(2026, 9, 15), types.NewTradingDay(2026, 9, 16)
+	f := factsOn(t, "SHFE", "rb2701") // UseHistory
+	if err := f.Position.Open(types.Buy, day, d("3000"), 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Position.Settle(day, d("3000"), next); err != nil {
+		t.Fatal(err)
+	}
+	f.Position.Day = next
+	if err := f.Position.Open(types.Buy, next, d("3000"), 1); err != nil {
+		t.Fatal(err)
+	}
+	// 今 1 / 昨 2
+	req := func(off types.Offset, vol int) Request {
+		return Request{Instrument: f.Instrument.ID, Direction: types.Sell, Offset: off, Hedge: types.Speculation, Price: d("3000"), Volume: vol}
+	}
+	closable := func(r Request, frozen Frozen) bool {
+		g := f
+		g.FrozenClose = frozen
+		res := Validate(r, g)
+		return res.Rejected == nil || res.Rejected.Check != CheckClosable
+	}
+	for _, c := range []struct {
+		name   string
+		r      Request
+		frozen Frozen
+		ok     bool
+	}{
+		{"没冻结 平昨 2", req(types.CloseYesterday, 2), Frozen{}, true},
+		{"冻昨 1 平昨 2", req(types.CloseYesterday, 2), Frozen{VolumeHistory: 1}, false},
+		{"冻昨 1 平昨 1", req(types.CloseYesterday, 1), Frozen{VolumeHistory: 1}, true},
+		{"冻昨 2 平今 1（今昨分开扣）", req(types.CloseToday, 1), Frozen{VolumeHistory: 2}, true},
+		{"冻今 1 平今 1", req(types.CloseToday, 1), Frozen{VolumeToday: 1}, false},
+		{"冻得比持仓多", req(types.CloseToday, 1), Frozen{VolumeToday: 5}, false},
+	} {
+		if got := closable(c.r, c.frozen); got != c.ok {
+			t.Errorf("⚠️ %s：可平 = %v，期望 %v", c.name, got, c.ok)
+		}
+	}
+}

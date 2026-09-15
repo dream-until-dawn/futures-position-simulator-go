@@ -4760,11 +4760,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "490 平昨超量不看昨仓是否为 0 就给拒因——把「账上无仓」的码推给「有昨仓但不够」",
+		"name": "490 平昨超量不看昨仓是否为 0 就给拒因——把「账上无仓」的码推给「有昨仓但不够」（20260915 F4 重锚：可平量扣冻结后判「账上无仓」改看持仓本身）",
 		"dir": "",
 		"file": "order/order.go",
-		"old": "\t\t\tif today == 0 && his == 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
-		"new": "\t\t\tif today >= 0 && his >= 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"old": "\t\t\tif heldToday == 0 && heldHis == 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
+		"new": "\t\t\tif heldToday >= 0 && heldHis >= 0 {\n\t\t\t\tr.Kind = ctperr.ReasonCloseYesterdayExceeds",
 		"pkg": "./order/",
 		"test": "TestKindStaysUnknownOutsideCorpus",
 		"want": "不许推过来",
@@ -4793,11 +4793,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "493 平昨给拒因只看昨仓不看今仓——今 1 / 昨 0 平昨被配上码（评审 20260915 打回的原样；§13 #20 裁决后大商所跨结算已是昨仓，不再是那一格）",
+		"name": "493 平昨给拒因只看昨仓不看今仓——今 1 / 昨 0 平昨被配上码（评审 20260915 打回的原样；§13 #20 裁决后大商所跨结算已是昨仓，不再是那一格）（20260915 F4 重锚）",
 		"dir": "",
 		"file": "order/order.go",
-		"old": "\t\t\tif today == 0 && his == 0 {\n",
-		"new": "\t\t\tif his == 0 {\n",
+		"old": "\t\t\tif heldToday == 0 && heldHis == 0 {\n",
+		"new": "\t\t\tif heldHis == 0 {\n",
 		"pkg": "./order/",
 		"test": "TestKindStaysUnknownOutsideCorpus",
 		"want": "今 1 / 昨 0 平昨的拒因是",
@@ -5385,6 +5385,94 @@
 		"pkg": "./order/",
 		"test": "TestFreezeNakedCloseNeedsTheSplit",
 		"want": "对不上",
+		"expect": "red"
+	},
+	{
+		"name": "547 可平量不扣挂单冻住的手数——两笔平仓挂单能超出持仓",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "today, his := heldToday-frozen.VolumeToday, heldHis-frozen.VolumeHistory",
+		"new": "today, his := heldToday-0*frozen.VolumeToday, heldHis-0*frozen.VolumeHistory",
+		"pkg": "./order/",
+		"test": "TestClosableSubtractsFrozenClose",
+		"want": "冻昨 1 平昨 2",
+		"expect": "red"
+	},
+	{
+		"name": "548 门面不把挂单冻住的手数交给校验——第二笔平今挂单通过",
+		"dir": "",
+		"file": "submit.go",
+		"old": "f.FrozenClose = s.book.TotalOf(req.Instrument, opposite(req.Direction))",
+		"new": "_ = s.book.TotalOf(req.Instrument, opposite(req.Direction))",
+		"pkg": "./",
+		"test": "TestPlacedCloseHoldsClosable",
+		"want": "第二笔平今挂单要拒在可平量",
+		"expect": "red"
+	},
+	{
+		"name": "549 挂单不冻结账户——可用资金不扣",
+		"dir": "",
+		"file": "place.go",
+		"old": "if err := s.acc.Freeze(day, fr.Margin, fr.Commission); err != nil {\n\t\treturn order.Frozen{}, err",
+		"new": "if err := error(nil); err != nil {\n\t\treturn order.Frozen{}, err",
+		"pkg": "./",
+		"test": "TestPlaceFreezesAndCancelRestores",
+		"want": "挂单冻结 保证金",
+		"expect": "red"
+	},
+	{
+		"name": "550 撤单不解冻——挂撤往返之后可用少了一截",
+		"dir": "",
+		"file": "place.go",
+		"old": "\tif err := s.acc.Unfreeze(day, fr.Margin, fr.Commission); err != nil {\n\t\treturn err\n\t}",
+		"new": "\tif err := error(nil); err != nil {\n\t\treturn err\n\t}",
+		"pkg": "./",
+		"test": "TestPlaceFreezesAndCancelRestores",
+		"want": "挂撤往返之后账户没回到起点",
+		"expect": "red"
+	},
+	{
+		"name": "551 成交记账失败时不把冻结放回——挂单还在簿上而冻结没了",
+		"dir": "",
+		"file": "place.go",
+		"old": "if ferr := s.acc.Freeze(day, fr.Margin, fr.Commission); ferr != nil {",
+		"new": "if ferr := error(nil); ferr != nil {",
+		"pkg": "./",
+		"test": "TestFillRestoresOnFailure",
+		"want": "没放回",
+		"expect": "red"
+	},
+	{
+		"name": "552 结算不先查挂单簿——报的是账户层「仍有冻结额」而不是「先撤单」",
+		"dir": "",
+		"file": "settle.go",
+		"old": "if live := s.book.Live(); len(live) > 0 {",
+		"new": "if live := s.book.Live(); false && len(live) > 0 {",
+		"pkg": "./",
+		"test": "TestSettleAndApplyTradeRespectLiveOrders",
+		"want": "先撤单",
+		"expect": "red"
+	},
+	{
+		"name": "553 灌成交可以平掉挂单冻住的手数",
+		"dir": "",
+		"file": "trade.go",
+		"old": "if fz := s.book.TotalOf(tr.Instrument, held); p.VolumeToday(held) < fz.VolumeToday || p.VolumeHistory(held) < fz.VolumeHistory {",
+		"new": "if fz := s.book.TotalOf(tr.Instrument, held); false {",
+		"pkg": "./",
+		"test": "TestSettleAndApplyTradeRespectLiveOrders",
+		"want": "灌成交平掉了",
+		"expect": "red"
+	},
+	{
+		"name": "554 平昨挂单冻的是今仓手数——CTP 20260911 平昨挂单的持仓侧冻结对不上",
+		"dir": "",
+		"file": "order/freeze.go",
+		"old": "\t\t} else {\n\t\t\tf.VolumeHistory = req.Volume\n\t\t}",
+		"new": "\t\t} else {\n\t\t\tf.VolumeToday = req.Volume\n\t\t}",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadePlaceAgainstCTPFrozen",
+		"want": "持仓侧冻住",
 		"expect": "red"
 	}
 ]

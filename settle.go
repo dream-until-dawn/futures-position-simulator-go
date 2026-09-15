@@ -31,6 +31,9 @@ func (s *Simulator) Settle(day types.TradingDay, prices map[types.InstrumentID]d
 	if err := nextDay.Validate(); err != nil {
 		return fmt.Errorf("下一交易日不合法：%w", err)
 	}
+	if live := s.book.Live(); len(live) > 0 {
+		return fmt.Errorf("结算时簿上还有 %d 笔挂单 %v —— 先撤单。⚠️ 当日有效单收盘后由交易所撤是文档、本库没有观测，不替调用方撤", len(live), live)
+	}
 	if a := s.acc.Snapshot(); !a.FrozenMargin.IsZero() || !a.FrozenCommission.IsZero() || !a.FrozenCash.IsZero() {
 		return fmt.Errorf("结算时仍有冻结额（保证金 %s / 手续费 %s）—— 挂单的跨日规则门面还没有（F4）", a.FrozenMargin, a.FrozenCommission)
 	}

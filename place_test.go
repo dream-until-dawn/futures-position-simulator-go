@@ -1,0 +1,153 @@
+package futsim
+
+import (
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/dream-until-dawn/futures-position-simulator-go/match"
+	"github.com/dream-until-dawn/futures-position-simulator-go/order"
+	"github.com/dream-until-dawn/futures-position-simulator-go/types"
+)
+
+// TestPlaceFreezesAndCancelRestores 钉住挂单冻结、撤单释放，往返之后账户逐字段回到挂单前。
+//
+// （state.md：CTP 上「报单 → 挂上 → 撤单 → 账户回到起点，差 0」。）
+func TestPlaceFreezesAndCancelRestores(t *testing.T) {
+	s := submitSim(t, ctpChoices(), "1000000")
+	before := s.Account()
+	fr, err := s.Place(simDay, wall(t, "2026-09-15 10:00"), "o1", req(t, "DCE.m2701", types.Buy, types.Open, "3360", 2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := s.Account()
+	// CTP 预设：冻结保证金按挂单价 3360 × 10 × 2 × 0.1 = 6720；手续费 1.5 × 2
+	if !a.FrozenMargin.Equal(dec("6720")) || !a.FrozenCommission.Equal(dec("3")) || !fr.Margin.Equal(dec("6720")) {
+		t.Errorf("挂单冻结 保证金 %s / 手续费 %s，期望 6720 / 3", a.FrozenMargin, a.FrozenCommission)
+	}
+	if !before.Available.Sub(a.Available).Equal(dec("6723")) {
+		t.Errorf("⚠️ 挂单后可用少了 %s，期望 6723 —— 冻结没从可用里扣", before.Available.Sub(a.Available))
+	}
+	if !a.Commission.IsZero() || !a.CurrMargin.IsZero() {
+		t.Errorf("⚠️ 挂单不成交：手续费 %s、占用 %s 应当都是 0", a.Commission, a.CurrMargin)
+	}
+	if live := s.Live(); len(live) != 1 || live[0] != "o1" {
+		t.Errorf("簿上应有 o1，得到 %v", live)
+	}
+	if _, err := s.Place(simDay, wall(t, "2026-09-15 10:00"), "o1", req(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err == nil {
+		t.Error("⚠️ 同一个编号挂了两次")
+	}
+	if err := s.Cancel(simDay, "o1"); err != nil {
+		t.Fatal(err)
+	}
+	if !sameSnapshot(s.Account(), before) || len(s.Live()) != 0 {
+		t.Errorf("⚠️ 挂撤往返之后账户没回到起点：\n前 %+v\n后 %+v", before, s.Account())
+	}
+	if err := s.Cancel(simDay, "o1"); err == nil {
+		t.Error("⚠️ 撤了两次都成功 —— 第二次会凭空多出一份可用")
+	}
+}
+
+// TestPlacedCloseHoldsClosable 钉住挂着的平仓单占着可平量：第二笔平仓（挂单或立即成交）拒在可平量，撤掉第一笔后才能挂。
+func TestPlacedCloseHoldsClosable(t *testing.T) {
+	s := submitSim(t, ctpChoices(), "1000000")
+	at := wall(t, "2026-09-15 10:00")
+	if _, err := s.Submit(simDay, at, req(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err != nil {
+		t.Fatal(err)
+	}
+	closeToday := req(t, "DCE.m2701", types.Sell, types.CloseToday, "3370", 1)
+	fr, err := s.Place(simDay, at, "c1", closeToday)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fr.VolumeToday != 1 || !fr.Margin.IsZero() {
+		t.Errorf("平今挂单冻今 1 手、不冻保证金，得到 %+v", fr)
+	}
+	var rej *match.RejectedError
+	if _, err := s.Place(simDay, at, "c2", closeToday); !errors.As(err, &rej) || rej.Rejection.Check != order.CheckClosable {
+		t.Errorf("⚠️ 今仓 1 手已被挂单冻住，第二笔平今挂单要拒在可平量：%v", err)
+	}
+	if _, err := s.Submit(simDay, at, closeToday); !errors.As(err, &rej) || rej.Rejection.Check != order.CheckClosable {
+		t.Errorf("⚠️ 今仓 1 手已被挂单冻住，立即成交的平今也要拒在可平量：%v", err)
+	}
+	if err := s.Cancel(simDay, "c1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Place(simDay, at, "c2", closeToday); err != nil {
+		t.Errorf("撤掉 c1 之后应能挂 c2：%v", err)
+	}
+}
+
+// TestFillBooksLikeSubmit 钉住挂单成交的账 = 同价立即成交的账，成交后冻结清零。
+func TestFillBooksLikeSubmit(t *testing.T) {
+	at := wall(t, "2026-09-15 10:00")
+	a := submitSim(t, ctpChoices(), "1000000")
+	if _, err := a.Place(simDay, at, "o1", req(t, "DCE.m2701", types.Buy, types.Open, "3360", 2)); err != nil {
+		t.Fatal(err)
+	}
+	tr, err := a.Fill(simDay, "o1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !tr.Price.Equal(dec("3360")) || tr.Volume != 2 {
+		t.Errorf("挂单成交价 = 挂单价、量 = 全部，得到 %s × %d", tr.Price, tr.Volume)
+	}
+	b := submitSim(t, ctpChoices(), "1000000")
+	if _, err := b.Submit(simDay, at, req(t, "DCE.m2701", types.Buy, types.Open, "3360", 2)); err != nil {
+		t.Fatal(err)
+	}
+	if !sameSnapshot(a.Account(), b.Account()) {
+		t.Errorf("⚠️ 挂单成交与立即成交的账不同：\n%+v\n%+v", a.Account(), b.Account())
+	}
+	if !a.Account().FrozenMargin.IsZero() || !a.Account().FrozenCommission.IsZero() || len(a.Live()) != 0 {
+		t.Error("⚠️ 成交之后冻结没有清零 / 挂单还在簿上")
+	}
+}
+
+// TestFillRestoresOnFailure 钉住成交记账失败时挂单与冻结原样放回。
+//
+// ⚠️ 正常流程里挂上的单成交时 ApplyTrade 很难失败，这里白盒地拿掉计价价让重算截面失败 —— 验的是「放回」，不是「什么会失败」。
+func TestFillRestoresOnFailure(t *testing.T) {
+	s := submitSim(t, ctpChoices(), "1000000")
+	if _, err := s.Place(simDay, wall(t, "2026-09-15 10:00"), "o1", req(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err != nil {
+		t.Fatal(err)
+	}
+	before := s.Account()
+	m := simInst(t, "DCE.m2701")
+	ps := s.prices[m]
+	ps.hasLast = false
+	s.prices[m] = ps
+	if _, err := s.Fill(simDay, "o1"); err == nil {
+		t.Fatal("前提：拿掉计价价之后成交记账应当失败")
+	}
+	if !sameSnapshot(s.Account(), before) || len(s.Live()) != 1 {
+		t.Errorf("⚠️ 成交失败之后挂单或冻结没放回：簿 %v\n前 %+v\n后 %+v", s.Live(), before, s.Account())
+	}
+	if s.broken != nil {
+		t.Errorf("放回成功时不该失效：%v", s.broken)
+	}
+}
+
+// TestSettleAndApplyTradeRespectLiveOrders 钉住：簿上有挂单不许结算；灌成交不许平掉挂单冻住的手数。
+func TestSettleAndApplyTradeRespectLiveOrders(t *testing.T) {
+	s := submitSim(t, ctpChoices(), "1000000")
+	at := wall(t, "2026-09-15 10:00")
+	if _, err := s.Submit(simDay, at, req(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Place(simDay, at, "c1", req(t, "DCE.m2701", types.Sell, types.CloseToday, "3370", 1)); err != nil {
+		t.Fatal(err)
+	}
+	before := s.Account()
+	err := s.ApplyTrade(simDay, trade(t, "DCE.m2701", types.Sell, types.CloseToday, "3370", 1))
+	if err == nil || !strings.Contains(err.Error(), "走 Fill") {
+		t.Errorf("⚠️ 灌成交平掉了挂单冻住的今仓：%v", err)
+	}
+	if !sameSnapshot(s.Account(), before) {
+		t.Error("⚠️ 被拒的灌成交改了账户")
+	}
+	err = s.Settle(simDay, settlePx(t, "DCE.m2701", "3370", "SHFE.ag2702", "15785"), simNext)
+	if err == nil || !strings.Contains(err.Error(), "先撤单") {
+		t.Errorf("⚠️ 簿上有挂单时结算要报「先撤单」：%v", err)
+	}
+}

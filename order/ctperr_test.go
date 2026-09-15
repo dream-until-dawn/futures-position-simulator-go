@@ -185,6 +185,20 @@ func TestKindStaysUnknownOutsideCorpus(t *testing.T) {
 		t.Errorf("⚠️ 昨仓有 1 手、平昨 2 手时拒因是 %s —— 语料只测过账上无仓，不许推过来", k)
 	}
 
+	// ⚠️ 有昨仓 1 手、而它已被挂着的平昨单冻住，再平昨 1 手 ⇒ 可平量为 0 被拒，但**账上有仓** ⇒ 不给
+	// （语料那条是账上无仓；有仓全冻住时柜台给什么码没有观测。判的是持仓本身，不是可平量）
+	fz := factsOn(t, "SHFE", "rb2701")
+	if err := fz.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := fz.Position.Settle(day, d("3000"), next); err != nil {
+		t.Fatal(err)
+	}
+	fz.FrozenClose = Frozen{VolumeHistory: 1}
+	if k := kindOf(t, "昨1全冻住再平昨1", closeYd(fz, 1), fz, CheckClosable); k != ctperr.ReasonUnknown {
+		t.Errorf("⚠️ 昨 1 手全被挂单冻住时平昨的拒因是 %s —— 账上有仓，不是语料那一条", k)
+	}
+
 	// 其余几种没有语料的拒绝 ⇒ 不给
 	n := factsOn(t, "SHFE", "rb2701")
 	if err := n.Position.Open(types.Buy, day, d("3000"), 1); err != nil {
