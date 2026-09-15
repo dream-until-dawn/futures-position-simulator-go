@@ -819,17 +819,6 @@
 		"expect": "red"
 	},
 	{
-		"name": "81 保证金对拍不跳过带昨仓的方向",
-		"dir": "",
-		"file": "conformance/fixture/margin_test.go",
-		"old": "\t\t\t\tif h := f.Positions[sym][\"volume_\"+side.name+\"_his\"]; !h.Absent &&\n\t\t\t\t\t!h.IsText && h.Number.IsPositive() {\n\t\t\t\t\tskippedHistory++\n\t\t\t\t\tcontinue\n\t\t\t\t}",
-		"new": "",
-		"pkg": "./conformance/fixture/",
-		"test": "TestMarginAgainstFixturePositions",
-		"want": "保证金对不上",
-		"expect": "red"
-	},
-	{
 		"name": "82 拆分守卫去掉「手数变过」的判别力要求",
 		"dir": "",
 		"file": "view/split_settlement_test.go",

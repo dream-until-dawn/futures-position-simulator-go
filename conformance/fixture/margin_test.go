@@ -40,7 +40,6 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 	all := loadAll(t)
 	var fields []conformance.Field
 	products, multiLot, withQuote := map[string]bool{}, 0, 0
-	skippedHistory := 0
 	var skippedNoQuote []string
 
 	for _, f := range all {
@@ -91,21 +90,9 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 				name string
 				lib  decimal.Decimal
 			}{{"long", long}, {"short", short}} {
-				// ⚠️ 这一侧有昨仓就跳过，**并且记数**。
-				//
-				// 保证金是「每手 × 手数」，而手数来自重放，重放只回放**当日**成交 ——
-				// 昨仓那几手的开仓单在前一交易日的夹具里。
-				// 于是本库算的是今仓那几手的保证金，柜台算的是今+昨全部，
-				// 差异指向的是**夹具的边界**，不是保证金公式错。
-				//
-				// ⚠️ 20260909 夜盘第一次出现「同一合约既有昨仓、又有当日成交」，
-				// 这条当场红了 6 处 —— 此前样本里要么全是今仓、
-				// 要么有昨仓那天没成交，所以这个洞一直没露头。
-				if h := f.Positions[sym]["volume_"+side.name+"_his"]; !h.Absent &&
-					!h.IsText && h.Number.IsPositive() {
-					skippedHistory++
-					continue
-				}
+				// ⚠️ F7c 之前这里「这一侧有昨仓就跳过并记数」：手数来自只回放当日成交的旧重放，昨仓那几手在前一交易日，
+				// 本库算今仓的、柜台算今 + 昨 —— 差异指向夹具边界。F7c 起带昨仓的合约走结转（positionOf），持仓完整，
+				// 那一侧照样比：全量扫描里「去掉这道跳过」的破坏 81 从红变绿，就是这些方向已经对得上的证据，于是删掉跳过、接回比对
 				o := f.Positions[sym]["margin_"+side.name]
 				fields = append(fields, conformance.Field{
 					Name:          f.Path + " " + sym + ".margin_" + side.name,
@@ -141,15 +128,6 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 	if len(fields) < 4 {
 		t.Fatalf("只比了 %d 个字段 —— 太少", len(fields))
 	}
-	// ⚠️ 跳掉的要报出来，且卡的是不变式而不是绝对值：
-	// 明天结算之后昨仓会**合法地**变多，一个卡死的数字只会天天要人去调。
-	t.Logf("ⓘ 因该侧有昨仓而跳过 %d 处 —— 手数来自重放，而重放只回放当日成交",
-		skippedHistory)
-	if skippedHistory > len(fields) {
-		t.Errorf("⚠️ 跳过 %d 处，而真正比过的只有 %d 个字段 —— "+
-			"这条已经主要在跳过而不是在对拍。该给带昨仓的方向接上 Carry 了",
-			skippedHistory, len(fields))
-	}
 
 	r := conformance.Classify("夹具里的持仓·保证金", fields,
 		decimal.RequireFromString("0.0000001"))
@@ -165,7 +143,8 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 
 	// ⚠️ 明说测不到什么，免得「全对」被读成「保证金这块完了」。
 	t.Log("⚠️ 本条**测不到**：单向大边（本口子未启用，kq_facts 5）、" +
-		"今昨基准之分（本批全是今仓，两个候选同值）")
+		"今昨基准之分（本条只按快期实测的 PreSettleAll 算、不拿候选互比；F7c 起样本里有了昨仓方向，「全是今仓」不再成立，"+
+		"两个候选的判别力由 TestRebuildAccountFieldByField 承担，见破坏 518）")
 }
 
 // TestMarginRatesHaveMoreThanOneTier 是那次错误结论的守卫。
