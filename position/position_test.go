@@ -425,3 +425,37 @@ func TestMeasuredCloseOrder(t *testing.T) {
 		}
 	}
 }
+
+// TestCloneSharesNoLots 钉住 Clone 是深拷贝：两边各自开平，互不影响。
+func TestCloneSharesNoLots(t *testing.T) {
+	day := types.NewTradingDay(2026, 9, 15)
+	inst, err := types.ParseNative(types.DCE, "m2701", day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := New(inst, types.Speculation, day, refdata.NoUseHistory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Open(types.Buy, day, decimal.RequireFromString("3360"), 2); err != nil {
+		t.Fatal(err)
+	}
+	c := p.Clone()
+	if c.DateType() != p.DateType() || c.Day != p.Day || c.Instrument != p.Instrument {
+		t.Fatalf("副本的标识字段与原件不同：%+v / %+v", c, p)
+	}
+	// 在副本上平掉一手：原件仍是 2 手（浅拷贝时切片共用，原件的那一片手数也会被改成 1）。
+	if _, err := c.Close(types.Buy, types.CloseToday, day, 1, CloseOrderUnmeasured); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.VolumeToday(types.Buy); got != 2 {
+		t.Errorf("⚠️ 在副本上平了一手，原件的今仓变成 %d 手 —— 两份共用了明细", got)
+	}
+	// 反向：原件上开仓不进副本。
+	if err := p.Open(types.Buy, day, decimal.RequireFromString("3361"), 1); err != nil {
+		t.Fatal(err)
+	}
+	if got := c.VolumeToday(types.Buy); got != 1 {
+		t.Errorf("⚠️ 在原件上开了一手，副本变成 %d 手", got)
+	}
+}
