@@ -653,6 +653,9 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 
 ##### 三个决策点（使用者 2026-09-15 拍板：按实现方倾向）
 
+怎么确认的（评审 20260915 要求写明）：实现方在对话里把三个决策点与各自的倾向摆给使用者，使用者回复「按你的倾向做，继续推进」。
+⚠️ 确认的是**倾向**，不是逐条复述后的签字；第 2 条延续使用者此前确认过的 §13 #20（快期大商所不滚昨仓那一格登记口子差），第 1、3 条不改 CTP 预设。
+
 1. **UseHistory 上的裸 `CLOSE`**：`Choices` 加第八项 `UndatedCloseOnUseHistory {Unmeasured, AsYesterday}`。
    `KQChoices` 填 `AsYesterday`（kq_facts 32，两条独立证据；kq_facts 25 柜台接受），`CTPChoices` **留空**（simnow_pending#1 未裁决）。
    ⚠️ 与第一至七项不同：它的零值**合法** —— 零值时 UseHistory 上的裸 CLOSE 报错（现状），不是开户就报错；否则 CTP 预设开不了户
@@ -671,9 +674,12 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 
 ##### F6a 实现时定下的边界（2026-09-15）
 
-- **八项校验不跟第八项口径**：`Submit` / `Place` 照旧拒 UseHistory 上的裸 CLOSE（`order.checkClosable` 的拒因原话不动）。
-  口径只管记账路径（`ApplyTrade` / `Fill` / `FreezeOf` / `PlaceAccepted`）—— 八项是本库的规则，快期柜台接受的这种单与零头价位单走同一条路（`PlaceAccepted`）。
-  ⚠️ 也就是说快期口径下同一笔上期所裸 CLOSE，`Submit` 拒、`ApplyTrade` 收；守卫 `TestUndatedCloseAsYesterdayStaysOutOfValidation`，要改先改这里
+- ~~**八项校验不跟第八项口径**~~ **评审 20260915 打回，改为跟**：上一版 `Submit` / `Place` 照旧拒 UseHistory 上的裸 CLOSE，
+  于是快期口径下同一笔单 `ApplyTrade` 收、`Submit` 拒，而拒因原话是「本库拒绝按平昨处理：那个语义只在快期模拟上实测过」—— 调用方选的恰恰是快期口径，**报错对判据的描述与行为不一致**。
+  现在 `validate` 进门也过 `datedOffset`：按平昨校验（超过昨仓拒在可平量，原话是平昨的原话，与快期拒因「平昨手数超过昨仓持仓量」同义）；
+  改写得来的拒单**不给 CTP 拒因码**（码的语料是 CTP 上显式平昨的拒单，不外推）；`Submit` 返回的成交保留委托上的 `CLOSE`（快期成交里上期所裸 CLOSE 记作 CLOSE，语料 20 笔）。
+  零值口径（CTP）照旧拒、原话照旧。守卫 `TestUndatedCloseAsYesterdayInValidation`
+  - 我原先的顾虑（按平昨校验会配上 CTP 码 30）由「改写的不给码」解决 —— 评审提的，我没想到拆开
 - 改写只在入口做一次（`datedOffset`：`ApplyTrade` 进平仓分支、`FreezeOf` 进门）；`commission` 收到的已是改写后的，不再各判一次（写了第三处，破坏验证会是如预期仍然绿）
 - 只改 `types.Close`：强平标志也不指定今昨，但 kq_facts 32 只观测过 CLOSE ⇒ 破坏 574 如预期仍然绿，盲区如实登记
 - `Restore` 核挂单时**手数也核**：记作平昨的裸 CLOSE 在簿上仍是 `Close`，簿取的是存档自己的今 / 昨拆分；金额核对分不开（平昨档与拆分无关）

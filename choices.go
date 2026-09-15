@@ -40,8 +40,8 @@ const (
 	// UndatedCloseAsYesterday 按平昨记账：消耗昨仓、冻结昨仓、手续费走平昨档。
 	//
 	// ⚠️ 快期模拟的实测语义（kq_facts 32：今 1 昨 3 时 CLOSE 冻昨；只有今仓时 CLOSE 被拒「平昨手数超过昨仓持仓量」）。
-	// **只管记账路径**（ApplyTrade / Fill / FreezeOf / PlaceAccepted）：八项校验（Submit / Place）照旧拒 UseHistory 上的裸 CLOSE ——
-	// 校验是本库的规则，快期柜台接受的这种单走 PlaceAccepted / ApplyTrade，与零头价位的单同一条路。
+	// 记账路径（ApplyTrade / Fill / FreezeOf / PlaceAccepted）与八项校验（Submit / Place）都跟它：按平昨校验、按平昨记账。
+	// 改写得来的拒单不给 CTP 拒因码（语料是 CTP 上显式平昨的拒单，不外推）。评审 20260915 打回「八项不跟」那一版后改。
 	UndatedCloseAsYesterday
 )
 

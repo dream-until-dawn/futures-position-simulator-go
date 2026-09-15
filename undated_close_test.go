@@ -166,22 +166,95 @@ func TestUndatedCloseChoiceZeroValue(t *testing.T) {
 	}
 }
 
-// TestUndatedCloseAsYesterdayStaysOutOfValidation 钉住口径只管记账：快期口径下 Submit 仍拒 UseHistory 上的裸 CLOSE（有昨仓也拒）。
+// submitRb 在报单路径上开 rb2701：simDay 报开多 3 @3000、按 3000 结算，次日报开今 1 @3010 ⇒ 停在 simNext，多 今 1 / 昨 3。
+func submitRb(t *testing.T, ch Choices) *Simulator {
+	t.Helper()
+	s := submitSim(t, ch, "1000000")
+	mark(t, s, "SHFE.rb2701", "3000", "3000")
+	if _, err := s.Submit(simDay, wall(t, "2026-09-15 10:00"), req(t, "SHFE.rb2701", types.Buy, types.Open, "3000", 3)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Settle(simDay, settlePx(t, "SHFE.rb2701", "3000"), simNext); err != nil {
+		t.Fatal(err)
+	}
+	markOn(t, s, simNext, "SHFE.rb2701", "3010", "3000")
+	if _, err := s.Submit(simNext, wall(t, "2026-09-16 10:00"), req(t, "SHFE.rb2701", types.Buy, types.Open, "3010", 1)); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// TestUndatedCloseAsYesterdayInValidation 钉住八项也跟第八项口径（评审 20260915 打回 F6a 后改）：
+// 快期口径下 UseHistory 上的裸 CLOSE 按平昨校验、按平昨记账；改写得来的拒单不给 CTP 拒因码；零值口径照旧拒。
 //
-// ⚠️ 八项校验是本库的规则；快期柜台接受的这种单走 PlaceAccepted / ApplyTrade。哪天校验也跟了口径，这里红 ——
-// 那得先改 design.md §10 与 order.checkClosable 的拒因原话，不是顺手。
-func TestUndatedCloseAsYesterdayStaysOutOfValidation(t *testing.T) {
-	s := submitSim(t, kqChoices(), "1000000")
-	if err := s.ApplyTrade(simDay, trade(t, "SHFE.ag2702", types.Buy, types.Open, "15460", 1)); err != nil {
+// ⚠️ 上一版这里钉的是反面（「八项不跟口径，Submit 仍拒」），而那条拒因原话说「本库拒绝按平昨处理：只在快期实测过」——
+// 调用方选的就是快期口径。那是报错与行为不一致，不是边界。
+func TestUndatedCloseAsYesterdayInValidation(t *testing.T) {
+	at := wall(t, "2026-09-16 10:00")
+	bare := req(t, "SHFE.rb2701", types.Sell, types.Close, "3010", 1)
+
+	// ① 有昨仓：Submit 成交，账与显式平昨逐字段相同；成交记录保留委托上的 CLOSE（快期成交里裸 CLOSE 仍记作 CLOSE）
+	a, b := submitRb(t, kqChoices()), submitRb(t, kqChoices())
+	tr, err := a.Submit(simNext, at, bare)
+	if err != nil {
+		t.Fatalf("⚠️ 快期口径下有昨仓的 UseHistory 裸 CLOSE，Submit 拒了：%v", err)
+	}
+	if tr.Offset != types.Close {
+		t.Errorf("成交记录的开平标志 %v，应保留委托上的 CLOSE", tr.Offset)
+	}
+	if _, err := b.Submit(simNext, at, req(t, "SHFE.rb2701", types.Sell, types.CloseYesterday, "3010", 1)); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Settle(simDay, settlePx(t, "SHFE.ag2702", "15500"), simNext); err != nil {
-		t.Fatal(err)
+	if !sameSnapshot(a.Account(), b.Account()) {
+		t.Errorf("⚠️ Submit 裸 CLOSE 与平昨的账不同：\n%+v\n%+v", a.Account(), b.Account())
 	}
-	markOn(t, s, simNext, "SHFE.ag2702", "15500", "15500")
-	_, err := s.Submit(simNext, wall(t, "2026-09-16 10:00"), req(t, "SHFE.ag2702", types.Sell, types.Close, "15500", 1))
+	if td, h := rbVolumes(t, a); td != 1 || h != 2 {
+		t.Errorf("⚠️ Submit 裸 CLOSE 之后 今 %d / 昨 %d，期望 今 1 / 昨 2", td, h)
+	}
+
+	// ② 超过昨仓（今 1 昨 3 裸平 4）：拒在可平量、原话是平昨的原话，不给码
+	c := submitRb(t, kqChoices())
+	_, err = c.Submit(simNext, at, req(t, "SHFE.rb2701", types.Sell, types.Close, "3010", 4))
 	var rej *match.RejectedError
-	if !errors.As(err, &rej) || rej.Rejection.Check != order.CheckClosable {
-		t.Errorf("⚠️ 快期口径下有昨仓的 UseHistory 裸 CLOSE，Submit 要拒在可平量：%v", err)
+	if !errors.As(err, &rej) || rej.Rejection.Check != order.CheckClosable || !strings.Contains(err.Error(), "平昨 4 手超过昨仓 3 手") {
+		t.Errorf("⚠️ 快期口径下裸 CLOSE 4 手（昨仓 3）要按平昨拒在可平量：%v", err)
+	}
+	if strings.Contains(err.Error(), "拒绝**而不是按平昨处理") {
+		t.Errorf("⚠️ 快期口径下的拒因还在说「本库拒绝按平昨处理」：%v", err)
+	}
+
+	// ③ 账上无仓：显式平昨给 CTP 码（语料那一条），改写得来的裸 CLOSE 不给
+	d := submitSim(t, kqChoices(), "1000000")
+	mark(t, d, "SHFE.rb2701", "3000", "3000")
+	_, errDated := d.Submit(simDay, wall(t, "2026-09-15 10:00"), req(t, "SHFE.rb2701", types.Sell, types.CloseYesterday, "3000", 1))
+	_, errBare := d.Submit(simDay, wall(t, "2026-09-15 10:00"), req(t, "SHFE.rb2701", types.Sell, types.Close, "3000", 1))
+	var rd, rb *match.RejectedError
+	if !errors.As(errDated, &rd) || !errors.As(errBare, &rb) {
+		t.Fatalf("前提：无仓时两笔都要拒：%v / %v", errDated, errBare)
+	}
+	if _, ok := rd.Code(); !ok {
+		t.Errorf("前提：无仓显式平昨在上期所有语料码：%v", errDated)
+	}
+	if code, ok := rb.Code(); ok {
+		t.Errorf("⚠️ 改写得来的裸 CLOSE 拒单配上了 CTP 码 %v —— 语料里是显式平昨，不外推", code)
+	}
+
+	// ④ 零值口径（CTP）：照旧拒，原话照旧
+	e := submitRb(t, ctpChoices())
+	if _, err := e.Submit(simNext, at, bare); err == nil || !strings.Contains(err.Error(), "收到裸 CLOSE") {
+		t.Errorf("⚠️ 零值口径下 UseHistory 裸 CLOSE 要照旧拒（「收到裸 CLOSE」）：%v", err)
+	}
+
+	// ⑤ Place：冻昨、簿上是委托原样，成交后与 ①同账
+	g := submitRb(t, kqChoices())
+	fr, err := g.Place(simNext, at, "p", bare)
+	if err != nil || fr.VolumeHistory != 1 || fr.VolumeToday != 0 {
+		t.Fatalf("⚠️ 快期口径下 Place 裸 CLOSE 要冻昨 1：%+v %v", fr, err)
+	}
+	if _, err := g.Fill(simNext, "p"); err != nil {
+		t.Fatal(err)
+	}
+	if !sameSnapshot(g.Account(), a.Account()) {
+		t.Errorf("⚠️ Place+Fill 与 Submit 的账不同：\n%+v\n%+v", g.Account(), a.Account())
 	}
 }

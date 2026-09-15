@@ -19,7 +19,7 @@ func (s *Simulator) Place(day types.TradingDay, at time.Time, id string, req ord
 	if _, _, dup := s.book.Get(id); dup {
 		return order.Frozen{}, fmt.Errorf("委托 %s 已经在簿上", id)
 	}
-	fr, _, err := s.validate(day, at, req)
+	_, fr, _, err := s.validate(day, at, req)
 	if err != nil {
 		return order.Frozen{}, err
 	}
