@@ -76,6 +76,26 @@ FAIL
 		t.Error("反向：顶格的 FAIL<Tab>包 [build failed] 要认出来")
 	}
 
+	// ⚠️ 兜底（评审 20260915）：go test 的顶格格式哪天变了、buildFailedRe 漏判，而 want 恰好是编译错误里的变量名 ——
+	// 不许判成红对了。下面用一个 go test 不会输出的假格式模拟「顶格那行变了」。
+	changedFormat := `# some/pkg [some/pkg.test]
+.\x.go:4:2: declared and not used: someVar
+FAIL	some/pkg [compile went wrong]
+FAIL
+`
+	wantInCompilerError := Break{Name: "兜底", Expect: "red", Want: "someVar"}
+	if buildFailed(changedFormat) {
+		t.Fatal("前提：假格式不该被 buildFailedRe 认出来")
+	}
+	if v, d := classify(wantInCompilerError, changedFormat, false); v == "红对了" {
+		t.Errorf("⚠️ 编译失败没被认出、want 恰在编译错误里，判成了红对了（%s）—— 假好消息", d)
+	}
+	// 反向：want 在断言输出行（只有行号）里照样判红对了，否则一个「一律不认 want」的实现也能过上面
+	assertion := "=== RUN   TestX\n    x_test.go:9: someVar 不对\n--- FAIL: TestX (0.00s)\nFAIL\n"
+	if v, _ := classify(wantInCompilerError, assertion, false); v != "红对了" {
+		t.Errorf("want 在断言输出行里要判红对了，得到 %q", v)
+	}
+
 	// 还原：两次都要把 x.go 放回原样
 	if b, _ := os.ReadFile(target); !strings.Contains(string(b), "\treturn v\n") {
 		t.Errorf("⚠️ 跑完之后 x.go 没还原：%q", b)

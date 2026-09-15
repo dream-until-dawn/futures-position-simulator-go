@@ -524,17 +524,27 @@ func classify(b Break, text string, green bool) (verdict, detail string) {
 	if green {
 		return "仍然绿", "破坏后照样通过 —— 这条测试没在测它声称测的东西"
 	}
-	if !strings.Contains(text, b.Want) {
-		return "红错了理由", fmt.Sprintf(
-			"断言失败了，但输出里没有 %q（第三层不成立）：\n%s", b.Want, tail(text, 600))
-	}
+	// ⚠️ want 只在**断言输出**里找，跳过编译器报错行（评审 20260915）：
+	// 若 go test 的顶格格式哪天变了、buildFailedRe 漏判，编译失败会走到这里；而 want 恰好是变量名 / 类型名时，
+	// 它就出现在编译错误里 ⇒ 判成「红对了」—— 假好消息。编译器报错行是 `文件.go:行:列:`，测试断言行只有行号。
 	for _, line := range strings.Split(text, "\n") {
+		if compilerLineRe.MatchString(line) {
+			continue
+		}
 		if strings.Contains(line, b.Want) {
 			return "红对了", strings.TrimSpace(line)
 		}
 	}
-	return "红对了", ""
+	hint := ""
+	if strings.Contains(text, "[build failed]") || strings.Contains(text, "[setup failed]") {
+		hint = "（⚠️ 输出里有 [build failed] / [setup failed] 却没被认成编译失败 —— 可能是 go test 的输出格式变了，也可能只是测试日志里的引用）"
+	}
+	return "红错了理由", fmt.Sprintf(
+		"断言失败了，但断言输出里没有 %q（第三层不成立）%s：\n%s", b.Want, hint, tail(text, 600))
 }
+
+// compilerLineRe 认编译器 / vet 的报错行：`[vet: ]路径.go:行:列: 说明`（可带缩进）。测试断言行是 `xxx_test.go:行: 说明`，没有列号。
+var compilerLineRe = regexp.MustCompile(`^\s*(vet: )?\S+\.go:\d+:\d+: `)
 
 func gitDirty() (string, error) { return gitDirtyIn(".") }
 
