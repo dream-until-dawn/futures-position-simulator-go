@@ -17,6 +17,15 @@ type Config struct {
 	PreBalance decimal.Decimal
 	Rules      refdata.Provider
 	Choices    Choices
+
+	// —— 报单路径（Submit）才用的事实；不给则对应那一项「没查成」，不成交 ——
+
+	// Calendar 查交易时段。
+	Calendar *refdata.Calendar
+	// TickRounding 是涨跌停对齐最小变动价位的方向，按交易所。实测过的见 MeasuredTickRounding。
+	TickRounding map[types.Exchange]refdata.TickRounding
+	// PositionLimits 是限仓，按合约。⚠️ 本库没有这份数据：回测调用方自己给（给一个足够大的数也是一种声明）。
+	PositionLimits map[types.InstrumentID]int
 }
 
 // Quote 是一个合约此刻的计价输入。
@@ -49,6 +58,10 @@ type Simulator struct {
 	positions map[posKey]*position.Position
 	prices    map[types.InstrumentID]priceState
 
+	calendar       *refdata.Calendar
+	tickRounding   map[types.Exchange]refdata.TickRounding
+	positionLimits map[types.InstrumentID]int
+
 	// broken 非空时模拟器处于**失效态**：写账户中途失败，状态不再可信。
 	broken error
 }
@@ -69,6 +82,7 @@ func New(cfg Config) (*Simulator, error) {
 		rules: cfg.Rules, choices: cfg.Choices, acc: acc,
 		positions: map[posKey]*position.Position{},
 		prices:    map[types.InstrumentID]priceState{},
+		calendar:  cfg.Calendar, tickRounding: cfg.TickRounding, positionLimits: cfg.PositionLimits,
 	}, nil
 }
 

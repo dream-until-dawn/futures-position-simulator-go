@@ -1,6 +1,7 @@
 package refdata
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -233,6 +234,12 @@ func (c *Calendar) NextTradingDay(d types.TradingDay) (types.TradingDay, bool) {
 	return c.days[i], true
 }
 
+// ErrOutsideSession 表示时刻**确实**不落在该品种的任何交易时段内 —— 一个已知的「否」。
+//
+// ⚠️ 与 TradingDayAt 的其余报错分开：没有时段表、时段表与日历矛盾、超出日历范围，都是**答不了**，
+// 不是「不在时段内」。报单校验对前者该拒单、对后者该报「没查成」；靠报错文案分就是在拿自由文本做判断。
+var ErrOutsideSession = errors.New("不在任何交易时段内")
+
 // TradingDayAt 答一个墙钟时刻属于哪个交易日。
 //
 // 判定两条：
@@ -301,6 +308,6 @@ func (c *Calendar) TradingDayAt(t time.Time, ex types.Exchange, product string) 
 	}
 
 	return 0, fmt.Errorf("%s 不落在 %s.%s 的任何交易时段内 —— "+
-		"收盘到夜盘开盘之间不属于任何交易日，这是事实，不是待填的空缺",
-		t.In(cnZone).Format("2006-01-02 15:04:05"), ex, product)
+		"收盘到夜盘开盘之间不属于任何交易日，这是事实，不是待填的空缺：%w",
+		t.In(cnZone).Format("2006-01-02 15:04:05"), ex, product, ErrOutsideSession)
 }

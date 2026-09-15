@@ -317,6 +317,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
         SideScope   margin.SideScope    // 单向大边的合并范围
         Mark        pnl.Mark            // 盘中持仓盈亏的计价价
         Algorithm   account.Algorithm   // 浮盈算不算进可用
+        FreezeMargin order.FreezeMarginBasis // 开仓挂单冻结保证金按哪个价（F3 加，见 §7）
     }
 
 | 项 | CTP / SimNow 实测 | 快期模拟实测 |
@@ -327,6 +328,7 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 | `SideScope` | `ByProduct`（§13 #3） | ⚠️ 快期**没实现大边**（simnow_pending#6）—— 这一项在那个口子上测不了 |
 | `Mark` | `MarkLast`，基线是结算推进后的 `Basis`（§13 #2） | `MarkLast`（`Rebuild` 现用；换成昨结算价时 position_profit 700 → −320，破坏 519） |
 | `Algorithm` | `AlgorithmOnlyLost`（§13 #17） | `AlgorithmAll`（kq_facts 11） |
+| `FreezeMargin`（F3 加） | `FreezeAtOrderPrice`（`ctp-frozen-20260910`，见 §7） | `FreezeAtPreSettlement`（kq_facts 46） |
 
 ⇒ 提供两个**预设** `CTPChoices()` / `KQChoices()`，**只填实测过的格**；`FeeRounding` 在两个预设里都留零值，
 `New` 因此报错，调用方必须自己写一行 `c.FeeRounding = …` —— **那一行就是「我知道这一项没实测」的签字**。
@@ -473,6 +475,63 @@ F2 之后门面**能**结算了 ⇒ 若有人在这两条路上调 `Settle`，`p
 - **§13 #21**：E1 只有昨仓时裸平 1 手、E2 只有昨仓时显式平昨 1 手（分 a / b / c，见 §13 #21），大商所种子留 2 手、要先隔一次结算
 - **§13 #5 结算取整**：当日做几笔「第三位小数截断与四舍五入结果不同」的成交，**拍下当日全部逐笔成交**与收盘后账户，次日读 PreBalance。
   工具缺口：现有 dump 只挂本轮合约的成交（`AttachTrades` 按合约），要一个按交易日取全部成交的出口
+
+#### 7. F3：`Submit` —— 一笔报单过八项校验、按裁决成交、记账（2026-09-15，实现之前写）
+
+    func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request) (match.Trade, error)
+    func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Frozen, error)
+
+链条：组装 `order.Facts` ⇒ `match.Fill`（它自己调 `order.Validate`）⇒ `ApplyTrade`。
+被拒返回 `*match.RejectedError`（带 `Code()`，语料粒度内能说出柜台的码），没查成返回 `*match.UncheckedError`，调用方用 `errors.As` 分。
+⚠️ 「没查成不成交」不改（§3「match 的形状」第 1 条：调用方该补事实，不该让 match 放行）⇒ **F3 的主要工作是让门面能把八项的事实都补上**。
+
+##### 八项事实从哪来
+
+| 项 | 事实 | 来源 | 缺时 |
+|---|---|---|---|
+| 可交易 | `Instrument` | `Rules` | 查不到 ⇒ 可交易 / 价位 / 涨跌停 / 手数四项都没查成（`order` 现有处理） |
+| 时段 | `InSession` | **新增** `Config.Calendar`（`refdata.Calendar`）+ `Submit` 的 `at` | 见下 |
+| 最小变动价位 | `Instrument.PriceTick` | `Rules` | — |
+| 涨跌停 | 昨结算价 × `PriceLimitRatio`，按取整方向对齐 | `Mark` 给的昨结算价；**新增** `Config.TickRounding`（按交易所） | 没给该交易所 ⇒ 没查成 |
+| 手数上下限 | `Instrument.Min/MaxLimitOrderVolume` | `Rules` | 上限为 0 ⇒ 没查成（`order` 现有处理：免费行情不下发） |
+| 可平量 | 门面自己的持仓（没仓就给一个**空**持仓，不给 nil —— nil 在 `order` 里是「不知道」） | 门面 | — |
+| 资金 | `Available` = `account.Available()`；`Need` = `FreezeOf` 的保证金 + 手续费 | 门面 | 规格在而算不出（缺昨结算价、§13 #21 分歧段）⇒ **直接报这个原因**（实现时改：塞进「没查成」只会说「保证金与手续费」，把真正缺的东西说丢了） |
+| 限仓 | **新增** `Config.PositionLimits map[InstrumentID]int` | 调用方 | 没给该合约 ⇒ 没查成 |
+
+- **时段**：`TradingDayAt(at, …)` 成功且等于 `day` ⇒ 在时段内；成功而不等于 `day` ⇒ **报错**（时刻与交易日互相矛盾，是调用方的错，不是拒单）；
+  落在任何时段之外 ⇒ 不在时段内（拒）；没有该品种的时段表等 ⇒ 没查成。
+  ⚠️ 这要 `refdata` 把「时段之外」与「查不了」分开：新增哨兵 `refdata.ErrOutsideSession`（`%w` 包着），不靠报错文案分。
+  ⚠️ kq_facts 48：**快期自己不查时段**（313 笔里 217 笔落在时段外照收）⇒ 按快期口子对拍时这一项是盲区，不是待办
+- **涨跌停取整**：`MeasuredTickRounding()` 只给实测过的两家 —— 上期所向下、大商所四舍五入（probes.md §12，七个合约反解）。能源中心 / 郑商所 / 广期所 / 中金所**不填**
+- **限仓**：本库没有这份数据。⚠️ 回测调用方要自己给（给一个足够大的数也是一种声明，而且是调用方签的）；不给就不成交 —— 与「取整口径两个预设都留空」同一个手法
+
+##### 冻结额：新增第七项口径 `FreezeMarginBasis`
+
+开仓单冻的保证金按哪个价算，**两个口子实测相反**：
+
+    CTP / SimNow  挂单价     ctp-frozen-20260910：LongFrozenAmount 30050 ⇒ 挂单价 3005；FrozenMargin 4808 = 3005 × 10 × 0.16
+                              （按昨结算价 3164 会是 5062.4，否）；同一份的 FrozenCommission 3.01 = 3005 × 10 × 0.0001 + 0.005，也指向挂单价
+    快期模拟      昨结算价   kq_facts 46：ag2702 昨结 16262 × 15 × 22% = 53664.6、i2701 昨结 740 × 100 × 11% = 8140，报单价都远低于昨结算价
+
+⇒ `order.FreezeMarginBasis{Unmeasured, OrderPrice, PreSettlement}`，进 `Choices`，两个预设各填各的。
+算法走 `margin.Compute` 的一条腿（今仓腿：`OpenPrice` = 挂单价 + `OpenTodayPreSettleHistory`；或昨结算价 + `PreSettleAll`），不另写「名义额 × 费率」—— 那是第二份实现。
+冻结手续费：按 `FeeBasis` 取价（挂单价顶成交价的位置），档位与 `ApplyTrade` 同一个 `chargeUndated`（§13 #21 的限制一并继承）。
+
+##### 它不做的（F3 范围外）
+
+| 不做 | 为什么 |
+|---|---|
+| 挂单、撤单、冻结记账 | F4。按裁决（100% 立刻全量成交）`Submit` 要么成交要么不成交，没有「挂着」这个状态 —— `FreezeOf` 在 F3 只用来算 `Need` |
+| 市价单、部分成交 | `match` 的裁决 |
+| 快期那侧冻结的第二份实现（`conformance/fixture/frozen.go`） | 它自己算冻结额；迁到门面的 `FreezeOf` 是 F4 与 `Rebuild` 的 HasOrders 分支一起的事 |
+
+##### 验证
+
+- **CTP 冻结**：`FreezeOf` 按 CTP 预设对 `SHFE.rb2701` 买开 1 手 @3005 ⇒ 保证金 4808、手续费 3.01，比 `ctp-frozen-20260910` 的账户冻结字段（那一刻账上只挂这一笔，`LongFrozenAmount` 30050 是它的委托额）
+- **码**：门面 `Submit` 在合成规则数据上逐条造出语料里的 4 种拒因 × 3 个交易所，`RejectedError.Code()` 等于语料的码 —— 核的是**门面组装的事实**让 `order` 拒在同一项（`order` 包那条测试用的是手写 `Facts`）
+- **时段**：用 `sessions-20260908.json` 的真实时段表：时段内成交、时段外拒在 `CheckSession`、没有时段表的品种没查成、时刻与交易日矛盾报错
+- **成交之后**：`Submit` 成交的账与 `ApplyTrade` 同一笔成交的账逐字段相同（两条路只在「成交之前」不同）
+- **没查成不成交**：不给限仓 / 不给取整方向 / 不给日历，各自返回 `UncheckedError` 且点名缺什么，状态不动
 
 ### 为什么这样切
 
