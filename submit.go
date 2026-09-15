@@ -71,6 +71,8 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			today, history = p.VolumeToday(opposite(req.Direction)), p.VolumeHistory(opposite(req.Direction))
 			dt = p.DateType()
 		}
+		// ⚠️ 冻结手续费的档位按**持有的**今仓算（与此刻成交时 ApplyTrade 看的「平仓前今仓」一致），不扣挂单冻住的 ——
+		// 挂单阶段用持有还是可用，§13 #21 的候选都没说，是推得
 		if in.Commission, err = s.commission(tr, today); err != nil {
 			return order.Frozen{}, err
 		}
@@ -79,8 +81,16 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			if ord, ok := position.MeasuredCloseOrder(dt); !ok || ord != position.YesterdayFirst {
 				return order.Frozen{}, fmt.Errorf("%s 上的裸 CLOSE 没有实测的消耗顺序（PositionDateType %v）—— 显式给平今或平昨", req.Instrument, dt)
 			}
-			in.UndatedHistory = min(req.Volume, history)
+			// ⚠️ 拆的是**扣掉簿上已冻之后**的今 / 昨（评审 20260915 打回：原来拿持有的昨仓拆，
+			// 今1昨1 挂两笔裸平各 1 手时两笔都冻昨 1、簿上冻昨 2 而账上昨仓只有 1，两笔都成交不了）
+			fz := s.book.TotalOf(req.Instrument, opposite(req.Direction))
+			freeToday, freeHistory := today-fz.VolumeToday, history-fz.VolumeHistory
+			in.UndatedHistory = min(req.Volume, max(freeHistory, 0))
 			in.UndatedToday = req.Volume - in.UndatedHistory
+			if in.UndatedToday > freeToday {
+				// 合计超了可平量：校验会拒在可平量（validate 先让拒因说话），这里不猜一份冻结
+				return order.Frozen{}, fmt.Errorf("%s 裸 CLOSE %d 手超过可平今 %d / 昨 %d", req.Instrument, req.Volume, max(freeToday, 0), max(freeHistory, 0))
+			}
 		}
 	}
 	return order.FreezeOf(req, in)

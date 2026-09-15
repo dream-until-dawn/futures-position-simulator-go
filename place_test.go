@@ -151,3 +151,68 @@ func TestSettleAndApplyTradeRespectLiveOrders(t *testing.T) {
 		t.Errorf("⚠️ 簿上有挂单时结算要报「先撤单」：%v", err)
 	}
 }
+
+// withHistorySubmit 在 submitSim 上开多 1 @3399、按 3384 结算、次日开今 1 @3360 ⇒ 停在 simNext，m2701 今 1 昨 1。
+func withHistorySubmit(t *testing.T) *Simulator {
+	t.Helper()
+	s := submitSim(t, ctpChoices(), "1000000")
+	if _, err := s.Submit(simDay, wall(t, "2026-09-15 10:00"), req(t, "DCE.m2701", types.Buy, types.Open, "3399", 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Settle(simDay, settlePx(t, "DCE.m2701", "3384", "SHFE.ag2702", "15785"), simNext); err != nil {
+		t.Fatal(err)
+	}
+	markOn(t, s, simNext, "DCE.m2701", "3360", "3384")
+	if err := s.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Buy, types.Open, "3360", 1)); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// TestTwoPlacedClosesSplitAcrossFreeVolumes 钉住多笔挂单之间的拆分：每笔裸 CLOSE 拆的是**扣掉簿上已冻之后**的今 / 昨。
+//
+// ⚠️ 评审 20260915 打回的缺陷：原来拿持有的昨仓拆，今1昨1 挂两笔裸平各 1 手时两笔都冻「昨 1」，
+// 簿上冻昨 2 而账上昨仓只有 1 ⇒ 谁都成交不了（Fill 报「会平掉挂单冻住的手数」），只能撤。单笔对照测不到它。
+func TestTwoPlacedClosesSplitAcrossFreeVolumes(t *testing.T) {
+	at := wall(t, "2026-09-16 10:00")
+	bare := req(t, "DCE.m2701", types.Sell, types.Close, "3360", 1)
+	for _, c := range []struct {
+		name  string
+		first order.Request
+	}{
+		{"两笔裸平", bare},
+		{"先平昨再裸平", req(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1)},
+	} {
+		s := withHistorySubmit(t)
+		f1, err := s.Place(simNext, at, "c1", c.first)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f2, err := s.Place(simNext, at, "c2", bare)
+		if err != nil {
+			t.Fatalf("%s：第二笔裸平挂不上：%v", c.name, err)
+		}
+		if f1.VolumeHistory != 1 || f1.VolumeToday != 0 || f2.VolumeHistory != 0 || f2.VolumeToday != 1 {
+			t.Errorf("⚠️ %s：第一笔冻 今 %d / 昨 %d、第二笔冻 今 %d / 昨 %d，期望 昨 1 与 今 1 —— 两笔抢了同一手昨仓",
+				c.name, f1.VolumeToday, f1.VolumeHistory, f2.VolumeToday, f2.VolumeHistory)
+		}
+		for _, id := range []string{"c1", "c2"} {
+			if _, err := s.Fill(simNext, id); err != nil {
+				t.Errorf("⚠️ %s：%s 成交不了：%v", c.name, id, err)
+			}
+		}
+		if len(s.Live()) != 0 {
+			t.Errorf("%s：两笔都成交后簿上还有 %v", c.name, s.Live())
+		}
+		// 与两笔直接成交的账相同
+		b := withHistorySubmit(t)
+		for _, r := range []order.Request{c.first, bare} {
+			if _, err := b.Submit(simNext, at, r); err != nil {
+				t.Fatalf("%s 对照：%v", c.name, err)
+			}
+		}
+		if !sameSnapshot(s.Account(), b.Account()) {
+			t.Errorf("⚠️ %s：挂单成交与直接成交的账不同：\n%+v\n%+v", c.name, s.Account(), b.Account())
+		}
+	}
+}
