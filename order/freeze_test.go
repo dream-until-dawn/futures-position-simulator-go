@@ -86,19 +86,27 @@ func TestFreezeRefusesSuspiciousZero(t *testing.T) {
 	}
 }
 
-// TestFreezeRefusesNakedClose 断言裸 CLOSE 的冻结**算不出来**。
+// TestFreezeNakedCloseNeedsTheSplit 断言裸 CLOSE 的冻结只按调用方给的今 / 昨拆分冻，没给或对不上就报错。
 //
 // ⚠️ 不知道该冻今仓还是昨仓时，猜一边冻会让另一边的可平量凭空多出来。
-// 本库对裸 CLOSE 本来就报错（simnow_pending#1 未裁决），
-// 走到这里说明校验被绕过了 —— 那时更要报错，不要接着猜。
-func TestFreezeRefusesNakedClose(t *testing.T) {
-	req := Request{rb2701(t), types.Sell, types.Close, types.Speculation, d("3163"), 1}
-	_, err := FreezeOf(req, closeIn())
-	if err == nil {
-		t.Fatal("⚠️ 裸 CLOSE 竟然算出了冻结 —— 它必然猜了一边")
+// 本包不知道持仓与消耗顺序，拆分由调用方按 position.MeasuredCloseOrder 算好。
+// 原版一律报「校验被绕过」—— 那句自 #4 接进本库起就不成立（NoUseHistory 接受裸 CLOSE）。
+func TestFreezeNakedCloseNeedsTheSplit(t *testing.T) {
+	req := Request{rb2701(t), types.Sell, types.Close, types.Speculation, d("3163"), 3}
+	for _, bad := range []FreezeInput{closeIn(), {Commission: d("0.9"), UndatedToday: 1, UndatedHistory: 1}, {Commission: d("0.9"), UndatedToday: 4, UndatedHistory: -1}} {
+		if _, err := FreezeOf(req, bad); err == nil || !strings.Contains(err.Error(), "拆分") {
+			t.Errorf("⚠️ 拆分 今 %d / 昨 %d 与 3 手对不上，要报错：%v", bad.UndatedToday, bad.UndatedHistory, err)
+		}
 	}
-	if !strings.Contains(err.Error(), "校验被绕过") {
-		t.Errorf("报错了但没指出这是校验被绕过的信号：%v", err)
+	f, err := FreezeOf(req, FreezeInput{Commission: d("0.9"), UndatedToday: 1, UndatedHistory: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.VolumeToday != 1 || f.VolumeHistory != 2 || !f.Margin.IsZero() {
+		t.Errorf("裸 CLOSE 按拆分冻 今 1 / 昨 2、不冻保证金，得到 %+v", f)
+	}
+	if _, err := FreezeOf(req, FreezeInput{Margin: d("1"), Commission: d("0.9"), UndatedToday: 1, UndatedHistory: 2}); err == nil {
+		t.Error("⚠️ 裸 CLOSE 带着非零冻结保证金也通过了")
 	}
 }
 

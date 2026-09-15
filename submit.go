@@ -65,12 +65,22 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			return order.Frozen{}, err
 		}
 	} else {
-		todayBefore := 0
+		today, history := 0, 0
+		dt := inst.PositionDateType
 		if p, ok := s.positions[posKey{req.Instrument, req.Hedge}]; ok {
-			todayBefore = p.VolumeToday(opposite(req.Direction))
+			today, history = p.VolumeToday(opposite(req.Direction)), p.VolumeHistory(opposite(req.Direction))
+			dt = p.DateType()
 		}
-		if in.Commission, err = s.commission(tr, todayBefore); err != nil {
+		if in.Commission, err = s.commission(tr, today); err != nil {
 			return order.Frozen{}, err
+		}
+		if !req.Offset.SpecifiesPositionDate() {
+			// 裸 CLOSE：按实测的消耗顺序拆今 / 昨。⚠️ 持仓侧冻今还是冻昨在 CTP 上没观测，这里是**推得**（与成交时消耗的那一边一致）
+			if ord, ok := position.MeasuredCloseOrder(dt); !ok || ord != position.YesterdayFirst {
+				return order.Frozen{}, fmt.Errorf("%s 上的裸 CLOSE 没有实测的消耗顺序（PositionDateType %v）—— 显式给平今或平昨", req.Instrument, dt)
+			}
+			in.UndatedHistory = min(req.Volume, history)
+			in.UndatedToday = req.Volume - in.UndatedHistory
 		}
 	}
 	return order.FreezeOf(req, in)
@@ -108,7 +118,11 @@ func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request
 		fr, err := s.FreezeOf(day, req)
 		if err != nil {
 			// ⚠️ 规格在、却算不出要占用多少（缺昨结算价、§13 #21 分歧段……）：直接报这个原因，
-			// 不塞进「没查成」—— 那里只会说「保证金与手续费」，把真正缺的东西说丢了
+			// 不塞进「没查成」—— 那里只会说「保证金与手续费」，把真正缺的东西说丢了。
+			// ⚠️ 但先看有没有更高优先级的拒因：无仓裸平这类单该拒在可平量，不该被「算不出资金」盖住
+			if res := order.Validate(req, f); res.Rejected != nil {
+				return match.Trade{}, &match.RejectedError{Rejection: *res.Rejected, Exchange: req.Instrument.Exchange}
+			}
 			return match.Trade{}, fmt.Errorf("算这笔单要占用的资金：%w", err)
 		}
 		f.Need, f.HasNeed = fr.Margin.Add(fr.Commission), true

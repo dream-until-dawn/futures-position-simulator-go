@@ -974,6 +974,16 @@ v0.4.0 的另一半是 `match`（限价/市价、涨跌停、最小变动价位�
 它们是**能**验证的：涨跌停有 refdata.PriceLimits 与实测的两家取整方向。）
 <!-- 历史留档:end -->
 
+### 2026-09-15：门面 F3 合进 main 后撞出的缺陷 —— 大商所裸 `CLOSE` 走 `Submit` 一律报错（已修）
+
+写 F4 设计读 `order.FreezeOf` 时撞到：它的 `Close` 分支一律报「裸 CLOSE 在本库是被拒的，走到这里说明校验被绕过」，
+那句话自 #4 接进本库（NoUseHistory 接受裸 CLOSE）起就过期；F3 的 `Submit` 在校验之前调它算 `Need` ⇒ 大商所裸 `CLOSE` 报单一律报错（`ApplyTrade` 不受影响）。
+
+- `order.FreezeInput` 加 `UndatedToday / UndatedHistory`：裸 CLOSE 的今昨拆分由调用方按实测消耗顺序给，和不等于手数就报错
+- 门面 `FreezeOf` 按 `MeasuredCloseOrder` 拆（NoUseHistory 先平昨）；⚠️ 持仓侧冻今还是冻昨在 CTP 上**未观测**，与成交时消耗的那一边一致是推得
+- `Submit` 算不出 `Need` 时先跑一次 `Validate`：已有拒因（如无仓裸平）就返回拒绝，不让「算不出资金」盖住它
+- 同批改掉三句过期注释：`order.checkClosable` 的「本库仍记作今仓」（#20 裁决后已是昨仓）、`FreezeInput.Margin` / `Frozen.Margin` 的「按昨结算价、不按委托价」（只量过快期；CTP 按挂单价）
+
 ### 2026-09-15：门面 F3 —— `Submit`（实现之前写）
 
 设计见 design.md「门面的形状」§7。要点：
