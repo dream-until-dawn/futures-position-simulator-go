@@ -38,19 +38,19 @@ func TestSplitSaysSameWhenBaselinesCoincide(t *testing.T) {
 	}
 	next := types.NewTradingDay(2026, 9, 9)
 	// 先随便结一次，取出逐笔对冲基线；再拿它本身当结算价
-	p, err := ReconstructOnFacade(f, nil, sym, spec, refdata.UseHistory, decimal.RequireFromString("3160"), next)
+	r, err := ReconstructOnFacade(f, nil, sym, spec, refdata.UseHistory, decimal.RequireFromString("3160"), next)
 	if err != nil {
 		t.Fatal(err)
 	}
-	openAvg, _, _, err := Split(p, types.Buy)
+	openAvg, _, _, err := Split(r.Position, types.Buy)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err = ReconstructOnFacade(f, nil, sym, spec, refdata.UseHistory, openAvg, next)
+	r, err = ReconstructOnFacade(f, nil, sym, spec, refdata.UseHistory, openAvg, next)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, basisAvg, differs, err := Split(p, types.Buy)
+	_, basisAvg, differs, err := Split(r.Position, types.Buy)
 	if err != nil {
 		t.Fatal(err)
 	}

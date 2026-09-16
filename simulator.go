@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/account"
+	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
@@ -64,6 +65,9 @@ type Simulator struct {
 	tickRounding   map[types.Exchange]refdata.TickRounding
 	positionLimits map[types.InstrumentID]int
 
+	// groups 是最近一次计价的保证金分组分解（margin.Compute 给的），由 MarginGroups 只读给出。
+	groups []margin.GroupResult
+
 	// broken 非空时模拟器处于**失效态**：写账户中途失败，状态不再可信。
 	broken error
 }
@@ -117,6 +121,17 @@ func (s *Simulator) Withdraw(day types.TradingDay, amount decimal.Decimal) error
 
 // Account 返回账户快照。
 func (s *Simulator) Account() account.Snapshot { return s.acc.Snapshot() }
+
+// MarginGroups 返回**最近一次计价**算出的保证金分组分解（`margin.Compute` 的 Groups），逐组带多空两边。
+//
+// ⚠️ 它随每一次 Mark / ApplyTrade / Settle 重算，不是缓存的独立状态；空仓时为空。
+// ⚠️ **逐方向的数只有在组键是合约时**（SideScope = ByInstrument，或该组未启用大边）才对应柜台的 margin_long / margin_short：
+// ByProduct 下一组跨多个合约，「这个合约的多头占用」没有定义 —— 调用方要自己核组键，本方法不替它挑（design.md「门面的形状」§12）。
+func (s *Simulator) MarginGroups() []margin.GroupResult {
+	out := make([]margin.GroupResult, len(s.groups))
+	copy(out, s.groups)
+	return out
+}
 
 // Position 返回一个合约（投机）持仓的**副本**。改它不影响模拟器。
 func (s *Simulator) Position(inst types.InstrumentID, hedge types.HedgeFlag) (*position.Position, bool) {

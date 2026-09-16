@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
-	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
 	"github.com/shopspring/decimal"
 )
@@ -97,7 +96,7 @@ func TestCrossDayConformance(t *testing.T) {
 			continue
 		}
 		spec := specs[sym]
-		p, err := ReconstructOnFacade(prev, nil, sym, spec, positionDateOf(t, sym), settle, next.TradingDay)
+		rec, err := ReconstructOnFacade(prev, nil, sym, spec, positionDateOf(t, sym), settle, next.TradingDay)
 		if err != nil {
 			t.Errorf("⚠️ 结转 %s 失败：%v", sym, err)
 			continue
@@ -110,15 +109,11 @@ func TestCrossDayConformance(t *testing.T) {
 			Multiplier: spec.Multiplier,
 			LastPrice:  last.Number, HasLast: !last.Absent,
 		}
-		// 保证金：昨仓的基准仍是昨结算价，而 D+1 日的昨结算价 = D 日的结算价。
-		l, s, merr := MarginOf(p, spec.Margin, spec.Multiplier, settle, false,
-			margin.PreSettleAll, margin.ByInstrument)
-		if merr == nil {
-			in.MarginLong, in.MarginShort, in.HasMargin = l, s, true
-		} else if !IsNoPosition(merr) {
-			t.Errorf("%s 算保证金失败：%v", sym, merr)
+		// 保证金：昨仓的基准仍是昨结算价，而 D+1 日的昨结算价 = D 日的结算价 —— F8 起由门面给（Replayed 的逐方向占用）
+		if rec.HasMargin {
+			in.MarginLong, in.MarginShort, in.HasMargin = rec.MarginLong, rec.MarginShort, true
 		}
-		lib, err := view.PositionOf(p, in)
+		lib, err := view.PositionOf(rec.Position, in)
 		if err != nil {
 			t.Fatal(err)
 		}

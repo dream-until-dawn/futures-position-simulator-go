@@ -22,9 +22,14 @@ func TestReconstructOnFacadeSplitsTheTwoBaselines(t *testing.T) {
 	}
 	next := types.NewTradingDay(2026, 9, 9)
 	settle := decimal.RequireFromString("3160")
-	p, err := ReconstructOnFacade(f, nil, sym, spec, positionDateOf(t, sym), settle, next)
+	r, err := ReconstructOnFacade(f, nil, sym, spec, positionDateOf(t, sym), settle, next)
 	if err != nil {
 		t.Fatal(err)
+	}
+	p := r.Position
+	// 结转用的是交易所结算价（显式给的，不是借来的）⇒ 占用照给
+	if !r.HasMargin || !r.MarginLong.IsPositive() {
+		t.Errorf("⚠️ 结转之后应当给出占用，得到 HasMargin=%v 多头 %s", r.HasMargin, r.MarginLong)
 	}
 	s, err := p.Side(types.Buy)
 	if err != nil {

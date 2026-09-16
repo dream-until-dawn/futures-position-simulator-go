@@ -35,7 +35,7 @@ func Split(p *position.Position, dir types.Direction) (openAvg, basisAvg decimal
 
 // ReconstructOnFacade 在**门面**上重建一个合约跨日之后的持仓：前一日成交 → 按交易所结算价 Settle → 当日成交（cur 为 nil 时只结转到 nextDay）。
 //
-// 对拍测试（F6b）与 `cmd/oracle -carry`（F7b）都走它：记账链条只在门面里有一份。
+// 对拍测试（F6b）与 `cmd/oracle -carry`（F7b）都走它：记账链条只在门面里有一份。返回值自 F8 起带上逐方向占用（Replayed）。
 // F7b 之前还有 Carry / Reconstruct（`position.Settle` + `ReplayFrom` 的第二份实现），design.md「门面的形状」§10 / §11。
 //
 // # ⚠️ 为什么非结转不可
@@ -61,47 +61,47 @@ func Split(p *position.Position, dir types.Direction) (openAvg, basisAvg decimal
 // （UseHistory 上显式平今平昨、裸 CLOSE 按口径记作平昨；NoUseHistory 先平昨）。
 // 快期上消耗顺序结构性测不出（kq_facts 40），那道检查在快期夹具上一直在答「分不开」；F7b 删 Reconstruct 时随之离开结转路径。
 func ReconstructOnFacade(prev, cur *Fixture, symbol string, spec Spec,
-	dateType refdata.PositionDateType, settlement decimal.Decimal, nextDay types.TradingDay) (*position.Position, error) {
+	dateType refdata.PositionDateType, settlement decimal.Decimal, nextDay types.TradingDay) (Replayed, error) {
 
 	if cur != nil {
 		if nextDay != cur.TradingDay {
-			return nil, fmt.Errorf("nextDay %s 与当日夹具的交易日 %s 不同", nextDay, cur.TradingDay)
+			return Replayed{}, fmt.Errorf("nextDay %s 与当日夹具的交易日 %s 不同", nextDay, cur.TradingDay)
 		}
 	}
 	if prev.TradingDay >= nextDay {
-		return nil, fmt.Errorf("⚠️ 前一份夹具的交易日 %s 不早于 %s —— 结转方向反了，或者拿错了夹具", prev.TradingDay, nextDay)
+		return Replayed{}, fmt.Errorf("⚠️ 前一份夹具的交易日 %s 不早于 %s —— 结转方向反了，或者拿错了夹具", prev.TradingDay, nextDay)
 	}
 	inst, err := types.ParseSymbol(symbol, prev.TradingDay)
 	if err != nil {
-		return nil, fmt.Errorf("合约键 %q：%w", symbol, err)
+		return Replayed{}, fmt.Errorf("合约键 %q：%w", symbol, err)
 	}
 	trades := prev.TradesOf(symbol)
 	if len(trades) == 0 {
-		return nil, fmt.Errorf("夹具 %s 里 %s 一笔成交都没有 —— "+
+		return Replayed{}, fmt.Errorf("夹具 %s 里 %s 一笔成交都没有 —— "+
 			"⚠️ 结转一个没有成交记录的合约，得到的是空仓；而空仓与「有仓但没记录」在结果上长得一样", prev.Path, symbol)
 	}
 	pb, ok := numberOf(prev.Account, "pre_balance")
 	if !ok {
-		return nil, fmt.Errorf("夹具 %s 没有 pre_balance", prev.Path)
+		return Replayed{}, fmt.Errorf("夹具 %s 没有 pre_balance", prev.Path)
 	}
 	pre, ok := prev.PreSettlement(symbol)
 	if !ok {
-		return nil, fmt.Errorf("夹具 %s 里 %s 没有昨结算价", prev.Path, symbol)
+		return Replayed{}, fmt.Errorf("夹具 %s 里 %s 没有昨结算价", prev.Path, symbol)
 	}
 	last, ok := prev.Positions[symbol]["last_price"]
 	if !ok || last.Absent || last.IsText || !last.Number.IsPositive() {
-		return nil, fmt.Errorf("夹具 %s 里 %s 没有最新价 —— 这是「没有」不是「零」", prev.Path, symbol)
+		return Replayed{}, fmt.Errorf("夹具 %s 里 %s 没有最新价 —— 这是「没有」不是「零」", prev.Path, symbol)
 	}
 
 	rules := specRules{version: 1, byID: map[types.InstrumentID]Spec{inst: spec},
 		dates: map[types.InstrumentID]refdata.PositionDateType{inst: dateType}}
 	sim, err := futsim.New(futsim.Config{Day: prev.TradingDay, PreBalance: pb, Rules: rules, Choices: fixtureChoices()})
 	if err != nil {
-		return nil, err
+		return Replayed{}, err
 	}
 	if err := sim.Mark(prev.TradingDay, futsim.Quote{Instrument: inst, Last: last.Number, HasLast: true,
 		PreSettlement: pre, HasPreSettlement: true}); err != nil {
-		return nil, err
+		return Replayed{}, err
 	}
 	apply := func(day types.TradingDay, ts []Trade) error {
 		for _, tr := range ts {
@@ -113,19 +113,19 @@ func ReconstructOnFacade(prev, cur *Fixture, symbol string, spec Spec,
 		return nil
 	}
 	if err := apply(prev.TradingDay, trades); err != nil {
-		return nil, fmt.Errorf("重放 %s：%w", symbol, err)
+		return Replayed{}, fmt.Errorf("重放 %s：%w", symbol, err)
 	}
 	if p, ok := sim.Position(inst, types.Speculation); !ok || p.IsFlat() {
-		return nil, fmt.Errorf("⚠️ %s 在 %s 结束时是空仓，结转它没有意义 —— 若本以为有过夜种子，那说明种子被平掉了", symbol, prev.TradingDay)
+		return Replayed{}, fmt.Errorf("⚠️ %s 在 %s 结束时是空仓，结转它没有意义 —— 若本以为有过夜种子，那说明种子被平掉了", symbol, prev.TradingDay)
 	}
 	if err := sim.Settle(prev.TradingDay, map[types.InstrumentID]decimal.Decimal{inst: settlement}, nextDay); err != nil {
-		return nil, err
+		return Replayed{}, err
 	}
 	if cur != nil {
 		if err := apply(nextDay, cur.TradesOf(symbol)); err != nil {
-			return nil, fmt.Errorf("在结转结果上重放 %s 的当日成交：%w", symbol, err)
+			return Replayed{}, fmt.Errorf("在结转结果上重放 %s 的当日成交：%w", symbol, err)
 		}
 	}
-	p, _ := sim.Position(inst, types.Speculation)
-	return p, nil
+	// 结转用的是交易所结算价（调用方显式给），不是借来的 ⇒ 占用照给
+	return replayedOf(sim, inst, false), nil
 }

@@ -91,6 +91,7 @@ func (s *Simulator) Settle(day types.TradingDay, prices map[types.InstrumentID]d
 			return fmt.Errorf("⚠️ 结算写账户中途失败，模拟器失效：%w", err)
 		}
 	}
-	s.positions, s.prices = next, nextPrices
+	// ⚠️ 留下的是**次日**的分组分解：持仓与计价都已换成次日的，MarginGroups 要与它们一致
+	s.positions, s.prices, s.groups = next, nextPrices, nextVal.groups
 	return nil
 }
