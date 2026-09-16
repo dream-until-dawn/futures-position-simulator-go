@@ -118,6 +118,16 @@ func TestRejectCorpusIsProbeWrittenOnly(t *testing.T) {
 		if o.TradingDay == "" || o.Exchange == "" || o.Case == "" {
 			t.Errorf("⚠️ 第 %d 条缺 trading_day / exchange / case —— 无法定位它是哪一次观测", i)
 		}
+		// ⚠️ tick 与它的出处要么都有、要么都没有（20260916 之前的 12 条两个都没有）：
+		// 只有数值没有出处，就分不出「柜台报的」与「人手填对了的」——
+		// 而这批语料唯一出过错的那一环正是人手填的那个。
+		if (o.PriceTick == nil) != (o.TickSource == "") {
+			t.Errorf("⚠️ 第 %d 条的 tick 只记了一半（值 %v / 出处 %q）—— "+
+				"数值没有出处就不知道它被谁核过", i, o.PriceTick, o.TickSource)
+		}
+		if o.TickSource != "" && o.TickSource != "counter" && o.TickSource != "flag" {
+			t.Errorf("⚠️ 第 %d 条的 tick 出处是 %q —— 只许 \"counter\"（柜台报的）或 \"flag\"（人手填的）", i, o.TickSource)
+		}
 		if o.ErrorID == nil && o.ExchangeCode == nil && o.Outcome == "rejected" {
 			t.Errorf("⚠️ 第 %d 条报 rejected 却两个码位都空 —— "+
 				"那是「被拒了但没拿到码」，与「没被拒」在下游同形，必须说清", i)
@@ -134,8 +144,9 @@ func TestRejectCorpusIsProbeWrittenOnly(t *testing.T) {
 // ⚠️ 为 §13 #6 那个替代解释补的（评审 20260915）：价格类拒单是柜台前置拒的还是交易所拒的。
 func TestObserveRecordsOrderSysIDPresence(t *testing.T) {
 	rc := rejectCase{Name: "低于跌停", Violates: []string{"涨跌停"}}
-	with := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{OrderSysID: "      123", StatusMsg: "50:x"}, "rejected")
-	without := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected")
+	tk := tickUsed{Value: 1, Source: tickFromCounter}
+	with := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{OrderSysID: "      123", StatusMsg: "50:x"}, "rejected", tk)
+	without := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected", tk)
 	if with.HasOrderSysID == nil || !*with.HasOrderSysID {
 		t.Errorf("⚠️ 回报里有交易所委托号，语料却记成 %v", with.HasOrderSysID)
 	}

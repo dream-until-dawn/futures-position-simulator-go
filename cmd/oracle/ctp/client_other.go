@@ -97,6 +97,10 @@ func (c *Client) CommissionRate(string, time.Duration) (
 	return nil, errPlatform
 }
 
+func (c *Client) Instrument(string, time.Duration) (*def.CThostFtdcInstrumentField, error) {
+	return nil, errPlatform
+}
+
 func (c *Client) Trades(time.Duration) ([]*def.CThostFtdcTradeField, error) {
 	return nil, errPlatform
 }

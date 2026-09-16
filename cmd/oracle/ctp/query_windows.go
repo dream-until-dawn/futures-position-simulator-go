@@ -229,7 +229,73 @@ func (c *Client) Trades(timeout time.Duration) ([]*def.CThostFtdcTradeField, err
 	}
 }
 
+// Instrument 查柜台**声明**的合约参数 —— 本项目要的是 `PriceTick` 与 `VolumeMultiple`。
+//
+// # ⚠️ 它消掉的是一处「猜错了不会报错」
+//
+// `ctp-reject` 的 `-tick` 一直要人手填，而填错的表现**不是报错**：
+// 四条用例照样跑完、照样拿到四个码，只是其中两条测到的是**另一种拒因**，
+// 而输出上仍标着原来那个名字（20260914 夜盘就这样错过一次：`bc` 的 tick 是 10，
+// 命令里写着 1，「低于跌停」那一笔同时违反了步长，柜台报的是 `48`）。
+//
+// ⇒ 让**柜台自己说**。这不是第二个独立来源（与行情、与拒因同一个柜台），
+// 但它把「人手转录」这一环整个去掉了 —— 而那一环正是唯一出过错的那一环。
+//
+// ⚠️ 郑商所 / 广期所此前拍不了拒因语料，理由写的是「仓库里没有它们最小变动价位的出处」。
+// 这个查询就是那个出处。
+func (c *Client) Instrument(symbol string, timeout time.Duration) (
+	*def.CThostFtdcInstrumentField, error) {
+	c.q.wait()
+	defer c.q.done()
+	c.insMu.Lock()
+	c.ins = nil
+	c.insMu.Unlock()
+
+	ex, inst := SplitSymbol(symbol)
+	f := def.CThostFtdcQryInstrumentField{}
+	copy(f.ExchangeID[:], ex)
+	copy(f.InstrumentID[:], inst)
+	c.req("ReqQryInstrument", unsafe.Pointer(&f))
+	select {
+	case <-c.insDone:
+		c.insMu.Lock()
+		defer c.insMu.Unlock()
+		for _, r := range c.ins {
+			// ⚠️ 逐条核对合约代码：查询字段填得不够窄时会回一整批，
+			// 而「拿第一条」在那种情形下是**静默地**拿了别的合约的 tick。
+			if text(r.InstrumentID[:]) == inst {
+				return r, nil
+			}
+		}
+		return nil, fmt.Errorf("柜台回完了 %d 条合约，里面没有 %s —— "+
+			"⚠️ 这是**查到了但没有它**，与超时（没有结论）不是一回事", len(c.ins), symbol)
+	case <-time.After(timeout):
+		// ⚠️ 与其余各查同一条纪律：超时是**没有结论**，不是「没有这个合约」。
+		return nil, fmt.Errorf("%v 内没有等到 %s 的合约查询最后一条 —— "+
+			"⚠️ **没有结论**，不是「柜台没有这个合约」", timeout, symbol)
+	}
+}
+
 func (c *Client) registerQueryCallbacks() {
+	c.on("SetOnRspQryInstrument", func(r *def.CThostFtdcInstrumentField,
+		info *def.CThostFtdcRspInfoField, _ int, isLast bool) uintptr {
+		if err := errOf(info); err != nil {
+			c.logf("[ctp] ⚠️ 查合约失败 %v", err)
+		}
+		if r != nil && text(r.InstrumentID[:]) != "" {
+			cp := *r
+			c.insMu.Lock()
+			c.ins = append(c.ins, &cp)
+			c.insMu.Unlock()
+		}
+		if isLast {
+			select {
+			case c.insDone <- struct{}{}:
+			default:
+			}
+		}
+		return 0
+	})
 	c.on("SetOnRspQryInstrumentCommissionRate", func(r *def.CThostFtdcInstrumentCommissionRateField,
 		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
 		if err := errOf(info); err != nil {

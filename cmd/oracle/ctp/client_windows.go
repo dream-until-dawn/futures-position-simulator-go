@@ -81,6 +81,11 @@ type Client struct {
 	trdMu   sync.Mutex
 	trd     []*def.CThostFtdcTradeField
 	trdDone chan struct{}
+	// ins 是合约查询的应答累积。⚠️ 按 isLast 收尾而不是「收到一条就算完」：
+	// 查询字段填得不够窄时柜台会回一整批，那时「第一条」不一定是要的那个合约。
+	insMu   sync.Mutex
+	ins     []*def.CThostFtdcInstrumentField
+	insDone chan struct{}
 }
 
 // New 建一个尚未连接的客户端。
@@ -97,6 +102,7 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 		md:       make(chan *def.CThostFtdcDepthMarketDataField, 1),
 		comm:     make(chan *def.CThostFtdcInstrumentCommissionRateField, 1),
 		trdDone:  make(chan struct{}, 1),
+		insDone:  make(chan struct{}, 1),
 		pos:      map[string]*def.CThostFtdcInvestorPositionField{}}
 }
 
