@@ -21,29 +21,45 @@ import (
 // 本命令是它在 CTP 侧的第一次实测。
 const sessionItem = "交易时段"
 
-// priorityVerdict 判「同时违反两项时，柜台报的是哪一项」。纯函数：离线可测。
+// side 是被同时违反的两项中的一项：它单独违反时的码、它的名字、以及**有没有这个码**。
 //
-// ⚠️ 判据是**码相等**，不是关键字：两项各自单独违反时的码已经在语料里量过
-// （`ctperr` 那张表），拿回来的码等于谁，就是谁先。
+// ⚠️ Has 必须显式带着：`ctperr` 查不到时零值 Code 与「码是 0 号 CTP 码」在结构上同形，
+// 而前者意味着这一对**判不了**，后者是一个结论。
+type side struct {
+	Code ctperr.Code
+	Name string
+	Has  bool
+}
+
+// pairVerdict 判「同时违反两项时，柜台报的是哪一项」。纯函数：离线可测。
+//
+// ⚠️ 判据是**码相等**，不是关键字：两项各自单独违反时的码已经量过
+// （`ctperr` 那张表，或本轮的对照组当场给出），拿回来的码等于谁，就是谁先。
 // ⚠️ 两个都对不上时**必须说出来**而不是挑一个近的 —— 那种情形说明这一笔
 // 违反的根本不是我以为的那两项（20260914 `bc` 那次正是）。
-func priorityVerdict(got, session ctperr.Code, other ctperr.Code, hasOther bool,
-	otherName string) (winner, why string) {
-
+func pairVerdict(got ctperr.Code, a, b side) (winner, why string) {
+	// ⚠️ 两个「判不了」的分支都排在命中之前，顺序是判据的一部分：
+	//
+	//	缺一边的码   拿到的码等于 b 时**仍然判不了** —— a 的码未知，
+	//	             它有可能恰好也是这个码，那时「b 先」是编出来的
+	//	两边码撞号   这一对分不开，不是「都赢了」；先比中 a 就返回的话会报成「a 先」
 	switch {
-	case got == session && hasOther && got == other:
-		// ⚠️ 两项的码**撞在一起**时这一对分不开 —— 这不是「都赢了」，是没有判别力。
-		return "", fmt.Sprintf("⚠️ **这一对分不开**：%s 与 %s 的码都是 %s", sessionItem, otherName, got)
-	case got == session:
-		return sessionItem, fmt.Sprintf("拿到 %s = %s 单独违反时的码", got, sessionItem)
-	case hasOther && got == other:
-		return otherName, fmt.Sprintf("拿到 %s = %s 单独违反时的码", got, otherName)
-	case !hasOther:
+	case !a.Has || !b.Has:
+		missing := a.Name
+		if a.Has {
+			missing = b.Name
+		}
 		return "", fmt.Sprintf("⚠️ **判不了**：%s 单独违反时的码本库没有观测（ctperr 查不到），"+
-			"拿到的 %s 归不到任何一项", otherName, got)
+			"拿到的 %s 归不到任何一项 —— 另一边的码未知，它有可能恰好也是这个", missing, got)
+	case a.Code == b.Code:
+		return "", fmt.Sprintf("⚠️ **这一对分不开**：%s 与 %s 的码都是 %s", a.Name, b.Name, a.Code)
+	case got == a.Code:
+		return a.Name, fmt.Sprintf("拿到 %s = %s 单独违反时的码", got, a.Name)
+	case got == b.Code:
+		return b.Name, fmt.Sprintf("拿到 %s = %s 单独违反时的码", got, b.Name)
 	default:
 		return "", fmt.Sprintf("⚠️ **谁都没预言到**：拿到 %s，而 %s 是 %s、%s 是 %s —— "+
-			"这一笔违反的多半不是我以为的那两项", got, sessionItem, session, otherName, other)
+			"这一笔违反的多半不是我以为的那两项", got, a.Name, a.Code, b.Name, b.Code)
 	}
 }
 
@@ -179,7 +195,9 @@ func runCTPPriority(args []string) error {
 				logf("[pri]   ⇒ 被拒但一个码都没有 —— 这一对判不了")
 				break
 			}
-			winner, why := priorityVerdict(got, session, otherCode, hasOther && hasOtherCode, rc.Name)
+			winner, why := pairVerdict(got,
+				side{Code: session, Name: sessionItem, Has: true},
+				side{Code: otherCode, Name: rc.Name, Has: hasOther && hasOtherCode})
 			if winner == "" {
 				logf("[pri]   ⇒ %s", why)
 			} else {

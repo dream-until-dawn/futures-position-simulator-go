@@ -6362,21 +6362,21 @@
 		"name": "644 优先级判定只比码的数值、不比码空间（CTP 50 与交易所 50 意思完全不同）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/priority.go",
-		"old": "\tcase got == session:",
-		"new": "\tcase got.Value == session.Value:",
+		"old": "\tcase got == a.Code:",
+		"new": "\tcase got.Value == a.Code.Value:",
 		"pkg": ".",
-		"test": "TestPriorityVerdict",
+		"test": "TestPairVerdict",
 		"want": "值同而空间不同",
 		"expect": "red"
 	},
 	{
-		"name": "645 两项码撞号时判成「时段先」（那一对分不开，不是都赢了）",
+		"name": "645 两项码撞号时照常比中（那一对分不开，不是都赢了）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/priority.go",
-		"old": "\tcase got == session && hasOther && got == other:",
+		"old": "\tcase a.Code == b.Code:",
 		"new": "\tcase false:",
 		"pkg": ".",
-		"test": "TestPriorityVerdict",
+		"test": "TestPairVerdict",
 		"want": "这一对分不开",
 		"expect": "red"
 	},
@@ -6400,6 +6400,61 @@
 		"pkg": ".",
 		"test": "TestCodeOfPrefersCTPSpace",
 		"want": "ErrorID 为零时要取前缀码",
+		"expect": "red"
+	},
+	{
+		"name": "648 「缺一边的码」那一支挪到命中之后（另一边的码未知时，命中 b 也判不了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase !a.Has || !b.Has:\n\t\tmissing := a.Name",
+		"new": "\tcase (!a.Has || !b.Has) && got != b.Code:\n\t\tmissing := a.Name",
+		"pkg": ".",
+		"test": "TestPairVerdict",
+		"want": "判不了",
+		"expect": "red"
+	},
+	{
+		"name": "649 撞号那一支返回第一个参数的名字（判定就此随传参顺序变）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\t\treturn \"\", fmt.Sprintf(\"⚠️ **这一对分不开**：%s 与 %s 的码都是 %s\", a.Name, b.Name, a.Code)",
+		"new": "\t\treturn a.Name, fmt.Sprintf(\"⚠️ **这一对分不开**：%s 与 %s 的码都是 %s\", a.Name, b.Name, a.Code)",
+		"pkg": ".",
+		"test": "TestPairVerdictIsSymmetric",
+		"want": "不是传参顺序的性质",
+		"expect": "red"
+	},
+	{
+		"name": "650 pairCases 第一条不再是正对照（后面几对的可信度全挂在它身上）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/pairs.go",
+		"old": "\t\tControl:  true,",
+		"new": "\t\tControl:  false,",
+		"pkg": ".",
+		"test": "TestPairCasesStartWithAPositiveControl",
+		"want": "它必须排在最前",
+		"expect": "red"
+	},
+	{
+		"name": "651 一条 pairCase 声明三项（拿回来的码归不了因，而它看起来是条好观测）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/pairs.go",
+		"old": "\t\tViolates: []string{\"可平量\", \"涨跌停\"},",
+		"new": "\t\tViolates: []string{\"可平量\", \"涨跌停\", \"交易时段\"},",
+		"pkg": ".",
+		"test": "TestPairCasesViolateExactlyTwo",
+		"want": "要恰好 2",
+		"expect": "red"
+	},
+	{
+		"name": "652 正对照的买单挂到跌停价上（封板时买一就在跌停价，会成交）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/pairs.go",
+		"old": "\t\t\treturn float64(md.LowerLimitPrice) - tick/2",
+		"new": "\t\t\treturn float64(md.LowerLimitPrice)",
+		"pkg": ".",
+		"test": "TestPairCasesCannotTrade",
+		"want": "放过了可能成交",
 		"expect": "red"
 	}
 ]

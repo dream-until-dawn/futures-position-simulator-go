@@ -11,39 +11,65 @@ import (
 
 func code(space ctperr.Space, v int) ctperr.Code { return ctperr.Code{Space: space, Value: v} }
 
-// TestPriorityVerdict 钉住「同时违反两项时报的是哪一项」的判定。
+// TestPairVerdict 钉住「同时违反两项时报的是哪一项」的判定。
 //
 // ⚠️ 判据是**码相等**而不是关键字。判别力集中在三个「判不了」的分支上 ——
-// 一个只会回答「时段」或「另一项」的实现，会把下面三种情形全部说成一个结论：
+// 一个只会回答 a 或 b 的实现，会把下面三种情形全部说成一个结论：
 //
 //	两项的码撞在一起   这一对分不开，不是「都赢了」
-//	另一项没有观测     拿到的码归不到任何一项
+//	有一项没有观测     拿到的码归不到任何一项
 //	两个都对不上       这一笔违反的多半不是我以为的那两项（20260914 bc 那次正是）
-func TestPriorityVerdict(t *testing.T) {
-	session := code(ctperr.SpaceStatusPrefix, 26)
-	tick := code(ctperr.SpaceStatusPrefix, 48)
+func TestPairVerdict(t *testing.T) {
+	sess := side{Code: code(ctperr.SpaceStatusPrefix, 26), Name: "交易时段", Has: true}
+	tick := side{Code: code(ctperr.SpaceStatusPrefix, 48), Name: "最小变动价位", Has: true}
 	for _, c := range []struct {
 		name       string
-		got, other ctperr.Code
-		hasOther   bool
+		got        ctperr.Code
+		a, b       side
 		wantWinner string
 		wantWhyHas string
 	}{
-		{"拿到时段的码 ⇒ 时段先", session, tick, true, sessionItem, "单独违反时的码"},
-		{"拿到另一项的码 ⇒ 另一项先", tick, tick, true, "非最小变动价位整倍数", "单独违反时的码"},
-		{"两项码撞号 ⇒ 分不开", session, session, true, "", "这一对分不开"},
-		{"另一项没观测 ⇒ 判不了", tick, ctperr.Code{}, false, "", "判不了"},
-		{"两个都对不上 ⇒ 谁都没预言到", code(ctperr.SpaceCTP, 99), tick, true, "", "谁都没预言到"},
+		{"拿到 a 的码 ⇒ a 先", sess.Code, sess, tick, "交易时段", "单独违反时的码"},
+		{"拿到 b 的码 ⇒ b 先", tick.Code, sess, tick, "最小变动价位", "单独违反时的码"},
+		{"两项码撞号 ⇒ 分不开", sess.Code, sess, sess, "", "这一对分不开"},
+		{"b 没观测 ⇒ 判不了", tick.Code, sess, side{Name: "最小变动价位"}, "", "判不了"},
+		{"a 没观测 ⇒ 判不了", tick.Code, side{Name: "交易时段"}, tick, "", "判不了"},
+		{"两个都对不上 ⇒ 谁都没预言到", code(ctperr.SpaceCTP, 99), sess, tick, "", "谁都没预言到"},
 		// ⚠️ 码空间这一维不许丢：值相同、空间不同的两个码是**两个**码。
-		{"值同而空间不同 ⇒ 不算命中", code(ctperr.SpaceCTP, 26), tick, true, "", "谁都没预言到"},
+		{"值同而空间不同 ⇒ 不算命中", code(ctperr.SpaceCTP, 26), sess, tick, "", "谁都没预言到"},
 	} {
-		winner, why := priorityVerdict(c.got, session, c.other, c.hasOther, "非最小变动价位整倍数")
+		winner, why := pairVerdict(c.got, c.a, c.b)
 		if winner != c.wantWinner {
 			t.Errorf("⚠️ %s：判成 %q，应为 %q（why=%s）", c.name, winner, c.wantWinner, why)
 		}
 		if !strings.Contains(why, c.wantWhyHas) {
 			t.Errorf("⚠️ %s 的说明没说到点上（要含 %q）：%s", c.name, c.wantWhyHas, why)
 		}
+	}
+}
+
+// TestPairVerdictIsSymmetric 钉住两项**换个位置**给出同一个结论。
+//
+// ⚠️ 「谁先」是柜台的性质，不是我传参顺序的性质。而一个先比 a 再比 b 的实现，
+// 在「撞号」那一档上会随参数顺序给出不同答案 —— 那种偏向在真数据上看不出来。
+func TestPairVerdictIsSymmetric(t *testing.T) {
+	sess := side{Code: code(ctperr.SpaceStatusPrefix, 26), Name: "交易时段", Has: true}
+	tick := side{Code: code(ctperr.SpaceStatusPrefix, 48), Name: "最小变动价位", Has: true}
+	for _, got := range []ctperr.Code{sess.Code, tick.Code, code(ctperr.SpaceCTP, 99)} {
+		w1, _ := pairVerdict(got, sess, tick)
+		w2, _ := pairVerdict(got, tick, sess)
+		if w1 != w2 {
+			t.Errorf("⚠️ 拿到 %s 时，两项换个位置就换了答案（%q vs %q）—— "+
+				"「谁先」是柜台的性质，不是传参顺序的性质", got, w1, w2)
+		}
+	}
+	// 撞号那一档也要对称（它是最容易被顺序偏向吃掉的一档）。
+	same := side{Code: sess.Code, Name: "另一项", Has: true}
+	if w1, _ := pairVerdict(sess.Code, sess, same); w1 != "" {
+		t.Errorf("⚠️ 撞号却判出了赢家 %q", w1)
+	}
+	if w2, _ := pairVerdict(sess.Code, same, sess); w2 != "" {
+		t.Errorf("⚠️ 撞号（换个位置）却判出了赢家 %q", w2)
 	}
 }
 
