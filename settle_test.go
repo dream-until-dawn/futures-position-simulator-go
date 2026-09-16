@@ -65,13 +65,26 @@ func TestSettleRefusesMissingPriceAndLeavesNoTrace(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := s.Account()
-	for name, px := range map[string]map[types.InstrumentID]decimal.Decimal{
-		"缺结算价":    {},
-		"结算价为零":   settlePx(t, "DCE.m2701", "0"),
-		"只给了别的合约": settlePx(t, "SHFE.ag2702", "15785"),
+	// ⚠️ 逐条**点名是哪一层拦的**，不只断言「报错了」。
+	//
+	// 门面这两道（`!ok` 与 `!px.IsPositive()`）与 position.Settle 自己的零价 / 非正价检查是**三层冗余**：
+	// 只断言 err != nil 的话，去掉门面任何一道，内层都会顺手接住，测试照样绿 ——
+	// 破坏 527 与 634 实测都是「仍然绿」，而那不是盲区声明，是这条测试分不出层。
+	// ⇒ 断言到门面自己那句话上，去掉哪一道都会表现为**换了一句错**。
+	for name, c := range map[string]struct {
+		px   map[types.InstrumentID]decimal.Decimal
+		want string
+	}{
+		"缺结算价":    {map[types.InstrumentID]decimal.Decimal{}, "有持仓而没有今结算价"},
+		"结算价为零":   {settlePx(t, "DCE.m2701", "0"), "今结算价 0 不为正"},
+		"只给了别的合约": {settlePx(t, "SHFE.ag2702", "15785"), "有持仓而没有今结算价"},
 	} {
-		if err := s.Settle(simDay, px, simNext); err == nil {
+		err := s.Settle(simDay, c.px, simNext)
+		if err == nil {
 			t.Errorf("⚠️ %s：结算成功了", name)
+		} else if !strings.Contains(err.Error(), c.want) {
+			t.Errorf("⚠️ %s 报错了，但不是门面那一道拦的（要含 %q）：%v —— "+
+				"落到 position 那层说明门面自己的检查被绕过了，而两层都在时这条差别是唯一看得见的", name, c.want, err)
 		}
 		if !sameSnapshot(s.Account(), before) {
 			t.Errorf("⚠️ %s 失败之后账户变了", name)
@@ -82,6 +95,18 @@ func TestSettleRefusesMissingPriceAndLeavesNoTrace(t *testing.T) {
 	}
 	if err := s.Settle(simDay, settlePx(t, "DCE.m2701", "3370"), simDay); err == nil {
 		t.Error("⚠️ 下一交易日等于当前交易日也结算了")
+	}
+	// ⚠️ 「下一交易日不晚于当前」这一句门面与 position 逐字相同，分不出层。
+	// 而**空仓**时 position.Settle 根本不会被调用（循环体一次都不进）——
+	// 于是这一次只有门面自己那道能拦，层次由**场景**而不是措辞分开。
+	flat := newSim(t)
+	if err := flat.Settle(simDay, map[types.InstrumentID]decimal.Decimal{}, simDay); err == nil {
+		t.Error("⚠️ 空仓时下一交易日等于当前交易日也结算了 —— " +
+			"这一档 position.Settle 不会被调用，拦不住就是门面自己那道没了")
+	}
+	// 反向对照：同样空仓、下一交易日正常时要结算得成，否则上面那条可以靠「空仓一律报错」通过。
+	if err := flat.Settle(simDay, map[types.InstrumentID]decimal.Decimal{}, simNext); err != nil {
+		t.Errorf("⚠️ 空仓 + 正常的下一交易日应当结算得成：%v", err)
 	}
 }
 

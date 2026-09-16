@@ -5067,15 +5067,15 @@
 		"expect": "red"
 	},
 	{
-		"name": "527 去掉「有仓而没有结算价」那道检查（期望**仍然绿**）",
+		"name": "527 去掉「有仓而没有结算价」那道——缺失落到下一层，报的不再是门面自己那句",
 		"dir": "",
 		"file": "settle.go",
 		"old": "\t\tif !ok {\n\t\t\treturn fmt.Errorf(\"%s 有持仓而没有今结算价",
 		"new": "\t\tif false && !ok {\n\t\t\treturn fmt.Errorf(\"%s 有持仓而没有今结算价",
 		"pkg": "./",
 		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
-		"want": "",
-		"expect": "green",
+		"want": "不是门面那一道拦的",
+		"expect": "red",
 		"why": "两道检查重叠：缺失的结算价从 map 取出来是零值，被下一道「不为正」拦住，只是报错文案变了。保留第一道是为了文案能说清「没有」而不是「为零」"
 	},
 	{
@@ -6249,14 +6249,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "634 结算里「今结算价不为正」那道去掉（527 的红搭档：缺失被伪装成零之后，就只剩这一道拦着）",
+		"name": "634 去掉门面「今结算价不为正」那道——零价落到 position 那层，换了一句错",
 		"dir": "",
 		"file": "settle.go",
 		"old": "\t\tif !px.IsPositive() {",
 		"new": "\t\tif false && !px.IsPositive() {",
 		"pkg": "./",
 		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
-		"want": "结算成功了",
+		"want": "不是门面那一道拦的",
 		"expect": "red"
 	},
 	{
@@ -6282,14 +6282,25 @@
 		"expect": "red"
 	},
 	{
-		"name": "637 把 634 的 test 改指同包别的测试（527 就此变回孤儿——本守卫自己的红搭档）",
+		"name": "637 把 635 的 test 改指同包别的测试（393 就此变回孤儿——本守卫自己的红搭档）",
 		"dir": "",
 		"file": "tools/breakcheck/breaks.json",
-		"old": "\t\t\"test\": \"TestSettleRefusesMissingPriceAndLeavesNoTrace\",\n\t\t\"want\": \"结算成功了\",",
-		"new": "\t\t\"test\": \"TestSettleRefusesNotNeededPositions\",\n\t\t\"want\": \"结算成功了\",",
+		"old": "\t\t\"test\": \"TestSlicePreconditionCheckedBeforeAnyOrder\",\n\t\t\"want\": \"本条守卫在空转\",",
+		"new": "\t\t\"test\": \"TestCheckCTPDumpDir\",\n\t\t\"want\": \"本条守卫在空转\",",
 		"pkg": "./tools/breakcheck/",
 		"test": "TestEveryGreenBreakHasARedPartner",
 		"want": "没有红搭档的 expect=green",
+		"expect": "red"
+	},
+	{
+		"name": "638 门面的「下一交易日不晚于当前」去掉——空仓那一档 position.Settle 根本不被调用，没人接住",
+		"dir": "",
+		"file": "settle.go",
+		"old": "\tif !nextDay.After(day) {",
+		"new": "\tif false && !nextDay.After(day) {",
+		"pkg": "./",
+		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
+		"want": "空仓时下一交易日等于当前交易日也结算了",
 		"expect": "red"
 	}
 ]
