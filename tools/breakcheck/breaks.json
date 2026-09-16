@@ -6498,7 +6498,7 @@
 		"new": "\t}\n\treturn \"\"\n}",
 		"pkg": "./ctperr/",
 		"test": "TestReasonStringsAreDistinct",
-		"want": "只数到 0 个拒因",
+		"want": "零值的名字是空串",
 		"expect": "red"
 	}
 ]
