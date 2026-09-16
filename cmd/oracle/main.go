@@ -53,6 +53,7 @@ func usage() {
   oracle ctp-closefee -symbol DCE.m2701 -mode bare|yd -dump ../../testdata/ctp  [-check 只读]
                                    ⚠️ **会真的平一手昨仓**（§13 #21 的 E1 / E2）：只有昨仓时平一手，
                                    看收的是平今档还是平昨档。前提：今 0、昨 ≥1；种子留了 2 手，两个实验各消耗一手
+  oracle ctp-priority -symbol SHFE.rb2701 -out testdata/refdata  ⚠️ 只在**报不进单的时段**跑（盘中休息）
   oracle ctp-inst -symbols SHFE.rb2701,GFEX.si2601   ⚠️ 只读：柜台声明的最小变动价位 / 乘数
   oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
                                    ⚠️ **CTP/SimNow 侧**：查柜台**声明**的手续费率（三档各两项）。
@@ -183,6 +184,11 @@ func main() {
 		}
 	case "ctp-closefee":
 		if err := runCTPCloseFee(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-priority":
+		if err := runCTPPriority(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
