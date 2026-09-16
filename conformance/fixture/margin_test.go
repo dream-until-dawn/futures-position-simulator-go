@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
-	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
-	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -48,43 +46,38 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 			if len(trades) == 0 {
 				continue
 			}
-			pre, hasPre := f.PreSettlement(sym)
-			if !hasPre {
+			// ⚠️ 只比夹具**自己**报了昨结算价的截面：占用依赖它，借来的那一份门面不给（HasMargin 为假）
+			if _, hasPre := f.PreSettlement(sym); !hasPre {
 				skippedNoQuote = append(skippedNoQuote, f.Path)
 				continue
 			}
 			withQuote++
 			// ⚠️ 保证金用夹具**自己**报的昨结算价（上面缺就跳过了）；持仓走 positionOf（带昨仓结转、否则当日重放）——
 			// 当日重放那一支若借了同日兄弟夹具的昨结算价，也只当门面前提，这里算保证金用的仍是上面的 pre（design.md §11 决策点 3）
-			p, _, err := positionOf(t, all, f, sym)
+			r, _, err := positionOf(t, all, f, sym)
 			if err != nil {
 				t.Errorf("⚠️ %s %s 重放失败：%v", f.Path, sym, err)
 				continue
 			}
 			product, _ := splitProduct(trades[0].Instrument.Product)
-			rates, ok := ratesFor(product)
-			if !ok {
+			if _, ok := ratesFor(product); !ok {
 				t.Errorf("⚠️ 品种 %s 没有登记保证金率", product)
 				continue
 			}
-			mult, ok := multipliers[sym]
-			if !ok {
+			if _, ok := multipliers[sym]; !ok {
 				t.Errorf("⚠️ %s 没有登记乘数", sym)
 				continue
 			}
-			long, short, err := MarginOf(p, rates, decimal.RequireFromString(mult), pre,
-				false, // ⚠️ 单向大边：实测本口子未启用（kq_facts 5）
-				margin.PreSettleAll, margin.ByInstrument)
-			if IsNoPosition(err) {
-				// 空仓 —— 柜台给 "-"，本库也说「没有」，这里不构造字段。
-				// ⚠️ 两边都「没有」是一致，但它是空洞的一致，
-				// 在 view 那条全量对拍里已经按 Untriggered 记过账，不重复计。
+			// F8：逐方向占用由**门面**给（Replayed），本包不再自己把持仓翻译成 margin.Leg。
+			// ⚠️ 空仓时 HasMargin 为假 —— 柜台给 "-"、本库说「没有」，两边都「没有」是空洞的一致，
+			// 在 view 那条全量对拍里已按 Untriggered 记过账，这里不构造字段。
+			// ⚠️ 昨结算价借自同日兄弟夹具时 HasMargin 也为假（借来的数不进依赖它的比对，§11 决策点 3 / §12）——
+			// 本条上面已按「夹具自己报了昨结算价」筛过，所以走不到那一支。
+			if !r.HasMargin {
 				continue
 			}
-			if err != nil {
-				t.Errorf("⚠️ %s %s 算保证金失败：%v", f.Path, sym, err)
-				continue
-			}
+			long, short := r.MarginLong, r.MarginShort
+			p := r.Position
 			products[product] = true
 			for _, side := range []struct {
 				name string
@@ -143,7 +136,7 @@ func TestMarginAgainstFixturePositions(t *testing.T) {
 
 	// ⚠️ 明说测不到什么，免得「全对」被读成「保证金这块完了」。
 	t.Log("⚠️ 本条**测不到**：单向大边（本口子未启用，kq_facts 5）、" +
-		"今昨基准之分（本条只按快期实测的 PreSettleAll 算、不拿候选互比；F7c 起样本里有了昨仓方向，「全是今仓」不再成立，"+
+		"今昨基准之分（本条只按快期实测的 PreSettleAll 算、不拿候选互比；F7c 起样本里有了昨仓方向，「全是今仓」不再成立，" +
 		"两个候选的判别力由 TestRebuildAccountFieldByField 承担，见破坏 518）")
 }
 
@@ -165,84 +158,5 @@ func TestMarginRatesHaveMoreThanOneTier(t *testing.T) {
 	if len(tiers) == len(marginRates) {
 		t.Errorf("⚠️ %d 个品种恰好 %d 档 —— 实测里 rb 与 m 同为 7%%、i 与 cu 同为 11%%，"+
 			"每品种一档说明这张表不是照实测填的", len(marginRates), len(tiers))
-	}
-}
-
-// TestMarginNoPositionIsAnError 断言「无持仓」走的是 error 而不是 0。
-//
-// ⚠️ 这条路径此前**没有覆盖**：破坏验证把 errNoPosition 改成 nil，
-// 全部测试照样绿 —— 因为 view.PositionOf 自己的空仓判断先生效了，
-// 传进去的那个 0 根本没被用上。
-// 而 MarginOf 是个公开函数，别的调用方不一定有那层保护。
-//
-// 「空仓没有保证金」与「保证金是 0」在数上分不开，
-// 而后者会让一个空账户看起来和一个满仓账户一样安全。
-func TestMarginNoPositionIsAnError(t *testing.T) {
-	inst := types.InstrumentID{Exchange: types.SHFE, Product: "rb", Year: 2027, Month: 1}
-	p, err := position.New(inst, types.Speculation, types.NewTradingDay(2026, 9, 8), refdata.UseHistory)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rates, _ := ratesFor("rb")
-	long, short, err := MarginOf(p, rates, decimal.NewFromInt(10),
-		decimal.RequireFromString("3158"), false, margin.PreSettleAll, margin.ByInstrument)
-	if err == nil {
-		t.Fatalf("⚠️ 空仓算保证金得到 %s/%s 而没有报错 —— "+
-			"「空仓没有保证金」与「保证金是 0」在数上分不开，"+
-			"而后者会让空账户看起来和满仓账户一样安全", long, short)
-	}
-	if !IsNoPosition(err) {
-		t.Errorf("报错了但不是「无持仓」：%v", err)
-	}
-	// 反向：有持仓时不该报这个错，否则上面那条可以靠「一律报错」通过。
-	if err := p.Open(types.Buy, types.NewTradingDay(2026, 9, 8),
-		decimal.RequireFromString("3151"), 1); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := MarginOf(p, rates, decimal.NewFromInt(10),
-		decimal.RequireFromString("3158"), false,
-		margin.PreSettleAll, margin.ByInstrument); err != nil {
-		t.Errorf("有持仓时不该报错：%v", err)
-	}
-}
-
-// TestMarginRefusesMissingInputs 断言乘数与昨结算价缺失都被拒。
-//
-// ⚠️ 两个都是「回落到 0 会让金额变成 0，而 0 看起来完全合理」那一类。
-func TestMarginRefusesMissingInputs(t *testing.T) {
-	inst := types.InstrumentID{Exchange: types.SHFE, Product: "rb", Year: 2027, Month: 1}
-	day := types.NewTradingDay(2026, 9, 8)
-	mk := func() *position.Position {
-		p, err := position.New(inst, types.Speculation, day, refdata.UseHistory)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := p.Open(types.Buy, day, decimal.RequireFromString("3151"), 1); err != nil {
-			t.Fatal(err)
-		}
-		return p
-	}
-	rates, _ := ratesFor("rb")
-	ten := decimal.NewFromInt(10)
-	pre := decimal.RequireFromString("3158")
-	for _, c := range []struct {
-		name            string
-		mult, preSettle decimal.Decimal
-	}{
-		{"乘数为零", decimal.Zero, pre},
-		{"乘数为负", decimal.NewFromInt(-1), pre},
-		{"昨结算价为零", ten, decimal.Zero},
-		{"昨结算价为负", ten, decimal.NewFromInt(-1)},
-	} {
-		if _, _, err := MarginOf(mk(), rates, c.mult, c.preSettle, false,
-			margin.PreSettleAll, margin.ByInstrument); err == nil {
-			t.Errorf("⚠️ %s 应当报错 —— 回落到 0 会让保证金变成 0，"+
-				"而「不占保证金」在数上完全合理", c.name)
-		}
-	}
-	// 反向对照：两个都正常时不报错。
-	if _, _, err := MarginOf(mk(), rates, ten, pre, false,
-		margin.PreSettleAll, margin.ByInstrument); err != nil {
-		t.Errorf("输入正常时不该报错：%v", err)
 	}
 }

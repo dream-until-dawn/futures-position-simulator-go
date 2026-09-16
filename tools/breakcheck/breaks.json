@@ -386,11 +386,11 @@
 		"why": "平今与开仓在快期模拟上同费率（kq_facts 18），所以「开平标志选错档」这个错在本口子上查不出来。真实 CTP 上平今常另有费率。"
 	},
 	{
-		"name": "360 公司口径换交易所口径（期望**仍然绿**）",
+		"name": "360 公司口径换交易所口径（期望**仍然绿**）（F8 改指：翻译收进门面，这里取的是 MarginGroups 的哪一档）",
 		"dir": "",
-		"file": "conformance/fixture/margin.go",
-		"old": "\t\tlong = long.Add(g.LongExchange)\n\t\tshort = short.Add(g.ShortExchange)",
-		"new": "\t\tlong = long.Add(g.LongCompany)\n\t\tshort = short.Add(g.ShortCompany)",
+		"file": "conformance/fixture/replay.go",
+		"old": "\t\tout.MarginLong, out.MarginShort, out.HasMargin = g.LongExchange, g.ShortExchange, true",
+		"new": "\t\tout.MarginLong, out.MarginShort, out.HasMargin = g.LongCompany, g.ShortCompany, true",
 		"pkg": "./conformance/fixture/",
 		"test": "TestMarginAgainstFixturePositions",
 		"want": "",
@@ -398,11 +398,11 @@
 		"why": "实测费率里公司加收为零，交易所口径与公司口径恒等，本口子上分不开（待实测第 14 条）。⚠️ 风险度用的是公司口径，两层混用时错的方向是「看起来更安全」。"
 	},
 	{
-		"name": "361 逐笔翻译改成按方向合并手数",
+		"name": "361 逐笔翻译改成按方向合并手数（F8 改指：逐笔翻译只剩门面 value() 一份）",
 		"dir": "",
-		"file": "conformance/fixture/margin.go",
-		"old": "\t\tfor _, l := range s.Lots() {",
-		"new": "\t\tfor _, l := range s.Lots()[:min(1, len(s.Lots()))] {",
+		"file": "trade.go",
+		"old": "\t\t\tfor _, l := range side.Lots() {",
+		"new": "\t\t\tfor _, l := range side.Lots()[:min(1, len(side.Lots()))] {",
 		"pkg": "./conformance/fixture/",
 		"test": "TestMarginAgainstFixturePositions",
 		"want": "保证金对不上",
@@ -431,14 +431,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "364 空仓也返回 0 而不是报错",
+		"name": "364 空仓也说「有占用」（值是 0）而不是说没有（F8 改指：翻译收进门面，空仓在这里表现为门面没给这一组）",
 		"dir": "",
-		"file": "conformance/fixture/margin.go",
-		"old": "\t\treturn decimal.Zero, decimal.Zero, errNoPosition",
-		"new": "\t\treturn decimal.Zero, decimal.Zero, nil",
+		"file": "conformance/fixture/replay.go",
+		"old": "\tout := Replayed{Position: p}",
+		"new": "\tout := Replayed{Position: p, HasMargin: true}",
 		"pkg": "./conformance/fixture/",
-		"test": "TestMarginNoPositionIsAnError",
-		"want": "没有报错",
+		"test": "TestReplayOnFacadeFlatGivesNoMargin",
+		"want": "空仓时应当**没有**占用",
 		"expect": "red"
 	},
 	{
@@ -6093,16 +6093,16 @@
 		"expect": "red"
 	},
 	{
-		"name": "620 【期望仍然绿】保证金对拍改用借来的昨结算价（缺行情的截面也算保证金）",
+		"name": "620 【期望仍然绿】把「昨结算价是借来的」瞒着门面（借来的样本照样拿到占用）（F8 改指：守法从调用方自觉变成 ReplayOnFacade 的参数）",
 		"dir": "",
-		"file": "conformance/fixture/margin_test.go",
-		"old": "\t\t\tpre, hasPre := f.PreSettlement(sym)",
-		"new": "\t\t\tpre, _, hasPre := sameDayPre(all, f, sym)",
+		"file": "conformance/fixture/replay_facade_test.go",
+		"old": "\tr, err = ReplayOnFacade(f, sym, mustSpec(t, f, sym), refdata.PositionDateNotNeeded, pre, borrowed)",
+		"new": "\tr, err = ReplayOnFacade(f, sym, mustSpec(t, f, sym), refdata.PositionDateNotNeeded, pre, false)",
 		"pkg": "./conformance/fixture/",
 		"test": "TestMarginAgainstFixturePositions",
 		"want": "",
 		"expect": "green",
-		"why": "这正是 F7c 决策点 3 要防的那一步，而它**不会红**：20260908 那批借来的昨结算价（同日唯一值）恰好就是真值，借来算保证金照样对得上，只是比对的截面变多、「因缺行情跳过」变少 —— 那两个数只打日志不断言。守法落在结构上（ReplayOnFacade 只返回持仓、借值辅助写明只当前提）与本条登记，不在测试上。换一批借来的值不是真值的语料，它才会红"
+		"why": "两道都得拆才红：① 借来的那批（20260908）借到的值恰好就是真值，占用照样对得上；② margin_test 另有「夹具自己报了昨结算价」这道筛选，借来的样本根本不进保证金比对。守法落在结构（HasMargin 由参数决定）与登记上，不在测试上。换一批借来的值不是真值的语料，它才会红"
 	},
 	{
 		"name": "621 cmd/oracle 的 -carry 结算价接错（+50）：结转接上了、比对计数也不变，只有本库 position_price_long 变了",

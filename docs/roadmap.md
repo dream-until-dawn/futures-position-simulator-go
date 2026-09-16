@@ -1002,6 +1002,8 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
 
 设计见 design.md「门面的形状」§12。要点：重复的不是保证金算法（`margin` 包只有一份），是「持仓 → `margin.Leg`」这层翻译，
 门面 `value()` 与 `fixture.MarginOf` 各一份，而今昨维度正是在这层被压没的。
+**F8 落地**：门面 `MarginGroups()`；`Replayed{持仓, 逐方向占用, HasMargin}`；删 `fixture.MarginOf`；接上保证金的样本 31 → 40，失败不变。破坏 623–627 新增，360/361/364/529/620 改指。
+
 门面开只读出口 `MarginGroups()`；逐方向的数只在组键是合约时有定义（对拍处断言，不隐式回退）；
 `ReplayOnFacade` 加显式参数 `borrowedPre`，借来的昨结算价**不返回**保证金 —— F7c 那条守法从「靠调用方自觉」变成结构上的。
 

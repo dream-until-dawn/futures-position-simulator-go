@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -62,28 +61,29 @@ var errNoCarrySource = errors.New("带昨仓而结转不了")
 // ⚠️ F7c 撞出来的：旧 Replay 对带昨仓的合约也只重放当日成交，20260909 那批 rb2701 里有一笔裸 CLOSE ——
 // 柜台平的是**昨仓**，旧重放手里只有今仓，就**拿今仓去平**，量上恰好对得上、不报错；对拍只比没有昨仓的那一侧，于是一直没露头。
 // 门面在 PositionDateNotNeeded 下拒绝裸 CLOSE（没有实测的消耗顺序），不将错就错 ⇒ 带昨仓的合约走结转才对。
-func positionOf(t *testing.T, all []*Fixture, f *Fixture, sym string) (p *position.Position, borrowed bool, err error) {
+func positionOf(t *testing.T, all []*Fixture, f *Fixture, sym string) (r Replayed, borrowed bool, err error) {
 	t.Helper()
 	if f.HasHistoryPosition(sym) {
 		src, ok, why := carryStartFor(t, all, f, sym)
 		if !ok {
-			return nil, false, fmt.Errorf("%w：%s", errNoCarrySource, why)
+			return Replayed{}, false, fmt.Errorf("%w：%s", errNoCarrySource, why)
 		}
-		p, err = ReconstructOnFacade(src.prev, f, sym, src.spec, positionDateOf(t, sym), src.settle, f.TradingDay)
-		return p, false, err
+		r, err = ReconstructOnFacade(src.prev, f, sym, src.spec, positionDateOf(t, sym), src.settle, f.TradingDay)
+		return r, false, err
 	}
 	return replaySameDay(t, all, f, sym)
 }
 
 // replaySameDay 在门面上重放当日成交（PositionDateNotNeeded：当日样本不结算），昨结算价按 sameDayPre 取。
-func replaySameDay(t *testing.T, all []*Fixture, f *Fixture, sym string) (p *position.Position, borrowed bool, err error) {
+func replaySameDay(t *testing.T, all []*Fixture, f *Fixture, sym string) (r Replayed, borrowed bool, err error) {
 	t.Helper()
 	pre, borrowed, ok := sameDayPre(all, f, sym)
 	if !ok {
-		return nil, false, errNoSameDayPre
+		return Replayed{}, false, errNoSameDayPre
 	}
-	p, err = ReplayOnFacade(f, sym, mustSpec(t, f, sym), refdata.PositionDateNotNeeded, pre)
-	return p, borrowed, err
+	// ⚠️ 借来的昨结算价照实传下去：ReplayOnFacade 据此**不返回**占用（F8 把 F7c 那条守法变成结构上的）
+	r, err = ReplayOnFacade(f, sym, mustSpec(t, f, sym), refdata.PositionDateNotNeeded, pre, borrowed)
+	return r, borrowed, err
 }
 
 // TestSameDayPreBorrowsOnlyAUniqueValue 钉住借值的两条边：自己有就不借；同日兄弟夹具多值、或者别的交易日的值，都不借。
@@ -121,8 +121,24 @@ func TestReplayOnFacadeRefuses(t *testing.T) {
 	if !ok {
 		t.Fatal("前提：status-20260908-7 带行情")
 	}
-	if _, err := ReplayOnFacade(f, sym, spec, refdata.PositionDateNotNeeded, pre); err != nil {
+	r, err := ReplayOnFacade(f, sym, spec, refdata.PositionDateNotNeeded, pre, false)
+	if err != nil {
 		t.Fatalf("前提：齐全时要重放得出：%v", err)
+	}
+	// ⚠️ 占用只在「昨结算价不是借来的」时给：借来的那一份不属于这份证据（F8 把守法做进返回值）
+	if !r.HasMargin || !r.MarginLong.IsPositive() {
+		t.Errorf("⚠️ 自己报了昨结算价的样本应当给出占用，得到 HasMargin=%v 多头 %s", r.HasMargin, r.MarginLong)
+	}
+	borrowed, err := ReplayOnFacade(f, sym, spec, refdata.PositionDateNotNeeded, pre, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if borrowed.HasMargin || !borrowed.MarginLong.IsZero() {
+		t.Errorf("⚠️ 昨结算价借来的样本**不许**给出占用，得到 HasMargin=%v 多头 %s —— 借来的数不属于这份证据",
+			borrowed.HasMargin, borrowed.MarginLong)
+	}
+	if borrowed.Position == nil || borrowed.Position.IsFlat() {
+		t.Error("⚠️ 借来的样本照样要给持仓（比的是手数与开仓价，不依赖昨结算价）")
 	}
 	noLast := *f
 	noLast.Positions = map[string]map[string]Value{}
@@ -144,10 +160,48 @@ func TestReplayOnFacadeRefuses(t *testing.T) {
 		{"没有最新价", &noLast, sym, pre, "没有最新价"},
 		{"没有 pre_balance", &noPB, sym, pre, "pre_balance"},
 	} {
-		_, err := ReplayOnFacade(c.f, c.sym, spec, refdata.PositionDateNotNeeded, c.pre)
+		_, err := ReplayOnFacade(c.f, c.sym, spec, refdata.PositionDateNotNeeded, c.pre, false)
 		if err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("⚠️ %s：应当报错（含 %q），得到 %v", c.name, c.want, err)
 		}
+	}
+}
+
+// TestReplayOnFacadeFlatGivesNoMargin 钉住「空仓没有占用」与「保证金是 0」分得开（F8 从 TestMarginNoPositionIsAnError 接过来）。
+//
+// ⚠️ 两者在数上分不开，而后者会让一个空账户看起来和满仓账户一样安全。门面这侧的说法是 HasMargin=false，不是零。
+func TestReplayOnFacadeFlatGivesNoMargin(t *testing.T) {
+	inst, err := types.ParseSymbol("SHFE.rb2701", mustDay(t, "20260908"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	day := mustDay(t, "20260908")
+	f := &Fixture{Path: "合成", TradingDay: day,
+		Account:   map[string]Value{"pre_balance": {Number: dd("1000000")}},
+		Positions: map[string]map[string]Value{"SHFE.rb2701": {"last_price": {Number: dd("3160")}}},
+		Trades: []Trade{
+			{TradeID: "o", Instrument: inst, Direction: types.Buy, Offset: types.Open, Price: dd("3150"), Volume: 1, At: 1},
+			{TradeID: "c", Instrument: inst, Direction: types.Sell, Offset: types.CloseToday, Price: dd("3160"), Volume: 1, At: 2},
+		}}
+	spec := mustSpec(t, f, "SHFE.rb2701")
+	r, err := ReplayOnFacade(f, "SHFE.rb2701", spec, refdata.UseHistory, dd("3158"), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !r.Position.IsFlat() {
+		t.Fatalf("前提：开一手又平掉之后是空仓，得到 %+v", r.Position)
+	}
+	if r.HasMargin || !r.MarginLong.IsZero() || !r.MarginShort.IsZero() {
+		t.Errorf("⚠️ 空仓时应当**没有**占用（HasMargin=false），得到 %v 多 %s / 空 %s —— "+
+			"「空仓没有保证金」与「保证金是 0」在数上分不开，而后者会让空账户看起来和满仓账户一样安全",
+			r.HasMargin, r.MarginLong, r.MarginShort)
+	}
+
+	// 缺输入（乘数不为正）要报错，不是回落到 0（F8 从 TestMarginRefusesMissingInputs 接过来；昨结算价那一档在 Refuses 里）
+	bad := spec
+	bad.Multiplier = decimal.Zero
+	if _, err := ReplayOnFacade(f, "SHFE.rb2701", bad, refdata.UseHistory, dd("3158"), false); err == nil {
+		t.Error("⚠️ 乘数为零应当报错 —— 回落到 0 会让保证金与手续费都变成 0，而「不占保证金」在数上完全合理")
 	}
 }
 
@@ -167,11 +221,16 @@ func TestReplayOnFacadeClosesOnTheRightSide(t *testing.T) {
 			{TradeID: "o", Instrument: inst, Direction: types.Buy, Offset: types.Open, Price: dd("3150"), Volume: 2, At: 1},
 			{TradeID: "c", Instrument: inst, Direction: types.Sell, Offset: types.CloseToday, Price: dd("3160"), Volume: 1, At: 2},
 		}}
-	p, err := ReplayOnFacade(f, "SHFE.rb2701", mustSpec(t, f, "SHFE.rb2701"), refdata.UseHistory, dd("3158"))
+	r, err := ReplayOnFacade(f, "SHFE.rb2701", mustSpec(t, f, "SHFE.rb2701"), refdata.UseHistory, dd("3158"), false)
 	if err != nil {
 		t.Fatalf("⚠️ 开多 2、卖出平今 1 之后重放报错 —— 平仓方向取反会去平空头，而空头没有仓：%v", err)
 	}
+	p := r.Position
 	if p.VolumeToday(types.Buy) != 1 || p.VolumeToday(types.Sell) != 0 {
 		t.Errorf("⚠️ 开多 2、卖出平今 1 之后 多 %d / 空 %d，应为 多 1 / 空 0", p.VolumeToday(types.Buy), p.VolumeToday(types.Sell))
+	}
+	// 占用逐方向给出：只有多头 ⇒ 空头那边为零
+	if !r.HasMargin || !r.MarginLong.IsPositive() || !r.MarginShort.IsZero() {
+		t.Errorf("⚠️ 只有多头时占用应当 多 > 0 / 空 = 0，得到 HasMargin=%v 多 %s / 空 %s", r.HasMargin, r.MarginLong, r.MarginShort)
 	}
 }

@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
-	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
-	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
@@ -125,7 +123,7 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 			if len(trades) == 0 {
 				continue
 			}
-			p, borrowed, err := positionOf(t, all, f, sym)
+			rep, borrowed, err := positionOf(t, all, f, sym)
 			if errors.Is(err, errNoSameDayPre) || errors.Is(err, errNoCarrySource) {
 				noPre = append(noPre, f.Path+" "+sym)
 				continue
@@ -151,7 +149,7 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 				if history {
 					historySides++
 				}
-				s, err := p.Side(side.dir)
+				s, err := rep.Position.Side(side.dir)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -282,27 +280,19 @@ func TestPositionViewAgainstFixtureShowsTheGap(t *testing.T) {
 	if !ok {
 		t.Fatalf("%s 没有 %s 的昨结算价 —— 本条选它就是因为它带行情", target.Path, sym)
 	}
-	p, err := ReplayOnFacade(target, sym, mustSpec(t, target, sym), refdata.PositionDateNotNeeded, pre)
+	rep, err := ReplayOnFacade(target, sym, mustSpec(t, target, sym), refdata.PositionDateNotNeeded, pre, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+	p := rep.Position
 	oracle := target.Positions[sym]
-	pre, hasPre := target.PreSettlement(sym)
-	if !hasPre {
-		t.Fatalf("⚠️ %s 里 %s 没有昨结算价 —— 这份夹具不自足", targetName, sym)
-	}
-	rates, ok := ratesFor("rb")
-	if !ok {
-		t.Fatal("rb 没有登记保证金率")
-	}
 	mult := decimal.NewFromInt(10)
-	// ⚠️ 保证金由 margin 包算再传进来，**不在 view 里重算**：
-	// 重算会产生第二个实现，而两个实现一起退化时测试全绿。
-	mLong, mShort, err := MarginOf(p, rates, mult, pre, false,
-		margin.PreSettleAll, margin.ByInstrument)
-	if err != nil {
-		t.Fatalf("算保证金失败：%v", err)
+	// ⚠️ 保证金由**门面**算再传进来，view 里不重算：重算会产生第二个实现，而两个实现一起退化时测试全绿。
+	// F8 之前这里调 fixture.MarginOf 自己把持仓翻译成 margin.Leg —— 那层翻译与门面 value() 重了一份。
+	if !rep.HasMargin {
+		t.Fatalf("⚠️ %s 里 %s 有持仓、昨结算价也自己报了，门面却没给占用", targetName, sym)
 	}
+	mLong, mShort := rep.MarginLong, rep.MarginShort
 	lib, err := view.PositionOf(p, view.PositionInput{
 		Multiplier: mult,
 		LastPrice:  oracle["last_price"].Number, HasLast: true,
@@ -484,42 +474,31 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 				t.Errorf("⚠️ %s 没有登记乘数 —— 漏乘会得到一个量级正确到肉眼看不出的错值", sym)
 				continue
 			}
-			var p *position.Position
+			var rep Replayed
 			var err error
 			if carrySrc != nil {
 				// ⚠️ 结转过来的持仓在门面上重建（F6b）：前一日成交 → 按交易所结算价结算 → 当日成交，
 				// 带该合约**实测的** PositionDateType（今昨仓滚不滚由它定）。
-				p, err = ReconstructOnFacade(carrySrc.prev, f, sym, carrySrc.spec,
+				rep, err = ReconstructOnFacade(carrySrc.prev, f, sym, carrySrc.spec,
 					positionDateOf(t, sym), carrySrc.settle, f.TradingDay)
 			} else {
-				p, _, err = replaySameDay(t, all, f, sym)
+				rep, _, err = replaySameDay(t, all, f, sym)
 			}
 			if err != nil {
 				continue
 			}
+			p := rep.Position
 			oracle := f.Positions[sym]
 			last := oracle["last_price"]
 			in := view.PositionInput{
 				Multiplier: decimal.RequireFromString(multStr),
 				LastPrice:  last.Number, HasLast: !last.Absent,
 			}
-			// ⚠️ 有昨结算价才算保证金；没有就**不给**，让那几个字段落进
-			// 「还没实现」并被记账 —— 而不是拿别处的数补上。
-			if pre, ok := f.PreSettlement(sym); ok {
-				product, _ := splitProduct(trades[0].Instrument.Product)
-				if rates, ok := ratesFor(product); ok {
-					l, s, err := MarginOf(p, rates, in.Multiplier, pre, false,
-						margin.PreSettleAll, margin.ByInstrument)
-					switch {
-					case IsNoPosition(err):
-						// 空仓：不给保证金，view 会渲染成「明确无值」。
-					case err != nil:
-						t.Errorf("⚠️ %s %s 算保证金失败：%v", f.Path, sym, err)
-					default:
-						in.MarginLong, in.MarginShort, in.HasMargin = l, s, true
-						withMargin++
-					}
-				}
+			// ⚠️ 占用由**门面**给（F8）。没有就**不给**，让那几个字段落进「还没实现」并被记账 —— 而不是拿别处的数补上。
+			// HasMargin 为假的两种情形都在这里落成「不给」：空仓（view 渲染成「明确无值」）、昨结算价借自同日兄弟夹具（借来的不进依赖它的比对）。
+			if rep.HasMargin {
+				in.MarginLong, in.MarginShort, in.HasMargin = rep.MarginLong, rep.MarginShort, true
+				withMargin++
 			}
 			// ⚠️ 冻结只在**这份夹具记了委托**时给。
 			//

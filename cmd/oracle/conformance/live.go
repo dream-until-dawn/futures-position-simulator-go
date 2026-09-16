@@ -31,8 +31,6 @@ import (
 
 	libconf "github.com/dream-until-dawn/futures-position-simulator-go/conformance"
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture"
-	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
-	"github.com/dream-until-dawn/futures-position-simulator-go/position"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/view"
 	"github.com/shopspring/decimal"
@@ -114,7 +112,7 @@ func Compare(raw []byte, specs map[string]Spec, carry *Carry) (Result, error) {
 		// 所以 carry 里没有这个合约的结算价时**不猜**，照样记进跳过。
 		needsCarry := f.HasHistoryPosition(sym) || len(f.TradesOf(sym)) == 0
 		if needsCarry {
-			p, err := carry.reconstruct(f, sym, spec)
+			rep, err := carry.reconstruct(f, sym, spec)
 			if err != nil {
 				if f.HasHistoryPosition(sym) {
 					res.SkippedHistory = append(res.SkippedHistory, sym+"："+err.Error())
@@ -123,7 +121,7 @@ func Compare(raw []byte, specs map[string]Spec, carry *Carry) (Result, error) {
 				}
 				continue
 			}
-			fs, err := compareOne(f, sym, spec, p)
+			fs, err := compareOne(f, sym, spec, rep)
 			if err != nil {
 				return res, err
 			}
@@ -139,13 +137,13 @@ func Compare(raw []byte, specs map[string]Spec, carry *Carry) (Result, error) {
 		if !ok {
 			return res, fmt.Errorf("实时截面里 %s 没有昨结算价 —— 门面记账要它，不拿别处的顶替", sym)
 		}
-		p, err := fixture.ReplayOnFacade(f, sym,
+		rep, err := fixture.ReplayOnFacade(f, sym,
 			fixture.Spec{Multiplier: spec.Multiplier, Commission: spec.Commission, Margin: spec.Margin},
-			spec.PositionDate, pre)
+			spec.PositionDate, pre, false)
 		if err != nil {
 			return res, fmt.Errorf("重放 %s：%w", sym, err)
 		}
-		fs, err := compareOne(f, sym, spec, p)
+		fs, err := compareOne(f, sym, spec, rep)
 		if err != nil {
 			return res, err
 		}
@@ -258,7 +256,7 @@ func hasAnyVolume(pos map[string]fixture.Value) bool {
 // 写两份比对准备（取最新价、算保证金、渲染视图）会让两条路在
 // 「用不用昨结算价算保证金」这类细节上悄悄分岔。
 func compareOne(f *fixture.Fixture, sym string, spec Spec,
-	p *position.Position) ([]libconf.Field, error) {
+	rep fixture.Replayed) ([]libconf.Field, error) {
 
 	oracle := f.Positions[sym]
 	last := oracle["last_price"]
@@ -266,16 +264,11 @@ func compareOne(f *fixture.Fixture, sym string, spec Spec,
 		Multiplier: spec.Multiplier,
 		LastPrice:  last.Number, HasLast: !last.Absent && !last.IsText,
 	}
-	if pre, ok := f.PreSettlement(sym); ok {
-		l, s, merr := fixture.MarginOf(p, spec.Margin, spec.Multiplier, pre,
-			false, margin.PreSettleAll, margin.ByInstrument)
-		if merr == nil {
-			in.MarginLong, in.MarginShort, in.HasMargin = l, s, true
-		} else if !fixture.IsNoPosition(merr) {
-			return nil, fmt.Errorf("%s 算保证金：%w", sym, merr)
-		}
+	// F8：逐方向占用由**门面**给（Replayed）。为假只有两种情形：空仓、昨结算价是借来的（实时这条路从不借）
+	if rep.HasMargin {
+		in.MarginLong, in.MarginShort, in.HasMargin = rep.MarginLong, rep.MarginShort, true
 	}
-	lib, err := view.PositionOf(p, in)
+	lib, err := view.PositionOf(rep.Position, in)
 	if err != nil {
 		return nil, fmt.Errorf("%s 渲染视图：%w", sym, err)
 	}
@@ -302,13 +295,13 @@ type Carry struct {
 }
 
 // reconstruct 结转一个合约。nil 接收者表示**调用方没给 -carry**。
-func (c *Carry) reconstruct(cur *fixture.Fixture, sym string, spec Spec) (*position.Position, error) {
+func (c *Carry) reconstruct(cur *fixture.Fixture, sym string, spec Spec) (fixture.Replayed, error) {
 	if c == nil || c.Prev == nil {
-		return nil, fmt.Errorf("没给 -carry（前一交易日的夹具）")
+		return fixture.Replayed{}, fmt.Errorf("没给 -carry（前一交易日的夹具）")
 	}
 	settle, ok := c.Settlement[sym]
 	if !ok {
-		return nil, fmt.Errorf("没有该合约的**交易所**结算价（不拿柜台的顶替）")
+		return fixture.Replayed{}, fmt.Errorf("没有该合约的**交易所**结算价（不拿柜台的顶替）")
 	}
 	// F7b：在门面上结转（规格自 F7a 起带手续费率）；Reconstruct 删了
 	return fixture.ReconstructOnFacade(c.Prev, cur, sym,

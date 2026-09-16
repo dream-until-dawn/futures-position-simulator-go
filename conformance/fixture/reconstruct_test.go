@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/conformance"
-	"github.com/dream-until-dawn/futures-position-simulator-go/margin"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
@@ -68,7 +67,7 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 		if !his.IsPositive() {
 			continue // 没有昨仓的方向，原来那两条对拍已经在比了
 		}
-		p, err := ReconstructOnFacade(prev, f, sym, spec, positionDateOf(t, sym), settle, f.TradingDay)
+		rec, err := ReconstructOnFacade(prev, f, sym, spec, positionDateOf(t, sym), settle, f.TradingDay)
 		if err != nil {
 			t.Errorf("⚠️ %s 重建失败：%v", f.Path, err)
 			continue
@@ -112,6 +111,7 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 			}
 		}
 
+		p := rec.Position
 		s, err := p.Side(types.Buy)
 		if err != nil {
 			t.Fatal(err)
@@ -195,11 +195,9 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 				"换挡瞬间的截面，跳过", f.Path, implied, curPre, oracleDatetime(f, sym))
 			continue
 		}
-		ml, ms, merr := MarginOf(p, marginRatesOf(t, sym), multiplierOf(t, sym),
-			settle, false, margin.PreSettleAll, margin.ByInstrument)
-		if merr != nil && !IsNoPosition(merr) {
-			t.Errorf("%s 算保证金失败：%v", f.Path, merr)
-		} else if merr == nil {
+		// F8：占用由门面给（结转用的是交易所结算价，不是借来的）
+		if rec.HasMargin {
+			ml, ms := rec.MarginLong, rec.MarginShort
 			for _, mc := range []struct {
 				name string
 				lib  decimal.Decimal

@@ -850,6 +850,19 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 3. **迁移**：7 个调用点改从门面取；删 `fixture.MarginOf`；`margin_test` 的三条单测改成门面上的等价
    （空仓 / 缺计价输入在门面里本来就报错，费率多档那条与保证金率表有关、留在原处）
 
+##### F8 落地（2026-09-16）
+
+- 门面：`valuation` 留下 `margin.Compute` 的 `Groups`，`MarginGroups()` 只读给出（结算后给次日那一份、恢复时按存档重算、返回副本）；破坏 623–627，529 因同一行改动改指
+- `conformance/fixture`：`ReplayOnFacade` / `ReconstructOnFacade` 返回 `Replayed{持仓, 逐方向占用, HasMargin}`；
+  `ReplayOnFacade` 加参数 `borrowedPre` —— 借来的昨结算价**不返回**占用，F7c 那条守法从文档变成结构上的
+- 删 `fixture.MarginOf` / `IsNoPosition` / `margin.go`；7 个调用点（`margin_test` / `fixture_test` ×2 / `crossday_test` / `reconstruct_test` / `cmd/oracle`）改从门面取
+- 取的是**交易所口径**（与柜台比的那一档，原 `MarginOf` 的选择）；公司口径含券商加收，本批费率上两者恒等（待实测 #14），要它走 `MarginGroups`
+- `MarginOf` 那两条守卫单测在门面侧接住：空仓 ⇒ `HasMargin=false`（不是 0）、乘数不为正 ⇒ 报错（`TestReplayOnFacadeFlatGivesNoMargin`）
+- 破坏 360 / 361 / 364 / 620 改指到门面与 `Replayed`
+- 判据：迁移前后 `conformance/fixture` 与 `cmd/oracle/conformance` 的 -v 日志（去行号与耗时、排序）——
+  `cmd/oracle` 逐行相同；夹具侧只差三处：**接上保证金的样本 31 → 40**（结转来的那些以前因为夹具自己没报昨结算价而拿不到占用，现在按交易所结算价给），
+  对得上 +27 / 未实现 −27（正是那 9 个样本的字段），**失败数不变**；以及删掉 / 新增的那几条测试
+
 ##### ⚠️ 风险与盲区（实现之前先写下）
 
 - 大边（`MaxMarginSide`）在快期上未启用，`ByProduct` 下的逐方向占用**测不到**；本条只在 `ByInstrument` 上有覆盖
