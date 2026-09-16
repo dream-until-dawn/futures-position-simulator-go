@@ -6247,5 +6247,49 @@
 		"test": "TestRepoRootFindsThisRepo",
 		"want": "仓库根被认成了当前目录",
 		"expect": "red"
+	},
+	{
+		"name": "634 结算里「今结算价不为正」那道去掉（527 的红搭档：缺失被伪装成零之后，就只剩这一道拦着）",
+		"dir": "",
+		"file": "settle.go",
+		"old": "\t\tif !px.IsPositive() {",
+		"new": "\t\tif false && !px.IsPositive() {",
+		"pkg": "./",
+		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
+		"want": "结算成功了",
+		"expect": "red"
+	},
+	{
+		"name": "635 「前提不成立，不跑」改成同义措辞（393 的红搭档：AST 守卫认的是那句话，措辞一改它就空转）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\treturn fmt.Errorf(\"⚠️ **前提不成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
+		"new": "\t\treturn fmt.Errorf(\"⚠️ **前提没有成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
+		"pkg": "./",
+		"test": "TestSlicePreconditionCheckedBeforeAnyOrder",
+		"want": "本条守卫在空转",
+		"expect": "red"
+	},
+	{
+		"name": "636 语料已拍而 §13 #6 又写回「语料待拍」（409 的红搭档：过期的低报，双向断言的另一向）",
+		"dir": "cmd/oracle",
+		"file": "docs/cn-futures-rules.md",
+		"old": "守卫 `TestRejectCorpusIsProbeWrittenOnly` 双向核对（语料在 ⇒ 本格不许再写「待拍」）。",
+		"new": "守卫 `TestRejectCorpusIsProbeWrittenOnly` 双向核对（语料在 ⇒ 本格不许再写「待拍」）。语料待拍。",
+		"pkg": "./",
+		"test": "TestRejectCorpusIsProbeWrittenOnly",
+		"want": "过期陈述",
+		"expect": "red"
+	},
+	{
+		"name": "637 把 634 的 test 改指同包别的测试（527 就此变回孤儿——本守卫自己的红搭档）",
+		"dir": "",
+		"file": "tools/breakcheck/breaks.json",
+		"old": "\t\t\"test\": \"TestSettleRefusesMissingPriceAndLeavesNoTrace\",\n\t\t\"want\": \"结算成功了\",",
+		"new": "\t\t\"test\": \"TestSettleRefusesNotNeededPositions\",\n\t\t\"want\": \"结算成功了\",",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestEveryGreenBreakHasARedPartner",
+		"want": "没有红搭档的 expect=green",
+		"expect": "red"
 	}
 ]
