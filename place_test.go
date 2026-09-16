@@ -268,9 +268,11 @@ func TestBareCloseFillOrderAndSubmitAmongLiveOrders(t *testing.T) {
 		t.Errorf("⚠️ 挂单 a 随后成交失败：%v", err)
 	}
 
-	// ⚠️ 已知陷阱（§13 #21 未收敛的直接后果，钉住而不是修）：m2701 平今档 ≠ 平昨档。
-	// 挂 a、b 各裸平 1 手、先成交 b（平今）之后，a 面对的是「只有昨仓的裸平」—— 分歧段 ⇒ 成交报错、a 留在簿上、冻结原样。
-	// 挂的时候按平仓前今仓 1 手收平今档，挂得上；成交时今仓已经没了。
+	// §13 #21 收敛到 (a) 之后（20260917 夜盘 E1）这一段**不再是陷阱**。它此前钉的是
+	// 「a 面对只有昨仓的裸平 ⇒ 分歧段 ⇒ 成交报错、a 留在簿上」—— 那是未收敛时的「不猜」。
+	// 挂 a、b 各裸平 1 手、先成交 b（平今）之后，a 面对的是「只有昨仓的裸平」⇒ 照收**平昨档**、成交成功。
+	// ⚠️ 挂的时候按平仓前今仓 1 手冻的是**平今档**，成交时收的是**平昨档** —— 冻结与实收不等，
+	// 这里钉住冻结整笔释放、账户按**实收**记账（按冻结记账会少收 0.45，而那不会报错）。
 	w := withHistorySubmit(t)
 	barem := req(t, "DCE.m2701", types.Sell, types.Close, "3360", 1)
 	for _, id := range []string{"a", "b"} {
@@ -282,10 +284,17 @@ func TestBareCloseFillOrderAndSubmitAmongLiveOrders(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := w.Account()
-	if _, err := w.Fill(simNext, "a"); err == nil || !strings.Contains(err.Error(), "#21") {
-		t.Errorf("m2701 上 a 面对只有昨仓的裸平，要报 §13 #21：%v", err)
+	if _, err := w.Fill(simNext, "a"); err != nil {
+		t.Fatalf("⚠️ m2701 上 a 面对只有昨仓的裸平，§13 #21 收敛之后应当成交：%v", err)
 	}
-	if !sameSnapshot(w.Account(), before) || len(w.Live()) != 1 {
-		t.Errorf("⚠️ #21 报错之后 a 或冻结没留住：簿 %v", w.Live())
+	after := w.Account()
+	if len(w.Live()) != 0 {
+		t.Errorf("⚠️ a 成交之后簿上还有：%v", w.Live())
+	}
+	if !after.FrozenCommission.IsZero() {
+		t.Errorf("⚠️ 冻结手续费没释放干净：%s —— 挂单时冻的平今档与成交时收的平昨档不等，差额留在了冻结里", after.FrozenCommission)
+	}
+	if got := after.Commission.Sub(before.Commission); !got.Equal(dec("1.2")) {
+		t.Errorf("⚠️ a 实收 %s，期望平昨档 1.2 —— 挂单时冻的是平今档 0.75，实收不该跟着冻结走", got)
 	}
 }

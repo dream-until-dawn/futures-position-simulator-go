@@ -84,6 +84,33 @@ const (
 	// CheckVolumeRange 手数是否在上下限内。
 	CheckVolumeRange
 	// CheckClosable 平仓量是否超过可平量。⚠️ **今昨分别校验**。
+	//
+	// ⚠️⚠️ **实测：它在 CTP 上排在 CheckSession 之前，与上面这个取值顺序相反**
+	// （20260916 日盘，`oracle ctp-priority`，盘中休息 11:30–13:30，SHFE / CZCE / GFEX 三所一致）：
+	// 一笔**同时**违反「不在交易时段」与「无仓平昨」的委托，柜台报的是**可平量**
+	// （SHFE 51 / CZCE 30 / GFEX 30，CTP 码空间），而不是时段（26，交易所前缀码空间）。
+	//
+	//	⇒ 这与码空间对得上：可平量走 CTP 前置那一层（CTP 空间、无交易所委托号），
+	//	  时段与价格类是再往后那一层。**不是一张任意的优先级表，是分层。**
+	//
+	// ⚠️⚠️ **同日下午又量到一条**（20260916 13:31–13:33，`oracle ctp-pairs`）：
+	// 一笔同时违反「可平量」与**价格类**的委托，CTP 报的也是**可平量**
+	// （SHFE 51 / CZCE 30 / GFEX 30；同轮正对照复现了价格类的 48 ⇒ 确实违反到了价格类）。
+	// 而本库把 `CheckPriceTick` / `CheckPriceLimit` 排在 `CheckClosable` **前面** —— 跟的是快期那一侧
+	// （快期：最小变动价位先 / 涨跌停先，state.md `reject_priority_measured` 第 2、3 行）。
+	//
+	// ⚠️⚠️ **两处都是今天就分岔的行为，都并进 §13 #22 等裁决，本库不自行重排**：
+	//
+	//	可平量 × 价格类   本库报价格类   CTP 报可平量
+	//	可平量 × 时段     本库报时段     CTP 报可平量   —— 门面带 Calendar 时**会查时段**（submit.go ErrOutsideSession）
+	//
+	// ⚠️ 20260916 午休时这里写的是「CheckSession 本库根本不查，顺序表不一致而行为一致，是个巧合」——
+	// **那个前提是错的**（评审 20260916 夜用 submitSim 探出：午休 / 收盘后空仓平昨，本库报时段、CTP 报可平量）。
+	// 我据一句「本库标着查不了」下了结论，而没去跑一遍门面 —— 仓库里早有 TestSubmitSession 钉着「16:00 拒在时段」。
+	//
+	// ⚠️ 也不能只把这一对单独重排：CTP 实测是「可平量 > 时段 > 价格类」，本库跟快期是「价格类 > 可平量」，
+	// 而快期不查时段。两边拼起来是个环（时段 > 价格类 > 可平量 > 时段）⇒ 怎么排取决于 #22 跟哪个柜台。
+	// 当前行为由 TestSessionVersusClosablePinnedPending22 钉住，将来重排时它会红、看得见。
 	CheckClosable
 	// CheckFunds 可用资金是否够（保证金 + 手续费）。
 	CheckFunds
@@ -274,7 +301,10 @@ func Validate(req Request, f Facts) Result {
 	if !f.HasSession {
 		skip(CheckSession, "「此刻在不在交易时段内」—— 本库的 Calendar 时段之外拒答（kq_facts 23）")
 	} else if !f.InSession {
-		add(CheckSession, "不在交易时段内")
+		// ⚠️ 带上 Kind：「不在交易时段内」五所都有实测码 26（20260916 盘中休息与收盘后两轮）。
+		// 此前这里走的是不带 Kind 的 add，于是 ctperr 那五格从门面永远走不到 —— 拒单的码是「未知拒因、无码」（评审 20260916 夜 nit 1）。
+		rejections = append(rejections, Rejection{Check: CheckSession, Kind: ctperr.ReasonOutsideSession,
+			Reason: "不在交易时段内"})
 	}
 
 	// —— 3 最小变动价位 ——

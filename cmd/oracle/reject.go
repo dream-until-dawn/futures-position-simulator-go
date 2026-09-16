@@ -98,18 +98,15 @@ func runCTPReject(args []string) error {
 	fs := flag.NewFlagSet("ctp-reject", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 SHFE.rb2701（⚠️ 无默认值）")
-	tick := fs.Float64("tick", 0, "最小变动价位（⚠️ **无默认值**）。"+
-		"⚠️ 猜错的表现不是报错，是**一条用例测到了另一种拒因**，而输出上仍标着原来那个名字")
+	tick := fs.Float64("tick", 0, "最小变动价位。⚠️ **留空即向柜台查**（ReqQryInstrument）；"+
+		"填了则与柜台报的**交叉核对**，不一致就拒绝跑 —— "+
+		"猜错的表现不是报错，是**一条用例测到了另一种拒因**，而输出上仍标着原来那个名字")
 	out := fs.String("out", "", "把观测落成**机器可读**的语料到该目录（留空则只打日志）。"+
 		"⚠️ 20260912 评审判为必修：此前这些码**只活在提交正文里**，而 ctperr 要开工得先让它变成数据。"+
 		"⚠️ 语料**只收码不收原话** —— StatusMsg 是柜台自由文本，按纪律不进库")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
-	}
-	if *tick <= 0 {
-		return fmt.Errorf("⚠️ -tick 没有默认值：bc 是 10、rb 是 1、sc 是 0.1 —— " +
-			"猜错了本命令**照样跑完四条、照样拿到四个码**，而其中两条的码属于另一种拒因")
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：真实委托的合约必须显式指定")
@@ -130,6 +127,11 @@ func runCTPReject(args []string) error {
 	}
 	logf("[rej] 安全阀：AllowOrder=%v MaxVolume=%d", env.AllowOrder, env.MaxVolume)
 
+	tk, err := resolveTick(c, *symbol, *tick, *timeout, logf)
+	if err != nil {
+		return err
+	}
+
 	md, err := c.MarketData(*symbol, *timeout)
 	if err != nil {
 		return err
@@ -143,10 +145,24 @@ func runCTPReject(args []string) error {
 	// ⚠️ 每一条用例都要产出一条观测，**包括没被拒的那些** ——
 	// 否则语料里只剩成功的那几条，而那看起来覆盖得很齐。
 	record := func(rc rejectCase, st ctp.OrderState, outcome string) {
-		obs = append(obs, observe(c.TradingDay(), ex, inst, rc, st, outcome))
+		obs = append(obs, observe(c.TradingDay(), nowClock(), ex, inst, rc, st, outcome, tk))
 	}
+	// ⚠️ 对照组排在四条用例**之前**：它挂不上的话，后面每一个码都归不了因（见 control.go）。
+	ctrl, cerr := runControl(c, ex, inst, md, tk, *timeout, logf)
+	obs = append(obs, ctrl)
+	if cerr != nil {
+		// ⚠️ **先落盘再报错**：对照组被拒时拿到的那个码，正是这一轮唯一有信息的东西。
+		// 同「有成交也要把观测留下来」那一条理由。
+		if *out != "" {
+			if _, werr := writeRejectCorpus(*out, obs, logf); werr != nil {
+				logf("[rej] ⚠️ 语料落盘失败：%v", werr)
+			}
+		}
+		return cerr
+	}
+
 	for i, rc := range rejectCases {
-		px := rc.Price(md, *tick)
+		px := rc.Price(md, tk.Value)
 		logf("")
 		logf("[rej] %d/%d %s → dir=%q off=%q @%.2f", i+1, len(rejectCases),
 			rc.Name, string(rc.Dir), string(rc.Off), px)

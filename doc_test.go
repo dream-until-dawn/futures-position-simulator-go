@@ -766,6 +766,82 @@ func TestRejectPriorityPairsMatchTable(t *testing.T) {
 		filepath.Join("docs", "state.md"), "## `reject_priority_measured`")
 }
 
+// priorityItems 是八项校验在那张表「同时违反的两项」一列里的名字。
+//
+// ⚠️ 写死成一张词表，而不是「× 两边随便什么都算一项」：后者会把
+// 「最小变动价位（CTP/INE 侧，20260911 夜盘）」这种带注记的写法当成另一项，
+// 同一对就被数成两对 —— 那正是本条要防的毛病的反面。
+var priorityItems = []string{"合约可交易", "交易时段", "最小变动价位", "涨跌停", "手数上下限", "可平量", "可用资金", "限仓"}
+
+// distinctPriorityPairs 从表的每一行抽出「同时违反的两项」，归一成无序对并去重。
+func distinctPriorityPairs(t *testing.T, rows []string) (map[string][]string, error) {
+	t.Helper()
+	pairs := map[string][]string{}
+	for _, r := range rows {
+		cells := strings.Split(r, "|")
+		if len(cells) < 3 {
+			return nil, fmt.Errorf("行格式不对：%q", r)
+		}
+		num, col := strings.TrimSpace(cells[1]), cells[2]
+		var hit []string
+		for _, it := range priorityItems {
+			if strings.Contains(col, it) {
+				hit = append(hit, it)
+			}
+		}
+		if len(hit) != 2 {
+			return nil, fmt.Errorf("第 %s 行认出 %d 项 %v（要恰好 2）：%q —— 词表不全，或这一行写的不是一对", num, len(hit), hit, strings.TrimSpace(col))
+		}
+		sort.Strings(hit)
+		k := hit[0] + " × " + hit[1]
+		pairs[k] = append(pairs[k], num)
+	}
+	return pairs, nil
+}
+
+// TestRejectPriorityDistinctPairsMatchCell 断言 state.md 那一格写的「不同的对是 N」与表里去重后的对数一致。
+//
+// ⚠️ 上面那条按**行**核；而「对」一直没人核 —— 20260916 夜的漂移就是证据：
+// 补第 9、10 行时说明只写了第 1/5 行一组重复，送审消息里据此把不同的对算成了 9，实际是 7
+// （2/9、3/10 也是同一对在两个柜台各量一次）。评审同日指出，并建议从「同时违反的两项」列归一化出无序对去重。
+//
+// ⚠️ 行与对的差不是噪声：**同一对量了两次的那几组，恰恰可能是两个柜台答案相反的那几组**（§13 #22 的 2/9、3/10）。
+// 把它们数成两对，会同时掩盖「重复」与「分歧」。
+func TestRejectPriorityDistinctPairsMatchCell(t *testing.T) {
+	rows := numberedTableRows(t, filepath.Join("docs", "state.md"), "## `reject_priority_measured`")
+	if len(rows) == 0 {
+		t.Fatal("⚠️ 表一行都没解析到 —— 下面的比较会在空集上通过")
+	}
+	pairs, err := distinctPriorityPairs(t, rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join("docs", "state.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile(`不同的\*\*对\*\*是 \*\*(\d+)\*\*`).FindAllStringSubmatch(string(b), -1)
+	if len(m) != 1 {
+		t.Fatalf("⚠️ state.md 里「不同的**对**是 **N**」出现 %d 次（要恰好 1 次）—— 没写就没人核，写两处就会漂", len(m))
+	}
+	declared, _ := strconv.Atoi(m[0][1])
+	if declared != len(pairs) {
+		var dup []string
+		for k, ns := range pairs {
+			if len(ns) > 1 {
+				dup = append(dup, fmt.Sprintf("%s（第 %s 行）", k, strings.Join(ns, "/")))
+			}
+		}
+		sort.Strings(dup)
+		t.Errorf("⚠️ 那一格写「不同的对是 %d」，而表里 %d 行去重后是 %d 对；重复的：%s",
+			declared, len(rows), len(pairs), strings.Join(dup, "、"))
+	}
+	// ⚠️ 反空转：行数与对数相等时，本条与按行核的那条说的是同一句话 —— 那时它没有额外的判别力，要说出来。
+	if len(pairs) == len(rows) {
+		t.Logf("ⓘ 表里没有重复的对（%d 行 = %d 对）—— 本条此刻与按行核的守卫等价", len(rows), len(pairs))
+	}
+}
+
 // TestKQFactsMatchesTable 断言 state.md 的 kq_facts 与它自己那张表的条数一致。
 //
 // ⚠️ 这条是**在 state.md 自己身上**栽了一次之后补的：
@@ -1523,6 +1599,9 @@ var retiredBreakNums = map[string]string{
 		"而讲这件事的那几段文字（state.md / silent-risks）说的正是「它为什么不再需要」。" +
 		"⚠️⚠️ 而这一条的存在本身是个提醒：**把错误变成不可能，胜过多一条守卫去防它** —— " +
 		"于是「破坏总数」这个计数会**下降**，而那是好事，不是回归",
+	"523": "20260916 夜 §13 #21 收敛后退休。它破坏的是「裸 CLOSE 超出今仓的部分在两档费率不同时也放行 —— 替 #21 猜了一个候选」，" +
+		"而收敛之后大商所上「放行（走平昨档）」是**实测答案**，前提反过来了；改它的形状违反「改指一条破坏只该动锚点」，只能退休另起新号（657–659）。" +
+		"⚠️ 退休时我写了「没有退休表」—— 表在这里，是 F7c 建的；守卫当时没报，是因为 roadmap 写的是「**523 退休**」而不是「破坏 523」的格式（评审 20260916 夜 nit 4）",
 }
 
 // TestBreakRefsResolve 断言**文字里点名的每一个破坏编号都真的存在**。

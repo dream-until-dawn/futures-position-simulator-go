@@ -72,8 +72,8 @@ func pick(r Rates, offset types.Offset) (byMoney, byVolume decimal.Decimal, err 
 		// CTP 的 CloseRatio 就是平昨费率；传裸 Close 进来按这一档算。
 		//
 		// ⚠️ 本包只按传进来的标志算钱。裸 Close 该收哪一档由门面（futsim.chargeUndated）决定：
-		// 「按实际消耗的明细拆档」已被 #4 夹具否掉（大商所通用平仓消耗昨仓而收平今档，§13 #21），
-		// 门面只做两个残余候选一致的那一段。
+		// 「按实际消耗的明细拆档」已被 #4 夹具否掉（大商所通用平仓消耗昨仓而收平今档），
+		// §13 #21 于 20260917 夜盘收敛到 (a)：min(平仓量, 平仓前今仓量) 走平今，其余走平昨。
 		// 这句注释原写「裸 Close 在不区分今昨的交易所上也走这一档」，写于 §13 #20 裁决之前。
 		// 「裸 Close 在 UseHistory 交易所上算什么」仍未由 SimNow 裁决（simnow_pending#1），那个判断属于 order 包。
 		return r.CloseByMoney, r.CloseByVolume, nil

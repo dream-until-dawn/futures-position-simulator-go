@@ -4605,11 +4605,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "485 ctperr 表里手打一格郑商所——没有语料的码被当成实测（「取值不许先填」要防的正是这个）",
+		"name": "485 ctperr 表里手打一格中金所——没有语料的码被当成实测（「取值不许先填」要防的正是这个）",
 		"dir": "",
 		"file": "ctperr/ctperr.go",
-		"old": "\t{types.INE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 51},\n}",
-		"new": "\t{types.INE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 51},\n\t{types.CZCE, ReasonPriceTick}:            {SpaceStatusPrefix, 48},\n}",
+		"old": "\t{types.GFEX, ReasonOutsideSession}: {SpaceStatusPrefix, 26},\n}",
+		"new": "\t{types.GFEX, ReasonOutsideSession}: {SpaceStatusPrefix, 26},\n\t{types.CFFEX, ReasonPriceTick}:      {SpaceStatusPrefix, 48},\n}",
 		"pkg": "./ctperr/",
 		"test": "TestTableMatchesCorpus",
 		"want": "这一格是填的",
@@ -5023,17 +5023,6 @@
 		"expect": "red"
 	},
 	{
-		"name": "523 裸 CLOSE 超出今仓的部分在两档费率不同时也放行——替 §13 #21 猜了一个候选",
-		"dir": "",
-		"file": "trade.go",
-		"old": "if !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) {",
-		"new": "if false && !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) && false {",
-		"pkg": "./",
-		"test": "TestUndatedCloseFeeTier",
-		"want": "要报 §13 #21",
-		"expect": "red"
-	},
-	{
 		"name": "524 结算不滚仓——副本没做 position.Settle 就带进次日",
 		"dir": "",
 		"file": "settle.go",
@@ -5067,15 +5056,15 @@
 		"expect": "red"
 	},
 	{
-		"name": "527 去掉「有仓而没有结算价」那道检查（期望**仍然绿**）",
+		"name": "527 去掉「有仓而没有结算价」那道——缺失落到下一层，报的不再是门面自己那句",
 		"dir": "",
 		"file": "settle.go",
 		"old": "\t\tif !ok {\n\t\t\treturn fmt.Errorf(\"%s 有持仓而没有今结算价",
 		"new": "\t\tif false && !ok {\n\t\t\treturn fmt.Errorf(\"%s 有持仓而没有今结算价",
 		"pkg": "./",
 		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
-		"want": "",
-		"expect": "green",
+		"want": "不是门面那一道拦的",
+		"expect": "red",
 		"why": "两道检查重叠：缺失的结算价从 map 取出来是零值，被下一道「不为正」拦住，只是报错文案变了。保留第一道是为了文案能说清「没有」而不是「为零」"
 	},
 	{
@@ -5112,25 +5101,25 @@
 		"expect": "red"
 	},
 	{
-		"name": "531 裸 CLOSE 超出今仓的部分在两档费率相同时不收费——少收且不报错（评审 20260915：此前改成这样全绿）",
+		"name": "531 裸 CLOSE 超出今仓的部分不收费——少收且不报错（评审 20260915：此前改成这样全绿；20260916 §13 #21 收敛后重锚，形状不变）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\treturn charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值",
-		"new": "\treturn nil",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn nil",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "两档同费率",
 		"expect": "red"
 	},
 	{
-		"name": "532 裸 CLOSE 超出今仓的部分在两档费率相同时也报错（过严）——两候选同值的那一段被拒（评审 20260915 验过：红在两档同费率那两格）",
+		"name": "532 裸 CLOSE 超出今仓的部分报错——退回 §13 #21 收敛之前的「不猜」（20260916 重锚，形状不变；原来只在两档同费率时算过严）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\treturn charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值",
-		"new": "\treturn fmt.Errorf(\"过严\")",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn fmt.Errorf(\"过严\")",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
-		"want": "两档同费率",
+		"want": "收敛之后应当照收平昨档而不是报错",
 		"expect": "red"
 	},
 	{
@@ -5685,7 +5674,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "583 Restore 核挂单冻结时不按第八项口径改写（记作平昨的裸 CLOSE 走了今昨拆法那一支）",
+		"name": "583 Restore 核挂单冻结时不按第八项口径改写（记作平昨的裸 CLOSE 走了今昨拆法那一支）（⚠️ 红在哪一行取决于测试合约的交易所在不在 §13 #21 (a) 的范围里：rb2701 是上期所、不在范围内 ⇒ 没改写的裸 CLOSE 要在没有观测的交易所上定档、报错不猜 ⇒ 连合法存档都恢复不了。20260916 夜 cbebb69 曾把 want 改到第 106 行，那是 (a) 暂时对所有交易所生效的那几个小时；b2212b8 收窄到只认大商所后红点回到这里 —— 两处都是缺了改写的真实后果，不是副作用）",
 		"dir": "",
 		"file": "state.go",
 		"old": "if off := s.datedOffset(inst.PositionDateType, req.Offset); off.IsClose() && !off.SpecifiesPositionDate() {",
@@ -6180,6 +6169,413 @@
 		"pkg": "./",
 		"test": "TestMarginGroupsIsACopy",
 		"want": "返回的必须是副本",
+		"expect": "red"
+	},
+	{
+		"name": "628 ctp-closefee 忘了接 -dump 守卫（判定全绿，夹具静默落进 cmd/oracle/testdata/ctp）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee.go",
+		"old": "\t// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go\n\tif *dump != \"\" {\n\t\tabs, err := ctpDumpDir(*dump)\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t\t*dump = abs\n\t}\n",
+		"new": "\t_ = ctpDumpDir // 破坏：这条命令忘了接线\n",
+		"pkg": "./",
+		"test": "TestCTPDumpDirIsWiredIntoEveryCommand",
+		"want": "ctp-closefee 报的不是 -dump 那个错",
+		"expect": "red"
+	},
+	{
+		"name": "629 ctp-params 忘了接 -dump 守卫（接线是每个命令一处，少接一个别的命令不会红）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go\n\tif *dump != \"\" {\n\t\tabs, err := ctpDumpDir(*dump)\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t\t*dump = abs\n\t}\n\tenv, err := probe.LoadEnv(*envPath)\n\tif err != nil {\n\t\treturn err\n\t}\n\tc := ctp.New(ctp.Credentials{\n\t\tFront:    env.CTPTdFront,",
+		"new": "\t_ = ctpDumpDir // 破坏：这条命令忘了接线\n\tenv, err := probe.LoadEnv(*envPath)\n\tif err != nil {\n\t\treturn err\n\t}\n\tc := ctp.New(ctp.Credentials{\n\t\tFront:    env.CTPTdFront,",
+		"pkg": "./",
+		"test": "TestCTPDumpDirIsWiredIntoEveryCommand",
+		"want": "ctp-params 报的不是 -dump 那个错",
+		"expect": "red"
+	},
+	{
+		"name": "630 -dump 判定只看末级目录名（cmd/oracle/testdata/ctp 就此放行——字面上完全正确的那种落错）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\tif strings.EqualFold(got, want) {\n\t\treturn nil\n\t}",
+		"new": "\tif strings.EqualFold(filepath.Base(got), \"ctp\") {\n\t\treturn nil\n\t}\n\t_ = want",
+		"pkg": "./",
+		"test": "TestCheckCTPDumpDir",
+		"want": "应当被拒",
+		"expect": "red"
+	},
+	{
+		"name": "631 嵌套模块那一支永不命中（理由退化成通用句「不是仓库根下的」，补救方向就丢了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\tcase strings.EqualFold(filepath.Base(got), \"ctp\") &&\n\t\tstrings.EqualFold(filepath.Base(filepath.Dir(got)), \"testdata\"):",
+		"new": "\tcase false:",
+		"pkg": "./",
+		"test": "TestCheckCTPDumpDir",
+		"want": "嵌套模块",
+		"expect": "red"
+	},
+	{
+		"name": "632 两种落错给同一句话（两者的补救不一样：一种换目录，一种是「你以为对的那个字面路径不对」）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\t\treturn \"那是天勤 DIFF 的语料目录，CTP 夹具混进去在别处**不会报错**\"",
+		"new": "\t\treturn \"路径**字面上**就是 \" + ctpFixtureHome + \"，但它在仓库根之外 —— \" +\n\t\t\t\"oracle 是嵌套模块、只能在 cmd/oracle 下跑，照抄文档里的相对路径就会落到这里\"",
+		"pkg": "./",
+		"test": "TestCheckCTPDumpDirTellsApartTheTwoMistakes",
+		"want": "两种落错给了同一句话",
+		"expect": "red"
+	},
+	{
+		"name": "633 repoRoot 直接返回当前目录（纯函数照样全绿，而真跑起来会把 cmd/oracle/testdata/ctp 当成家）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\tfor {\n\t\tif _, err := os.Stat(filepath.Join(d, \".git\")); err == nil {\n\t\t\treturn d, nil\n\t\t}",
+		"new": "\treturn d, nil\n\tfor {\n\t\tif _, err := os.Stat(filepath.Join(d, \".git\")); err == nil {\n\t\t\treturn d, nil\n\t\t}",
+		"pkg": "./",
+		"test": "TestRepoRootFindsThisRepo",
+		"want": "仓库根被认成了当前目录",
+		"expect": "red"
+	},
+	{
+		"name": "634 去掉门面「今结算价不为正」那道——零价落到 position 那层，换了一句错",
+		"dir": "",
+		"file": "settle.go",
+		"old": "\t\tif !px.IsPositive() {",
+		"new": "\t\tif false && !px.IsPositive() {",
+		"pkg": "./",
+		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
+		"want": "不是门面那一道拦的",
+		"expect": "red"
+	},
+	{
+		"name": "635 「前提不成立，不跑」改成同义措辞（393 的红搭档：AST 守卫认的是那句话，措辞一改它就空转）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\treturn fmt.Errorf(\"⚠️ **前提不成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
+		"new": "\t\treturn fmt.Errorf(\"⚠️ **前提没有成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
+		"pkg": "./",
+		"test": "TestSlicePreconditionCheckedBeforeAnyOrder",
+		"want": "本条守卫在空转",
+		"expect": "red"
+	},
+	{
+		"name": "636 语料已拍而 §13 #6 又写回「语料待拍」（409 的红搭档：过期的低报，双向断言的另一向）",
+		"dir": "cmd/oracle",
+		"file": "docs/cn-futures-rules.md",
+		"old": "守卫 `TestRejectCorpusIsProbeWrittenOnly` 双向核对（语料在 ⇒ 本格不许再写「待拍」）。",
+		"new": "守卫 `TestRejectCorpusIsProbeWrittenOnly` 双向核对（语料在 ⇒ 本格不许再写「待拍」）。语料待拍。",
+		"pkg": "./",
+		"test": "TestRejectCorpusIsProbeWrittenOnly",
+		"want": "过期陈述",
+		"expect": "red"
+	},
+	{
+		"name": "637 把 635 的 test 改指同包别的测试（393 就此变回孤儿——本守卫自己的红搭档）",
+		"dir": "",
+		"file": "tools/breakcheck/breaks.json",
+		"old": "\t\t\"test\": \"TestSlicePreconditionCheckedBeforeAnyOrder\",\n\t\t\"want\": \"本条守卫在空转\",",
+		"new": "\t\t\"test\": \"TestCheckCTPDumpDir\",\n\t\t\"want\": \"本条守卫在空转\",",
+		"pkg": "./tools/breakcheck/",
+		"test": "TestEveryGreenBreakHasARedPartner",
+		"want": "没有红搭档的 expect=green",
+		"expect": "red"
+	},
+	{
+		"name": "638 门面的「下一交易日不晚于当前」去掉——空仓那一档会走到更深处才失败，把模拟器弄失效",
+		"dir": "",
+		"file": "settle.go",
+		"old": "\tif !nextDay.After(day) {",
+		"new": "\tif false && !nextDay.After(day) {",
+		"pkg": "./",
+		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
+		"want": "失败之后模拟器不该受影响",
+		"expect": "red"
+	},
+	{
+		"name": "639 tick 两者不等时静默取柜台的（那一档没有可信的选择，只能停下）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ticksource.go",
+		"old": "\tcase counter > 0 && flag > 0:\n\t\treturn tickUsed{}, \"\", fmt.Errorf(\"⚠️ **不跑**：柜台报的最小变动价位是 %g，而 -tick 填的是 %g —— \"+",
+		"new": "\tcase counter > 0 && flag > 0:\n\t\treturn tickUsed{Value: counter, Source: tickFromCounter}, \"两者不等，取柜台的\", nil\n\tcase false:\n\t\treturn tickUsed{}, \"\", fmt.Errorf(\"⚠️ **不跑**：柜台报的最小变动价位是 %g，而 -tick 填的是 %g —— \"+",
+		"pkg": ".",
+		"test": "TestTickVerdictDoesNotSilentlyPreferTheFlag",
+		"want": "停下才是对的",
+		"expect": "red"
+	},
+	{
+		"name": "640 语料不记 tick 的出处（手填对了的与柜台报的就此分不开）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/rejectcorpus.go",
+		"old": "\t\tTickSource: tk.Source,",
+		"new": "\t\tTickSource: \"\",",
+		"pkg": ".",
+		"test": "TestObserveRecordsTick",
+		"want": "没记下 tick 的出处",
+		"expect": "red"
+	},
+	{
+		"name": "641 对照组被拒时照样往下跑（四条用例的码会以机器可读的形式被错误归因）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/control.go",
+		"old": "\tdefault:\n\t\treturn false, false, fmt.Errorf(\"⚠️ **整轮不跑**：对照组那笔**完全合法**的委托被拒了\"+",
+		"new": "\tdefault:\n\t\treturn true, false, nil\n\tcase false:\n\t\treturn false, false, fmt.Errorf(\"⚠️ **整轮不跑**：对照组那笔**完全合法**的委托被拒了\"+",
+		"pkg": ".",
+		"test": "TestControlVerdictNeverProceedsOnAnythingButResting",
+		"want": "只有「挂上了」才说明这个合约报得进单",
+		"expect": "red"
+	},
+	{
+		"name": "643 codeText 把柜台原话也带上（自由文本不进库，而错误消息最容易被整段抄走）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/control.go",
+		"old": "\t\treturn fmt.Sprintf(\"%d\", code)",
+		"new": "\t\treturn fmt.Sprintf(\"%d（%s）\", code, statusMsg)",
+		"pkg": ".",
+		"test": "TestCodeTextOnlyGivesTheCode",
+		"want": "只该给码",
+		"expect": "red"
+	},
+	{
+		"name": "642 对照组挪到四条用例之后（错误归因已经写进语料了，晚一步等于没有）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/reject.go",
+		"old": "\tctrl, cerr := runControl(c, ex, inst, md, tk, *timeout, logf)\n\tobs = append(obs, ctrl)\n\tif cerr != nil {",
+		"new": "\tvar ctrl rejectObservation\n\tvar cerr error\n\tdefer func() { _ = ctrl }()\n\tif false {",
+		"pkg": ".",
+		"test": "TestControlRunsBeforeAnyCase",
+		"want": "找不到 runControl 的调用",
+		"expect": "red"
+	},
+	{
+		"name": "644 优先级判定只比码的数值、不比码空间（CTP 50 与交易所 50 意思完全不同）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase got == a.Code:",
+		"new": "\tcase got.Value == a.Code.Value:",
+		"pkg": ".",
+		"test": "TestPairVerdict",
+		"want": "值同而空间不同",
+		"expect": "red"
+	},
+	{
+		"name": "645 两项码撞号时照常比中（那一对分不开，不是都赢了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase a.Code == b.Code:",
+		"new": "\tcase false:",
+		"pkg": ".",
+		"test": "TestPairVerdict",
+		"want": "这一对分不开",
+		"expect": "red"
+	},
+	{
+		"name": "646 caseReason 认不出涨跌停那两条（它们会安静地走「另一项没有观测」那一支）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase \"涨跌停\":\n\t\tswitch {\n\t\tcase strings.Contains(rc.Name, \"涨停\"):",
+		"new": "\tcase \"涨跌停\":\n\t\tswitch {\n\t\tcase false:",
+		"pkg": ".",
+		"test": "TestCaseReasonCoversEveryCase",
+		"want": "映射不到拒因",
+		"expect": "red"
+	},
+	{
+		"name": "647 codeOf 把 ErrorID==0 也当成一个 CTP 码（价格类拒单的 ErrorID 恒为 0）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tif st.ErrorID != 0 {",
+		"new": "\tif true {",
+		"pkg": ".",
+		"test": "TestCodeOfPrefersCTPSpace",
+		"want": "ErrorID 为零时要取前缀码",
+		"expect": "red"
+	},
+	{
+		"name": "648 「缺一边的码」那一支挪到命中之后（另一边的码未知时，命中 b 也判不了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase !a.Has || !b.Has:\n\t\tmissing := a.Name",
+		"new": "\tcase (!a.Has || !b.Has) && got != b.Code:\n\t\tmissing := a.Name",
+		"pkg": ".",
+		"test": "TestPairVerdict",
+		"want": "判不了",
+		"expect": "red"
+	},
+	{
+		"name": "649 撞号那一支返回第一个参数的名字（判定就此随传参顺序变）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\t\treturn \"\", fmt.Sprintf(\"⚠️ **这一对分不开**：%s 与 %s 的码都是 %s\", a.Name, b.Name, a.Code)",
+		"new": "\t\treturn a.Name, fmt.Sprintf(\"⚠️ **这一对分不开**：%s 与 %s 的码都是 %s\", a.Name, b.Name, a.Code)",
+		"pkg": ".",
+		"test": "TestPairVerdictIsSymmetric",
+		"want": "不是传参顺序的性质",
+		"expect": "red"
+	},
+	{
+		"name": "650 pairCases 第一条不再是正对照（后面几对的可信度全挂在它身上）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/pairs.go",
+		"old": "\t\tControl:  true,",
+		"new": "\t\tControl:  false,",
+		"pkg": ".",
+		"test": "TestPairCasesStartWithAPositiveControl",
+		"want": "它必须排在最前",
+		"expect": "red"
+	},
+	{
+		"name": "651 一条 pairCase 声明三项（拿回来的码归不了因，而它看起来是条好观测）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/pairs.go",
+		"old": "\t\tViolates: []string{\"可平量\", \"涨跌停\"},",
+		"new": "\t\tViolates: []string{\"可平量\", \"涨跌停\", \"交易时段\"},",
+		"pkg": ".",
+		"test": "TestPairCasesViolateExactlyTwo",
+		"want": "要恰好 2",
+		"expect": "red"
+	},
+	{
+		"name": "652 正对照的买单挂到跌停价上（封板时买一就在跌停价，会成交）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/pairs.go",
+		"old": "\t\t\treturn float64(md.LowerLimitPrice) - tick/2",
+		"new": "\t\t\treturn float64(md.LowerLimitPrice)",
+		"pkg": ".",
+		"test": "TestPairCasesCannotTrade",
+		"want": "放过了可能成交",
+		"expect": "red"
+	},
+	{
+		"name": "653 盘中休息里的对照组多声明一项（归类器整条跳过，那个码永远进不了 ctperr 的表）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\trc.Violates = []string{sessionItem}",
+		"new": "\trc.Violates = []string{sessionItem, \"最小变动价位\"}",
+		"pkg": ".",
+		"test": "TestSessionOnlyControlDeclaresExactlyOne",
+		"want": "要恰好一项",
+		"expect": "red"
+	},
+	{
+		"name": "654 ctp-priority 的对照组换一笔委托（就不是「同一个输入换个时段」了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\trc.Why = \"价内、整倍数、不平仓 —— 此刻唯一不成立的是「在交易时段内」\"\n\treturn rc",
+		"new": "\trc.Why = \"价内、整倍数、不平仓 —— 此刻唯一不成立的是「在交易时段内」\"\n\trc.Dir = def.THOST_FTDC_D_Sell\n\treturn rc",
+		"pkg": ".",
+		"test": "TestSessionOnlyControlDeclaresExactlyOne",
+		"want": "方向/开平与对照组不一致",
+		"expect": "red"
+	},
+	{
+		"name": "655 两个拒因共用一个名字（读日志的人分不开，而所有码照常对得上）",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\tcase ReasonOutsideSession:\n\t\treturn \"不在交易时段内\"",
+		"new": "\tcase ReasonOutsideSession:\n\t\treturn \"平昨超过昨仓\"",
+		"pkg": "./ctperr/",
+		"test": "TestReasonStringsAreDistinct",
+		"want": "共用名字",
+		"expect": "red"
+	},
+	{
+		"name": "656 Reason.String() 对未知值返回空串（数拒因的循环会立刻停，而那看起来像数完了）",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\t}\n\treturn \"未知拒因\"\n}",
+		"new": "\t}\n\treturn \"\"\n}",
+		"pkg": "./ctperr/",
+		"test": "TestReasonStringsAreDistinct",
+		"want": "零值的名字是空串",
+		"expect": "red"
+	},
+	{
+		"name": "657 裸 CLOSE 超出今仓的部分走平今档——候选 (b)「一律平今」，已被 20260917 E1 否掉",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn charge(types.CloseToday, rest)",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
+		"want": "Commission：本库 0.1，柜台 0.2",
+		"expect": "red"
+	},
+	{
+		"name": "658 裸 CLOSE 超出今仓的部分报错——退回收敛前，E1 那笔成交进不了门面（对拍那一侧的红）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn fmt.Errorf(\"§13 #21 未收敛\")",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
+		"want": "那笔成交进不了门面",
+		"expect": "red"
+	},
+	{
+		"name": "659 对拍里两片的开仓次序反过来（FIFO 这个推得的假设由 OpenCost 那一格比着，推错就红）",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\tfor _, px := range []string{\"3427\", \"3426\"} {",
+		"new": "\tfor _, px := range []string{\"3426\", \"3427\"} {",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
+		"want": "OpenCost：本库",
+		"expect": "red"
+	},
+	{
+		"name": "660 §13 #21 的 (a) 去掉交易所限定（一手 m2701 的观测被外推到郑商所 / 广期所，而使用者裁决只认大商所）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\treturn ex == types.DCE",
+		"new": "\treturn true",
+		"pkg": "./",
+		"test": "TestUndatedCloseFeeTier",
+		"want": "只认大商所",
+		"expect": "red"
+	},
+	{
+		"name": "661 时段拒单不带 Kind（ctperr 那五格 26 从门面永远走不到，拒单报「未知拒因、无码」）",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t\trejections = append(rejections, Rejection{Check: CheckSession, Kind: ctperr.ReasonOutsideSession,",
+		"new": "\t\trejections = append(rejections, Rejection{Check: CheckSession,",
+		"pkg": "./",
+		"test": "TestSubmitSession",
+		"want": "Kind 没接上",
+		"expect": "red"
+	},
+	{
+		"name": "662 门面不再拒在时段（「时段 × 可平量」悄悄换成了 CTP 那一侧的答案，而 §13 #22 还没裁决）",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t} else if !f.InSession {",
+		"new": "\t} else if false && !f.InSession {",
+		"pkg": "./",
+		"test": "TestSessionVersusClosablePinnedPending22",
+		"want": "悄悄换了的行为",
+		"expect": "red"
+	},
+	{
+		"name": "663 state.md 把不同的对写回 9（按「行数减一」心算——20260916 夜送审消息里真的这么写过）",
+		"dir": "",
+		"file": "docs/state.md",
+		"old": "不同的**对**是 **7**",
+		"new": "不同的**对**是 **9**",
+		"pkg": "./",
+		"test": "TestRejectPriorityDistinctPairsMatchCell",
+		"want": "不同的对是 9",
+		"expect": "red"
+	},
+	{
+		"name": "664 对数守卫不去重（按行当对数——同一对在两个柜台各量一次的那几组被数成两对）",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\t\tk := hit[0] + \" × \" + hit[1]",
+		"new": "\t\tk := num + hit[0] + \" × \" + hit[1]",
+		"pkg": "./",
+		"test": "TestRejectPriorityDistinctPairsMatchCell",
+		"want": "去重后是 10 对",
 		"expect": "red"
 	}
 ]

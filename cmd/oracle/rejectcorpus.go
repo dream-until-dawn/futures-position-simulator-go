@@ -28,6 +28,13 @@ import (
 // 而「缺」与「零」必须分得开 —— 所以用指针，不用 0。
 type rejectObservation struct {
 	TradingDay string `json:"trading_day"`
+	// At 是本地时钟（HH:MM:SS）；空表示那一轮没记这一栏（20260916 之前的记录）。
+	//
+	// ⚠️ 它补的是一个**离开时钟就读不懂**的码：柜台的 `26 当前状态禁止报单` 取决于时段 ——
+	// 10:15–10:30 的盘中休息里，**每一个**交易所都给这个码。
+	// 只有交易日的话，一条 10:28 拍到的 26 与「这个交易所报不进单」在语料里长得一模一样，
+	// ⚠️ 而 20260916 我正是差一点据此写下「郑商所 / 广期所在 SimNow 上禁止报单」。
+	At         string `json:"at,omitempty"`
 	Exchange   string `json:"exchange"`
 	Instrument string `json:"instrument"`
 	// Case 是**我给这次输入起的名字**，不是柜台给的。
@@ -68,14 +75,45 @@ type rejectObservation struct {
 	// `false` ⇒ 没有交易所编号 —— 柜台前置拒，**或**交易所在分配编号之前拒，本栏分不开。
 	// ⚠️ 只记有无，**不记编号本身**：判别只要有无，而多记一个标识字段没有收益。
 	HasOrderSysID *bool `json:"has_order_sys_id,omitempty"`
+	// PriceTick 是这一轮构造价格用的最小变动价位；nil 表示那一轮没记这一栏（20260916 之前的 12 条）。
+	//
+	// ⚠️ 它是**这批语料唯一出过错的那一环**的落盘：20260914 夜盘 `bc` 的 tick 是 10 而命令里填了 1，
+	// 于是「低于跌停」那一笔同时违反了步长，拿到的是步长的码，**而输出上标着「低于跌停」**。
+	// 那次错**事后**才被发现，靠的是人重读命令行 —— 语料本身一个字都没说。
+	// ⇒ 把它记进每一条：谁用了哪个 tick，事后可核。
+	PriceTick *float64 `json:"price_tick,omitempty"`
+	// TickSource 是那个 tick 的出处：`counter`（柜台 ReqQryInstrument 报的）或 `flag`（人手 -tick 填的）。
+	//
+	// ⚠️ 两者的可信度不同，而**数值上完全一样** —— 不记出处的话，
+	// 一个手填对了的 tick 与一个柜台报的 tick 在语料里分不开。
+	TickSource string `json:"tick_source,omitempty"`
 }
 
+// tickUsed 是这一轮用的最小变动价位与它的出处。
+//
+// ⚠️ 合成一个类型而不是两个散参数：出处与数值分开传，就会有人只传其中一个。
+type tickUsed struct {
+	Value  float64
+	Source string
+}
+
+// tickFromCounter / tickFromFlag 是 TickSource 的两个合法取值。
+const (
+	tickFromCounter = "counter"
+	tickFromFlag    = "flag"
+)
+
 // observe 把一次用例的委托回报折成一条语料。纯函数：离线可测。
-func observe(day, ex, inst string, rc rejectCase, st ctp.OrderState, outcome string) rejectObservation {
+func observe(day, at, ex, inst string, rc rejectCase, st ctp.OrderState, outcome string, tk tickUsed) rejectObservation {
 	o := rejectObservation{
-		TradingDay: day, Exchange: ex, Instrument: inst,
+		TradingDay: day, At: at, Exchange: ex, Instrument: inst,
 		Case: rc.Name, Violates: rc.Violates,
 		Offset: string(rc.Off), Outcome: outcome, Source: "probe",
+		TickSource: tk.Source,
+	}
+	if tk.Value > 0 {
+		v := tk.Value
+		o.PriceTick = &v
 	}
 	// ⚠️ 两个码位都用指针：**「缺」与「零」必须分得开**。
 	// `ErrorID == 0` 恰恰是价格类拒单的常态（它们不经过 RspInfo）。

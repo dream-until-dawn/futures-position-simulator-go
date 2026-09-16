@@ -50,6 +50,12 @@ func usage() {
   oracle ctp-reject -symbol INE.bc2611 -tick 10 [-out testdata/refdata]
                                    ⚠️ **CTP/SimNow 侧**：逐条发非法报单，记拒因的**数值码**。
                                    ⚠️ -tick 无默认值；-out 落机器可读语料（**只收码不收原话**）
+  oracle ctp-closefee -symbol DCE.m2701 -mode bare|yd -dump ../../testdata/ctp  [-check 只读]
+                                   ⚠️ **会真的平一手昨仓**（§13 #21 的 E1 / E2）：只有昨仓时平一手，
+                                   看收的是平今档还是平昨档。前提：今 0、昨 ≥1；种子留了 2 手，两个实验各消耗一手
+  oracle ctp-priority -symbol SHFE.rb2701 -out testdata/refdata  ⚠️ 只在**报不进单的时段**跑（盘中休息）
+  oracle ctp-pairs -symbol SHFE.rb2701 -out testdata/refdata     ⚠️ 只在**交易时段内**跑（与上一条相反）
+  oracle ctp-inst -symbols SHFE.rb2701,GFEX.si2601   ⚠️ 只读：柜台声明的最小变动价位 / 乘数
   oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
                                    ⚠️ **CTP/SimNow 侧**：查柜台**声明**的手续费率（三档各两项）。
                                    只读，不下单。⚠️ 声明与行为同源，对得上**不升证据等级**
@@ -174,6 +180,26 @@ func main() {
 		}
 	case "ctp-closeorder":
 		if err := runCTPCloseOrder(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-closefee":
+		if err := runCTPCloseFee(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-pairs":
+		if err := runCTPPairs(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-priority":
+		if err := runCTPPriority(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-inst":
+		if err := runCTPInst(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -435,10 +461,18 @@ func runCTPParams(args []string) error {
 	quote := fs.String("quote", "", "同时拍一条**行情快照**，形如 SHFE.rb2701（留空则不拍）。"+
 		"⚠️ 它补的是 probes.md §6.9 声明过的盲区：没有最新价就分不开"+
 		"「今结算价基准」与「最新价基准」——**而最该抓的一刻是开盘那一瞬**")
-	dump := fs.String("dump", "", "落盘目录（⚠️ **无默认值**；CTP 夹具要落 testdata/ctp/，"+
-		"别落进 testdata/probes —— 那是天勤 DIFF 的语料，混进去**不会报错**）")
+	dump := fs.String("dump", "", "落盘目录（⚠️ **无默认值**；CTP 夹具只能落仓库根下的 testdata/ctp/，"+
+		"落别处会被 ctpDumpDir 拒掉 —— 这条此前只是帮助文字、混进 testdata/probes 不报错）")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
+	}
+	// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go
+	if *dump != "" {
+		abs, err := ctpDumpDir(*dump)
+		if err != nil {
+			return err
+		}
+		*dump = abs
 	}
 	env, err := probe.LoadEnv(*envPath)
 	if err != nil {
@@ -564,7 +598,16 @@ var ctpProtectedLegs = []safety.ProtectedLeg{
 		Why: "#4/#7 唯一的过夜种子（周五夜盘开，交易日 20260914 仍是今仓）"},
 	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260915", Volume: 1,
 		Why: "#4/#7 唯一的昨仓来源（交易日 20260915 跨过结算）—— 只有 ctp-closeorder 可以动它"},
+	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260916", Volume: 2,
+		Why: "§13 #21 的 E1/E2 种子（2 手，两个实验各消耗一手）—— 20260916 白天不许平，它要跨过今晚的结算才变成昨仓"},
 }
+
+// ⚠️ **只登记种植那一天，不登记实验那一天**（20260916 有、20260917 没有）：
+// 保护的意思是「今天别让别的命令把它平掉」，而**明天它的用处正是被平掉** ——
+// E1/E2 就是要消耗这两手昨仓。登记到实验那天，反而要给 ctp-closefee 开一个豁免口，
+// 而豁免口现在只有 ctp-closeorder 一处、由守卫钉死（TestCTPValveCallSitesCarryProtection）。
+// ⚠️ 代价写在这里：20260917 当天，种子不受安全阀保护 —— `ctp-flatten -all` 会平掉它。
+// 那天的做法是**先跑实验，再做别的**。
 
 // ctpValve 从 .env 造 CTP 侧的下单安全阀，**带上 ctpProtectedLegs**。
 //
@@ -620,6 +663,14 @@ func runCTPOrder(args []string) error {
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
+	}
+	// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go
+	if *dump != "" {
+		abs, err := ctpDumpDir(*dump)
+		if err != nil {
+			return err
+		}
+		*dump = abs
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：一笔真实委托的合约必须显式指定")
@@ -770,9 +821,17 @@ func runCTPRoundTrip(args []string) error {
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 SHFE.rb2701（⚠️ 无默认值）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
-	dump := fs.String("dump", "", "落盘目录（⚠️ 无默认值；CTP 夹具要落 testdata/ctp）")
+	dump := fs.String("dump", "", "落盘目录（⚠️ 无默认值；只能是仓库根下的 testdata/ctp，别处会被拒）")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
+	}
+	// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go
+	if *dump != "" {
+		abs, err := ctpDumpDir(*dump)
+		if err != nil {
+			return err
+		}
+		*dump = abs
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：一笔会**真的成交**的委托，合约必须显式指定")

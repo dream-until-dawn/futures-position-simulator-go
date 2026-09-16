@@ -141,6 +141,10 @@ func TestSubmitSession(t *testing.T) {
 	var rej *match.RejectedError
 	if !errors.As(err, &rej) || rej.Rejection.Check != order.CheckSession {
 		t.Errorf("⚠️ 16:00 不在任何时段内，要拒在时段：%v", err)
+	} else if c, ok := rej.Code(); !ok || c != (ctperr.Code{Space: ctperr.SpaceStatusPrefix, Value: 26}) {
+		// ⚠️ 时段拒单要带得出码：五所实测都是 26（20260916 盘中休息与收盘后）。
+		// 此前 order.Validate 这一项不带 Kind，ctperr 那五格从门面永远走不到（评审 20260916 夜 nit 1）。
+		t.Errorf("⚠️ 时段拒单的码是 %v（ok=%v），应为交易所前缀码 26 —— Kind 没接上的话这里是「未知拒因、无码」", c, ok)
 	}
 	_, err = s.Submit(simDay, wall(t, "2026-09-15 21:30"), open1)
 	if err == nil || !strings.Contains(err.Error(), "矛盾") {
@@ -271,6 +275,46 @@ func TestFreezeOfBareCloseSplitsYesterdayFirst(t *testing.T) {
 		if fr.VolumeToday != c.today || fr.VolumeHistory != c.his || !fr.Margin.IsZero() {
 			t.Errorf("⚠️ 今1昨1 裸平 %d 手：冻 今 %d / 昨 %d（保证金 %s），期望 今 %d / 昨 %d、不冻保证金",
 				c.vol, fr.VolumeToday, fr.VolumeHistory, fr.Margin, c.today, c.his)
+		}
+	}
+}
+
+// TestSessionVersusClosablePinnedPending22 钉住本库**当前**在「时段 × 可平量」上的行为 —— 它与 CTP 实测相反，等 §13 #22 裁决。
+//
+// ⚠️ 这条测试**不是在说本库对**。它存在是为了让「本库现在怎么答」这件事有一个会红的对应物：
+// 将来按 #22 的裁决重排 order.Check 时，这条会红，重排者得在这里写下新答案 —— 而不是悄悄地换了一种行为。
+//
+//	报单时刻        本库报              CTP 实测（state.md reject_priority_measured 第 8 行，五所一致）
+//	10:00 盘中      可平量（CTP 码 30）  可平量（30）
+//	12:00 午休      交易时段（26）       可平量（30）   ← 分岔
+//	16:00 收盘后    交易时段（26）       可平量（30）   ← 分岔
+//
+// ⚠️ 20260916 午休我写过「CheckSession 本库根本不查，行为恰好一致，是个巧合」—— 那个前提是错的：
+// 门面带 Calendar 时会查时段。这张表是评审 20260916 夜用 submitSim 探出来的，这里照原样钉住。
+func TestSessionVersusClosablePinnedPending22(t *testing.T) {
+	closeYd := req(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1) // 空仓平昨
+	for _, c := range []struct {
+		at        string
+		wantCheck order.Check
+		wantCode  int
+		ctpSays   string
+	}{
+		{"2026-09-15 10:00", order.CheckClosable, 30, "可平量 30（一致）"},
+		{"2026-09-15 12:00", order.CheckSession, 26, "可平量 30（**分岔**，§13 #22）"},
+		{"2026-09-15 16:00", order.CheckSession, 26, "可平量 30（**分岔**，§13 #22）"},
+	} {
+		s := submitSim(t, ctpChoices(), "1000000")
+		_, err := s.Submit(simDay, wall(t, c.at), closeYd)
+		var rej *match.RejectedError
+		if !errors.As(err, &rej) {
+			t.Errorf("⚠️ %s 空仓平昨要被拒，得到 %v", c.at, err)
+			continue
+		}
+		code, _ := rej.Code()
+		if rej.Rejection.Check != c.wantCheck || code.Value != c.wantCode {
+			t.Errorf("⚠️ %s 空仓平昨：本库现在报 %v（码 %v），此前钉住的是 %v（%d）；CTP 实测是 %s。\n"+
+				"    若这是按 §13 #22 的裁决有意重排，改这张表并在 #22 那一行记下裁决；否则这是一次**悄悄换了的行为**",
+				c.at, rej.Rejection.Check, code, c.wantCheck, c.wantCode, c.ctpSays)
 		}
 	}
 }

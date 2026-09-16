@@ -102,7 +102,8 @@ func (s *Simulator) Cancel(day types.TradingDay, id string) error {
 
 // Fill 让一笔挂单**全量**成交，价 = 挂单价（match 的裁决：不做盘口、100% 全量；引擎决定的只是何时）。
 //
-// 先把挂单拿下、解冻，再 ApplyTrade；ApplyTrade 失败（例如 §13 #21 分歧段）⇒ 挂单与冻结原样放回。
+// 先把挂单拿下、解冻，再 ApplyTrade；ApplyTrade 失败 ⇒ 挂单与冻结原样放回。
+// （§13 #21 收敛之前「只有昨仓的裸平、两档费率不同」是这里最常见的失败；20260917 收敛到 (a) 之后那一支不再报错。）
 func (s *Simulator) Fill(day types.TradingDay, id string) (match.Trade, error) {
 	if err := s.usable(day); err != nil {
 		return match.Trade{}, err

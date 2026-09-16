@@ -34,7 +34,17 @@ func simInst(t *testing.T, sym string) types.InstrumentID {
 func simRules(t *testing.T) refdata.Provider {
 	t.Helper()
 	m, ag, y, rb := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702"), simInst(t, "DCE.y2701"), simInst(t, "SHFE.rb2701")
+	ma := simInst(t, "CZCE.MA2701")
 	b := refdata.NewBuilder(1).
+		// MA2701（郑商所）：NoUseHistory，平昨 2 / 平今 6 —— 照 ctp-commission-rates-20260915.txt 的声明，
+		// 方向与 m 相反（m 平今便宜、MA 平今贵）。给「§13 #21 的 (a) 只认大商所」那一格用：
+		// 这里超出今仓、两档不同 ⇒ 要照旧报错不猜。
+		AddInstrument(refdata.Instrument{ID: ma, VolumeMultiple: dec("10"), PriceTick: dec("1"),
+			PositionDateType: refdata.NoUseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.07"), HasPriceLimitRatio: true}).
+		AddCommissionRates(ma, types.Speculation, refdata.CommissionRates{
+			OpenByVolume: dec("2"), CloseByVolume: dec("2"), CloseTodayByVolume: dec("6")}).
+		AddMarginRates(ma, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).
 		// rb2701：UseHistory 且开 / 平昨 / 平今三档按手费率**两两不同**，给「裸 CLOSE 记作平昨」收哪一档用（ag2702 三档同费率，分不开）
 		AddInstrument(refdata.Instrument{ID: rb, VolumeMultiple: dec("10"), PriceTick: dec("1"),
 			PositionDateType: refdata.UseHistory, IsTrading: true,
@@ -274,25 +284,43 @@ func TestUndatedCloseFeeTier(t *testing.T) {
 		t.Errorf("前提：先平昨应消耗昨仓，剩今 1，得到 今 %d / 昨 %d", p.VolumeToday(types.Buy), p.VolumeHistory(types.Buy))
 	}
 
-	// 只有昨仓、两档费率不同 ⇒ 候选分歧 ⇒ 报错，状态不动
+	// 只有昨仓、两档费率不同 ⇒ §13 #21 已收敛到 (a)：平仓前今仓 0 手 ⇒ **全走平昨档**。
+	// 实测：20260917 夜盘 E1，DCE.m2701 今0昨2 裸平1，柜台收 0.2 = 平昨档（ctp-slices-20260917{,-2}）。
+	// ⚠️ 收敛之前这一格钉的是「报 #21、状态不动」—— 那是「不猜」，不是答案。
 	s2 := withHistory(t)
-	before2 := s2.Account()
-	err := s2.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.Close, "3360", 1))
-	if err == nil || !strings.Contains(err.Error(), "#21") {
-		t.Errorf("⚠️ 只有昨仓时裸平、两档费率不同，要报 §13 #21：%v", err)
+	before2 := s2.Account().Commission
+	if err := s2.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.Close, "3360", 1)); err != nil {
+		t.Fatalf("⚠️ 只有昨仓时裸平 1 手，§13 #21 收敛之后应当照收平昨档而不是报错：%v", err)
 	}
-	if !sameSnapshot(s2.Account(), before2) {
-		t.Error("⚠️ 报错之后账户变了")
+	if got := s2.Account().Commission.Sub(before2); !got.Equal(dec("1.2")) {
+		t.Errorf("⚠️ 只有昨仓裸平 1 收了 %s，期望平昨档 1.2 —— 候选 (b)「一律平今」会收 0.75，已被 E1 否掉", got)
 	}
-	if p, _ := s2.Position(simInst(t, "DCE.m2701"), types.Speculation); p.VolumeHistory(types.Buy) != 1 {
-		t.Error("⚠️ 报错之后昨仓被消耗了")
+	if p, _ := s2.Position(simInst(t, "DCE.m2701"), types.Speculation); p.VolumeHistory(types.Buy) != 0 {
+		t.Error("⚠️ 裸平之后昨仓没被消耗")
 	}
 
-	// 反向：显式平昨照走平昨档（不受 #21 影响）
-	if err := s2.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1)); err != nil {
+	// ⚠️ 范围的另一个方向：(a) **只认大商所**（使用者裁决，确认在评审方一侧取得）。
+	// 郑商所 MA2701 两档不同（平昨 2 / 平今 6），只有昨仓时裸平 ⇒ 这一段没有观测 ⇒ 照旧**报错不猜**、状态不动。
+	// ⚠️ 这一格若被「顺手」按 (a) 收了平昨 2，所有测试照样可以绿 —— 而那是把一手 m2701 的观测外推到了另一个交易所。
+	sc := withHistoryOn(t, "CZCE.MA2701", "3000")
+	beforeC := sc.Account()
+	errC := sc.ApplyTrade(simNext, trade(t, "CZCE.MA2701", types.Sell, types.Close, "3000", 1))
+	if errC == nil || !strings.Contains(errC.Error(), "只在大商所有观测") {
+		t.Errorf("⚠️ 郑商所只有昨仓时裸平、两档费率不同，要照旧报错不猜（§13 #21 的 (a) 只认大商所）：%v", errC)
+	}
+	if !sameSnapshot(sc.Account(), beforeC) {
+		t.Error("⚠️ 郑商所那一笔报错之后账户变了")
+	}
+	if p, _ := sc.Position(simInst(t, "CZCE.MA2701"), types.Speculation); p.VolumeHistory(types.Buy) != 1 {
+		t.Error("⚠️ 郑商所那一笔报错之后昨仓被消耗了")
+	}
+
+	// 反向：显式平昨照走平昨档
+	s3 := withHistory(t)
+	if err := s3.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1)); err != nil {
 		t.Fatal(err)
 	}
-	if got := s2.Account().Commission; !got.Equal(dec("1.2")) {
+	if got := s3.Account().Commission; !got.Equal(dec("1.2")) {
 		t.Errorf("显式平昨应收平昨档 1.2，得到 %s", got)
 	}
 

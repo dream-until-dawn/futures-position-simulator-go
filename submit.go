@@ -160,7 +160,7 @@ func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Reque
 	if f.HasInstrument {
 		fr, err = s.FreezeOf(day, req)
 		if err != nil {
-			// ⚠️ 规格在、却算不出要占用多少（缺昨结算价、§13 #21 分歧段……）：直接报这个原因，
+			// ⚠️ 规格在、却算不出要占用多少（缺昨结算价……）：直接报这个原因，
 			// 不塞进「没查成」—— 那里只会说「保证金与手续费」，把真正缺的东西说丢了。
 			// ⚠️ 但先看有没有更高优先级的拒因：无仓裸平这类单该拒在可平量，不该被「算不出资金」盖住
 			if res := order.Validate(req, f); res.Rejected != nil {

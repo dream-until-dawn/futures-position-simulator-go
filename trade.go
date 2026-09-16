@@ -306,18 +306,31 @@ func (s *Simulator) commission(tr match.Trade, todayBefore int) (decimal.Decimal
 	return total, err
 }
 
-// chargeUndated 给裸 CLOSE 与强平标志收手续费 —— §13 #21 未收敛，只做两个残余候选一致的那一段。
+// chargeUndated 给裸 CLOSE 与强平标志收手续费 —— §13 #21 **已收敛到候选 (a)**（20260917 夜盘，E1）：
 //
-// ⚠️ 已被否：「按实际消耗的明细拆档，昨仓部分走平昨档」。DCE.m2701 通用平仓消耗了昨仓，
-// 柜台收的是平今档 0.1 而不是平昨档 0.2（ctp-slices-20260915-{2,3}）。
+//	min(平仓量, 平仓前今仓量) 走平今档，其余走平昨档 —— 「日内平仓」按**数量**认定，与消耗了哪一片无关
 //
-//	(a) min(平仓量, 平仓前今仓量) 走平今，其余走平昨
-//	(b) 一律走平今
-//	(c) 按消耗拆档没错，是大商所行为上的平昨费率 ≠ 声明（评审 20260915 补；语料里没有大商所显式平昨成交）
+// 证据是同一个柜台、同一个合约上的两笔（DCE.m2701，声明 平今 0.1 / 平昨 0.2）：
 //
-// 平仓量 ≤ 平仓前今仓量时 a、b 都是「全走平今」；⚠️ c 未排除，它在这一段预言的是「行为平昨费率」，
-// 与声明平今费率相等只是 m2701 上的巧合 ⇒ **这一段只在 m2701 上有观测**。
-// 超出的部分只在两档声明费率相同时 a、b 同值 —— 不同就报错，不猜。
+//	ctp-slices-20260915-{2,3}  今1昨1 裸平1、消耗的是昨仓，收 0.1  ⇒ 否掉「按实际消耗的明细拆档」
+//	ctp-slices-20260917{,-2}   今0昨2 裸平1，收 0.2                ⇒ 否掉 (b) 一律平今、(c) 行为平昨费率 ≠ 声明
+//
+// ⚠️ E2（今0昨1 **显式**平昨 1，ctp-slices-20260917-{3,4}）也收 0.2，与 (a) 一致，**但它不是第二次独立判别**：
+// 发出去的是 OF_CloseYesterday，成交记录里的开平标志却是 '1'（通用平仓）—— 大商所把它改写成了平仓，
+// 于是它与 E1 实际上是同一种输入。⇒ 证据是**一次**，不是两次交叉确认。
+//
+// ⚠️⚠️ **范围：只认大商所。** 证据只有 CTP 上 DCE.m2701 一手，而其他 NoUseHistory 交易所的声明费率里
+// 平今 ≠ 平昨的品种不少（ctp-commission-rates-20260915.txt：CZCE CF/OI/SF/SM/CJ 平今 0、MA 平今 6 平昨 2
+// 方向与 m 相反；GFEX ps 平今按额 0）。⇒ 郑商所、广期所及其他 NoUseHistory 交易所在「超出今仓、两档费率不同」时
+// **照旧报错不猜**，等实测。
+//
+// 范围的出处（照实写）：**使用者裁决「只认大商所」**，**双方各自确认**：
+// 评审方在评审会话里用 AskUserQuestion 向使用者本人问到（评审 20260916 夜，exp-21-seed 条件 1）；
+// 实现方随后在自己的会话里把「这条确认发生在评审方一侧」摆给使用者，使用者答「就是这个意思」（同夜）。
+// 对照 §13 #20：那一条「全部 NoUseHistory」同样是使用者裁决，并单独登记了「观测只覆盖大商所」。
+//
+// ⚠️ 收敛之前这里对所有交易所「超出今仓的那一段、两档费率又不同」都报错不猜（那一段 a、b 给不同答案）。
+// ⚠️ 只有一个柜台、一个品种、一手 ⇒ 不进 rules_measured。
 func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRates, charge func(types.Offset, int) error) error {
 	todayPart := tr.Volume
 	if todayPart > todayBefore {
@@ -330,11 +343,23 @@ func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRate
 	if rest == 0 {
 		return nil
 	}
+	if undatedCloseMeasuredOn(tr.Instrument.Exchange) {
+		return charge(types.CloseYesterday, rest) // §13 #21 (a)，大商所实测
+	}
 	if !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) {
 		return fmt.Errorf("%s 的 %v %d 手里有 %d 手超出平仓前的今仓（%d 手），而平今档与平昨档费率不同 —— "+
-			"这一段收哪一档没有观测（§13 #21：按今仓量认定则收平昨，一律平今则收平今）", tr.Instrument, tr.Offset, tr.Volume, rest, todayBefore)
+			"§13 #21 的 (a)「超出部分走平昨档」只在大商所有观测（使用者裁决范围：只认大商所），%s 上这一段收哪一档没有观测，不猜",
+			tr.Instrument, tr.Offset, tr.Volume, rest, todayBefore, tr.Instrument.Exchange)
 	}
-	return charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值
+	return charge(types.CloseYesterday, rest) // 两档同费率：不论哪个候选都同值
+}
+
+// undatedCloseMeasuredOn 报告 §13 #21 的 (a)「超出今仓的部分走平昨档」在这个交易所上**有没有观测**。
+//
+// ⚠️ 单独立一个函数，是为了让「范围」这件事在代码里只有一处：将来补测了郑商所 / 广期所，改的是这里，
+// 而不是在 chargeUndated 里再加一个 || —— 那样范围就散在判断条件里，读不出「它是一张实测名单」。
+func undatedCloseMeasuredOn(ex types.Exchange) bool {
+	return ex == types.DCE
 }
 
 // commit 把算好的数写进账户（并留下这次计价的分组分解）。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。
