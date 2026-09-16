@@ -209,7 +209,7 @@ func runCTPCloseOrder(args []string) error {
 	fs := flag.NewFlagSet("ctp-closeorder", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 DCE.m2701（⚠️ 无默认值：会真的开一手、平一手）")
-	dump := fs.String("dump", "", "三份截面落盘目录（⚠️ CTP 夹具只能落 testdata/ctp/）")
+	dump := fs.String("dump", "", "三份截面落盘目录（⚠️ 只能是仓库根下的 testdata/ctp —— 落别处会被拒，不是只写在这句里）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	cleanup := fs.Bool("cleanup", false, "**只收尾**：只用平今单平掉该合约多头的今仓，不开仓、不做实验。"+
 		"⚠️ 20260913 评审第二轮补的：保护期内（20260914/15）第 1 步的收尾若失败，遗留的今仓"+
@@ -217,6 +217,14 @@ func runCTPCloseOrder(args []string) error {
 		"⚠️ 分不清今仓里有没有种子时**拒绝动手**（见 cleanupVerdict）")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
+	}
+	// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go
+	if *dump != "" {
+		abs, err := ctpDumpDir(*dump)
+		if err != nil {
+			return err
+		}
+		*dump = abs
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：本命令会真的开一手、平一手")

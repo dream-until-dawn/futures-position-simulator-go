@@ -62,10 +62,18 @@ func runCTPSlices(args []string) error {
 		"于是 p2 必定高出至少一个价位。配 -second higher 用")
 	fillWait := fs.Duration("fillwait", 6*time.Minute, "-restfirst 时等腿1 成交的上限。等不到就**撤掉并报错**，不留单")
 	dump := fs.String("dump", "", "把**两片俱在、尚未平仓**那一刻的截面落盘到该目录"+
-		"（⚠️ CTP 夹具只能落 testdata/ctp/）")
+		"（⚠️ 只能是仓库根下的 testdata/ctp —— 落别处会被拒）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
+	}
+	// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go
+	if *dump != "" {
+		abs, err := ctpDumpDir(*dump)
+		if err != nil {
+			return err
+		}
+		*dump = abs
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：本命令会真的建两手仓")

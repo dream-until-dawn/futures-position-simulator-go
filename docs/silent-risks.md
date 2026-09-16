@@ -4119,6 +4119,26 @@ breakcheck 跑的是这一行：
 补法：`account.Algorithm` 必填；`TestProductionAccountAvailableAgainstCTP` 用生产的 `account`
 按截面分量重建、比柜台的 `Available`（破坏 500）。
 
+**97. ⚠️ 「CTP 夹具只能落 `testdata/ctp/`」这条规矩，在 20260916 之前只是**帮助文字**。**
+
+`Fixture.Write` 对目录一句校验都没有，直接 `MkdirAll`。于是两种落错都不报错：
+
+    testdata/probes          天勤 DIFF 的语料混进 CTP 夹具（帮助文字自己写着「混进去**不会报错**」）
+    cmd/oracle/testdata/ctp  照抄文档里的 `-dump testdata/ctp`，而 oracle 是嵌套模块、只能在 cmd/oracle 下跑
+
+⚠️ **第二种是这一条真正的形态**：路径**字面上**就是 `testdata/ctp`，命令成功、日志打出落盘路径、
+夹具内容完全正确 —— 只是它落在一个谁也不会去读的目录里，而下一次全量对拍照常绿（少一份证据不会让任何测试变红）。
+
+**当初为什么没被发现**：规矩写在三处 flag 帮助文字与一处注释里，共四处，措辞一次比一次重
+（「只能落」「别落进」「不会报错」）——**重复的措辞看起来像是有人管着，实际上一次校验都没有**。
+⚠️ 这正是「源码措辞不是行为证据」那一条：四处措辞加起来的证据强度仍然是零。
+
+补法：`cmd/oracle/dumpdir.go` 的 `ctpDumpDir` —— 解析成绝对路径，钉死在**仓库根**下的 `testdata/ctp`，
+六个带 `-dump` 的 CTP 命令在 `fs.Parse` 之后立刻校验（连柜台都还没连）。
+两种落错给**不同**的理由（补救不一样：一种换目录，一种是「你以为对的那个字面路径不对」），
+`TestCheckCTPDumpDirTellsApartTheTwoMistakes` 钉住这一点；`TestRepoRootFindsThisRepo` 钉住「仓库根没被认成当前目录」——
+认成当前目录时纯函数照样全绿，而真跑起来会把 `cmd/oracle/testdata/ctp` 当成家。
+
 ## 怎么用这份清单
 
 - **动到保证金、今昨仓、结算链路的代码前**，先看第一节对应那条的守卫还在不在

@@ -4,8 +4,17 @@
 
 20260916 白天在 `DCE.m2701` 上种了 **2 手多头**，留仓过夜，为的是 20260917 拿到「只有昨仓」的两手。
 
-    先  oracle ctp-closefee -symbol DCE.m2701 -mode bare -dump testdata/ctp   （E1，消耗一手）
-    再  oracle ctp-closefee -symbol DCE.m2701 -mode yd   -dump testdata/ctp   （E2，消耗另一手）
+⚠️ **交易日 20260917 从 20260916 夜盘（21:00）就开始了**，不是第二天早上 ——
+这是量出来的，不是推的：2026-09-14 **21:21** 跑出来的那批夹具落盘名就是 `ctp-slices-20260915-*.json`，
+当时跑的正是 `DCE.m2701` 且账上已有昨仓。⇒ 今仓翻昨仓在夜盘开盘前就完成，实验**当晚**就能跑。
+
+在 `cmd/oracle` 下（`oracle` 是嵌套模块，只能在那里跑；`.env` 与 `testdata/` 都在仓库根）：
+
+    先  go run . ctp-closefee -symbol DCE.m2701 -mode bare -env ../../.env -dump ../../testdata/ctp   （E1，消耗一手）
+    再  go run . ctp-closefee -symbol DCE.m2701 -mode yd   -env ../../.env -dump ../../testdata/ctp   （E2，消耗另一手）
+
+⚠️ `-dump` 写成 `testdata/ctp` 会被拒（那解析到 `cmd/oracle/testdata/ctp`）——
+这道拒绝是 20260916 加的，在那之前它会静默落到错地方，见 `cmd/oracle/dumpdir.go`。
 
 ⚠️ **那天种子不受安全阀保护**：受保护腿只登记了种植那一天（20260916）——
 保护的含义是「今天别被别的命令平掉」，而实验那天它的用处正是被平掉，
@@ -1836,7 +1845,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 127 |
-| `docs/roadmap.md` | 52 |
+| `docs/roadmap.md` | 53 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 95 |

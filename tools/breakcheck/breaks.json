@@ -6181,5 +6181,71 @@
 		"test": "TestMarginGroupsIsACopy",
 		"want": "返回的必须是副本",
 		"expect": "red"
+	},
+	{
+		"name": "628 ctp-closefee 忘了接 -dump 守卫（判定全绿，夹具静默落进 cmd/oracle/testdata/ctp）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee.go",
+		"old": "\t// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go\n\tif *dump != \"\" {\n\t\tabs, err := ctpDumpDir(*dump)\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t\t*dump = abs\n\t}\n",
+		"new": "\t_ = ctpDumpDir // 破坏：这条命令忘了接线\n",
+		"pkg": "./",
+		"test": "TestCTPDumpDirIsWiredIntoEveryCommand",
+		"want": "ctp-closefee 收下了",
+		"expect": "red"
+	},
+	{
+		"name": "629 ctp-params 忘了接 -dump 守卫（接线是每个命令一处，少接一个别的命令不会红）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\t// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go\n\tif *dump != \"\" {\n\t\tabs, err := ctpDumpDir(*dump)\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t\t*dump = abs\n\t}\n\tenv, err := probe.LoadEnv(*envPath)\n\tif err != nil {\n\t\treturn err\n\t}\n\tc := ctp.New(ctp.Credentials{\n\t\tFront:    env.CTPTdFront,",
+		"new": "\t_ = ctpDumpDir // 破坏：这条命令忘了接线\n\tenv, err := probe.LoadEnv(*envPath)\n\tif err != nil {\n\t\treturn err\n\t}\n\tc := ctp.New(ctp.Credentials{\n\t\tFront:    env.CTPTdFront,",
+		"pkg": "./",
+		"test": "TestCTPDumpDirIsWiredIntoEveryCommand",
+		"want": "ctp-params 收下了",
+		"expect": "red"
+	},
+	{
+		"name": "630 -dump 判定只看末级目录名（cmd/oracle/testdata/ctp 就此放行——字面上完全正确的那种落错）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\tif strings.EqualFold(got, want) {\n\t\treturn nil\n\t}",
+		"new": "\tif strings.EqualFold(filepath.Base(got), \"ctp\") {\n\t\treturn nil\n\t}\n\t_ = want",
+		"pkg": "./",
+		"test": "TestCheckCTPDumpDir",
+		"want": "应当被拒",
+		"expect": "red"
+	},
+	{
+		"name": "631 嵌套模块那一支永不命中（理由退化成通用句「不是仓库根下的」，补救方向就丢了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\tcase strings.EqualFold(filepath.Base(got), \"ctp\") &&\n\t\tstrings.EqualFold(filepath.Base(filepath.Dir(got)), \"testdata\"):",
+		"new": "\tcase false:",
+		"pkg": "./",
+		"test": "TestCheckCTPDumpDir",
+		"want": "嵌套模块",
+		"expect": "red"
+	},
+	{
+		"name": "632 两种落错给同一句话（两者的补救不一样：一种换目录，一种是「你以为对的那个字面路径不对」）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\t\twhy = \"那是天勤 DIFF 的语料目录，CTP 夹具混进去在别处**不会报错**\"",
+		"new": "\t\twhy = \"路径**字面上**就是 \" + ctpFixtureHome + \"，但它在仓库根之外 —— \" +\n\t\t\t\"oracle 是嵌套模块、只能在 cmd/oracle 下跑，照抄文档里的相对路径就会落到这里\"",
+		"pkg": "./",
+		"test": "TestCheckCTPDumpDirTellsApartTheTwoMistakes",
+		"want": "两种落错给了同一句话",
+		"expect": "red"
+	},
+	{
+		"name": "633 repoRoot 直接返回当前目录（纯函数照样全绿，而真跑起来会把 cmd/oracle/testdata/ctp 当成家）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/dumpdir.go",
+		"old": "\tfor {\n\t\tif _, err := os.Stat(filepath.Join(d, \".git\")); err == nil {\n\t\t\treturn d, nil\n\t\t}",
+		"new": "\treturn d, nil\n\tfor {\n\t\tif _, err := os.Stat(filepath.Join(d, \".git\")); err == nil {\n\t\t\treturn d, nil\n\t\t}",
+		"pkg": "./",
+		"test": "TestRepoRootFindsThisRepo",
+		"want": "仓库根被认成了当前目录",
+		"expect": "red"
 	}
 ]

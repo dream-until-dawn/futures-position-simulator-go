@@ -105,11 +105,19 @@ func runCTPCloseFee(args []string) error {
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 DCE.m2701（⚠️ 无默认值：会真的平一手昨仓）")
 	mode := fs.String("mode", "", "bare = E1 通用平仓；yd = E2 显式平昨（⚠️ 无默认值）")
-	dump := fs.String("dump", "", "两份截面落盘目录（⚠️ CTP 夹具只能落 testdata/ctp/）")
+	dump := fs.String("dump", "", "两份截面落盘目录（⚠️ 只能是仓库根下的 testdata/ctp —— 落别处会被拒，不是只写在这句里）")
 	check := fs.Bool("check", false, "**只读**：打印今昨、当日开过几手与声明费率，不下单")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
+	}
+	// ⚠️ CTP 夹具只有一个家（仓库根下的 testdata/ctp）；落错在此之前不报错，理由见 dumpdir.go
+	if *dump != "" {
+		abs, err := ctpDumpDir(*dump)
+		if err != nil {
+			return err
+		}
+		*dump = abs
 	}
 	if *symbol == "" {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：本命令会真的平一手昨仓")
@@ -162,7 +170,7 @@ func runCTPCloseFee(args []string) error {
 	}
 	logf("[cf] 起点 手续费合计=%.4f", float64(acc0.Commission))
 	if *check {
-		logf("[cf] 只读模式：不下单。要跑实验加 -mode bare|yd -dump testdata/ctp")
+		logf("[cf] 只读模式：不下单。要跑实验加 -mode bare|yd -dump ../../testdata/ctp（在 cmd/oracle 下跑）")
 		return nil
 	}
 	if s0.Yd < 1 {
