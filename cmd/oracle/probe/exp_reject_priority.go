@@ -158,6 +158,20 @@ func applyAll(q kq.Quote, tick float64, base kq.OrderReq, keys map[string]bool) 
 //
 // ⚠️ 不测 close × closetoday：它们是同一项检查（CheckClosable）的两种形态，
 // 组合起来问不出优先级。列出来说明它是被排除的。
+// kqDeclaredDivergence 是**快期上已知会与本库相反**的那几对 —— 不是本库错了，是裁决选了另一个口子。
+//
+// §13 #22（使用者 20260916 夜裁决跟 CTP，并定为长期规则「快期与 CTP 实测相反时以 CTP 为准」）：
+// CTP 上可平量先于价格类，快期上价格类先。本库跟 CTP 之后，这个探针（它对着快期跑）在这几对上**必然**报相反。
+//
+// ⚠️ 不单独计数的话，每次跑都会在汇总里多出几条「❌ order.Check 的取值顺序在这个口子上是错的」——
+// 那句话在裁决之后是**假话**，而它长得和一次真回归一模一样。
+// ⚠️ 反过来也要喊：这几对在快期上**一致**了，说明快期的行为变了（或本库的顺序被挪回了快期那一侧），要看。
+func kqDeclaredDivergence(a, b string) bool {
+	isClose := func(k string) bool { return k == "close" || k == "closetoday" }
+	isPrice := func(k string) bool { return k == "tick" || k == "limit" }
+	return (isClose(a) && isPrice(b)) || (isPrice(a) && isClose(b))
+}
+
 var priorityPairs = [][2]string{
 	{"tick", "limit"},
 	{"tick", "close"},
@@ -318,7 +332,7 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 	// 第二轮：组合单。
 	r.Logf("")
 	r.Logf("  —— 组合 ——")
-	agree, disagree, unusable := 0, 0, 0
+	agree, disagree, declared, unusable := 0, 0, 0, 0
 	for _, pair := range priorityPairs {
 		a, b := byKey[pair[0]], byKey[pair[1]]
 		req, err := applyAll(q, tick, base(), map[string]bool{a.Key: true, b.Key: true})
@@ -350,9 +364,17 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 		case msg == "" || (single[a.Key] == "" && single[b.Key] == ""):
 			unusable++
 			r.Logf("      ⚠️ 归因不成立：原话为空")
+		case msg == single[winner.Key] && kqDeclaredDivergence(a.Key, b.Key):
+			agree++
+			r.Logf("      ⚠️ 与本库**一致** —— 而这一对是已声明的快期口径差（§13 #22 跟 CTP 后快期本该相反）。" +
+				"快期的行为变了，或 order.Check 被挪回了快期那一侧：要看")
 		case msg == single[winner.Key]:
 			agree++
 			r.Logf("      ✅ 与本库一致：柜台报的是 %s", winner.Key)
+		case msg == single[loser.Key] && kqDeclaredDivergence(a.Key, b.Key):
+			declared++
+			r.Logf("      ⓘ 与本库相反：柜台报的是 %s —— **已声明的口径差**，不是本库错了："+
+				"§13 #22 裁决跟 CTP（CTP 上可平量先于价格类），快期这一对本来就相反", loser.Key)
 		case msg == single[loser.Key]:
 			disagree++
 			r.Logf("      ❌ 与本库**相反**：柜台报的是 %s —— "+
@@ -365,16 +387,16 @@ func (r *Runner) expRejectPriority(ctx context.Context) error {
 	}
 
 	r.Logf("")
-	r.Logf("  合计：一致 %d，相反 %d，归因不成立 %d（共 %d 对）",
-		agree, disagree, unusable, len(priorityPairs))
+	r.Logf("  合计：一致 %d，相反 %d，已声明口径差 %d，归因不成立 %d（共 %d 对）",
+		agree, disagree, declared, unusable, len(priorityPairs))
 	// ⚠️ 「全部归因不成立」要当成失败报出来，不是「跑完了」。
 	// 一次什么都没问出来的实验，与一次全部一致的实验，
 	// 在汇总行里长得一模一样 —— 除非这里分开说。
 	switch {
-	case agree+disagree == 0 && ambient:
+	case agree+disagree+declared == 0 && ambient:
 		r.Logf("  ⓘ 一对都没问出来，**但这次运行不是白跑的**：" +
 			"上面那条环境性拒因优先于四项，是本轮唯一也是真实的收获")
-	case agree+disagree == 0:
+	case agree+disagree+declared == 0:
 		r.Logf("  ⚠️ **一对都没问出来** —— 这次运行对优先级没有任何判别力")
 	}
 

@@ -17,7 +17,10 @@ import (
 //
 // # 每一条都对应一次真实观测
 //
-// 期望值来自 20260909 在快期模拟 SHFE.ag2702 与 DCE.i2701 上的实测，
+// ⚠️ **两个柜台的实测都在这张表里，而它们在「可平量 × 价格类」上相反** —— 表里按 CTP（§13 #22 裁决）。
+// 价格类两项之间的先后两个柜台一致（最小变动价位先）。
+//
+// 价格类那几行的期望值来自 20260909 在快期模拟 SHFE.ag2702 与 DCE.i2701 上的实测，
 // 原始夹具 testdata/probes/exp-reject-tick-vs-limit-20260909*.json，
 // 复跑见 docs/probes.md §14。它与 cn-futures-rules.md §9 的文档表一致。
 //
@@ -50,10 +53,13 @@ func TestRejectionPriorityMatchesCounter(t *testing.T) {
 			CheckPriceTick, "柜台原话「下单价格不是价格单位的整倍数」"},
 		{"越涨停 + 不是整数倍", mkReq(types.Buy, types.Open, d(overLimitOffTick), 1),
 			CheckPriceTick, "实测：零头 1/3 个 tick 时柜台报的是「不是整倍数」"},
+		// ⚠️ 下面两行 20260916 夜**翻了**：此前期望的是快期的答案（涨跌停 / 最小变动价位先）。
+		// CTP 实测报可平量（SHFE 51 / CZCE 30 / GFEX 30），§13 #22 使用者裁决跟 CTP。
+		// 快期那两次观测不删 —— 它们是已声明的口径差（state.md reject_priority_measured 第 2、3 行）。
 		{"越涨停 + 超可平量", mkReq(types.Sell, types.CloseYesterday, d(overLimitOnTick), 99),
-			CheckPriceLimit, "实测：柜台报涨跌停，不报可平量"},
+			CheckClosable, "CTP 实测报可平量（快期报涨跌停，已声明口径差；§13 #22 裁决跟 CTP）"},
 		{"不是整数倍 + 超可平量", mkReq(types.Sell, types.CloseYesterday, d(inLimitOffTick), 99),
-			CheckPriceTick, "实测：柜台报最小变动价位，不报可平量"},
+			CheckClosable, "CTP 实测报可平量（快期报最小变动价位，已声明口径差；§13 #22 裁决跟 CTP）"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -1508,11 +1508,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "145 allChecks 与常量的优先级分岔",
+		"name": "145 allChecks 与常量的优先级分岔（20260916 夜 #22 重排后重锚，形状不变：交换 allChecks 里相邻两项）",
 		"dir": "",
 		"file": "order/order.go",
-		"old": "\tCheckTradable, CheckSession, CheckPriceTick, CheckPriceLimit,",
-		"new": "\tCheckTradable, CheckSession, CheckPriceLimit, CheckPriceTick,",
+		"old": "\tCheckTradable, CheckClosable, CheckSession, CheckPriceTick,",
+		"new": "\tCheckTradable, CheckSession, CheckClosable, CheckPriceTick,",
 		"pkg": "./order/",
 		"test": "TestPriorityIsSaidOnce",
 		"want": "两处分岔了",
@@ -6546,17 +6546,6 @@
 		"expect": "red"
 	},
 	{
-		"name": "662 门面不再拒在时段（「时段 × 可平量」悄悄换成了 CTP 那一侧的答案，而 §13 #22 还没裁决）",
-		"dir": "",
-		"file": "order/order.go",
-		"old": "\t} else if !f.InSession {",
-		"new": "\t} else if false && !f.InSession {",
-		"pkg": "./",
-		"test": "TestSessionVersusClosablePinnedPending22",
-		"want": "悄悄换了的行为",
-		"expect": "red"
-	},
-	{
 		"name": "663 state.md 把不同的对写回 9（按「行数减一」心算——20260916 夜送审消息里真的这么写过）",
 		"dir": "",
 		"file": "docs/state.md",
@@ -6576,6 +6565,28 @@
 		"pkg": "./",
 		"test": "TestRejectPriorityDistinctPairsMatchCell",
 		"want": "去重后是 10 对",
+		"expect": "red"
+	},
+	{
+		"name": "665 可平量与交易时段两个常量换回去（顺序挪回快期那一侧：午休 / 收盘后空仓平昨又报时段，而 §13 #22 已裁决跟 CTP）",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\tCheckClosable\n\t// CheckSession 是否在交易时段内。⚠️ 本库目前查不了，见 Result.Unchecked。\n\t//\n\t// ⚠️ 还有第二层，与「查不了」不是一回事：**快期模拟自己也不查**。\n\t// 20260909 从已有语料横着读：313 笔从未被拒过的委托里有 217 笔\n\t// 落在该品种的任何时段之外，`DCE.i2701` 甚至在夜盘收盘后近四小时被收下\n\t// （kq_facts 48，守卫 TestOrdersAcceptedOutsideSession）。\n\t// 于是在这个口子上，**一个查时段的实现与一个不查的实现对拍结果相同** ——\n\t// 那是一条盲区，不是一处待办。\n\tCheckSession\n",
+		"new": "\tCheckSession\n\t// CheckSession 是否在交易时段内。⚠️ 本库目前查不了，见 Result.Unchecked。\n\t//\n\t// ⚠️ 还有第二层，与「查不了」不是一回事：**快期模拟自己也不查**。\n\t// 20260909 从已有语料横着读：313 笔从未被拒过的委托里有 217 笔\n\t// 落在该品种的任何时段之外，`DCE.i2701` 甚至在夜盘收盘后近四小时被收下\n\t// （kq_facts 48，守卫 TestOrdersAcceptedOutsideSession）。\n\t// 于是在这个口子上，**一个查时段的实现与一个不查的实现对拍结果相同** ——\n\t// 那是一条盲区，不是一处待办。\n\tCheckClosable\n",
+		"pkg": "./",
+		"test": "TestSessionVersusClosableFollowsCTP",
+		"want": "挪回了快期那一侧",
+		"expect": "red"
+	},
+	{
+		"name": "666 快期探针把 tick × limit 也算成已声明口径差（两个柜台在这一对上一致，相反才是真回归，会被静静吞掉）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/probe/exp_reject_priority.go",
+		"old": "\tisPrice := func(k string) bool { return k == \"tick\" || k == \"limit\" }\n\treturn (isClose(a) && isPrice(b)) || (isPrice(a) && isClose(b))",
+		"new": "\tisPrice := func(k string) bool { return k == \"tick\" || k == \"limit\" }\n\treturn (isClose(a) && isPrice(b)) || (isPrice(a) && isClose(b)) || (isPrice(a) && isPrice(b))",
+		"pkg": "./probe/",
+		"test": "TestKQDeclaredDivergenceCoversExactlyTheClosableVsPricePairs",
+		"want": "[tick limit]",
 		"expect": "red"
 	}
 ]
