@@ -6522,5 +6522,60 @@
 		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
 		"want": "OpenCost：本库",
 		"expect": "red"
+	},
+	{
+		"name": "660 §13 #21 的 (a) 去掉交易所限定（一手 m2701 的观测被外推到郑商所 / 广期所，而使用者裁决只认大商所）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\treturn ex == types.DCE",
+		"new": "\treturn true",
+		"pkg": "./",
+		"test": "TestUndatedCloseFeeTier",
+		"want": "只认大商所",
+		"expect": "red"
+	},
+	{
+		"name": "661 时段拒单不带 Kind（ctperr 那五格 26 从门面永远走不到，拒单报「未知拒因、无码」）",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t\trejections = append(rejections, Rejection{Check: CheckSession, Kind: ctperr.ReasonOutsideSession,",
+		"new": "\t\trejections = append(rejections, Rejection{Check: CheckSession,",
+		"pkg": "./",
+		"test": "TestSubmitSession",
+		"want": "Kind 没接上",
+		"expect": "red"
+	},
+	{
+		"name": "662 门面不再拒在时段（「时段 × 可平量」悄悄换成了 CTP 那一侧的答案，而 §13 #22 还没裁决）",
+		"dir": "",
+		"file": "order/order.go",
+		"old": "\t} else if !f.InSession {",
+		"new": "\t} else if false && !f.InSession {",
+		"pkg": "./",
+		"test": "TestSessionVersusClosablePinnedPending22",
+		"want": "悄悄换了的行为",
+		"expect": "red"
+	},
+	{
+		"name": "663 state.md 把不同的对写回 9（按「行数减一」心算——20260916 夜送审消息里真的这么写过）",
+		"dir": "",
+		"file": "docs/state.md",
+		"old": "不同的**对**是 **7**",
+		"new": "不同的**对**是 **9**",
+		"pkg": "./",
+		"test": "TestRejectPriorityDistinctPairsMatchCell",
+		"want": "不同的对是 9",
+		"expect": "red"
+	},
+	{
+		"name": "664 对数守卫不去重（按行当对数——同一对在两个柜台各量一次的那几组被数成两对）",
+		"dir": "",
+		"file": "doc_test.go",
+		"old": "\t\tk := hit[0] + \" × \" + hit[1]",
+		"new": "\t\tk := num + hit[0] + \" × \" + hit[1]",
+		"pkg": "./",
+		"test": "TestRejectPriorityDistinctPairsMatchCell",
+		"want": "去重后是 10 对",
+		"expect": "red"
 	}
 ]

@@ -34,7 +34,17 @@ func simInst(t *testing.T, sym string) types.InstrumentID {
 func simRules(t *testing.T) refdata.Provider {
 	t.Helper()
 	m, ag, y, rb := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702"), simInst(t, "DCE.y2701"), simInst(t, "SHFE.rb2701")
+	ma := simInst(t, "CZCE.MA2701")
 	b := refdata.NewBuilder(1).
+		// MA2701（郑商所）：NoUseHistory，平昨 2 / 平今 6 —— 照 ctp-commission-rates-20260915.txt 的声明，
+		// 方向与 m 相反（m 平今便宜、MA 平今贵）。给「§13 #21 的 (a) 只认大商所」那一格用：
+		// 这里超出今仓、两档不同 ⇒ 要照旧报错不猜。
+		AddInstrument(refdata.Instrument{ID: ma, VolumeMultiple: dec("10"), PriceTick: dec("1"),
+			PositionDateType: refdata.NoUseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.07"), HasPriceLimitRatio: true}).
+		AddCommissionRates(ma, types.Speculation, refdata.CommissionRates{
+			OpenByVolume: dec("2"), CloseByVolume: dec("2"), CloseTodayByVolume: dec("6")}).
+		AddMarginRates(ma, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).
 		// rb2701：UseHistory 且开 / 平昨 / 平今三档按手费率**两两不同**，给「裸 CLOSE 记作平昨」收哪一档用（ag2702 三档同费率，分不开）
 		AddInstrument(refdata.Instrument{ID: rb, VolumeMultiple: dec("10"), PriceTick: dec("1"),
 			PositionDateType: refdata.UseHistory, IsTrading: true,
@@ -287,6 +297,22 @@ func TestUndatedCloseFeeTier(t *testing.T) {
 	}
 	if p, _ := s2.Position(simInst(t, "DCE.m2701"), types.Speculation); p.VolumeHistory(types.Buy) != 0 {
 		t.Error("⚠️ 裸平之后昨仓没被消耗")
+	}
+
+	// ⚠️ 范围的另一个方向：(a) **只认大商所**（使用者裁决，确认在评审方一侧取得）。
+	// 郑商所 MA2701 两档不同（平昨 2 / 平今 6），只有昨仓时裸平 ⇒ 这一段没有观测 ⇒ 照旧**报错不猜**、状态不动。
+	// ⚠️ 这一格若被「顺手」按 (a) 收了平昨 2，所有测试照样可以绿 —— 而那是把一手 m2701 的观测外推到了另一个交易所。
+	sc := withHistoryOn(t, "CZCE.MA2701", "3000")
+	beforeC := sc.Account()
+	errC := sc.ApplyTrade(simNext, trade(t, "CZCE.MA2701", types.Sell, types.Close, "3000", 1))
+	if errC == nil || !strings.Contains(errC.Error(), "只在大商所有观测") {
+		t.Errorf("⚠️ 郑商所只有昨仓时裸平、两档费率不同，要照旧报错不猜（§13 #21 的 (a) 只认大商所）：%v", errC)
+	}
+	if !sameSnapshot(sc.Account(), beforeC) {
+		t.Error("⚠️ 郑商所那一笔报错之后账户变了")
+	}
+	if p, _ := sc.Position(simInst(t, "CZCE.MA2701"), types.Speculation); p.VolumeHistory(types.Buy) != 1 {
+		t.Error("⚠️ 郑商所那一笔报错之后昨仓被消耗了")
 	}
 
 	// 反向：显式平昨照走平昨档

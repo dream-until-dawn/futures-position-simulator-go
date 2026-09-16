@@ -93,20 +93,24 @@ const (
 	//	⇒ 这与码空间对得上：可平量走 CTP 前置那一层（CTP 空间、无交易所委托号），
 	//	  时段与价格类是再往后那一层。**不是一张任意的优先级表，是分层。**
 	//
-	// ⚠️⚠️ **同日下午又量到一条，而那一条的性质完全不同**（20260916 13:31–13:33，`oracle ctp-pairs`）：
+	// ⚠️⚠️ **同日下午又量到一条**（20260916 13:31–13:33，`oracle ctp-pairs`）：
 	// 一笔同时违反「可平量」与**价格类**的委托，CTP 报的也是**可平量**
 	// （SHFE 51 / CZCE 30 / GFEX 30；同轮正对照复现了价格类的 48 ⇒ 确实违反到了价格类）。
 	// 而本库把 `CheckPriceTick` / `CheckPriceLimit` 排在 `CheckClosable` **前面** —— 跟的是快期那一侧
 	// （快期：最小变动价位先 / 涨跌停先，state.md `reject_priority_measured` 第 2、3 行）。
 	//
-	//	⚠️ 这一条**两项本库都查**，所以行为真的会分岔 —— 与下面那个「行为恰好一致」的巧合不是一回事。
-	//	⇒ 两个柜台相反，选哪边是**裁决**不是实测：登记为 §13 #22，本库**不自行重排**。
+	// ⚠️⚠️ **两处都是今天就分岔的行为，都并进 §13 #22 等裁决，本库不自行重排**：
 	//
-	// ⚠️ **本库不据此重排**（指上面 Session 那一条），理由要说清楚，因为它是个**巧合**：
-	// `CheckSession` 本库**根本不查**（Result.Unchecked），于是同一笔委托在本库这边
-	// 也会落到 `CheckClosable` 上 —— **顺序表不一致，而行为一致**。
-	// ⚠️ 巧合的危险在于它会失效：本库哪天接上时段数据源，这个顺序就开始给出错的那一项，
-	// 而那一天不会有任何东西提醒。⇒ 登记在 silent-risks，守卫是本条注释旁的实测事实。
+	//	可平量 × 价格类   本库报价格类   CTP 报可平量
+	//	可平量 × 时段     本库报时段     CTP 报可平量   —— 门面带 Calendar 时**会查时段**（submit.go ErrOutsideSession）
+	//
+	// ⚠️ 20260916 午休时这里写的是「CheckSession 本库根本不查，顺序表不一致而行为一致，是个巧合」——
+	// **那个前提是错的**（评审 20260916 夜用 submitSim 探出：午休 / 收盘后空仓平昨，本库报时段、CTP 报可平量）。
+	// 我据一句「本库标着查不了」下了结论，而没去跑一遍门面 —— 仓库里早有 TestSubmitSession 钉着「16:00 拒在时段」。
+	//
+	// ⚠️ 也不能只把这一对单独重排：CTP 实测是「可平量 > 时段 > 价格类」，本库跟快期是「价格类 > 可平量」，
+	// 而快期不查时段。两边拼起来是个环（时段 > 价格类 > 可平量 > 时段）⇒ 怎么排取决于 #22 跟哪个柜台。
+	// 当前行为由 TestSessionVersusClosablePinnedPending22 钉住，将来重排时它会红、看得见。
 	CheckClosable
 	// CheckFunds 可用资金是否够（保证金 + 手续费）。
 	CheckFunds
@@ -297,7 +301,10 @@ func Validate(req Request, f Facts) Result {
 	if !f.HasSession {
 		skip(CheckSession, "「此刻在不在交易时段内」—— 本库的 Calendar 时段之外拒答（kq_facts 23）")
 	} else if !f.InSession {
-		add(CheckSession, "不在交易时段内")
+		// ⚠️ 带上 Kind：「不在交易时段内」五所都有实测码 26（20260916 盘中休息与收盘后两轮）。
+		// 此前这里走的是不带 Kind 的 add，于是 ctperr 那五格从门面永远走不到 —— 拒单的码是「未知拒因、无码」（评审 20260916 夜 nit 1）。
+		rejections = append(rejections, Rejection{Check: CheckSession, Kind: ctperr.ReasonOutsideSession,
+			Reason: "不在交易时段内"})
 	}
 
 	// —— 3 最小变动价位 ——
