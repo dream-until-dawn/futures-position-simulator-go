@@ -6293,14 +6293,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "638 门面的「下一交易日不晚于当前」去掉——空仓那一档 position.Settle 根本不被调用，没人接住",
+		"name": "638 门面的「下一交易日不晚于当前」去掉——空仓那一档会走到更深处才失败，把模拟器弄失效",
 		"dir": "",
 		"file": "settle.go",
 		"old": "\tif !nextDay.After(day) {",
 		"new": "\tif false && !nextDay.After(day) {",
 		"pkg": "./",
 		"test": "TestSettleRefusesMissingPriceAndLeavesNoTrace",
-		"want": "空仓时下一交易日等于当前交易日也结算了",
+		"want": "失败之后模拟器不该受影响",
 		"expect": "red"
 	}
 ]

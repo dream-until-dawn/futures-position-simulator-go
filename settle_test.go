@@ -104,9 +104,13 @@ func TestSettleRefusesMissingPriceAndLeavesNoTrace(t *testing.T) {
 		t.Error("⚠️ 空仓时下一交易日等于当前交易日也结算了 —— " +
 			"这一档 position.Settle 不会被调用，拦不住就是门面自己那道没了")
 	}
-	// 反向对照：同样空仓、下一交易日正常时要结算得成，否则上面那条可以靠「空仓一律报错」通过。
+	// ⚠️ 这一条既是反向对照（免得上面那条靠「空仓一律报错」通过），
+	// 也是 LeavesNoTrace 的那一半 —— 而它比上面那条更有判别力：
+	// 门面那道拦在一切之前，**失败不碰状态**；把它去掉，同一档会一路走到更深处才失败，
+	// 并在途中把模拟器弄**失效**，于是这条正常结算再也跑不了。
 	if err := flat.Settle(simDay, map[types.InstrumentID]decimal.Decimal{}, simNext); err != nil {
-		t.Errorf("⚠️ 空仓 + 正常的下一交易日应当结算得成：%v", err)
+		t.Errorf("⚠️ 空仓那一档失败之后模拟器不该受影响，而随后一次正常的结算失败了：%v —— "+
+			"门面那道「下一交易日不晚于当前」拦在一切之前，失败得干净；它没了就会走到更深处才失败", err)
 	}
 }
 
