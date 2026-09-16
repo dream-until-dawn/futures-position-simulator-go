@@ -6161,14 +6161,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "626 Restore 之后 MarginGroups 是空的（分组不进存档，恢复时没重算）",
+		"name": "626 Restore 之后 MarginGroups 是空的（分组不进存档、恢复时没重算 ⇒ 取那一组时就先红了，不是逐字段比出来的）",
 		"dir": "",
 		"file": "state.go",
 		"old": "\ts.groups = v.groups // 恢复出来的模拟器也要能答 MarginGroups",
 		"new": "\t_ = v.groups // 恢复出来的模拟器也要能答 MarginGroups",
 		"pkg": "./",
 		"test": "TestMarginGroupsFollowsTheLatestValuation",
-		"want": "恢复之后的分组",
+		"want": "分组里没有",
 		"expect": "red"
 	},
 	{
