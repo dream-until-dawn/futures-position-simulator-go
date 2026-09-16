@@ -323,6 +323,159 @@ func TestFacadeSettlesM2701AcrossDaysAgainstCTP(t *testing.T) {
 	compare("-3 通用平仓之后", s3)
 }
 
+// TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP 是 §13 #21 **第二段**的对拍：只有昨仓时裸平，手续费收哪一档。
+//
+// ⚠️ 上一条（TestFacadeSettlesM2701AcrossDaysAgainstCTP）钉的是第一段 —— 今1昨1 裸平1 收平今档 0.1 ——
+// 而那一段三个候选**都预言 0.1**，不判别候选。这一条才是判别的那一格：
+//
+//	E1  今0昨2 裸平1   (a) 收平昨 0.2   (b) 收平今 0.1   (c) 收「行为平昨费率」—— 若等于 0.1 与 b 同值
+//	实测 0.2 ⇒ 只剩 (a)
+//
+// ⚠️ **它在 §13 #21 收敛之前会红**：本库当时对「超出今仓那一段、两档费率又不同」报错不猜，
+// 于是 E1 那笔成交根本进不了门面。这正是它的判别力 —— 从生产代码出发、比柜台的字节，
+// 不是在测试里手写一个期望值（silent-risks 方法论 96）。
+//
+// ⚠️ E2（显式平昨）那一笔也比，但**它不是第二次独立判别**：发出去的是 OF_CloseYesterday，
+// 成交记录里的开平标志却是 '1'（大商所改写成了通用平仓）⇒ 它进门面时也是一笔裸 CLOSE，与 E1 同一种输入。
+//
+// ⚠️ 输入来源：20260916 的两片开仓价从 ① 的 OpenCost 68530 与 -2 的 34260 反推（3427、3426）；
+// 先开哪一片由 FIFO（§13 #13）推得 —— **推错了 OpenCost 那一格会红**，所以这个假设是被比对着的。
+// 结算价 = ① 行情的 PreSettlementPrice 3434；保证金率取 -2 那条记录（① 只有昨仓，记录报 0，§13 #1）。
+// ⚠️ 20260916 当天的计价不比（没有那一天的截面），它只是为了走一次真实的 Settle 把两片翻成昨仓。
+func TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP(t *testing.T) {
+	fx := loadCTP(t)
+	get := func(name string) ctpFixture {
+		f, ok := fx[name]
+		if !ok {
+			t.Fatalf("⚠️ 缺夹具 %s", name)
+		}
+		return f
+	}
+	const sym, rec = "DCE.m2701", "DCE.m2701/2/1"
+	d0, d1 := types.TradingDay(20260916), types.TradingDay(20260917)
+	id, err := types.ParseSymbol(sym, d0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mult, ok := specMultiplier(t, sym, id)
+	if !ok {
+		t.Fatal("⚠️ 规格快照里没有 m 的乘数")
+	}
+	e1Before, e1After := get("ctp-slices-20260917.json"), get("ctp-slices-20260917-2.json")
+	e2After := get("ctp-slices-20260917-4.json")
+	rate := num(t, e1After.Positions[rec], "MarginRateByMoney")
+	if !rate.IsPositive() {
+		t.Fatal("⚠️ -2 那条记录没给保证金率")
+	}
+	d := decimal.RequireFromString
+	rules := oneInstrumentRules{
+		inst: refdata.Instrument{ID: id, VolumeMultiple: mult, PriceTick: decimal.NewFromInt(1),
+			PositionDateType: refdata.NoUseHistory},
+		commission: refdata.CommissionRates{OpenByVolume: d("0.2"), CloseByVolume: d("0.2"), CloseTodayByVolume: d("0.1")},
+		margin:     refdata.MarginRates{LongByMoney: rate, ShortByMoney: rate},
+	}
+	ch := futsim.CTPChoices()
+	ch.FeeRounding = fee.NoRounding
+	sim, err := futsim.New(futsim.Config{Day: d0, PreBalance: decimal.NewFromInt(20000000), Rules: rules, Choices: ch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	settle := num(t, e1Before.Quotes[sym], "PreSettlementPrice")
+
+	// 20260916：两片开仓（价格反推，次序按 FIFO 推 —— 由下面 OpenCost 的比对核对）
+	if err := sim.Mark(d0, futsim.Quote{Instrument: id, Last: settle, HasLast: true,
+		PreSettlement: settle, HasPreSettlement: true}); err != nil {
+		t.Fatal(err)
+	}
+	for _, px := range []string{"3427", "3426"} {
+		if err := sim.ApplyTrade(d0, match.Trade{Instrument: id, Direction: types.Buy, Offset: types.Open,
+			Hedge: types.Speculation, Price: d(px), Volume: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := sim.Settle(d0, map[types.InstrumentID]decimal.Decimal{id: settle}, d1); err != nil {
+		t.Fatal(err)
+	}
+
+	markRec := func(f ctpFixture) {
+		t.Helper()
+		r := f.Positions[rec]
+		if err := sim.Mark(d1, futsim.Quote{Instrument: id,
+			Last: num(t, r, "SettlementPrice"), HasLast: true,
+			PreSettlement: num(t, r, "PreSettlementPrice"), HasPreSettlement: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	compare := func(label string, f ctpFixture) {
+		t.Helper()
+		r := f.Positions[rec]
+		a := sim.Account()
+		lib := map[string]decimal.Decimal{
+			"CloseProfit": a.CloseProfit, "Commission": a.Commission,
+			"UseMargin": a.CurrMargin, "PositionProfit": a.PositionProfit,
+			"Position": decimal.Zero, "TodayPosition": decimal.Zero, "OpenCost": decimal.Zero, "PositionCost": decimal.Zero,
+		}
+		// ⚠️ 平光之后门面里可能已经没有这条持仓 —— 那时四个持仓字段按 0 比，柜台同样报 0。
+		if p, ok := sim.Position(id, types.Speculation); ok {
+			side, _ := p.Side(types.Buy)
+			openCost, posCost := decimal.Zero, decimal.Zero
+			for _, l := range side.Lots() {
+				v := decimal.NewFromInt(int64(l.Volume)).Mul(mult)
+				openCost = openCost.Add(l.OpenPrice.Mul(v))
+				posCost = posCost.Add(l.Basis.Mul(v))
+			}
+			lib["Position"] = decimal.NewFromInt(int64(side.Volume()))
+			lib["TodayPosition"] = decimal.NewFromInt(int64(side.VolumeToday()))
+			lib["OpenCost"], lib["PositionCost"] = openCost, posCost
+		}
+		for _, k := range []string{"Position", "TodayPosition", "OpenCost", "PositionCost", "UseMargin", "PositionProfit", "CloseProfit", "Commission"} {
+			got, _ := lib[k].Float64()
+			if want := flt(t, r, k); math.Abs(got-want) > 1e-6 {
+				t.Errorf("⚠️ %s %s：本库 %v，柜台 %v", label, k, got, want)
+			}
+		}
+	}
+	apply := func(label string, tr map[string]any) {
+		t.Helper()
+		dir, err := types.DirectionFromCTP(tr["Direction"].(string))
+		if err != nil {
+			t.Fatal(err)
+		}
+		off, err := types.OffsetFromCTP(tr["OffsetFlag"].(string))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := sim.ApplyTrade(d1, match.Trade{Instrument: id, Direction: dir, Offset: off,
+			Hedge: types.Speculation, Price: num(t, tr, "Price"), Volume: int(flt(t, tr, "Volume"))}); err != nil {
+			t.Fatalf("⚠️ %s 那笔成交进不了门面：%v —— §13 #21 收敛之前本库对这一段报错不猜，这里就是它会红的地方", label, err)
+		}
+	}
+
+	markRec(e1Before)
+	compare("E1 ① 只有昨仓、平仓之前", e1Before)
+
+	if len(e1After.Trades) != 1 || len(e2After.Trades) != 2 {
+		t.Fatalf("⚠️ -2/-4 的成交数 %d/%d，期望 1/2 —— 夹具变了", len(e1After.Trades), len(e2After.Trades))
+	}
+	if off := e1After.Trades[0]["OffsetFlag"]; off != "1" {
+		t.Fatalf("⚠️ 前提：E1 那笔是裸 CLOSE（'1'），夹具里是 %v", off)
+	}
+	markRec(e1After)
+	apply("E1 裸平", e1After.Trades[0])
+	compare("E1 ② 裸平 1 手之后（判别 #21 的那一格）", e1After)
+
+	trades := e2After.Trades
+	sort.Slice(trades, func(i, j int) bool { return flt(t, trades[i], "SequenceNo") < flt(t, trades[j], "SequenceNo") })
+	// ⚠️ E2 发出去的是显式平昨（'4'），成交记录却是 '1' —— 钉住这个改写，它决定了 E2 **不是**独立判别。
+	if off := trades[1]["OffsetFlag"]; off != "1" {
+		t.Errorf("⚠️ E2 那笔的成交开平标志是 %v —— 此前量到的是 '1'（大商所把显式平昨改写成了平仓）。"+
+			"变了的话 E2 就成了一次真正的「显式平昨」观测，§13 #21 的证据要重新数", off)
+	}
+	markRec(e2After)
+	apply("E2 平昨", trades[1])
+	compare("E2 ② 平昨 1 手之后", e2After)
+}
+
 // TestFacadeFreezeRb2701AgainstCTP 用门面的 FreezeOf 按 CTP 预设算一笔开仓挂单的冻结，比 ctp-frozen-20260910 的账户冻结字段。
 //
 // 那一刻账上只挂着这一笔：SHFE.rb2701 买开 1 手，记录的 LongFrozenAmount 30050 ⇒ 挂单价 3005。

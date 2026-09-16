@@ -5023,17 +5023,6 @@
 		"expect": "red"
 	},
 	{
-		"name": "523 裸 CLOSE 超出今仓的部分在两档费率不同时也放行——替 §13 #21 猜了一个候选",
-		"dir": "",
-		"file": "trade.go",
-		"old": "if !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) {",
-		"new": "if false && !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) && false {",
-		"pkg": "./",
-		"test": "TestUndatedCloseFeeTier",
-		"want": "要报 §13 #21",
-		"expect": "red"
-	},
-	{
 		"name": "524 结算不滚仓——副本没做 position.Settle 就带进次日",
 		"dir": "",
 		"file": "settle.go",
@@ -5112,25 +5101,25 @@
 		"expect": "red"
 	},
 	{
-		"name": "531 裸 CLOSE 超出今仓的部分在两档费率相同时不收费——少收且不报错（评审 20260915：此前改成这样全绿）",
+		"name": "531 裸 CLOSE 超出今仓的部分不收费——少收且不报错（评审 20260915：此前改成这样全绿；20260916 §13 #21 收敛后重锚，形状不变）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\treturn charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值",
-		"new": "\treturn nil",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn nil",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "两档同费率",
 		"expect": "red"
 	},
 	{
-		"name": "532 裸 CLOSE 超出今仓的部分在两档费率相同时也报错（过严）——两候选同值的那一段被拒（评审 20260915 验过：红在两档同费率那两格）",
+		"name": "532 裸 CLOSE 超出今仓的部分报错——退回 §13 #21 收敛之前的「不猜」（20260916 重锚，形状不变；原来只在两档同费率时算过严）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\treturn charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值",
-		"new": "\treturn fmt.Errorf(\"过严\")",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn fmt.Errorf(\"过严\")",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
-		"want": "两档同费率",
+		"want": "收敛之后应当照收平昨档而不是报错",
 		"expect": "red"
 	},
 	{
@@ -6499,6 +6488,39 @@
 		"pkg": "./ctperr/",
 		"test": "TestReasonStringsAreDistinct",
 		"want": "零值的名字是空串",
+		"expect": "red"
+	},
+	{
+		"name": "657 裸 CLOSE 超出今仓的部分走平今档——候选 (b)「一律平今」，已被 20260917 E1 否掉",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn charge(types.CloseToday, rest)",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
+		"want": "Commission：本库 0.1，柜台 0.2",
+		"expect": "red"
+	},
+	{
+		"name": "658 裸 CLOSE 超出今仓的部分报错——退回收敛前，E1 那笔成交进不了门面（对拍那一侧的红）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t\treturn fmt.Errorf(\"§13 #21 未收敛\")",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
+		"want": "那笔成交进不了门面",
+		"expect": "red"
+	},
+	{
+		"name": "659 对拍里两片的开仓次序反过来（FIFO 这个推得的假设由 OpenCost 那一格比着，推错就红）",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\tfor _, px := range []string{\"3427\", \"3426\"} {",
+		"new": "\tfor _, px := range []string{\"3426\", \"3427\"} {",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
+		"want": "OpenCost：本库",
 		"expect": "red"
 	}
 ]

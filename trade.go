@@ -300,25 +300,28 @@ func (s *Simulator) commission(tr match.Trade, todayBefore int) (decimal.Decimal
 		err = charge(types.Open, tr.Volume)
 	} else if tr.Offset.SpecifiesPositionDate() {
 		err = charge(tr.Offset, tr.Volume)
-	} else if err := chargeUndated(tr, todayBefore, rates, charge); err != nil {
+	} else if err := chargeUndated(tr, todayBefore, charge); err != nil {
 		return decimal.Zero, err
 	}
 	return total, err
 }
 
-// chargeUndated 给裸 CLOSE 与强平标志收手续费 —— §13 #21 未收敛，只做两个残余候选一致的那一段。
+// chargeUndated 给裸 CLOSE 与强平标志收手续费 —— §13 #21 **已收敛到候选 (a)**（20260917 夜盘，E1）：
 //
-// ⚠️ 已被否：「按实际消耗的明细拆档，昨仓部分走平昨档」。DCE.m2701 通用平仓消耗了昨仓，
-// 柜台收的是平今档 0.1 而不是平昨档 0.2（ctp-slices-20260915-{2,3}）。
+//	min(平仓量, 平仓前今仓量) 走平今档，其余走平昨档 —— 「日内平仓」按**数量**认定，与消耗了哪一片无关
 //
-//	(a) min(平仓量, 平仓前今仓量) 走平今，其余走平昨
-//	(b) 一律走平今
-//	(c) 按消耗拆档没错，是大商所行为上的平昨费率 ≠ 声明（评审 20260915 补；语料里没有大商所显式平昨成交）
+// 证据是同一个柜台、同一个合约上的两笔（DCE.m2701，声明 平今 0.1 / 平昨 0.2）：
 //
-// 平仓量 ≤ 平仓前今仓量时 a、b 都是「全走平今」；⚠️ c 未排除，它在这一段预言的是「行为平昨费率」，
-// 与声明平今费率相等只是 m2701 上的巧合 ⇒ **这一段只在 m2701 上有观测**。
-// 超出的部分只在两档声明费率相同时 a、b 同值 —— 不同就报错，不猜。
-func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRates, charge func(types.Offset, int) error) error {
+//	ctp-slices-20260915-{2,3}  今1昨1 裸平1、消耗的是昨仓，收 0.1  ⇒ 否掉「按实际消耗的明细拆档」
+//	ctp-slices-20260917{,-2}   今0昨2 裸平1，收 0.2                ⇒ 否掉 (b) 一律平今、(c) 行为平昨费率 ≠ 声明
+//
+// ⚠️ E2（今0昨1 **显式**平昨 1，ctp-slices-20260917-{3,4}）也收 0.2，与 (a) 一致，**但它不是第二次独立判别**：
+// 发出去的是 OF_CloseYesterday，成交记录里的开平标志却是 '1'（通用平仓）—— 大商所把它改写成了平仓，
+// 于是它与 E1 实际上是同一种输入。⇒ 证据是**一次**，不是两次交叉确认。
+//
+// ⚠️ 收敛之前这里对「超出今仓的那一段、两档费率又不同」**报错不猜**（那一段 a、b 给不同答案）。
+// ⚠️ 只有一个柜台、一个品种、一手 ⇒ 不进 rules_measured。
+func chargeUndated(tr match.Trade, todayBefore int, charge func(types.Offset, int) error) error {
 	todayPart := tr.Volume
 	if todayPart > todayBefore {
 		todayPart = todayBefore
@@ -326,15 +329,10 @@ func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRate
 	if err := charge(types.CloseToday, todayPart); err != nil {
 		return err
 	}
-	rest := tr.Volume - todayPart
-	if rest == 0 {
-		return nil
+	if rest := tr.Volume - todayPart; rest > 0 {
+		return charge(types.CloseYesterday, rest)
 	}
-	if !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) {
-		return fmt.Errorf("%s 的 %v %d 手里有 %d 手超出平仓前的今仓（%d 手），而平今档与平昨档费率不同 —— "+
-			"这一段收哪一档没有观测（§13 #21：按今仓量认定则收平昨，一律平今则收平今）", tr.Instrument, tr.Offset, tr.Volume, rest, todayBefore)
-	}
-	return charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值
+	return nil
 }
 
 // commit 把算好的数写进账户（并留下这次计价的分组分解）。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。

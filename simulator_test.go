@@ -274,25 +274,27 @@ func TestUndatedCloseFeeTier(t *testing.T) {
 		t.Errorf("前提：先平昨应消耗昨仓，剩今 1，得到 今 %d / 昨 %d", p.VolumeToday(types.Buy), p.VolumeHistory(types.Buy))
 	}
 
-	// 只有昨仓、两档费率不同 ⇒ 候选分歧 ⇒ 报错，状态不动
+	// 只有昨仓、两档费率不同 ⇒ §13 #21 已收敛到 (a)：平仓前今仓 0 手 ⇒ **全走平昨档**。
+	// 实测：20260917 夜盘 E1，DCE.m2701 今0昨2 裸平1，柜台收 0.2 = 平昨档（ctp-slices-20260917{,-2}）。
+	// ⚠️ 收敛之前这一格钉的是「报 #21、状态不动」—— 那是「不猜」，不是答案。
 	s2 := withHistory(t)
-	before2 := s2.Account()
-	err := s2.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.Close, "3360", 1))
-	if err == nil || !strings.Contains(err.Error(), "#21") {
-		t.Errorf("⚠️ 只有昨仓时裸平、两档费率不同，要报 §13 #21：%v", err)
+	before2 := s2.Account().Commission
+	if err := s2.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.Close, "3360", 1)); err != nil {
+		t.Fatalf("⚠️ 只有昨仓时裸平 1 手，§13 #21 收敛之后应当照收平昨档而不是报错：%v", err)
 	}
-	if !sameSnapshot(s2.Account(), before2) {
-		t.Error("⚠️ 报错之后账户变了")
+	if got := s2.Account().Commission.Sub(before2); !got.Equal(dec("1.2")) {
+		t.Errorf("⚠️ 只有昨仓裸平 1 收了 %s，期望平昨档 1.2 —— 候选 (b)「一律平今」会收 0.75，已被 E1 否掉", got)
 	}
-	if p, _ := s2.Position(simInst(t, "DCE.m2701"), types.Speculation); p.VolumeHistory(types.Buy) != 1 {
-		t.Error("⚠️ 报错之后昨仓被消耗了")
+	if p, _ := s2.Position(simInst(t, "DCE.m2701"), types.Speculation); p.VolumeHistory(types.Buy) != 0 {
+		t.Error("⚠️ 裸平之后昨仓没被消耗")
 	}
 
-	// 反向：显式平昨照走平昨档（不受 #21 影响）
-	if err := s2.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1)); err != nil {
+	// 反向：显式平昨照走平昨档
+	s3 := withHistory(t)
+	if err := s3.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1)); err != nil {
 		t.Fatal(err)
 	}
-	if got := s2.Account().Commission; !got.Equal(dec("1.2")) {
+	if got := s3.Account().Commission; !got.Equal(dec("1.2")) {
 		t.Errorf("显式平昨应收平昨档 1.2，得到 %s", got)
 	}
 
