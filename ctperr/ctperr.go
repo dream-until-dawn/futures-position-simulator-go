@@ -113,7 +113,8 @@ type key struct {
 // measured 是实测的表。⚠️ 改这里之前先去拍语料：TestTableMatchesCorpus 会双向核对。
 //
 // 出处：oracle ctp-reject -out，SimNow。交易日 20260915（DCE / SHFE / INE）与
-// 20260916 日盘（SHFE 重拍 / CZCE / GFEX，每一轮都带对照组与柜台报的 tick）。
+// 20260916 日盘（SHFE 重拍 / CZCE / GFEX，每一轮都带对照组与柜台报的 tick）；
+// 「不在交易时段内」那五格出自 `oracle ctp-priority` 的对照组（20260916 15:05，收盘之后，五所）。
 //
 // ⚠️ **两个码空间，撞号**：CTP 的 `50 平今仓位不足` 与交易所的 `50 价格跌破跌停板`
 // 意思完全不同 —— 所以 Code 带 Space 这一维。
@@ -151,6 +152,15 @@ var measured = map[key]Code{
 	{types.GFEX, ReasonAboveUpperLimit}:       {SpaceStatusPrefix, 49},
 	{types.GFEX, ReasonBelowLowerLimit}:       {SpaceStatusPrefix, 50},
 	{types.GFEX, ReasonCloseYesterdayExceeds}: {SpaceCTP, 30},
+
+	// ⚠️ 「不在交易时段内」五所同号，且**盘中休息与收盘之后给的是同一个码**
+	// （11:32 与 15:05 两轮，语料里 at 那一栏分得开）。
+	// ⚠️ 节假日、以及「合约已到期」的码仍然**没有观测** —— 不从这五格往那边推。
+	{types.SHFE, ReasonOutsideSession}: {SpaceStatusPrefix, 26},
+	{types.INE, ReasonOutsideSession}:  {SpaceStatusPrefix, 26},
+	{types.DCE, ReasonOutsideSession}:  {SpaceStatusPrefix, 26},
+	{types.CZCE, ReasonOutsideSession}: {SpaceStatusPrefix, 26},
+	{types.GFEX, ReasonOutsideSession}: {SpaceStatusPrefix, 26},
 }
 
 // Lookup 查某交易所某拒因的码。第二个返回值为 false 表示**没有观测**，调用方不许拿零值当码用。
