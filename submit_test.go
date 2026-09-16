@@ -279,19 +279,19 @@ func TestFreezeOfBareCloseSplitsYesterdayFirst(t *testing.T) {
 	}
 }
 
-// TestSessionVersusClosablePinnedPending22 钉住本库**当前**在「时段 × 可平量」上的行为 —— 它与 CTP 实测相反，等 §13 #22 裁决。
+// TestSessionVersusClosableFollowsCTP 钉住「时段 × 可平量」**跟 CTP**：不论报单时刻，空仓平昨都报可平量。
 //
-// ⚠️ 这条测试**不是在说本库对**。它存在是为了让「本库现在怎么答」这件事有一个会红的对应物：
-// 将来按 #22 的裁决重排 order.Check 时，这条会红，重排者得在这里写下新答案 —— 而不是悄悄地换了一种行为。
+// §13 #22 使用者 20260916 夜裁决「跟 CTP」（并定为长期规则：快期与 CTP 相反时以 CTP 为准）。
 //
-//	报单时刻        本库报              CTP 实测（state.md reject_priority_measured 第 8 行，五所一致）
-//	10:00 盘中      可平量（CTP 码 30）  可平量（30）
-//	12:00 午休      交易时段（26）       可平量（30）   ← 分岔
-//	16:00 收盘后    交易时段（26）       可平量（30）   ← 分岔
+//	报单时刻        本库报（裁决后）     本库报（裁决前）   CTP 实测（reject_priority_measured 第 8 行，五所一致）
+//	10:00 盘中      可平量 30            可平量 30          可平量 30
+//	12:00 午休      可平量 30            交易时段 26        可平量 30
+//	16:00 收盘后    可平量 30            交易时段 26        可平量 30
 //
-// ⚠️ 20260916 午休我写过「CheckSession 本库根本不查，行为恰好一致，是个巧合」—— 那个前提是错的：
-// 门面带 Calendar 时会查时段。这张表是评审 20260916 夜用 submitSim 探出来的，这里照原样钉住。
-func TestSessionVersusClosablePinnedPending22(t *testing.T) {
+// ⚠️ 这条测试的前身 TestSessionVersusClosablePinnedPending22 钉的是**裁决前**的行为（中间那一列）——
+// 它存在是为了让重排时有东西会红。20260916 夜重排时它确实红在 12:00 与 16:00 两行，然后按裁决改成现在这样。
+// ⚠️ 午休与收盘后两行是判别力所在：10:00 那一行裁决前后同值，只拿它比，挪回快期那一侧的顺序照样绿。
+func TestSessionVersusClosableFollowsCTP(t *testing.T) {
 	closeYd := req(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1) // 空仓平昨
 	for _, c := range []struct {
 		at        string
@@ -299,9 +299,9 @@ func TestSessionVersusClosablePinnedPending22(t *testing.T) {
 		wantCode  int
 		ctpSays   string
 	}{
-		{"2026-09-15 10:00", order.CheckClosable, 30, "可平量 30（一致）"},
-		{"2026-09-15 12:00", order.CheckSession, 26, "可平量 30（**分岔**，§13 #22）"},
-		{"2026-09-15 16:00", order.CheckSession, 26, "可平量 30（**分岔**，§13 #22）"},
+		{"2026-09-15 10:00", order.CheckClosable, 30, "可平量 30"},
+		{"2026-09-15 12:00", order.CheckClosable, 30, "可平量 30（盘中休息，五所一致）"},
+		{"2026-09-15 16:00", order.CheckClosable, 30, "可平量 30（收盘后，五所一致）"},
 	} {
 		s := submitSim(t, ctpChoices(), "1000000")
 		_, err := s.Submit(simDay, wall(t, c.at), closeYd)
@@ -312,8 +312,8 @@ func TestSessionVersusClosablePinnedPending22(t *testing.T) {
 		}
 		code, _ := rej.Code()
 		if rej.Rejection.Check != c.wantCheck || code.Value != c.wantCode {
-			t.Errorf("⚠️ %s 空仓平昨：本库现在报 %v（码 %v），此前钉住的是 %v（%d）；CTP 实测是 %s。\n"+
-				"    若这是按 §13 #22 的裁决有意重排，改这张表并在 #22 那一行记下裁决；否则这是一次**悄悄换了的行为**",
+			t.Errorf("⚠️ %s 空仓平昨：本库报 %v（码 %v），应为 %v（%d）—— CTP 实测是 %s。\n"+
+				"    §13 #22 已裁决跟 CTP：可平量排在时段之前。报成时段说明顺序被挪回了快期那一侧",
 				c.at, rej.Rejection.Check, code, c.wantCheck, c.wantCode, c.ctpSays)
 		}
 	}

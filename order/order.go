@@ -53,11 +53,37 @@ import (
 // Check 是八项校验之一。
 type Check uint8
 
-// ⚠️ 取值顺序**就是拒绝优先级**（cn-futures-rules.md §9），别重排。
+// ⚠️ 取值顺序**就是拒绝优先级**（cn-futures-rules.md §9；Validate 按取值排序）。
+// ⚠️ 别**随手**重排：顺序跟 CTP 实测走（§13 #22 与长期规则「快期与 CTP 相反时以 CTP 为准」），
+// 要改先拿出 CTP 上的反例。它是导出枚举：挪动会改变常量的数值（20260916 夜 CheckClosable 挪到第二时就改过）。
 const (
 	CheckUnknown Check = iota
 	// CheckTradable 合约是否可交易。
 	CheckTradable
+	// CheckClosable 平仓量是否超过可平量。⚠️ **今昨分别校验**。
+	//
+	// ⚠️⚠️ **它排在第二、紧跟合约可交易 —— 按 CTP**（§13 #22：使用者 20260916 夜裁决「跟 CTP」，
+	// 并定为长期规则：快期与 CTP 实测相反时一律以 CTP 为准）。
+	//
+	// CTP/SimNow 实测（state.md `reject_priority_measured` 第 8–10 行）：
+	//
+	//	可平量 × 交易时段       报可平量   五所一致（盘中休息与收盘后；SHFE/INE 51、DCE/CZCE/GFEX 30）
+	//	可平量 × 最小变动价位   报可平量   SHFE 51 / CZCE 30 / GFEX 30；同轮正对照复现了价格类的 48
+	//	可平量 × 涨跌停         报可平量   同上
+	//
+	// ⇒ 与码空间对得上：可平量走 CTP 前置那一层（CTP 码空间、无交易所委托号），时段与价格类在后面那一层。
+	//
+	// ⚠️ **快期那侧相反**（第 2、3 行：价格类先），而快期不查时段。本库此前跟的是快期；
+	// 那两行观测**保留**，是已声明的口径差，不是被推翻的实测。
+	//
+	// ⚠️ 挪位置的**副作用**，照实写：它与 `CheckVolumeRange`（手数上下限）之间**没有观测**
+	// （探针上手数上下限只能与可平量一起触发，超上限的开仓先被安全阀拦下），
+	// 这次挪动让那一对从「手数先」变成「可平量先」—— **是重排带过来的，不是量出来的**。
+	// 与 `CheckTradable` 之间同样没有观测，保持在它后面不动。
+	//
+	// ⚠️ 20260916 午休时这里写过「CheckSession 本库根本不查，顺序表不一致而行为一致，是个巧合」——
+	// 前提是错的（门面带 Calendar 时会查时段），见 silent-risks 98 的更正。
+	CheckClosable
 	// CheckSession 是否在交易时段内。⚠️ 本库目前查不了，见 Result.Unchecked。
 	//
 	// ⚠️ 还有第二层，与「查不了」不是一回事：**快期模拟自己也不查**。
@@ -83,35 +109,6 @@ const (
 	CheckPriceLimit
 	// CheckVolumeRange 手数是否在上下限内。
 	CheckVolumeRange
-	// CheckClosable 平仓量是否超过可平量。⚠️ **今昨分别校验**。
-	//
-	// ⚠️⚠️ **实测：它在 CTP 上排在 CheckSession 之前，与上面这个取值顺序相反**
-	// （20260916 日盘，`oracle ctp-priority`，盘中休息 11:30–13:30，SHFE / CZCE / GFEX 三所一致）：
-	// 一笔**同时**违反「不在交易时段」与「无仓平昨」的委托，柜台报的是**可平量**
-	// （SHFE 51 / CZCE 30 / GFEX 30，CTP 码空间），而不是时段（26，交易所前缀码空间）。
-	//
-	//	⇒ 这与码空间对得上：可平量走 CTP 前置那一层（CTP 空间、无交易所委托号），
-	//	  时段与价格类是再往后那一层。**不是一张任意的优先级表，是分层。**
-	//
-	// ⚠️⚠️ **同日下午又量到一条**（20260916 13:31–13:33，`oracle ctp-pairs`）：
-	// 一笔同时违反「可平量」与**价格类**的委托，CTP 报的也是**可平量**
-	// （SHFE 51 / CZCE 30 / GFEX 30；同轮正对照复现了价格类的 48 ⇒ 确实违反到了价格类）。
-	// 而本库把 `CheckPriceTick` / `CheckPriceLimit` 排在 `CheckClosable` **前面** —— 跟的是快期那一侧
-	// （快期：最小变动价位先 / 涨跌停先，state.md `reject_priority_measured` 第 2、3 行）。
-	//
-	// ⚠️⚠️ **两处都是今天就分岔的行为，都并进 §13 #22 等裁决，本库不自行重排**：
-	//
-	//	可平量 × 价格类   本库报价格类   CTP 报可平量
-	//	可平量 × 时段     本库报时段     CTP 报可平量   —— 门面带 Calendar 时**会查时段**（submit.go ErrOutsideSession）
-	//
-	// ⚠️ 20260916 午休时这里写的是「CheckSession 本库根本不查，顺序表不一致而行为一致，是个巧合」——
-	// **那个前提是错的**（评审 20260916 夜用 submitSim 探出：午休 / 收盘后空仓平昨，本库报时段、CTP 报可平量）。
-	// 我据一句「本库标着查不了」下了结论，而没去跑一遍门面 —— 仓库里早有 TestSubmitSession 钉着「16:00 拒在时段」。
-	//
-	// ⚠️ 也不能只把这一对单独重排：CTP 实测是「可平量 > 时段 > 价格类」，本库跟快期是「价格类 > 可平量」，
-	// 而快期不查时段。两边拼起来是个环（时段 > 价格类 > 可平量 > 时段）⇒ 怎么排取决于 #22 跟哪个柜台。
-	// 当前行为由 TestSessionVersusClosablePinnedPending22 钉住，将来重排时它会红、看得见。
-	CheckClosable
 	// CheckFunds 可用资金是否够（保证金 + 手续费）。
 	CheckFunds
 	// CheckPositionLimit 限仓。
@@ -146,8 +143,8 @@ func (c Check) String() string {
 // 加了一项而忘了加进这里，那一项就永远不在分母里 ——
 // 而覆盖率看起来只会更好。
 var allChecks = []Check{
-	CheckTradable, CheckSession, CheckPriceTick, CheckPriceLimit,
-	CheckVolumeRange, CheckClosable, CheckFunds, CheckPositionLimit,
+	CheckTradable, CheckClosable, CheckSession, CheckPriceTick,
+	CheckPriceLimit, CheckVolumeRange, CheckFunds, CheckPositionLimit,
 }
 
 // Request 是一笔报单。
@@ -297,7 +294,7 @@ func Validate(req Request, f Facts) Result {
 		add(CheckTradable, "合约 %s 不可交易（IsTrading=false）", req.Instrument.Canonical())
 	}
 
-	// —— 2 交易时段 ——
+	// —— 3 交易时段 ——
 	if !f.HasSession {
 		skip(CheckSession, "「此刻在不在交易时段内」—— 本库的 Calendar 时段之外拒答（kq_facts 23）")
 	} else if !f.InSession {
@@ -307,7 +304,7 @@ func Validate(req Request, f Facts) Result {
 			Reason: "不在交易时段内"})
 	}
 
-	// —— 3 最小变动价位 ——
+	// —— 4 最小变动价位 ——
 	switch {
 	case !f.HasInstrument:
 		skip(CheckPriceTick, "合约规格里的 PriceTick")
@@ -318,7 +315,7 @@ func Validate(req Request, f Facts) Result {
 			Reason: fmt.Sprintf("价格 %s 不是最小变动价位 %s 的整数倍", req.Price, f.Instrument.PriceTick)})
 	}
 
-	// —— 4 涨跌停 ——
+	// —— 5 涨跌停 ——
 	up, lo, ok := f.Instrument.PriceLimits(f.PreSettlement, f.HasPreSettlement, f.Rounding)
 	switch {
 	case !f.HasInstrument:
@@ -337,7 +334,7 @@ func Validate(req Request, f Facts) Result {
 			Reason: fmt.Sprintf("价格 %s 低于跌停价 %s", req.Price, lo)})
 	}
 
-	// —— 5 手数上下限 ——
+	// —— 6 手数上下限 ——
 	switch {
 	case !f.HasInstrument:
 		skip(CheckVolumeRange, "合约规格里的手数上下限")
@@ -349,7 +346,7 @@ func Validate(req Request, f Facts) Result {
 		add(CheckVolumeRange, "手数 %d 低于下限 %d", req.Volume, f.Instrument.MinLimitOrderVolume)
 	}
 
-	// —— 6 可平量（⚠️ 今昨**分别**校验）——
+	// —— 2 可平量（⚠️ 今昨**分别**校验；优先级第 2，写在这里不影响先后 —— 先后按常量取值排序）——
 	if req.Offset.IsClose() {
 		if f.Position == nil {
 			skip(CheckClosable, "持仓（nil 表示**不知道**，不是「空仓」）")
