@@ -5674,14 +5674,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "583 Restore 核挂单冻结时不按第八项口径改写（记作平昨的裸 CLOSE 走了今昨拆法那一支）",
+		"name": "583 Restore 核挂单冻结时不按第八项口径改写（记作平昨的裸 CLOSE 走了今昨拆法那一支）（20260916 夜盘 want 改指：原来红在「合法存档恢复不了」，那是 §13 #21 未收敛时报错的副作用；收敛后红在它真正守的那一句）",
 		"dir": "",
 		"file": "state.go",
 		"old": "if off := s.datedOffset(inst.PositionDateType, req.Offset); off.IsClose() && !off.SpecifiesPositionDate() {",
 		"new": "if off := req.Offset; off.IsClose() && !off.SpecifiesPositionDate() && inst.PositionDateType == inst.PositionDateType {",
 		"pkg": "./",
 		"test": "TestRestoreChecksAsYesterdaySplit",
-		"want": "合法存档恢复不了",
+		"want": "改成冻今 1，恢复要被拒",
 		"expect": "red"
 	},
 	{
