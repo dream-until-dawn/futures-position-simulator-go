@@ -5090,11 +5090,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "529 结算后沿用上一交易日的计价输入——次日没 Mark 也能开仓",
+		"name": "529 结算后沿用上一交易日的计价输入——次日没 Mark 也能开仓（F8 改指：同一行加上了 s.groups）",
 		"dir": "",
 		"file": "settle.go",
-		"old": "\ts.positions, s.prices = next, nextPrices\n",
-		"new": "\ts.positions, s.prices = next, s.prices\n\t_ = nextPrices\n",
+		"old": "\ts.positions, s.prices, s.groups = next, nextPrices, nextVal.groups\n",
+		"new": "\ts.positions, s.prices, s.groups = next, s.prices, nextVal.groups\n\t_ = nextPrices\n",
 		"pkg": "./",
 		"test": "TestSettleDropsFlatPositionsAndTheirPrices",
 		"want": "次日没 Mark 就开仓",
@@ -6126,5 +6126,60 @@
 		"want": "",
 		"expect": "green",
 		"why": "迁移时这个跳过数是 0，今天的语料走不到它；它守的是将来 —— 出现别的交易日的昨仓样本（交易所结算价只有 20260908 一份）时走 errNoCarrySource 跳过。评审 20260915 提的棘轮，登记为盲区而不是造一份假语料"
+	},
+	{
+		"name": "623 计价时丢掉 margin.Compute 的分组分解（MarginGroups 永远是空的）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\tv.marginCompany, v.marginExchange, v.groups = res.Company, res.Exchange, res.Groups",
+		"new": "\tv.marginCompany, v.marginExchange = res.Company, res.Exchange",
+		"pkg": "./",
+		"test": "TestMarginGroupsFollowsTheLatestValuation",
+		"want": "一个品种一组",
+		"expect": "red"
+	},
+	{
+		"name": "624 commit 不落下这次计价的分组分解（灌成交之后 MarginGroups 停在上一次）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\ts.groups = v.groups\n\tsteps := []func() error{",
+		"new": "\tsteps := []func() error{",
+		"pkg": "./",
+		"test": "TestMarginGroupsFollowsTheLatestValuation",
+		"want": "一个品种一组",
+		"expect": "red"
+	},
+	{
+		"name": "625 结算后留下的是**结算前**那一份分组（与已经换成次日的账户占用对不上）",
+		"dir": "",
+		"file": "settle.go",
+		"old": "\ts.positions, s.prices, s.groups = next, nextPrices, nextVal.groups",
+		"new": "\ts.positions, s.prices, s.groups = next, nextPrices, settled.groups",
+		"pkg": "./",
+		"test": "TestMarginGroupsFollowsTheLatestValuation",
+		"want": "给的还是结算前那一份",
+		"expect": "red"
+	},
+	{
+		"name": "626 Restore 之后 MarginGroups 是空的（分组不进存档，恢复时没重算）",
+		"dir": "",
+		"file": "state.go",
+		"old": "\ts.groups = v.groups // 恢复出来的模拟器也要能答 MarginGroups",
+		"new": "\t_ = v.groups // 恢复出来的模拟器也要能答 MarginGroups",
+		"pkg": "./",
+		"test": "TestMarginGroupsFollowsTheLatestValuation",
+		"want": "恢复之后的分组",
+		"expect": "red"
+	},
+	{
+		"name": "627 MarginGroups 把内部切片直接给出去（调用方改一改，模拟器的回答跟着变）",
+		"dir": "",
+		"file": "simulator.go",
+		"old": "\tout := make([]margin.GroupResult, len(s.groups))\n\tcopy(out, s.groups)\n\treturn out",
+		"new": "\treturn s.groups",
+		"pkg": "./",
+		"test": "TestMarginGroupsIsACopy",
+		"want": "返回的必须是副本",
+		"expect": "red"
 	}
 ]

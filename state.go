@@ -194,6 +194,7 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("按存档的持仓与计价重算：%w", err)
 	}
+	s.groups = v.groups // 恢复出来的模拟器也要能答 MarginGroups（它不进存档，按存档的持仓与计价重算）
 	for _, c := range []struct {
 		name      string
 		got, want decimal.Decimal

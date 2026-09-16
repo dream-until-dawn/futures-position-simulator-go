@@ -18,6 +18,10 @@ import (
 type valuation struct {
 	marginCompany, marginExchange decimal.Decimal
 	positionProfit                decimal.Decimal
+	// groups 是 margin.Compute 的分组分解（逐组多空两边），原样留着给 MarginGroups。
+	//
+	// ⚠️ 不是新算一遍：margin 包本来就返回它，门面此前把它丢掉了，于是对拍那侧只好自己再把持仓翻译成 leg —— 那层翻译才是 F8 收掉的重复。
+	groups []margin.GroupResult
 }
 
 // value 对一组持仓与计价输入算截面。**纯函数**：不读不写 s 的状态，只读规则数据与口径。
@@ -80,7 +84,7 @@ func (s *Simulator) value(positions map[posKey]*position.Position, prices map[ty
 	if err != nil {
 		return v, fmt.Errorf("保证金：%w", err)
 	}
-	v.marginCompany, v.marginExchange = res.Company, res.Exchange
+	v.marginCompany, v.marginExchange, v.groups = res.Company, res.Exchange, res.Groups
 	return v, nil
 }
 
@@ -333,8 +337,9 @@ func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRate
 	return charge(types.CloseYesterday, rest) // 两档同费率：两个候选同值
 }
 
-// commit 把算好的数写进账户。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。
+// commit 把算好的数写进账户（并留下这次计价的分组分解）。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。
 func (s *Simulator) commit(day types.TradingDay, v valuation, commission, closeProfit decimal.Decimal) error {
+	s.groups = v.groups
 	steps := []func() error{
 		func() error { return s.acc.AddCommission(day, commission) },
 		func() error { return s.acc.AddCloseProfit(day, closeProfit) },
