@@ -825,6 +825,37 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
    - (b) 门面的 `ApplyTrade` 返回这笔成交的已实现结果（逐日盯市 / 逐笔对冲两个口径），`account_test` 改从它取 —— 导出面变大，而快期上两个口径分不开（本批全今仓；昨仓样本上柜台 close_profit 只给逐日盯市一个数），新增的导出字段在快期对拍里没有判别力
 2. **`fixture.MarginOf`**（`cmd/oracle` 与 `crossday` / `reconstruct` 在用）：不进 F7，登记。它是「持仓 → 保证金」的第二份实现，但调用方要的是**逐方向**的数（view 的 `margin_long` / `margin_short`），门面只给合计 —— 要它就得先定门面给不给逐合约逐方向的占用
 
+#### 12. F8：持仓 → 保证金的翻译收进门面（2026-09-16，实现之前写）
+
+**为什么**：F7 之后快期侧只剩这一处第二份实现。⚠️ 重复的**不是保证金算法**（只有 `margin` 包一份），
+是「持仓 → `margin.Leg`」这层**翻译**：门面的 `value()` 与 `conformance/fixture.MarginOf` 各写了一遍。
+翻译恰恰是今昨维度被压没的地方（`IsHistory`、逐笔而非按方向合计、`MaxMarginSide`、基准）——
+两处各自决定这几项，一起退化时对拍照样全绿。
+
+##### 已核（20260916）
+
+- `margin.Compute` **已经**返回逐组逐方向的分解（`Result.Groups`：`LongCompany` / `ShortCompany` / 合并后），门面缺的只是出口
+- `MarginOf` 的调用点 7 处：`margin_test`（4）、`fixture_test`（2）、`crossday_test`、`reconstruct_test`、`cmd/oracle/conformance/live.go`
+- `margin_test` 里三条单测直接测它：空仓报错、缺输入（乘数 / 昨结算价不为正）报错、费率至少三档
+- 快期口径用 `margin.ByInstrument`（`fixtureChoices`），组键就是合约；`MaxMarginSide` 在这个口子上全为假（kq_facts 5）
+
+##### 形状（实现方倾向）
+
+1. **门面开一个只读出口**：`(s *Simulator) MarginGroups() []margin.GroupResult` —— 最近一次计价算出的分组分解，原样给出。
+   ⚠️ 逐方向的数**只有在组键是合约时**（`SideScope = ByInstrument`，或未启用大边）才与柜台的 `margin_long` / `margin_short` 对得上：
+   `ByProduct` 下一组跨多个合约，「这个合约的多头占用」没有定义。⇒ 对拍处**断言组键等于合约**，不做隐式回退
+2. **与 F7c 那条守法的冲突要正面处理**：`ReplayOnFacade` 刻意只返回持仓，为的是让**借来的昨结算价**进不了保证金比对（§11 决策点 3，使用者定）。
+   而保证金要从同一个模拟器里取 ⇒ 给它加一个显式参数 `borrowedPre bool`：借来的时候**不返回**保证金（返回结构里 `HasMargin=false`），
+   不是靠调用方自觉。返回值因此从 `*position.Position` 变成 `Replayed{Position, MarginLong, MarginShort, HasMargin}`
+3. **迁移**：7 个调用点改从门面取；删 `fixture.MarginOf`；`margin_test` 的三条单测改成门面上的等价
+   （空仓 / 缺计价输入在门面里本来就报错，费率多档那条与保证金率表有关、留在原处）
+
+##### ⚠️ 风险与盲区（实现之前先写下）
+
+- 大边（`MaxMarginSide`）在快期上未启用，`ByProduct` 下的逐方向占用**测不到**；本条只在 `ByInstrument` 上有覆盖
+- `MarginGroups` 是新的导出面（门禁④要记进 roadmap）：它把「最近一次计价」的中间结果露出去，调用方可能据此以为门面缓存了逐合约占用 —— 文档要写明它随每次 `Mark` / `ApplyTrade` / `Settle` 重算
+- `cmd/oracle` 的实时对拍用的是 `spec.Margin`（实测保证金率），与门面口径一致；迁移后那条路的 `pre` 仍取实时截面自己的
+
 ### 为什么这样切
 
 **纯函数层与状态层的分界是这套结构的主轴。** `fee` / `margin` / `pnl` 只做计算：
