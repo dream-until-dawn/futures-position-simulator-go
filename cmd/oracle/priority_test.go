@@ -50,26 +50,33 @@ func TestPairVerdict(t *testing.T) {
 
 // TestPairVerdictIsSymmetric 钉住两项**换个位置**给出同一个结论。
 //
-// ⚠️ 「谁先」是柜台的性质，不是我传参顺序的性质。而一个先比 a 再比 b 的实现，
-// 在「撞号」那一档上会随参数顺序给出不同答案 —— 那种偏向在真数据上看不出来。
+// ⚠️ 「谁先」是柜台的性质，不是我传参顺序的性质。
+// ⚠️ 撞号那一对**必须进这个循环**：不撞号的两项在任何合理实现下都天然对称，
+// 只拿它们比，这条测试就是空转的 —— 而顺序偏向恰恰只在撞号那一档上显形
+// （破坏 649 第一次跑就红在别处，正是因为撞号那一对当时在循环之外）。
 func TestPairVerdictIsSymmetric(t *testing.T) {
 	sess := side{Code: code(ctperr.SpaceStatusPrefix, 26), Name: "交易时段", Has: true}
 	tick := side{Code: code(ctperr.SpaceStatusPrefix, 48), Name: "最小变动价位", Has: true}
-	for _, got := range []ctperr.Code{sess.Code, tick.Code, code(ctperr.SpaceCTP, 99)} {
-		w1, _ := pairVerdict(got, sess, tick)
-		w2, _ := pairVerdict(got, tick, sess)
-		if w1 != w2 {
-			t.Errorf("⚠️ 拿到 %s 时，两项换个位置就换了答案（%q vs %q）—— "+
-				"「谁先」是柜台的性质，不是传参顺序的性质", got, w1, w2)
+	same := side{Code: sess.Code, Name: "另一项", Has: true} // 与 sess 撞号
+	none := side{Name: "没观测的一项"}                          // Has=false
+	for _, pair := range [][2]side{{sess, tick}, {sess, same}, {sess, none}} {
+		for _, got := range []ctperr.Code{sess.Code, tick.Code, code(ctperr.SpaceCTP, 99)} {
+			w1, why1 := pairVerdict(got, pair[0], pair[1])
+			w2, why2 := pairVerdict(got, pair[1], pair[0])
+			if w1 != w2 {
+				t.Errorf("⚠️ %s × %s 拿到 %s 时，两项换个位置就换了答案（%q vs %q）—— "+
+					"「谁先」是柜台的性质，不是传参顺序的性质\n  %s\n  %s",
+					pair[0].Name, pair[1].Name, got, w1, w2, why1, why2)
+			}
 		}
 	}
-	// 撞号那一档也要对称（它是最容易被顺序偏向吃掉的一档）。
-	same := side{Code: sess.Code, Name: "另一项", Has: true}
-	if w1, _ := pairVerdict(sess.Code, sess, same); w1 != "" {
-		t.Errorf("⚠️ 撞号却判出了赢家 %q", w1)
+	// 反向对照：撞号那一对**确实**被判成「分不开」，否则一个恒返回空的实现也能过上面。
+	if w, _ := pairVerdict(sess.Code, sess, same); w != "" {
+		t.Errorf("⚠️ 撞号却判出了赢家 %q", w)
 	}
-	if w2, _ := pairVerdict(sess.Code, same, sess); w2 != "" {
-		t.Errorf("⚠️ 撞号（换个位置）却判出了赢家 %q", w2)
+	// 反向对照：分得开的那一对**确实**判得出赢家，否则「一律分不开」同样能过。
+	if w, _ := pairVerdict(tick.Code, sess, tick); w != tick.Name {
+		t.Errorf("⚠️ 分得开的一对没判出赢家：得到 %q，应为 %q", w, tick.Name)
 	}
 }
 
