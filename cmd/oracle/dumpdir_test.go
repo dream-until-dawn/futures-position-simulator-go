@@ -51,12 +51,15 @@ func TestCheckCTPDumpDir(t *testing.T) {
 // 而这两种落错的补救完全不同：一种是换目录，一种是「你以为对的那个字面路径不对」。
 func TestCheckCTPDumpDirTellsApartTheTwoMistakes(t *testing.T) {
 	root := filepath.FromSlash("C:/repo")
-	nested := checkCTPDumpDir(filepath.FromSlash("C:/repo/cmd/oracle/testdata/ctp"), root)
-	probes := checkCTPDumpDir(filepath.FromSlash("C:/repo/testdata/probes"), root)
-	if nested == nil || probes == nil {
+	if checkCTPDumpDir(filepath.FromSlash("C:/repo/cmd/oracle/testdata/ctp"), root) == nil ||
+		checkCTPDumpDir(filepath.FromSlash("C:/repo/testdata/probes"), root) == nil {
 		t.Fatal("前提：两种落错都要被拒")
 	}
-	if nested.Error() == probes.Error() {
+	// ⚠️ 比的是**理由**，不是整句错误：整句里带着各自的路径，
+	// 路径不同整句就不同 —— 拿整句比，理由塌成一句也照样绿（破坏 632 起初就是这样漏掉的）。
+	nested := dumpDirWhy(filepath.FromSlash("C:/repo/cmd/oracle/testdata/ctp"), root)
+	probes := dumpDirWhy(filepath.FromSlash("C:/repo/testdata/probes"), root)
+	if nested == probes {
 		t.Errorf("⚠️ 两种落错给了同一句话 —— 它们的补救不一样：\n%v", nested)
 	}
 }

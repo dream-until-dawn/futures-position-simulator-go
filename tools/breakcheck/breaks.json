@@ -6190,7 +6190,7 @@
 		"new": "\t_ = ctpDumpDir // 破坏：这条命令忘了接线\n",
 		"pkg": "./",
 		"test": "TestCTPDumpDirIsWiredIntoEveryCommand",
-		"want": "ctp-closefee 收下了",
+		"want": "ctp-closefee 报的不是 -dump 那个错",
 		"expect": "red"
 	},
 	{
@@ -6201,7 +6201,7 @@
 		"new": "\t_ = ctpDumpDir // 破坏：这条命令忘了接线\n\tenv, err := probe.LoadEnv(*envPath)\n\tif err != nil {\n\t\treturn err\n\t}\n\tc := ctp.New(ctp.Credentials{\n\t\tFront:    env.CTPTdFront,",
 		"pkg": "./",
 		"test": "TestCTPDumpDirIsWiredIntoEveryCommand",
-		"want": "ctp-params 收下了",
+		"want": "ctp-params 报的不是 -dump 那个错",
 		"expect": "red"
 	},
 	{
@@ -6230,8 +6230,8 @@
 		"name": "632 两种落错给同一句话（两者的补救不一样：一种换目录，一种是「你以为对的那个字面路径不对」）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/dumpdir.go",
-		"old": "\t\twhy = \"那是天勤 DIFF 的语料目录，CTP 夹具混进去在别处**不会报错**\"",
-		"new": "\t\twhy = \"路径**字面上**就是 \" + ctpFixtureHome + \"，但它在仓库根之外 —— \" +\n\t\t\t\"oracle 是嵌套模块、只能在 cmd/oracle 下跑，照抄文档里的相对路径就会落到这里\"",
+		"old": "\t\treturn \"那是天勤 DIFF 的语料目录，CTP 夹具混进去在别处**不会报错**\"",
+		"new": "\t\treturn \"路径**字面上**就是 \" + ctpFixtureHome + \"，但它在仓库根之外 —— \" +\n\t\t\t\"oracle 是嵌套模块、只能在 cmd/oracle 下跑，照抄文档里的相对路径就会落到这里\"",
 		"pkg": "./",
 		"test": "TestCheckCTPDumpDirTellsApartTheTwoMistakes",
 		"want": "两种落错给了同一句话",

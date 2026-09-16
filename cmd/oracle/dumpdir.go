@@ -29,16 +29,25 @@ func checkCTPDumpDir(abs, root string) error {
 	if strings.EqualFold(got, want) {
 		return nil
 	}
-	why := "它不是仓库根下的 " + ctpFixtureHome
+	return fmt.Errorf("⚠️ -dump 指到 %s，**不落盘**：%s。CTP 夹具只有一个家：%s",
+		got, dumpDirWhy(got, root), want)
+}
+
+// dumpDirWhy 只给**理由**，不带路径。
+//
+// ⚠️ 它之所以是独立的一支：理由退化（两种落错说同一句话）要能被测出来，
+// 而整句错误里带着各自的 got —— 路径不同，整句就不同，
+// 理由塌成一句也照样「两条消息不一样」。破坏 632 起初就是这样安静地绿着的。
+func dumpDirWhy(got, root string) string {
 	switch {
 	case strings.EqualFold(got, filepath.Join(root, "testdata", "probes")):
-		why = "那是天勤 DIFF 的语料目录，CTP 夹具混进去在别处**不会报错**"
+		return "那是天勤 DIFF 的语料目录，CTP 夹具混进去在别处**不会报错**"
 	case strings.EqualFold(filepath.Base(got), "ctp") &&
 		strings.EqualFold(filepath.Base(filepath.Dir(got)), "testdata"):
-		why = "路径**字面上**就是 " + ctpFixtureHome + "，但它在仓库根之外 —— " +
+		return "路径**字面上**就是 " + ctpFixtureHome + "，但它在仓库根之外 —— " +
 			"oracle 是嵌套模块、只能在 cmd/oracle 下跑，照抄文档里的相对路径就会落到这里"
 	}
-	return fmt.Errorf("⚠️ -dump 指到 %s，**不落盘**：%s。CTP 夹具只有一个家：%s", got, why, want)
+	return "它不是仓库根下的 " + ctpFixtureHome
 }
 
 // ctpDumpDir 校验并返回 -dump 的绝对路径。空目录由调用方各自处理（有的命令允许不落盘）。
