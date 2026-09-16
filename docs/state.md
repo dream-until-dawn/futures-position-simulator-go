@@ -1,5 +1,19 @@
 # 项目状态：唯一来源
 
+## ⚠️ 开工第一条（交易日 20260917）：**先跑 §13 #21 的 E1/E2，跑完再考虑任何 flatten**
+
+20260916 白天在 `DCE.m2701` 上种了 **2 手多头**，留仓过夜，为的是 20260917 拿到「只有昨仓」的两手。
+
+    先  oracle ctp-closefee -symbol DCE.m2701 -mode bare -dump testdata/ctp   （E1，消耗一手）
+    再  oracle ctp-closefee -symbol DCE.m2701 -mode yd   -dump testdata/ctp   （E2，消耗另一手）
+
+⚠️ **那天种子不受安全阀保护**：受保护腿只登记了种植那一天（20260916）——
+保护的含义是「今天别被别的命令平掉」，而实验那天它的用处正是被平掉，
+登记到实验那天就得给 `ctp-closefee` 开豁免口（豁免口只有 `ctp-closeorder` 一处，是刻意的）。
+⇒ `ctp-flatten -all` 会平掉它，`ctp-hold`（不带 `-keep`）与 `ctp-closeorder` 的收尾也会动今仓。**先跑实验。**
+
+⚠️ 这条写在这里而不是只写在 roadmap 里，是评审 20260916 提的：一个只写在变更记录里的代价，第二天早上不一定会被读到。
+
 ## ✅✅ 判别实验 ① 有答案了（20260910 夜盘，交易日 20260911）
 
 ### 结论：**昨仓的占用保证金按「昨结算价」算 —— 候选 A，逐日盯市重置**
@@ -1825,7 +1839,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/roadmap.md` | 51 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
-| `docs/state.md` | 94 |
+| `docs/state.md` | 95 |
 
 ⚠️ **增删小节时要同步改这里**，这是刻意的摩擦：一次有意的增删是一行改动，
 一次意外的删除则会红。守卫是 `TestDocSectionCountsMatch`。
