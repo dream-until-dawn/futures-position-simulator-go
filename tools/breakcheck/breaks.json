@@ -6357,5 +6357,49 @@
 		"test": "TestControlRunsBeforeAnyCase",
 		"want": "找不到 runControl 的调用",
 		"expect": "red"
+	},
+	{
+		"name": "644 优先级判定只比码的数值、不比码空间（CTP 50 与交易所 50 意思完全不同）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase got == session:",
+		"new": "\tcase got.Value == session.Value:",
+		"pkg": ".",
+		"test": "TestPriorityVerdict",
+		"want": "值同而空间不同",
+		"expect": "red"
+	},
+	{
+		"name": "645 两项码撞号时判成「时段先」（那一对分不开，不是都赢了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase got == session && hasOther && got == other:",
+		"new": "\tcase false:",
+		"pkg": ".",
+		"test": "TestPriorityVerdict",
+		"want": "这一对分不开",
+		"expect": "red"
+	},
+	{
+		"name": "646 caseReason 认不出涨跌停那两条（它们会安静地走「另一项没有观测」那一支）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tcase \"涨跌停\":\n\t\tswitch {\n\t\tcase strings.Contains(rc.Name, \"涨停\"):",
+		"new": "\tcase \"涨跌停\":\n\t\tswitch {\n\t\tcase false:",
+		"pkg": ".",
+		"test": "TestCaseReasonCoversEveryCase",
+		"want": "映射不到拒因",
+		"expect": "red"
+	},
+	{
+		"name": "647 codeOf 把 ErrorID==0 也当成一个 CTP 码（价格类拒单的 ErrorID 恒为 0）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\tif st.ErrorID != 0 {",
+		"new": "\tif true {",
+		"pkg": ".",
+		"test": "TestCodeOfPrefersCTPSpace",
+		"want": "ErrorID 为零时要取前缀码",
+		"expect": "red"
 	}
 ]
