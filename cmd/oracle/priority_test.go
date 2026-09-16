@@ -144,3 +144,30 @@ func TestPriorityUsesTheSameInputsAsReject(t *testing.T) {
 		t.Errorf("⚠️ 用例只有 %d 条 —— 这条命令能量到的对数随之减少", len(rejectCases))
 	}
 }
+
+// TestSessionOnlyControlDeclaresExactlyOne 钉住对照组在盘中休息里的声明**恰好一项**，
+// 且它与 ctp-reject 用的是同一笔委托。
+//
+// ⚠️ 多声明一项的后果是**静默**的：语料的归类器整条跳过，于是那个码永远进不了 ctperr 的表，
+// 而命令照样跑完、观测照样落盘、输出上一个字都不会变。
+func TestSessionOnlyControlDeclaresExactlyOne(t *testing.T) {
+	rc := sessionOnlyControl()
+	if len(rc.Violates) != 1 || rc.Violates[0] != sessionItem {
+		t.Errorf("⚠️ 声明的是 %v，要恰好一项且是 %q —— 归类器只认恰好一项，多一项整条跳过",
+			rc.Violates, sessionItem)
+	}
+	// ⚠️ 必须还是**同一笔**委托：换一笔就不是「同一个输入换个时段」了。
+	if rc.Dir != controlCase.Dir || rc.Off != controlCase.Off {
+		t.Errorf("⚠️ 方向/开平与对照组不一致（%q/%q vs %q/%q）",
+			string(rc.Dir), string(rc.Off), string(controlCase.Dir), string(controlCase.Off))
+	}
+	md := &def.CThostFtdcDepthMarketDataField{LowerLimitPrice: 100, UpperLimitPrice: 200}
+	if rc.Price(md, 2) != controlCase.Price(md, 2) {
+		t.Errorf("⚠️ 价格算法与对照组不一致：%v vs %v", rc.Price(md, 2), controlCase.Price(md, 2))
+	}
+	// 反向：ctp-reject 用的那一份**不许**声明违反了什么 —— 它在那个上下文里是护栏。
+	if len(controlCase.Violates) != 0 {
+		t.Errorf("⚠️ controlCase 自己声明了 %v —— 在 ctp-reject 里它什么都不违反，"+
+			"声明了就会被当成一条「某一项的码」的观测", controlCase.Violates)
+	}
+}

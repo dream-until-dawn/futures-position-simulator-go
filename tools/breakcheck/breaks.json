@@ -6456,5 +6456,49 @@
 		"test": "TestPairCasesCannotTrade",
 		"want": "放过了可能成交",
 		"expect": "red"
+	},
+	{
+		"name": "653 盘中休息里的对照组多声明一项（归类器整条跳过，那个码永远进不了 ctperr 的表）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\trc.Violates = []string{sessionItem}",
+		"new": "\trc.Violates = []string{sessionItem, \"最小变动价位\"}",
+		"pkg": ".",
+		"test": "TestSessionOnlyControlDeclaresExactlyOne",
+		"want": "要恰好一项",
+		"expect": "red"
+	},
+	{
+		"name": "654 ctp-priority 的对照组换一笔委托（就不是「同一个输入换个时段」了）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/priority.go",
+		"old": "\trc.Why = \"价内、整倍数、不平仓 —— 此刻唯一不成立的是「在交易时段内」\"\n\treturn rc",
+		"new": "\trc.Why = \"价内、整倍数、不平仓 —— 此刻唯一不成立的是「在交易时段内」\"\n\trc.Dir = def.THOST_FTDC_D_Sell\n\treturn rc",
+		"pkg": ".",
+		"test": "TestSessionOnlyControlDeclaresExactlyOne",
+		"want": "方向/开平与对照组不一致",
+		"expect": "red"
+	},
+	{
+		"name": "655 两个拒因共用一个名字（读日志的人分不开，而所有码照常对得上）",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\tcase ReasonOutsideSession:\n\t\treturn \"不在交易时段内\"",
+		"new": "\tcase ReasonOutsideSession:\n\t\treturn \"平昨超过昨仓\"",
+		"pkg": "./ctperr/",
+		"test": "TestReasonStringsAreDistinct",
+		"want": "共用名字",
+		"expect": "red"
+	},
+	{
+		"name": "656 Reason.String() 对未知值返回空串（数拒因的循环会立刻停，而那看起来像数完了）",
+		"dir": "",
+		"file": "ctperr/ctperr.go",
+		"old": "\t}\n\treturn \"未知拒因\"\n}",
+		"new": "\t}\n\treturn \"\"\n}",
+		"pkg": "./ctperr/",
+		"test": "TestReasonStringsAreDistinct",
+		"want": "只数到 0 个拒因",
+		"expect": "red"
 	}
 ]

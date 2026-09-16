@@ -72,9 +72,25 @@ func codeText(statusMsg string) string {
 	return "无"
 }
 
-// runControl 发出对照组那一笔并判定；挂上了就撤掉。
+// runControl 发出对照组那一笔并判定；挂上了就撤掉。语料按 controlCase 的原样声明（什么都不违反）。
 func runControl(c *ctp.Client, ex, inst string, md *def.CThostFtdcDepthMarketDataField,
 	tk tickUsed, timeout time.Duration, logf func(string, ...any)) (rejectObservation, error) {
+	return runControlDeclaring(c, ex, inst, md, tk, timeout, logf, controlCase)
+}
+
+// runControlDeclaring 与 runControl 同一笔委托，但语料按 declare 声明。
+//
+// ⚠️ 为什么这一层存在：**同一笔委托违反了什么，取决于它跑在什么时候**。
+//
+//	交易时段内   它什么都不违反 —— 那正是 ctp-reject 要的护栏（挂不上就整轮不跑）
+//	盘中休息里   它恰好违反**一项**：交易时段 —— 那时它不是护栏，是一条观测
+//
+// ⚠️ 而这一分别必须写进 `violates`，否则那个码进不了 `ctperr` 的表：
+// 归类器只认「violates 恰好一项」，空的一律跳过。⇒ 一笔真的被拒过的委托，
+// 它的码会因为「声明它什么都不违反」而永远用不上。
+func runControlDeclaring(c *ctp.Client, ex, inst string, md *def.CThostFtdcDepthMarketDataField,
+	tk tickUsed, timeout time.Duration, logf func(string, ...any),
+	declare rejectCase) (rejectObservation, error) {
 
 	px := controlCase.Price(md, tk.Value)
 	logf("[rej] 对照组 → dir=%q off=%q @%.2f（%s）",
@@ -94,7 +110,7 @@ func runControl(c *ctp.Client, ex, inst string, md *def.CThostFtdcDepthMarketDat
 	}
 	// ⚠️ 对照组**自己也是一条观测**：它被拒时拿到的那个码，正是「这个交易所此刻禁止报单」
 	// 这件事唯一的机器可读证据。只写在提交正文里，下一个人还会再撞一次。
-	obs := observe(c.TradingDay(), nowClock(), ex, inst, controlCase, st, outcome, tk)
+	obs := observe(c.TradingDay(), nowClock(), ex, inst, declare, st, outcome, tk)
 	if cancel {
 		logf("[rej] 对照组挂上了 —— 撤掉它，后面四条的码归得了因")
 		if cerr := c.Cancel(st.OrderRef, req); cerr != nil {

@@ -45,6 +45,10 @@ func reasonOf(o observation) Reason {
 		if o.Offset == "4" {
 			return ReasonCloseYesterdayExceeds
 		}
+	case "交易时段":
+		// ⚠️ 只认**对照组**那一笔：它除时段外完全合法，所以「恰好违反一项」这句话在它身上是真的。
+		// 别的用例即使也落在休息时段，同时还违反着价格类或可平量 —— 那时 violates 会是两项，上面就返回了。
+		return ReasonOutsideSession
 	}
 	return ReasonUnknown
 }
@@ -164,5 +168,39 @@ func TestCodeSpacesKeepCollidingNumbersApart(t *testing.T) {
 	}
 	if below == ctp50 {
 		t.Error("⚠️ 前缀 50（跌破跌停）与 CTP 50（平今仓位不足）被判成同一个码 —— 码空间这一维丢了")
+	}
+}
+
+// TestReasonStringsAreDistinct 钉住每个拒因的名字互不相同、且都不是「未知拒因」。
+//
+// ⚠️ 这些名字是**读日志的人唯一看得到的东西**：`Error.Error()` 里带的就是它。
+// 两个拒因共用一个名字时，一条「平昨超过昨仓」的日志可能说的是完全另一回事，
+// 而所有对拍、所有语料、所有码都照常对得上 —— 名字不参与任何比较。
+//
+// ⚠️ 遍历方式是**从零值往后数到第一个「未知拒因」**：写死一张名单的话，
+// 新加一个拒因时这条守卫不会说话（而新加正是最容易撞名字的时候）。
+func TestReasonStringsAreDistinct(t *testing.T) {
+	seen := map[string]Reason{}
+	n := 0
+	for r := Reason(1); ; r++ {
+		s := r.String()
+		if s == ReasonUnknown.String() {
+			break // 数完了
+		}
+		n++
+		if prev, dup := seen[s]; dup {
+			t.Errorf("⚠️ 拒因 %d 与 %d 共用名字 %q —— 读日志的人分不开这两回事", r, prev, s)
+		}
+		seen[s] = r
+		if r > 100 {
+			t.Fatal("⚠️ 数了 100 个还没到头 —— String() 对未知值不返回「未知拒因」了？")
+		}
+	}
+	// ⚠️ 反空转：一个「零个拒因」的枚举也能让上面全过。
+	if n < 5 {
+		t.Errorf("⚠️ 只数到 %d 个拒因 —— 实测已有五项（价格三项、可平量、交易时段）", n)
+	}
+	if ReasonUnknown.String() == "" {
+		t.Error("⚠️ 零值的名字是空串 —— 它会让上面的循环立刻停，而那看起来像是数完了")
 	}
 }

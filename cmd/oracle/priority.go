@@ -101,6 +101,20 @@ func codeOf(st ctp.OrderState) (ctperr.Code, bool) {
 	return ctperr.Code{}, false
 }
 
+// sessionOnlyControl 是对照组那一笔在**盘中休息**里的声明：它恰好违反一项 —— 交易时段。
+//
+// ⚠️ 「恰好一项」是硬要求，不是措辞：语料的归类器只认 violates 恰好一项，
+// 多一项就整条跳过 ⇒ 一笔真的被拒过的委托，它的码会因为声明多写了一项而永远用不上。
+// ⚠️ 而委托本身与 ctp-reject 用的是**同一笔**（价格、方向、开平都取自 controlCase）：
+// 换一笔就不是「同一个输入换个时段」了。
+func sessionOnlyControl() rejectCase {
+	rc := controlCase
+	rc.Name = "只违反交易时段（对照组：除时段外完全合法）"
+	rc.Violates = []string{sessionItem}
+	rc.Why = "价内、整倍数、不平仓 —— 此刻唯一不成立的是「在交易时段内」"
+	return rc
+}
+
 // runCTPPriority 量「交易时段 × 另一项」的拒绝优先级。
 //
 // ⚠️ 它与 `ctp-reject` 的前提**恰好相反**：那条要合约此刻报得进单，这条要报不进
@@ -150,7 +164,7 @@ func runCTPPriority(args []string) error {
 
 	// ⚠️ 对照组在这条命令里是**前提**而不是护栏：它必须**被拒**，
 	// 那才证明「此刻这个合约报不进单」这一项确实被违反了。
-	ctrl, ctrlErr := runControl(c, ex, inst, md, tk, *timeout, logf)
+	ctrl, ctrlErr := runControlDeclaring(c, ex, inst, md, tk, *timeout, logf, sessionOnlyControl())
 	obs := []rejectObservation{ctrl}
 	session, hasSession := ctpCodeOfObservation(ctrl)
 	if ctrlErr == nil {

@@ -79,6 +79,14 @@ const (
 	//
 	// ⚠️ 语料里是「账上无仓时平昨」。平今超量、有仓但不够的码**没有观测**，不从这一条推。
 	ReasonCloseYesterdayExceeds
+	// ReasonOutsideSession 不在交易时段内。
+	//
+	// ⚠️ 它是 20260916 才有观测的：对应 `order.CheckSession`，而那一项此前在**两个口子上都测不出来** ——
+	// 本库标「查不了」，快期那侧根本不查（kq_facts 48）。盘中休息里一笔**除时段外完全合法**的委托被拒，
+	// 才把这个码逼出来（`oracle ctp-priority` 的对照组）。
+	//
+	// ⚠️ 语料里是「盘中休息（10:15–10:30 / 11:30–13:30）」。收盘之后、节假日的码**没有观测**，不从这一条推。
+	ReasonOutsideSession
 )
 
 func (r Reason) String() string {
@@ -91,6 +99,8 @@ func (r Reason) String() string {
 		return "价格低于跌停"
 	case ReasonCloseYesterdayExceeds:
 		return "平昨超过昨仓"
+	case ReasonOutsideSession:
+		return "不在交易时段内"
 	}
 	return "未知拒因"
 }
