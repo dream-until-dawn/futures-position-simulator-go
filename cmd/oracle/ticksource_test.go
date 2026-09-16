@@ -69,7 +69,7 @@ func TestTickVerdictDoesNotSilentlyPreferTheFlag(t *testing.T) {
 // 而它们的可信度不同。
 func TestObserveRecordsTick(t *testing.T) {
 	rc := rejectCase{Name: "低于跌停", Violates: []string{"涨跌停"}}
-	o := observe("20260917", "GFEX", "si2601", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected",
+	o := observe("20260917", "21:05:00", "GFEX", "si2601", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected",
 		tickUsed{Value: 5, Source: tickFromCounter})
 	if o.PriceTick == nil || *o.PriceTick != 5 {
 		t.Errorf("⚠️ 语料里没记下 tick：%v", o.PriceTick)
@@ -78,7 +78,7 @@ func TestObserveRecordsTick(t *testing.T) {
 		t.Errorf("⚠️ 语料里没记下 tick 的出处：%q", o.TickSource)
 	}
 	// 零值那一档：没有 tick 就不许伪造一个 0 —— 「没记」与「记成 0」必须分得开。
-	z := observe("20260917", "GFEX", "si2601", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected", tickUsed{})
+	z := observe("20260917", "21:05:00", "GFEX", "si2601", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected", tickUsed{})
 	if z.PriceTick != nil {
 		t.Errorf("⚠️ 没有 tick 时写进了 %v —— 「没记这一栏」与「tick 是 0」在下游同形", *z.PriceTick)
 	}

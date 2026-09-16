@@ -28,6 +28,13 @@ import (
 // 而「缺」与「零」必须分得开 —— 所以用指针，不用 0。
 type rejectObservation struct {
 	TradingDay string `json:"trading_day"`
+	// At 是本地时钟（HH:MM:SS）；空表示那一轮没记这一栏（20260916 之前的记录）。
+	//
+	// ⚠️ 它补的是一个**离开时钟就读不懂**的码：柜台的 `26 当前状态禁止报单` 取决于时段 ——
+	// 10:15–10:30 的盘中休息里，**每一个**交易所都给这个码。
+	// 只有交易日的话，一条 10:28 拍到的 26 与「这个交易所报不进单」在语料里长得一模一样，
+	// ⚠️ 而 20260916 我正是差一点据此写下「郑商所 / 广期所在 SimNow 上禁止报单」。
+	At         string `json:"at,omitempty"`
 	Exchange   string `json:"exchange"`
 	Instrument string `json:"instrument"`
 	// Case 是**我给这次输入起的名字**，不是柜台给的。
@@ -97,9 +104,9 @@ const (
 )
 
 // observe 把一次用例的委托回报折成一条语料。纯函数：离线可测。
-func observe(day, ex, inst string, rc rejectCase, st ctp.OrderState, outcome string, tk tickUsed) rejectObservation {
+func observe(day, at, ex, inst string, rc rejectCase, st ctp.OrderState, outcome string, tk tickUsed) rejectObservation {
 	o := rejectObservation{
-		TradingDay: day, Exchange: ex, Instrument: inst,
+		TradingDay: day, At: at, Exchange: ex, Instrument: inst,
 		Case: rc.Name, Violates: rc.Violates,
 		Offset: string(rc.Off), Outcome: outcome, Source: "probe",
 		TickSource: tk.Source,

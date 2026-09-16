@@ -116,8 +116,12 @@ func TestTableMatchesCorpus(t *testing.T) {
 }
 
 // TestLookupDoesNotFallBack 钉住没测过的组合返回 false，而不是某个「常见」的码。
+//
+// ⚠️ 20260916：郑商所与广期所**已经拍了**，于是从这张「没测过」的名单里移出去 ——
+// 名单只剩中金所。⚠️ 移出去的同时必须在下面补上「它们现在查得到」的正向断言，
+// 否则这次改动的净效果是**少了两个交易所的判别力**，而那在 diff 里看起来只是删了两个词。
 func TestLookupDoesNotFallBack(t *testing.T) {
-	for _, ex := range []types.Exchange{types.CZCE, types.GFEX, types.CFFEX} {
+	for _, ex := range []types.Exchange{types.CFFEX} {
 		for _, r := range []Reason{ReasonPriceTick, ReasonAboveUpperLimit, ReasonBelowLowerLimit, ReasonCloseYesterdayExceeds} {
 			if c, ok := Lookup(ex, r); ok {
 				t.Errorf("⚠️ %s %s 查到了 %s —— 这个交易所一条语料都没有", ex, r, c)
@@ -133,6 +137,21 @@ func TestLookupDoesNotFallBack(t *testing.T) {
 	// ⚠️ 反向：测过的要查得到，否则一个恒返回 false 的实现也能过上面。
 	if c, ok := Lookup(types.DCE, ReasonCloseYesterdayExceeds); !ok || c != (Code{SpaceCTP, 30}) {
 		t.Errorf("大商所平昨超量要查到 CTP 30，得到 %v %v", c, ok)
+	}
+	// ⚠️ 20260916 从「没测过」名单里移出去的那两个，逐条钉住它们现在查得到 ——
+	// 而且钉的是**可平量**那一格：价格类三条五所同号，拿它们做正向断言，
+	// 一个「郑商所那几行漏填了」的表也能照样通过（另外三所的值一模一样）。
+	for _, c := range []struct {
+		ex   types.Exchange
+		want Code
+	}{
+		{types.CZCE, Code{SpaceCTP, 30}},
+		{types.GFEX, Code{SpaceCTP, 30}},
+	} {
+		if got, ok := Lookup(c.ex, ReasonCloseYesterdayExceeds); !ok || got != c.want {
+			t.Errorf("⚠️ %s 平昨超量要查到 %v（20260916 实测），得到 %v %v —— "+
+				"它刚从「没测过」名单里移出去，这一条是它唯一的对侧", c.ex, c.want, got, ok)
+		}
 	}
 }
 

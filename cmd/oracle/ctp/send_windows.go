@@ -246,7 +246,16 @@ func (c *Client) registerOrderCallbacks() {
 	// 而账户上**没有冻结**（说明单根本没挂上）。
 	// 「被拒了」与「回报丢了」在那一刻完全分不开，**因为两者都没有声音**。
 	//
-	// ⚠️ 交易所级的拒单走 ErrRtn，不走 Rsp —— 我只注册了后者。
+	// ⚠️ 异步的拒单走 ErrRtn，不走 Rsp —— 我只注册了后者。
+	//
+	// ⚠️⚠️ **不要把这条通道读成「交易所拒的」**（20260916 更正）：
+	// 它此前标着「**交易所**拒单」，而 20260916 的语料**不支持那句话** ——
+	// 走这条通道的 `平仓量超过持仓量`（SHFE/INE 51、DCE/CZCE/GFEX 30）
+	// 拿到的是 **CTP 空间**的 `ErrorID`、消息前缀是 `CTP:`、且**没有交易所委托号**；
+	// 而同一合约同一刻，一笔合法委托是**拿得到**委托号的（对照组，`has_order_sys_id=true`）
+	// ⇒ 这条通道上的拒绝发生在拿到交易所编号**之前**，说不上是交易所拒的。
+	//
+	//	⇒ 措辞只说**通道**（ErrRtn），不说**是谁拒的** —— 后者本库分不出来。
 	c.on("SetOnErrRtnOrderInsert", func(o *def.CThostFtdcInputOrderField,
 		info *def.CThostFtdcRspInfoField) uintptr {
 		ref := ""
@@ -261,11 +270,11 @@ func (c *Client) registerOrderCallbacks() {
 			code = int(info.ErrorID)
 		}
 		c.book.put(ref, func(s *OrderState) {
-			s.Status, s.StatusMsg = def.THOST_FTDC_OST_Canceled, "交易所拒单："+msg
+			s.Status, s.StatusMsg = def.THOST_FTDC_OST_Canceled, "报单错误回报（ErrRtn）："+msg
 			// ⚠️ 数值码要**交出去**，不能只打进日志。见 OrderState.ErrorID 的注释。
 			s.ErrorID = code
 		})
-		c.logf("[ctp] ⚠️ **交易所**拒单 ref=%s  %s", ref, msg)
+		c.logf("[ctp] ⚠️ 报单错误回报（ErrRtn，**不等于交易所拒的**）ref=%s  %s", ref, msg)
 		return 0
 	})
 	c.on("SetOnRspOrderAction", func(_ *def.CThostFtdcInputOrderActionField,

@@ -209,9 +209,17 @@ func TestRejectedErrorCarriesCode(t *testing.T) {
 		t.Errorf("⚠️ 上期所最小变动价位要查到前缀码 48，得到 %v ok=%v", c, ok)
 	}
 	// ⚠️ 反向：没拍过的交易所、没有语料粒度的拒因，都要查不到。
+	// ⚠️ 20260916 这里换过一次交易所：郑商所与广期所当天拍了语料，
+	// 这条断言原本指着郑商所 —— 再指着它就不是「没拍过」了，而是**一条会红的假设**。
+	// 中金所仍然一条都没有（它的合约本库还没碰过）。
+	cffex := &RejectedError{Rejection: order.Rejection{Kind: ctperr.ReasonPriceTick}, Exchange: types.CFFEX}
+	if c, ok := cffex.Code(); ok {
+		t.Errorf("⚠️ 中金所查到了 %v —— 一条语料都没有", c)
+	}
+	// 正向：刚拍的那两个要查得到，否则「把交易所换成一个没拍过的」就成了一条免费的绿。
 	czce := &RejectedError{Rejection: order.Rejection{Kind: ctperr.ReasonPriceTick}, Exchange: types.CZCE}
-	if c, ok := czce.Code(); ok {
-		t.Errorf("⚠️ 郑商所查到了 %v —— 一条语料都没有", c)
+	if c, ok := czce.Code(); !ok || c != (ctperr.Code{Space: ctperr.SpaceStatusPrefix, Value: 48}) {
+		t.Errorf("⚠️ 郑商所最小变动价位要查到前缀码 48（20260916 实测），得到 %v ok=%v", c, ok)
 	}
 	funds := &RejectedError{Rejection: order.Rejection{Check: order.CheckFunds}, Exchange: types.SHFE}
 	if c, ok := funds.Code(); ok {

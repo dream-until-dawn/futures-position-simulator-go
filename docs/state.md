@@ -1574,7 +1574,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | # | 结果 | 夹具 / 语料 |
 |---|---|---|
 | 1 | ✅ **#4 收敛**：大商所通用平仓消耗**昨仓**（与 FIFO 在「今 + 昨」上恒同值）。⚠️ 第一次跑在落 ① 时退出：工具要求截面带成交明细，而 ① 在开仓之前当日零成交 —— 已修（阶段声明 `tradesExpected`），**零委托**，种子未动；重跑成功。种子按实验设计被消耗，m2701 已空仓 | `ctp-slices-20260915{,-2,-3}.json` |
-| 2–4 | ✅ **#6 语料**：DCE / SHFE / INE 各 4 条，零成交，共 12 条。⚠️ 更正：大商所**价格类**码与上期所同号；「自成一套」只对可平量（30 vs 51） | `testdata/refdata/ctp-reject-codes.json` |
+| 2–4 | ✅ **#6 语料**：DCE / SHFE / INE 各 4 条，零成交，共 12 条。⚠️ 更正：大商所**价格类**码与上期所同号；「自成一套」只对可平量（30 vs 51）。⚠️⚠️ **20260916 再更正：「大商所自成一套」整句作废** —— 补拍郑商所（`MA701`）与广期所（`si2701`）之后，可平量是 **51（SHFE / INE）vs 30（DCE / CZCE / GFEX）**，二比三，而大商所在**多数**那一侧。价格类三条（48 / 49 / 50，交易所空间、`ErrorID == 0`）**五所完全同号**。语料 12 → 27 条 | `testdata/refdata/ctp-reject-codes.json` |
 | 5 | ✅ **#19**：rb2701 是「单一投资者」记录 ⇒「读错记录」排除（优先级为推得），「声明不完整」继续成立 | `testdata/refdata/ctp-commission-rates-20260915.txt` |
 | 6 | ✅ **#13 收敛**：逐片 FIFO。样本 A（p1 < p2）+ 样本 B（p1 > p2，`-second lower`），每个两个独立读数 | `ctp-slices-20260915-{4..9}.json` |
 
@@ -1846,7 +1846,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 127 |
-| `docs/roadmap.md` | 54 |
+| `docs/roadmap.md` | 55 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 95 |

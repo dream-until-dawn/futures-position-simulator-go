@@ -145,8 +145,22 @@ func runCTPReject(args []string) error {
 	// ⚠️ 每一条用例都要产出一条观测，**包括没被拒的那些** ——
 	// 否则语料里只剩成功的那几条，而那看起来覆盖得很齐。
 	record := func(rc rejectCase, st ctp.OrderState, outcome string) {
-		obs = append(obs, observe(c.TradingDay(), ex, inst, rc, st, outcome, tk))
+		obs = append(obs, observe(c.TradingDay(), nowClock(), ex, inst, rc, st, outcome, tk))
 	}
+	// ⚠️ 对照组排在四条用例**之前**：它挂不上的话，后面每一个码都归不了因（见 control.go）。
+	ctrl, cerr := runControl(c, ex, inst, md, tk, *timeout, logf)
+	obs = append(obs, ctrl)
+	if cerr != nil {
+		// ⚠️ **先落盘再报错**：对照组被拒时拿到的那个码，正是这一轮唯一有信息的东西。
+		// 同「有成交也要把观测留下来」那一条理由。
+		if *out != "" {
+			if _, werr := writeRejectCorpus(*out, obs, logf); werr != nil {
+				logf("[rej] ⚠️ 语料落盘失败：%v", werr)
+			}
+		}
+		return cerr
+	}
+
 	for i, rc := range rejectCases {
 		px := rc.Price(md, tk.Value)
 		logf("")

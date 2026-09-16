@@ -102,7 +102,20 @@ type key struct {
 
 // measured 是实测的表。⚠️ 改这里之前先去拍语料：TestTableMatchesCorpus 会双向核对。
 //
-// 出处：oracle ctp-reject -out，交易日 20260915（2026-09-14 夜盘），SimNow。
+// 出处：oracle ctp-reject -out，SimNow。交易日 20260915（DCE / SHFE / INE）与
+// 20260916 日盘（SHFE 重拍 / CZCE / GFEX，每一轮都带对照组与柜台报的 tick）。
+//
+// ⚠️ **两个码空间，撞号**：CTP 的 `50 平今仓位不足` 与交易所的 `50 价格跌破跌停板`
+// 意思完全不同 —— 所以 Code 带 Space 这一维。
+//
+// ⚠️ **五所到齐之后的形状，与「各交易所各有一套」相反**：
+//
+//	价格类三条  48 / 49 / 50  **五所完全同号**（交易所空间，ErrorID == 0）
+//	可平量      51（SHFE / INE）vs 30（DCE / CZCE / GFEX）  二比三，CTP 空间
+//
+// ⚠️ 20260914 那一版记的是「INE 照抄上期所，**大商所自成一套**」——
+// 补拍郑商所与广期所之后那句作废：大商所在**多数**那一侧。
+// **两个样本上的「一样」与「不一样」，都还不是一个分组。**
 var measured = map[key]Code{
 	{types.DCE, ReasonPriceTick}:             {SpaceStatusPrefix, 48},
 	{types.DCE, ReasonAboveUpperLimit}:       {SpaceStatusPrefix, 49},
@@ -118,6 +131,16 @@ var measured = map[key]Code{
 	{types.INE, ReasonAboveUpperLimit}:       {SpaceStatusPrefix, 49},
 	{types.INE, ReasonBelowLowerLimit}:       {SpaceStatusPrefix, 50},
 	{types.INE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 51},
+
+	{types.CZCE, ReasonPriceTick}:             {SpaceStatusPrefix, 48},
+	{types.CZCE, ReasonAboveUpperLimit}:       {SpaceStatusPrefix, 49},
+	{types.CZCE, ReasonBelowLowerLimit}:       {SpaceStatusPrefix, 50},
+	{types.CZCE, ReasonCloseYesterdayExceeds}: {SpaceCTP, 30},
+
+	{types.GFEX, ReasonPriceTick}:             {SpaceStatusPrefix, 48},
+	{types.GFEX, ReasonAboveUpperLimit}:       {SpaceStatusPrefix, 49},
+	{types.GFEX, ReasonBelowLowerLimit}:       {SpaceStatusPrefix, 50},
+	{types.GFEX, ReasonCloseYesterdayExceeds}: {SpaceCTP, 30},
 }
 
 // Lookup 查某交易所某拒因的码。第二个返回值为 false 表示**没有观测**，调用方不许拿零值当码用。

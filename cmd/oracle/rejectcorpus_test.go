@@ -145,8 +145,8 @@ func TestRejectCorpusIsProbeWrittenOnly(t *testing.T) {
 func TestObserveRecordsOrderSysIDPresence(t *testing.T) {
 	rc := rejectCase{Name: "低于跌停", Violates: []string{"涨跌停"}}
 	tk := tickUsed{Value: 1, Source: tickFromCounter}
-	with := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{OrderSysID: "      123", StatusMsg: "50:x"}, "rejected", tk)
-	without := observe("20260916", "SHFE", "rb2701", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected", tk)
+	with := observe("20260916", "10:28:19", "SHFE", "rb2701", rc, ctp.OrderState{OrderSysID: "      123", StatusMsg: "50:x"}, "rejected", tk)
+	without := observe("20260916", "10:28:19", "SHFE", "rb2701", rc, ctp.OrderState{StatusMsg: "50:x"}, "rejected", tk)
 	if with.HasOrderSysID == nil || !*with.HasOrderSysID {
 		t.Errorf("⚠️ 回报里有交易所委托号，语料却记成 %v", with.HasOrderSysID)
 	}

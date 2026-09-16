@@ -62,3 +62,9 @@ func resolveTick(c *ctp.Client, symbol string, flag float64, timeout time.Durati
 	logf("[rej] tick ⇒ %g（出处 %s）：%s", tk.Value, tk.Source, why)
 	return tk, nil
 }
+
+// nowClock 给本地时钟 HH:MM:SS —— 语料里那一栏的唯一来源。
+//
+// ⚠️ 用**本地**时钟而不是柜台时间：柜台的委托回报里没有一个可靠的墙钟字段，
+// 而这一栏要回答的是「这条观测拍在哪个时段」，本地钟足够，且它不会缺席。
+func nowClock() string { return time.Now().Format("15:04:05") }
