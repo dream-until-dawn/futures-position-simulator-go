@@ -6643,5 +6643,49 @@
 		"test": "TestCloseFeeRegisteredRunsBeforeConnect",
 		"want": "找不到 closeFeeRegistered 的调用",
 		"expect": "red"
+	},
+	{
+		"name": "672 #5 判定从「相等」放宽成「差 0.001 以内」（旧线索那种 +0.027 会被凑成 i-t 的 +0.028）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settleresidual.go",
+		"old": "\t\tif p, ok := preds[name]; ok && p.Round(6).Equal(r) {",
+		"new": "\t\tif p, ok := preds[name]; ok && p.Round(6).Sub(r).Abs().LessThanOrEqual(decimal.RequireFromString(\"0.001\")) {",
+		"pkg": ".",
+		"test": "TestSettleVerdictIsEqualityNotNearest",
+		"want": "不往最近的凑",
+		"expect": "red"
+	},
+	{
+		"name": "673 #5 判法用 OpenCost 当盯市基线（跨两次结算的昨仓会把已兑现的浮盈再算一遍）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settleresidual.go",
+		"old": "\t\tcost, _ := p[\"PositionCost\"].(float64)",
+		"new": "\t\tcost, _ := p[\"OpenCost\"].(float64)",
+		"pkg": ".",
+		"test": "TestSettleResidualReproducesTheLeadOf5",
+		"want": "判法与当初手算的不是同一个东西",
+		"expect": "red"
+	},
+	{
+		"name": "674 #5 判法漏掉过夜腿的盯市盈亏（只剩账户四项）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settleresidual.go",
+		"old": "\t\tif l.Long {\n\t\t\tpredicted = predicted.Add(mv.Sub(l.PositionCost))",
+		"new": "\t\tif false {\n\t\t\tpredicted = predicted.Add(mv.Sub(l.PositionCost))",
+		"pkg": ".",
+		"test": "TestSettleResidualReproducesTheLeadOf5",
+		"want": "判法与当初手算的不是同一个东西",
+		"expect": "red"
+	},
+	{
+		"name": "675 次日缺结算价时补一个 0（不报错，残差就吞下整个持仓市值）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settleresidual.go",
+		"old": "\t\tq, ok := next.Quotes[sym]\n\t\tif !ok {",
+		"new": "\t\tq, ok := next.Quotes[sym]\n\t\tif !ok && false {",
+		"pkg": ".",
+		"test": "TestSettleInputRefusesToFillIn",
+		"want": "次日缺行情应当报错",
+		"expect": "red"
 	}
 ]
