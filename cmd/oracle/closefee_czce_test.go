@@ -1,6 +1,9 @@
 package main
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -150,5 +153,55 @@ func TestCloseFeeRegisteredBeforeTrading(t *testing.T) {
 		if (err == nil) != c.want {
 			t.Errorf("⚠️ %s %s：放行=%v，应为 %v（%v）", c.ex, c.m, err == nil, c.want, err)
 		}
+	}
+}
+
+// TestCloseFeeRegisteredRunsBeforeConnect 是「没登记就拒跑」的**接线测试**：那道判定必须排在连柜台之前。
+//
+// ⚠️ 判定函数全绿、忘了接线的表现是「一切正常」—— 郑商所 X1 照样跑完、照样打印一串候选，
+// 只是那串候选是大商所的 a/b/c：名字对得上、意思对不上。排在 Connect 之后同样不够：
+// 那时已经连上柜台，下一步就是下单。
+func TestCloseFeeRegisteredRunsBeforeConnect(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "closefee.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fn *ast.FuncDecl
+	for _, d := range f.Decls {
+		if fd, ok := d.(*ast.FuncDecl); ok && fd.Name.Name == "runCTPCloseFee" {
+			fn = fd
+		}
+	}
+	if fn == nil {
+		t.Fatal("⚠️ 找不到 runCTPCloseFee —— 它改名了，本条守卫失效")
+	}
+	guard, connect := token.NoPos, token.NoPos
+	ast.Inspect(fn, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch fun := call.Fun.(type) {
+		case *ast.Ident:
+			if fun.Name == "closeFeeRegistered" && guard == token.NoPos {
+				guard = call.Pos()
+			}
+		case *ast.SelectorExpr:
+			if fun.Sel.Name == "Connect" && connect == token.NoPos {
+				connect = call.Pos()
+			}
+		}
+		return true
+	})
+	if guard == token.NoPos {
+		t.Fatal("⚠️ runCTPCloseFee 里找不到 closeFeeRegistered 的调用 —— 没登记候选的交易所会照跑")
+	}
+	if connect == token.NoPos {
+		t.Fatal("⚠️ 找不到 Connect 调用 —— 本条守卫在空转")
+	}
+	if guard > connect {
+		t.Errorf("⚠️ closeFeeRegistered 排在 Connect 之后（%s vs %s）—— 连上柜台之后再拒，已经晚了",
+			fset.Position(guard), fset.Position(connect))
 	}
 }

@@ -6588,5 +6588,60 @@
 		"test": "TestKQDeclaredDivergenceCoversExactlyTheClosableVsPricePairs",
 		"want": "[tick limit]",
 		"expect": "red"
+	},
+	{
+		"name": "667 郑商所候选 (b) 的 X1 预言改成平昨（看到结果之后改预言——代码与事前登记分岔）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_czce.go",
+		"old": "\t\tX1: tierToday, X2: func(bool) feeTier { return tierToday }, X0: tierToday},",
+		"new": "\t\tX1: tierYd, X2: func(bool) feeTier { return tierToday }, X0: tierToday},",
+		"pkg": ".",
+		"test": "TestCZCECandidatesMatchPreRegistration",
+		"want": "代码与登记分岔了",
+		"expect": "red"
+	},
+	{
+		"name": "668 候选判定从「等于」放宽成「差 2 以内」（落在两档之间的 4 被当成两个预言都命中）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_czce.go",
+		"old": "\t\tif delta.Equal(rate) {",
+		"new": "\t\tif delta.Sub(rate).Abs().LessThanOrEqual(decimal.NewFromInt(2)) {",
+		"pkg": ".",
+		"test": "TestCZCEExperimentsDiscriminate",
+		"want": "两档之外",
+		"expect": "red"
+	},
+	{
+		"name": "669 没事前登记候选的交易所也放行（大商所 a/b/c 被搬到别的交易所上打印）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_czce.go",
+		"old": "\tcase exchange == \"DCE\":\n\t\treturn nil",
+		"new": "\tcase true:\n\t\treturn nil",
+		"pkg": ".",
+		"test": "TestCloseFeeRegisteredBeforeTrading",
+		"want": "放行=true，应为 false",
+		"expect": "red"
+	},
+	{
+		"name": "670 (e) 的 X0 预言改成平今（X0 就此分不开 d 与 e，三个实验合起来又不唯一）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_czce.go",
+		"old": "\t\tX1: tierYd, X2: func(bool) feeTier { return tierYd }, X0: tierYd},",
+		"new": "\t\tX1: tierYd, X2: func(bool) feeTier { return tierYd }, X0: tierToday},",
+		"pkg": ".",
+		"test": "TestCZCEExperimentsDiscriminate",
+		"want": "三个实验合起来没有唯一",
+		"expect": "red"
+	},
+	{
+		"name": "671 ctp-closefee 去掉连柜台之前那道「没登记就拒跑」",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee.go",
+		"old": "\t\tif err := closeFeeRegistered(exch, m); err != nil {\n\t\t\treturn err\n\t\t}",
+		"new": "\t\t_ = exch\n\t\t_ = m",
+		"pkg": ".",
+		"test": "TestCloseFeeRegisteredRunsBeforeConnect",
+		"want": "找不到 closeFeeRegistered 的调用",
+		"expect": "red"
 	}
 ]
