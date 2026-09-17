@@ -5101,22 +5101,22 @@
 		"expect": "red"
 	},
 	{
-		"name": "531 裸 CLOSE 超出今仓的部分不收费——少收且不报错（评审 20260915：此前改成这样全绿；20260916 §13 #21 收敛后重锚，形状不变）",
+		"name": "531 裸 CLOSE 超出今仓的部分不收费——少收且不报错（评审 20260915：此前改成这样全绿；20260916 §13 #21 收敛后重锚，形状不变）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t\treturn nil",
+		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn nil",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "两档同费率",
 		"expect": "red"
 	},
 	{
-		"name": "532 裸 CLOSE 超出今仓的部分报错——退回 §13 #21 收敛之前的「不猜」（20260916 重锚，形状不变；原来只在两档同费率时算过严）",
+		"name": "532 裸 CLOSE 超出今仓的部分报错——退回 §13 #21 收敛之前的「不猜」（20260916 重锚，形状不变；原来只在两档同费率时算过严）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t\treturn fmt.Errorf(\"过严\")",
+		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn fmt.Errorf(\"过严\")",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "收敛之后应当照收平昨档而不是报错",
@@ -6491,22 +6491,22 @@
 		"expect": "red"
 	},
 	{
-		"name": "657 裸 CLOSE 超出今仓的部分走平今档——候选 (b)「一律平今」，已被 20260917 E1 否掉",
+		"name": "657 裸 CLOSE 超出今仓的部分走平今档——候选 (b)「一律平今」，已被 20260917 E1 否掉（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t\treturn charge(types.CloseToday, rest)",
+		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseToday, rest)",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
 		"want": "Commission：本库 0.1，柜台 0.2",
 		"expect": "red"
 	},
 	{
-		"name": "658 裸 CLOSE 超出今仓的部分报错——退回收敛前，E1 那笔成交进不了门面（对拍那一侧的红）",
+		"name": "658 裸 CLOSE 超出今仓的部分报错——退回收敛前，E1 那笔成交进不了门面（对拍那一侧的红）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t\treturn fmt.Errorf(\"§13 #21 未收敛\")",
+		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
+		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn fmt.Errorf(\"§13 #21 未收敛\")",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
 		"want": "那笔成交进不了门面",
@@ -6686,6 +6686,17 @@
 		"pkg": ".",
 		"test": "TestSettleInputRefusesToFillIn",
 		"want": "次日缺行情应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "676 没有观测的交易所上两档不同时不再整笔报错（郑商所 X0：先按平今收平仓前今仓那一段，实测是平昨——既不报错也不对）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\tif !undatedCloseMeasuredOn(tr.Instrument.Exchange) && tiersDiffer {",
+		"new": "\tif false && !undatedCloseMeasuredOn(tr.Instrument.Exchange) && tiersDiffer {",
+		"pkg": "./",
+		"test": "TestUndatedCloseFeeTier",
+		"want": "要整笔报错不猜",
 		"expect": "red"
 	}
 ]
