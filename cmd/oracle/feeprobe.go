@@ -144,7 +144,10 @@ func runCTPFeeProbe(args []string) error {
 
 	// ⚠️ **先落盘再报错**：跑到一半失败时，已经成交的那几笔同样是 #5 的输入，丢了今晚就对不上。
 	if len(deltas) > 0 {
-		if werr := writeFeeDeltas(*dump, deltas, logf); werr != nil && runErr == nil {
+		// ⚠️ 逐笔增量落在 testdata/refdata，**不**落在截面目录：testdata/ctp 的加载器把每个 json 当截面读，
+		// 读不懂就红（那是对的）。它与拒因语料是同一类东西 —— 探针写的机器可读语料。
+		refdata := filepath.Join(filepath.Dir(*dump), "refdata")
+		if werr := writeFeeDeltas(refdata, deltas, logf); werr != nil && runErr == nil {
 			runErr = werr
 		}
 		// ⚠️ 走 dumpSlices（本包唯一的 AttachTrades 调用点）：补不上成交明细就整份不落盘。

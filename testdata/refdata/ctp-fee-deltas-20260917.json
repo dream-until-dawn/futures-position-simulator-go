@@ -1,0 +1,68 @@
+[
+  {
+    "trading_day": "20260917",
+    "at": "09:28:07",
+    "symbol": "DCE.j2701",
+    "round": 1,
+    "leg": "open",
+    "commission_before": "4.4",
+    "commission_after": "16.855000000000004",
+    "fee": "12.455000000000004",
+    "source": "probe"
+  },
+  {
+    "trading_day": "20260917",
+    "at": "09:28:08",
+    "symbol": "DCE.j2701",
+    "round": 1,
+    "leg": "close",
+    "commission_before": "16.855000000000004",
+    "commission_after": "29.304000000000006",
+    "fee": "12.449000000000002",
+    "source": "probe"
+  },
+  {
+    "trading_day": "20260917",
+    "at": "09:28:13",
+    "symbol": "DCE.j2701",
+    "round": 2,
+    "leg": "open",
+    "commission_before": "29.304000000000006",
+    "commission_after": "41.759",
+    "fee": "12.454999999999994",
+    "source": "probe"
+  },
+  {
+    "trading_day": "20260917",
+    "at": "09:28:14",
+    "symbol": "DCE.j2701",
+    "round": 2,
+    "leg": "close",
+    "commission_before": "41.759",
+    "commission_after": "54.211000000000006",
+    "fee": "12.452000000000006",
+    "source": "probe"
+  },
+  {
+    "trading_day": "20260917",
+    "at": "09:28:18",
+    "symbol": "DCE.j2701",
+    "round": 3,
+    "leg": "open",
+    "commission_before": "54.211000000000006",
+    "commission_after": "66.666",
+    "fee": "12.454999999999994",
+    "source": "probe"
+  },
+  {
+    "trading_day": "20260917",
+    "at": "09:28:19",
+    "symbol": "DCE.j2701",
+    "round": 3,
+    "leg": "close",
+    "commission_before": "66.666",
+    "commission_after": "79.118",
+    "fee": "12.452",
+    "source": "probe"
+  }
+]

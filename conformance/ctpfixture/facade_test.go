@@ -546,6 +546,24 @@ func TestFacadeFreezeRb2701AgainstCTP(t *testing.T) {
 // 每个交易所至少要有一份「换成另一个方向就对不上」的样本，否则本条只是在复述。
 func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 	ratios := map[string]string{"rb": "0.05", "m": "0.06", "ag": "0.20"} // probes.md §12
+	// ratioPending 是**已知**出现在 CTP 行情里、而比例还没有独立来源的品种 —— 逐个写理由，不是随手加名字的豁免。
+	//
+	// ⚠️ 它们进 CTP 夹具不是为了这条测试，是别的实验顺带把行情落进来的（dumpSlices 总会附上本合约行情）。
+	// 比例不许从这批 CTP 行情里反解（那样就是拿被测数据验自己），而独立来源 —— 快期夹具 —— 目前补不上：
+	// 快期 `status` 实验只把**账户上有持仓**的合约写进夹具，`-symbols` 里的只打在控制台上（20260917 试过，
+	// 控制台读数不算落盘证据）。⇒ 补法：让快期探针把 -symbols 的行情也落进夹具，再照 §12 反解。
+	// ⚠️ 表里的品种**只跳过这一条测试**；表外的新品种照样红。补上比例之后必须从这里删掉 ——
+	// 下面那道「已登记比例却还在待登记表里」的检查会红。
+	ratioPending := map[string]string{
+		"j":  "DCE.j2701：20260917 ctp-feeprobe（§13 #5 造带小数的逐笔手续费）的收尾截面顺带落了它的行情",
+		"MA": "CZCE.MA701：20260917 夜 §13 #21 在郑商所的 X1/X2/X0 截面会带它的行情（种子 20260917 日盘种下）",
+	}
+	for p := range ratioPending {
+		if _, dup := ratios[p]; dup {
+			t.Errorf("⚠️ %s 已经登记了比例，却还在 ratioPending 里 —— 豁免表烂在原地，删掉那一条", p)
+		}
+	}
+	pendingSeen := map[string]bool{}
 	other := map[types.Exchange]refdata.TickRounding{types.SHFE: refdata.TickHalfUp, types.DCE: refdata.TickFloor}
 	table := futsim.MeasuredTickRounding()
 
@@ -570,6 +588,13 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 				t.Fatal(err)
 			}
 			ratio, ok := ratios[id.Product]
+			if why, pending := ratioPending[id.Product]; !ok && pending {
+				if !pendingSeen[id.Product] {
+					t.Logf("ⓘ %s 比例待登记，本条跳过：%s", sym, why)
+					pendingSeen[id.Product] = true
+				}
+				continue
+			}
 			if !ok {
 				t.Errorf("⚠️ 行情里出现了 %s，而 probes.md §12 没有它的涨跌幅比例 —— 新样本要先登记比例，不许从这批行情反解", sym)
 				continue
