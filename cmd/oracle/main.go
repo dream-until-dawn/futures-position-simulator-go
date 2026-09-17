@@ -600,6 +600,8 @@ var ctpProtectedLegs = []safety.ProtectedLeg{
 		Why: "#4/#7 唯一的昨仓来源（交易日 20260915 跨过结算）—— 只有 ctp-closeorder 可以动它"},
 	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260916", Volume: 2,
 		Why: "§13 #21 的 E1/E2 种子（2 手，两个实验各消耗一手）—— 20260916 白天不许平，它要跨过今晚的结算才变成昨仓"},
+	{Symbol: "CZCE.MA701", Side: safety.Long, TradingDay: "20260917", Volume: 2,
+		Why: "§13 #21 往郑商所推的 X1/X2 种子（2 手：X1 消耗一手；X2 开始时还要有一手昨仓）—— 20260917 白天不许平，跨过今晚结算才变昨仓"},
 }
 
 // ⚠️ **只登记种植那一天，不登记实验那一天**（20260916 有、20260917 没有）：
