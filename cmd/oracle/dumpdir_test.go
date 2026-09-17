@@ -112,6 +112,7 @@ func TestCTPDumpDirIsWiredIntoEveryCommand(t *testing.T) {
 		{"ctp-params", runCTPParams, nil},
 		{"ctp-order", runCTPOrder, []string{"-symbol", "SHFE.rb2701"}},
 		{"ctp-roundtrip", runCTPRoundTrip, []string{"-symbol", "SHFE.rb2701"}},
+		{"ctp-feeprobe", runCTPFeeProbe, []string{"-symbol", "DCE.j2701", "-rounds", "1"}},
 	} {
 		// ⚠️ 用的正是最容易照抄错的那个路径：字面上就是 testdata/ctp，
 		// 而在 cmd/oracle 下跑时它解析到 cmd/oracle/testdata/ctp。
