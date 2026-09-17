@@ -55,6 +55,8 @@ func usage() {
                                    看收的是平今档还是平昨档。前提：今 0、昨 ≥1；种子留了 2 手，两个实验各消耗一手
   oracle ctp-priority -symbol SHFE.rb2701 -out testdata/refdata  ⚠️ 只在**报不进单的时段**跑（盘中休息）
   oracle ctp-pairs -symbol SHFE.rb2701 -out testdata/refdata     ⚠️ 只在**交易时段内**跑（与上一条相反）
+  oracle ctp-feeprobe -symbol DCE.j2701 -rounds 3 -dump ../../testdata/ctp  ⚠️ 真成交：开一手平今一手，逐笔记柜台手续费增量（§13 #5）
+  oracle settle-residual -end <D 收盘后截面> -next <D+1 截面> -mult CZCE.MA701=10 -fees 0.2,…  离线：按 §13 #5 登记的判法算残差、判候选
   oracle ctp-inst -symbols SHFE.rb2701,GFEX.si2601   ⚠️ 只读：柜台声明的最小变动价位 / 乘数
   oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
                                    ⚠️ **CTP/SimNow 侧**：查柜台**声明**的手续费率（三档各两项）。
@@ -185,6 +187,16 @@ func main() {
 		}
 	case "ctp-closefee":
 		if err := runCTPCloseFee(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "settle-residual":
+		if err := runSettleResidual(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-feeprobe":
+		if err := runCTPFeeProbe(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
@@ -600,6 +612,8 @@ var ctpProtectedLegs = []safety.ProtectedLeg{
 		Why: "#4/#7 唯一的昨仓来源（交易日 20260915 跨过结算）—— 只有 ctp-closeorder 可以动它"},
 	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260916", Volume: 2,
 		Why: "§13 #21 的 E1/E2 种子（2 手，两个实验各消耗一手）—— 20260916 白天不许平，它要跨过今晚的结算才变成昨仓"},
+	{Symbol: "CZCE.MA701", Side: safety.Long, TradingDay: "20260917", Volume: 2,
+		Why: "§13 #21 往郑商所推的 X1/X2 种子（2 手：X1 消耗一手；X2 开始时还要有一手昨仓）—— 20260917 白天不许平，跨过今晚结算才变昨仓"},
 }
 
 // ⚠️ **只登记种植那一天，不登记实验那一天**（20260916 有、20260917 没有）：

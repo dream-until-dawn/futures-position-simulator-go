@@ -321,8 +321,8 @@ func (s *Simulator) commission(tr match.Trade, todayBefore int) (decimal.Decimal
 //
 // ⚠️⚠️ **范围：只认大商所。** 证据只有 CTP 上 DCE.m2701 一手，而其他 NoUseHistory 交易所的声明费率里
 // 平今 ≠ 平昨的品种不少（ctp-commission-rates-20260915.txt：CZCE CF/OI/SF/SM/CJ 平今 0、MA 平今 6 平昨 2
-// 方向与 m 相反；GFEX ps 平今按额 0）。⇒ 郑商所、广期所及其他 NoUseHistory 交易所在「超出今仓、两档费率不同」时
-// **照旧报错不猜**，等实测。
+// 方向与 m 相反；GFEX ps 平今按额 0）。⇒ 郑商所、广期所及其他 NoUseHistory 交易所在两档费率不同时
+// **整笔报错不猜**，等实测（20260917 夜起是整笔：郑商所 X0 实测连「平仓前今仓那一段走平今」都不成立，§13 #23）。
 //
 // 范围的出处（照实写）：**使用者裁决「只认大商所」**，**双方各自确认**：
 // 评审方在评审会话里用 AskUserQuestion 向使用者本人问到（评审 20260916 夜，exp-21-seed 条件 1）；
@@ -332,6 +332,15 @@ func (s *Simulator) commission(tr match.Trade, todayBefore int) (decimal.Decimal
 // ⚠️ 收敛之前这里对所有交易所「超出今仓的那一段、两档费率又不同」都报错不猜（那一段 a、b 给不同答案）。
 // ⚠️ 只有一个柜台、一个品种、一手 ⇒ 不进 rules_measured。
 func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRates, charge func(types.Offset, int) error) error {
+	tiersDiffer := !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume)
+	// ⚠️⚠️ 没有观测的交易所上，两档不同时**整笔**报错不猜 —— 不只是「超出今仓那一段」（§13 #23）。
+	// 20260917 夜盘郑商所 X0：今1昨0 裸平1、平的是今仓，柜台收的是**平昨档** 2；而下面那段「min(平仓量, 平仓前今仓量) 走平今」会收 6。
+	// 此前这里先按平今收了那一段、剩余 0 手就直接返回 —— **既不报错也不对**。
+	if !undatedCloseMeasuredOn(tr.Instrument.Exchange) && tiersDiffer {
+		return fmt.Errorf("%s 的 %v %d 手（平仓前今仓 %d 手）：平今档与平昨档费率不同，而 %s 上裸平收哪一档没有可用的规则 —— "+
+			"§13 #21 的 (a) 只在大商所有观测（使用者裁决范围：只认大商所），且郑商所 20260918 实测连「平仓前今仓那一段走平今」都不成立（§13 #23），不猜",
+			tr.Instrument, tr.Offset, tr.Volume, todayBefore, tr.Instrument.Exchange)
+	}
 	todayPart := tr.Volume
 	if todayPart > todayBefore {
 		todayPart = todayBefore
@@ -343,15 +352,8 @@ func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRate
 	if rest == 0 {
 		return nil
 	}
-	if undatedCloseMeasuredOn(tr.Instrument.Exchange) {
-		return charge(types.CloseYesterday, rest) // §13 #21 (a)，大商所实测
-	}
-	if !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume) {
-		return fmt.Errorf("%s 的 %v %d 手里有 %d 手超出平仓前的今仓（%d 手），而平今档与平昨档费率不同 —— "+
-			"§13 #21 的 (a)「超出部分走平昨档」只在大商所有观测（使用者裁决范围：只认大商所），%s 上这一段收哪一档没有观测，不猜",
-			tr.Instrument, tr.Offset, tr.Volume, rest, todayBefore, tr.Instrument.Exchange)
-	}
-	return charge(types.CloseYesterday, rest) // 两档同费率：不论哪个候选都同值
+	// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）
+	return charge(types.CloseYesterday, rest)
 }
 
 // undatedCloseMeasuredOn 报告 §13 #21 的 (a)「超出今仓的部分走平昨档」在这个交易所上**有没有观测**。

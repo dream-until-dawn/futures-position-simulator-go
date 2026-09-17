@@ -8,6 +8,7 @@ import (
 	def "gitee.com/haifengat/goctp/ctpdefine"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe"
+	"github.com/shopspring/decimal"
 )
 
 // longSides 是某合约多头在一个时刻的**今/昨**手数。
@@ -171,6 +172,7 @@ const (
 	coStageSeedOnly   closeOrderStage = iota + 1 // ① 尚未开今仓：种子所在的那一刻
 	coStageBothSides                             // ② 今 1 + 昨 ≥1，通用平仓之前
 	coStageAfterClose                            // ③ 通用平仓之后
+	coStageAfterX0                               // ④ 郑商所：X2 消耗昨仓之后，剩下的今仓再通用平仓一手（X0）
 )
 
 // tradesExpected：① 落在开今仓之前，当日本合约还没有成交；②③ 都在开仓之后。
@@ -184,6 +186,8 @@ func (s closeOrderStage) note() string {
 		return "ctp-closeorder ②：今 1 + 昨 ≥1，**通用平仓之前**"
 	case coStageAfterClose:
 		return "ctp-closeorder ③：通用平仓（OF_Close）一手**之后**"
+	case coStageAfterX0:
+		return "ctp-closeorder ④：郑商所 X0 —— 今 1 昨 0 时再通用平仓一手**之后**（只能消耗今仓）"
 	}
 	return fmt.Sprintf("⚠️ ctp-closeorder：认不得的阶段 %d", int(s))
 }
@@ -310,6 +314,11 @@ func runCTPCloseOrder(args []string) error {
 	}
 
 	// ——— 4 通用平仓一手 ———
+	// ⚠️ 平仓前后各读一次账户手续费：郑商所上这一笔就是 §13 #21 的 X2（今1昨≥1 裸平1）。
+	accBefore, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
 	md, err := c.MarketData(*symbol, *timeout)
 	if err != nil {
 		return err
@@ -328,9 +337,39 @@ func runCTPCloseOrder(args []string) error {
 		return err
 	}
 
+	accAfter, err := c.Account(*timeout)
+	if err != nil {
+		return err
+	}
+
 	k := closeOrderVerdict(s1, s2)
 	logf("")
 	logf("%s", closeOrderDescribe(k, s1, s2))
+	if ex == "CZCE" {
+		// ⚠️ **先读消耗了哪一片，再读手续费**：(d) 的预言取决于它；消耗判不出来就不判手续费。
+		if k != coConsumedToday && k != coConsumedYesterday {
+			logf("[co] ⚠️ 消耗了哪一片没判出来 —— X2 的手续费判定不作数")
+		} else if rateToday, rateYd, rerr := closeFeeRates(c, *symbol, *timeout, logf); rerr != nil {
+			logf("[co] ⚠️ 读不到声明费率，X2 不判：%v", rerr)
+		} else {
+			delta := decimal.NewFromFloat(float64(accAfter.Commission)).Sub(decimal.NewFromFloat(float64(accBefore.Commission)))
+			alive, why, verr := czceX2(k == coConsumedYesterday, delta, rateToday, rateYd)
+			if verr != nil {
+				logf("[co] %v", verr)
+			} else {
+				logf("[co] %s", why)
+				logf("[co] ⇒ 仍然活着的候选：%v", alive)
+			}
+		}
+		// ——— 5 郑商所 X0：今 1 昨 0 时再通用平仓一手（只能消耗今仓）———
+		// ⚠️ 它分开 (d)「按消耗拆档」与 (e)「一律平昨」—— X1、X2（消耗昨仓）里两者预言完全相同。
+		// 前提不成立就不发：X2 若消耗的是今仓，账上是 今 0 昨 1，没有「只剩今仓」这一刻。
+		if k != coConsumedYesterday || s2.Today != 1 || s2.Yd != 0 {
+			logf("[co] ⓘ X0 不跑：要 X2 消耗昨仓之后恰好 今 1 / 昨 0，此刻是 今 %d / 昨 %d（判定 %d）", s2.Today, s2.Yd, int(k))
+		} else if err := runCZCEX0(c, env, ex, inst, *symbol, *dump, *timeout, logf); err != nil {
+			logf("[co] ⚠️ X0 没跑完：%v", err)
+		}
+	}
 	if s2.YdField != s1.YdField {
 		logf("ⓘ YdPosition 字段 %d→%d **动了** —— 在这个柜台上它不是日初静态值", s1.YdField, s2.YdField)
 	} else {
@@ -443,4 +482,51 @@ func closeOrderCleanup(c *ctp.Client, ex, inst string, timeout time.Duration, lo
 		return err
 	}
 	return closeTodayOnly(c, ex, inst, timeout, logf)
+}
+
+// runCZCEX0 发 X0 那一笔：今 1 昨 0 时通用平仓一手，前后读手续费、之后落盘，判 czceX0。
+//
+// ⚠️ 标志仍然必须是通用的 OF_Close（genericCloseReq）：用平今就是替柜台指定了答案。
+func runCZCEX0(c *ctp.Client, env probe.Env, ex, inst, symbol, dump string, timeout time.Duration,
+	logf func(string, ...any)) error {
+	accB, err := c.Account(timeout)
+	if err != nil {
+		return err
+	}
+	md, err := c.MarketData(symbol, timeout)
+	if err != nil {
+		return err
+	}
+	st, err := c.Insert(genericCloseReq(ex, inst, float64(md.LowerLimitPrice)), timeout)
+	if err != nil || st.VolumeTraded == 0 {
+		return fmt.Errorf("X0 通用平仓没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
+	}
+	pos, err := c.Positions(timeout)
+	if err != nil {
+		return err
+	}
+	s := longSidesOf(pos, inst)
+	logf("[co] X0 通用平仓之后：今 %d / 昨 %d", s.Today, s.Yd)
+	accA, err := c.Account(timeout)
+	if err != nil {
+		return err
+	}
+	if err := dumpSlices(c, env, dump, timeout, symbol, coStageAfterX0, logf); err != nil {
+		return err
+	}
+	if s.Today != 0 || s.Yd != 0 {
+		return fmt.Errorf("X0 之后不是 今 0 / 昨 0（今 %d / 昨 %d）—— 这一笔平的未必是那一手今仓，手续费判定不作数", s.Today, s.Yd)
+	}
+	rateToday, rateYd, err := closeFeeRates(c, symbol, timeout, logf)
+	if err != nil {
+		return err
+	}
+	delta := decimal.NewFromFloat(float64(accA.Commission)).Sub(decimal.NewFromFloat(float64(accB.Commission)))
+	alive, why, err := czceX0(delta, rateToday, rateYd)
+	if err != nil {
+		return err
+	}
+	logf("[co] %s", why)
+	logf("[co] ⇒ 仍然活着的候选：%v", alive)
+	return nil
 }

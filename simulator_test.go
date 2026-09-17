@@ -315,6 +315,23 @@ func TestUndatedCloseFeeTier(t *testing.T) {
 		t.Error("⚠️ 郑商所那一笔报错之后昨仓被消耗了")
 	}
 
+	// ⚠️⚠️ 郑商所 X0 的形状（今1昨0 裸平1，平的是今仓）：柜台实收**平昨档**（20260918 实测，§13 #23），
+	// 而「min(平仓量, 平仓前今仓量) 走平今」会收平今档 6。此前本库就是这么收的 —— 既不报错也不对。
+	// ⇒ 没有观测的交易所上两档不同时**整笔**报错不猜，不只是超出今仓那一段。
+	sz := newSim(t)
+	markOn(t, sz, simDay, "CZCE.MA2701", "3000", "3000")
+	if err := sz.ApplyTrade(simDay, trade(t, "CZCE.MA2701", types.Buy, types.Open, "3000", 1)); err != nil {
+		t.Fatal(err)
+	}
+	beforeZ := sz.Account()
+	errZ := sz.ApplyTrade(simDay, trade(t, "CZCE.MA2701", types.Sell, types.Close, "3000", 1))
+	if errZ == nil || !strings.Contains(errZ.Error(), "§13 #23") {
+		t.Errorf("⚠️ 郑商所今1昨0 裸平1、两档不同：要整笔报错不猜（实测收平昨、按平仓前今仓会收平今），得到 %v", errZ)
+	}
+	if !sameSnapshot(sz.Account(), beforeZ) {
+		t.Error("⚠️ 郑商所 X0 形状报错之后账户变了 —— 多半是先按平今收了一段")
+	}
+
 	// 反向：显式平昨照走平昨档
 	s3 := withHistory(t)
 	if err := s3.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.CloseYesterday, "3360", 1)); err != nil {
