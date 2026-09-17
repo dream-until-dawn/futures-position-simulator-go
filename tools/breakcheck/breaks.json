@@ -6656,14 +6656,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "673 #5 判法用 OpenCost 当盯市基线（跨两次结算的昨仓会把已兑现的浮盈再算一遍）",
+		"name": "673 #5 判法用 OpenCost 当盯市基线（跨两次结算的昨仓会把已兑现的浮盈再算一遍）（第一次指向历史那一对时仍然绿：那里过夜的是今仓，两种基线同值；改指带昨仓的合成样本）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/settleresidual.go",
 		"old": "\t\tcost, _ := p[\"PositionCost\"].(float64)",
 		"new": "\t\tcost, _ := p[\"OpenCost\"].(float64)",
 		"pkg": ".",
-		"test": "TestSettleResidualReproducesTheLeadOf5",
-		"want": "判法与当初手算的不是同一个东西",
+		"test": "TestSettleResidualUsesPositionCostNotOpenCost",
+		"want": "盯市基线用的不是 PositionCost",
 		"expect": "red"
 	},
 	{

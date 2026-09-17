@@ -76,3 +76,39 @@ func TestSettleInputRefusesToFillIn(t *testing.T) {
 		t.Errorf("⚠️ 两份截面同一个交易日应当报错：%v", err)
 	}
 }
+
+// TestSettleResidualUsesPositionCostNotOpenCost 用一条**昨仓**钉住盯市基线取 PositionCost。
+//
+// ⚠️ 历史那一对（TestSettleResidualReproducesTheLeadOf5）里过夜的是当天开的今仓，OpenCost == PositionCost，
+// 两种基线在它上面同值 —— 破坏 673 第一次跑就「仍然绿」，这一条是补的。
+//
+//	开仓 3000（两天前）、昨结 3100、今结 3150，多 1 手、乘数 10
+//	按 PositionCost（31000）盯市  +500   ⇒ 推算 1500
+//	按 OpenCost（30000）盯市      +1500  ⇒ 推算 2500（上一次结算已兑现的 +1000 被再算一遍）
+func TestSettleResidualUsesPositionCostNotOpenCost(t *testing.T) {
+	end := &ctp.Fixture{TradingDay: "20260917",
+		Account: map[string]any{"PreBalance": 1000.0, "Deposit": 0.0, "Withdraw": 0.0, "CloseProfit": 0.0, "Commission": 0.0},
+		Positions: map[string]map[string]any{"DCE.x2701/2/2": {
+			"Position": 1.0, "PosiDirection": "2", "OpenCost": 30000.0, "PositionCost": 31000.0}}}
+	next := &ctp.Fixture{TradingDay: "20260918",
+		Account: map[string]any{"PreBalance": 1500.0},
+		Quotes:  map[string]map[string]any{"DCE.x2701": {"PreSettlementPrice": 3150.0}}}
+	in, err := settleInputFrom(end, next, map[string]decimal.Decimal{"DCE.x2701": decimal.NewFromInt(10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pred, res := settleResidual(in)
+	if !pred.Equal(decimal.NewFromInt(1500)) || !res.IsZero() {
+		t.Errorf("⚠️ 推算 %s、残差 %s，应为 1500 / 0 —— 盯市基线用的不是 PositionCost（用 OpenCost 会得到 2500 / −1000）", pred, res)
+	}
+	// 空头同理，方向反过来
+	end.Positions["DCE.x2701/2/2"]["PosiDirection"] = "3"
+	next.Account["PreBalance"] = 500.0
+	in, err = settleInputFrom(end, next, map[string]decimal.Decimal{"DCE.x2701": decimal.NewFromInt(10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pred, res := settleResidual(in); !pred.Equal(decimal.NewFromInt(500)) || !res.IsZero() {
+		t.Errorf("⚠️ 空头：推算 %s、残差 %s，应为 500 / 0", pred, res)
+	}
+}
