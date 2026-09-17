@@ -132,6 +132,13 @@ func runCTPCloseFee(args []string) error {
 	default:
 		return fmt.Errorf("⚠️ -mode 要显式给 bare（E1 通用平仓）或 yd（E2 显式平昨）—— 两个实验分开的正是这一项")
 	}
+	if !*check {
+		// ⚠️ 在连柜台**之前**判：没有事前登记过候选的交易所，一笔都不许下（见 closeFeeRegistered）。
+		exch, _ := ctp.SplitSymbol(*symbol)
+		if err := closeFeeRegistered(exch, m); err != nil {
+			return err
+		}
+	}
 	if *dump == "" && !*check {
 		// ⚠️ 不落盘就不跑：#13 的教训是「判别性的读数躺在一个没拍下来的瞬间里」。
 		return fmt.Errorf("⚠️ -dump 没有给 —— 本命令不许只打 console：判别力在两份截面的 Commission 增量上")
@@ -215,7 +222,16 @@ func runCTPCloseFee(args []string) error {
 	}
 
 	delta := decimal.NewFromFloat(float64(acc1.Commission)).Sub(decimal.NewFromFloat(float64(acc0.Commission)))
-	alive, why := closeFeeCandidates(m, delta, rateToday, rateYd)
+	var alive []string
+	var why string
+	if ex == "CZCE" {
+		var verr error
+		if alive, why, verr = czceX1(delta, rateToday, rateYd); verr != nil {
+			return verr
+		}
+	} else {
+		alive, why = closeFeeCandidates(m, delta, rateToday, rateYd)
+	}
 	logf("")
 	logf("[cf] 手续费 %.4f → %.4f，这一笔收 %s（声明：平今档 %s / 平昨档 %s）",
 		float64(acc0.Commission), float64(acc1.Commission), delta, rateToday, rateYd)
