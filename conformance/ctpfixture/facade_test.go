@@ -560,7 +560,14 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 	ratioPending := map[string]string{
 		"j":  "DCE.j2701：20260917 ctp-feeprobe（§13 #5 造带小数的逐笔手续费）的收尾截面顺带落了它的行情",
 		"MA": "CZCE.MA701：20260917 夜 §13 #21 在郑商所的 X1/X2/X0 截面带上了它的行情（ctp-slices-20260918*）",
+		"i":  "DCE.i2701 / i2705：§13 #24 的事前登记样本（ctp-status-20260921-2）。按快期反解的 9%（kq_facts 22）五个候选都对不上，事后看像 6% —— 比例在 CTP 上没有独立来源，不许从这批行情反解",
 	}
+	// tickPending 是**合约**的最小变动价位不在规格快照（specs-20260908.json，只有少数合约）里的样本 —— 逐个写理由。
+	// ⚠️ 不从同品种别的月份借（那是推得），也不用控制台读数顶（不算落盘证据）；补上规格来源之后删掉。
+	tickPending := map[string]string{
+		"DCE.m2709": "§13 #24 的判别样本（ctp-status-20260921-2：昨结 3133 × 6% ⇒ 柜台 3320 / 2946，只有往里收对上）。判定已记在 state.md 的 #24 登记块；规格来源补上后改进 knownDivergence",
+	}
+	tickSeen := map[string]bool{}
 	for p := range ratioPending {
 		if _, dup := ratios[p]; dup {
 			t.Errorf("⚠️ %s 已经登记了比例，却还在 ratioPending 里 —— 豁免表烂在原地，删掉那一条", p)
@@ -616,6 +623,13 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 				t.Errorf("⚠️ %s 的交易所 %s 不在 MeasuredTickRounding 里", sym, id.Exchange)
 				continue
 			}
+			if why, pending := tickPending[sym]; pending {
+				if !tickSeen[sym] {
+					t.Logf("ⓘ %s 最小变动价位待登记，本条跳过：%s", sym, why)
+					tickSeen[sym] = true
+				}
+				continue
+			}
 			tick := specTick(t, sym)
 			inst := refdata.Instrument{ID: id, PriceTick: tick, PriceLimitRatio: decimal.RequireFromString(ratio), HasPriceLimitRatio: true}
 			pre := num(t, q, "PreSettlementPrice")
@@ -644,6 +658,11 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 	}
 	// 反方向：豁免表里的品种必须真在语料里出现过。否则那一条已经不豁免任何东西，
 	// 而表外看起来仍像「有个已知缺口」—— 删夹具或改名时它就这样烂在原地（评审 20260917 nit）。
+	for k, why := range tickPending {
+		if !tickSeen[k] {
+			t.Errorf("⚠️ tickPending 里的 %s 在语料里没出现 —— 删掉那一条（%s）", k, why)
+		}
+	}
 	for k, dv := range knownDivergence {
 		if !divergenceSeen[k] {
 			t.Errorf("⚠️ 已登记分歧 %s 在语料里没出现 —— 删掉那一条（%s）", k, dv.why)
