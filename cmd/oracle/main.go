@@ -476,7 +476,7 @@ func runCTPParams(args []string) error {
 	fs := flag.NewFlagSet("ctp-params", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	timeout := fs.Duration("timeout", 40*time.Second, "整条链路的超时")
-	quote := fs.String("quote", "", "同时拍一条**行情快照**，形如 SHFE.rb2701（留空则不拍）。"+
+	quote := fs.String("quote", "", "同时拍**行情快照**，形如 SHFE.rb2701，多个用逗号分隔（留空则不拍）。"+
 		"⚠️ 它补的是 probes.md §6.9 声明过的盲区：没有最新价就分不开"+
 		"「今结算价基准」与「最新价基准」——**而最该抓的一刻是开盘那一瞬**")
 	dump := fs.String("dump", "", "落盘目录（⚠️ **无默认值**；CTP 夹具只能落仓库根下的 testdata/ctp/，"+

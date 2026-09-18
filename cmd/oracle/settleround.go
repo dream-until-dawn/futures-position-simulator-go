@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/shopspring/decimal"
@@ -45,8 +46,13 @@ func settleRoundingResiduals(fees []decimal.Decimal) map[string]decimal.Decimal 
 //
 // ⚠️ 登记里写了「两个同值就在提交时说出来，不等看到结果」—— 这个函数就是说出来的那一步。
 func indistinguishable(res map[string]decimal.Decimal) [][]string {
+	return indistinguishableAmong(settleRoundingCandidates, res)
+}
+
+// indistinguishableAmong 同 indistinguishable，候选名单由调用方给（F10 补测用 settleGranularityCandidates）。
+func indistinguishableAmong(names []string, res map[string]decimal.Decimal) [][]string {
 	groups := map[string][]string{}
-	for _, name := range settleRoundingCandidates {
+	for _, name := range names {
 		k := res[name].String()
 		groups[k] = append(groups[k], name)
 	}
@@ -58,4 +64,47 @@ func indistinguishable(res map[string]decimal.Decimal) [][]string {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i][0] < out[j][0] })
 	return out
+}
+
+// settleOrder 是 F10 补测里一张单的柜台手续费增量（订单前后账户 Commission 之差）。
+type settleOrder struct {
+	Fee    decimal.Decimal
+	Volume int // 手数
+	Trades int // 成交笔数（从落盘的成交明细数出来）
+}
+
+// settleGranularityCandidates 是 F10 补测的候选（事前登记见 design.md 门面形状 §14「前置条件：补测」，提交 520be1b）。
+//
+// ⚠️ 顺序与名字是登记的一部分，TestSettleGranularityCandidatesMatchRegistration 钉住。
+var settleGranularityCandidates = []string{"iii", "i-t", "i-o", "i-l", "i-r", "i-T", "i-R"}
+
+// settleGranularityResiduals 按 F10 补测的七个候选各自预言残差。纯函数。
+//
+//	i-t  每笔成交截断到分    Σ_成交 (费 − 截断(费))
+//	i-o  每张单截断到分      Σ_单 (费 − 截断(费))
+//	i-l  每手截断到分        Σ (费 − 手数 × 截断(费 ÷ 手数))
+//
+// ⚠️ 柜台增量是**按单**读的：一张单拆成多笔成交时逐笔的费观测不到，(i-t) 算不出 —— 报错，不猜怎么拆。
+// 于是只要能算，(i-t) 与 (i-o) 必然同值；它们今天分不分得开，取决于有没有单拆成了多笔。
+// ⚠️ (i-l) 的「每手费」定义为 费 ÷ 手数（0.005 常数项按笔还是按手收未定，§13 #19）—— 这个定义本身是一个假设。
+func settleGranularityResiduals(orders []settleOrder) (map[string]decimal.Decimal, error) {
+	var fees []decimal.Decimal
+	perLot := decimal.Zero
+	for i, o := range orders {
+		if o.Volume <= 0 || o.Trades <= 0 {
+			return nil, fmt.Errorf("第 %d 张单：手数 %d、成交 %d 笔 —— 缺数不判", i+1, o.Volume, o.Trades)
+		}
+		if o.Trades > 1 {
+			return nil, fmt.Errorf("第 %d 张单拆成了 %d 笔成交 —— 逐笔的费观测不到，(i-t) 算不出；不猜怎么拆", i+1, o.Trades)
+		}
+		fees = append(fees, o.Fee)
+		v := decimal.NewFromInt(int64(o.Volume))
+		lot := o.Fee.Div(v).Truncate(2).Mul(v)
+		perLot = perLot.Add(o.Fee.Sub(lot))
+	}
+	old := settleRoundingResiduals(fees)
+	return map[string]decimal.Decimal{
+		"iii": old["iii"], "i-t": old["i-t"], "i-o": old["i-t"], "i-l": perLot,
+		"i-r": old["i-r"], "i-T": old["i-T"], "i-R": old["i-R"],
+	}, nil
 }
