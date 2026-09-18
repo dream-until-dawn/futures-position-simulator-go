@@ -6819,5 +6819,16 @@
 		"test": "TestLimitRatioFromQuotes",
 		"want": "的形状变了",
 		"expect": "red"
+	},
+	{
+		"name": "712 tickPending 不记「见过」—— 反方向检查必须能抓到登记了却不在语料里的豁免",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\t\t\t\t\ttickSeen[sym] = true\n",
+		"new": "",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "tickPending 里的",
+		"expect": "red"
 	}
 ]
