@@ -105,4 +105,6 @@ func (c *Client) Trades(time.Duration) ([]*def.CThostFtdcTradeField, error) {
 	return nil, errPlatform
 }
 
+func (c *Client) SettlementText(string, time.Duration) ([]byte, error) { return nil, errPlatform }
+
 func (c *Client) CancelByOrder(*def.CThostFtdcOrderField) error { return errPlatform }

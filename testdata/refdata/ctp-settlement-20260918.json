@@ -1,0 +1,103 @@
+{
+  "source": "ctp-settle-trades（结算单白名单列）",
+  "summary": {
+    "Balance B/F": "19997514.88",
+    "Balance C/F": "19995806.40",
+    "Commission": "108.48",
+    "MTM P/L": "-340.00",
+    "Realized P/L": "-1260.00"
+  },
+  "trades": [
+    {
+      "Date": "20260918",
+      "Fee": "2.00",
+      "Instrument": "MA701",
+      "Lots": "1",
+      "Price": "2984.000",
+      "Realized P/L": "-410.00",
+      "Turnover": "29840.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "2.00",
+      "Instrument": "MA701",
+      "Lots": "1",
+      "Price": "2987.000",
+      "Realized P/L": "0.00",
+      "Turnover": "29870.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "6.00",
+      "Instrument": "MA701",
+      "Lots": "1",
+      "Price": "2984.000",
+      "Realized P/L": "-410.00",
+      "Turnover": "29840.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "2.00",
+      "Instrument": "MA701",
+      "Lots": "1",
+      "Price": "2983.000",
+      "Realized P/L": "-40.00",
+      "Turnover": "29830.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "2.00",
+      "Instrument": "MA701",
+      "Lots": "1",
+      "Price": "2991.000",
+      "Realized P/L": "0.00",
+      "Turnover": "29910.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "23.58",
+      "Instrument": "j2701",
+      "Lots": "2",
+      "Price": "1965.000",
+      "Realized P/L": "0.00",
+      "Turnover": "393000.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "23.57",
+      "Instrument": "j2701",
+      "Lots": "2",
+      "Price": "1964.000",
+      "Realized P/L": "-200.00",
+      "Turnover": "392800.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "23.57",
+      "Instrument": "j2701",
+      "Lots": "2",
+      "Price": "1964.000",
+      "Realized P/L": "0.00",
+      "Turnover": "392800.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "23.56",
+      "Instrument": "j2701",
+      "Lots": "2",
+      "Price": "1963.000",
+      "Realized P/L": "-200.00",
+      "Turnover": "392600.00"
+    },
+    {
+      "Date": "20260918",
+      "Fee": "0.20",
+      "Instrument": "m2701",
+      "Lots": "1",
+      "Price": "3449.000",
+      "Realized P/L": "0.00",
+      "Turnover": "34490.00"
+    }
+  ],
+  "trading_day": "20260918"
+}

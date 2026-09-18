@@ -6984,5 +6984,27 @@
 		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
 		"want": "tickPending 里的",
 		"expect": "red"
+	},
+	{
+		"name": "713 结算单按行过滤不丢含投资者代码的行（抬头那一行原样打印出去）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settletrades.go",
+		"old": "\t\tif !drop {\n\t\t\tout = append(out, s)\n\t\t}",
+		"new": "\t\tif !drop || drop {\n\t\t\tout = append(out, s)\n\t\t}",
+		"pkg": ".",
+		"test": "TestASCIILinesDropsForbiddenAndNonASCII",
+		"want": "含投资者代码的行没被丢掉",
+		"expect": "red"
+	},
+	{
+		"name": "714 结算单成交记录不核白名单列里有没有投资者代码（表头对错列时账号照样输出）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settletrades.go",
+		"old": "\t\t\t\tif strings.Contains(v, f) {\n\t\t\t\t\treturn nil, fmt.Errorf(\"⚠️ 白名单列里出现了屏蔽词",
+		"new": "\t\t\t\tif false && strings.Contains(v, f) {\n\t\t\t\t\treturn nil, fmt.Errorf(\"⚠️ 白名单列里出现了屏蔽词",
+		"pkg": ".",
+		"test": "TestTradeRowsTakesOnlyWhitelistedColumns",
+		"want": "应当整份报错",
+		"expect": "red"
 	}
 ]

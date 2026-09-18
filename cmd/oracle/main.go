@@ -201,6 +201,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}
+	case "ctp-settle-trades":
+		if err := runCTPSettleTrades(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
 	case "ctp-feeprobe":
 		if err := runCTPFeeProbe(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)

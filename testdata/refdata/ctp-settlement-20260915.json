@@ -1,0 +1,130 @@
+{
+  "source": "ctp-settle-trades（结算单白名单列）",
+  "summary": {
+    "Balance B/F": "19997481.46",
+    "Balance C/F": "19996884.37",
+    "Commission": "12.09",
+    "MTM P/L": "0.00",
+    "Realized P/L": "-585.00"
+  },
+  "trades": [
+    {
+      "Date": "20260915",
+      "Fee": "0.20",
+      "Instrument": "m2701",
+      "Lots": "1",
+      "Price": "3360.000",
+      "Realized P/L": "0.00",
+      "Turnover": "33600.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "0.10",
+      "Instrument": "m2701",
+      "Lots": "1",
+      "Price": "3360.000",
+      "Realized P/L": "-240.00",
+      "Turnover": "33600.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "0.20",
+      "Instrument": "m2701",
+      "Lots": "1",
+      "Price": "3360.000",
+      "Realized P/L": "0.00",
+      "Turnover": "33600.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "2.32",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15457.000",
+      "Realized P/L": "0.00",
+      "Turnover": "231855.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "2.32",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15460.000",
+      "Realized P/L": "0.00",
+      "Turnover": "231900.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "0.00",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15457.000",
+      "Realized P/L": "0.00",
+      "Turnover": "231855.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "0.00",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15453.000",
+      "Realized P/L": "-105.00",
+      "Turnover": "231795.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "2.32",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15447.000",
+      "Realized P/L": "0.00",
+      "Turnover": "231705.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "0.00",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15433.000",
+      "Realized P/L": "-210.00",
+      "Turnover": "231495.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "2.32",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15441.000",
+      "Realized P/L": "0.00",
+      "Turnover": "231615.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "2.31",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15428.000",
+      "Realized P/L": "0.00",
+      "Turnover": "231420.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "0.00",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15433.000",
+      "Realized P/L": "-120.00",
+      "Turnover": "231495.00"
+    },
+    {
+      "Date": "20260915",
+      "Fee": "0.00",
+      "Instrument": "ag2702",
+      "Lots": "1",
+      "Price": "15434.000",
+      "Realized P/L": "90.00",
+      "Turnover": "231510.00"
+    }
+  ],
+  "trading_day": "20260915"
+}

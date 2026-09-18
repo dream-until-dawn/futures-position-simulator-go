@@ -620,6 +620,9 @@ D+1 日 baseline-full / close-order / yd-vs-his
            由柜台直接给出次序，不依赖任何运行开关）/
            **AttachTrades**（20260912 新增：把成交明细附进截面。
            ⚠️ 与 AttachQuote 同一条纪律：**补不上就让整份不落盘**）/
+           **SettlementText**（20260918 夜新增：查某个交易日的**结算单正文**（GBK 原始字节）。
+           ⚠️ 抬头带投资者代码与姓名 —— 调用方只许取白名单（`ctp-settle-trades`：成交记录的日期 / 合约 / 价 / 手数 / 成交额 / 手续费 / 平仓盈亏，资金摘要的几个数），
+           不许原样打印或落盘）/
            MarketData / Capture / AttachQuote / Check / Insert / Cancel / Order / Close；
            Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
 
