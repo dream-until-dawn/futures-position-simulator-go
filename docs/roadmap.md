@@ -1004,6 +1004,10 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
   ① `futsim.State` 新增 `Quotas []QuotaState`；新增导出类型 `futsim.QuotaState{Instrument, Hedge, Direction, OpenedToday, ChargedToday, ExplicitToday}`
   ② `futsim.StateFormat` 1 → 2：旧存档（含没有挂单、没有额度的）在版本号那一步报错，不迁移。⚠️ `impl-f10`（停着）原先在它的分支上也用了 2，落地时改用 3
 - 行为：大商所、郑商所的裸平按 (f) 收（此前大商所按被推翻的 (a)、郑商所两档不同时整笔报错）；广期所等照旧报错。三处外推报错不猜
+- ⚠️ **撞到一个锚点守卫的已知盲区（不修，登记）**：破坏 660 的旧锚点 `return ex == types.DCE` 恰好是新行 `return ex == types.DCE || ex == types.CZCE` 的**前缀** ——
+  `TestEveryBreakAnchorStillExists` 按子串计数，以为锚点还在；施加后成了 `return true || …`，判「红错了理由」。是单跑 701（子串匹配顺带选中 660）时撞出来的。
+  评审 20260918 审计：现有 616 个锚点里约 20% 结尾后同一行还有内容，且多是刻意的（json 半行、跨行锚点前半、带尾注释），加「锚点必须是整行」要么大面积改写、要么大面积豁免 ⇒ **不加**。
+  兜底是全量：能改到被锚定行的一定是生产代码改动，按门禁要跑全量，全量会判「红错了理由」
 - 新守卫：`TestFacadeUndatedCloseQuotaAgainstCTP`（先红后绿）、`TestTodayTierLots`、`TestUndatedCloseQuotaFullNightCZCE`、`TestQuotaRefusalsLeaveNoTrace`、`TestQuotaSurvivesStateAndResetsAtSettle`、`TestRestoreRefusesTamperedQuota`、`TestPendingBareClosesShareQuotaAtFreezeAndConsumeAtFill`；存档字段指纹 `TestStateFormatPinsFieldSet`（从 impl-f10 带过来）
 
 ### 自然日 2026-09-17 夜盘：§13 #5 命中「逐笔截断到分」；§13 #21 往郑商所推谁都没预言到 ⇒ #23
