@@ -6524,14 +6524,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "660 §13 #21 的 (a) 去掉交易所限定（一手 m2701 的观测被外推到郑商所 / 广期所，而使用者裁决只认大商所）",
+		"name": "660 实测名单去掉交易所限定（(f) 被外推到广期所等没有观测的交易所）（20260918 F11 重锚：名单扩到郑商所，原锚点成了新行的前缀、锚点守卫没发现；原意「(a) 只认大商所」）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\treturn ex == types.DCE",
+		"old": "\treturn ex == types.DCE || ex == types.CZCE",
 		"new": "\treturn true",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
-		"want": "只认大商所",
+		"want": "要报错不猜",
 		"expect": "red"
 	},
 	{
