@@ -19,6 +19,8 @@ import (
 // 第一版在这里自己写了一套 floor/ceil/round，于是本测试验的是
 // 「我在测试里写的取整能命中柜台」，而**生产代码对不对，它一个字都没说**。
 // 两个实现同一件事，一起退化时测试全绿 —— 那正是本项目反复警告的形状。
+// ⚠️ 候选集里**没有「往里收」**（涨停向下、跌停向上；refdata 还没有这种取整）⇒ 大商所那句「判出四舍五入」只是三选一的结果，
+// 这里的大商所样本同样与往里收一致（§13 #24）。能分开两者的那一份登记在 kqKnownDivergence 里。
 var candidates = []refdata.TickRounding{
 	refdata.TickFloor, refdata.TickCeil, refdata.TickHalfUp,
 }
@@ -70,7 +72,9 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 			if !pre.IsPositive() || !up.IsPositive() || !lo.IsPositive() {
 				continue
 			}
-			rows[sym] = obs{pre, up, lo, s.PriceTick}
+			// ⚠️ 按**样本**收（合约 + 昨结），不按合约名：同一合约多份夹具时，按合约名收会让后读的覆盖先读的，
+			// 20260909 那份 DCE.m2701 昨结 3415 的判别样本就这样从没被比过（§13 #24、silent-risks 101）。
+			rows[sym+"@"+pre.String()] = obs{pre, up, lo, s.PriceTick}
 		}
 	}
 	if len(rows) < 5 {
@@ -98,6 +102,12 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 		"DCE.i2701":   {"0.09", "四舍五入"},
 	}
 
+	// kqKnownDivergence 是三种候选（向下 / 向上 / 四舍五入）都命中不了的**已登记**样本：大商所的「往里收」（§13 #24）。
+	// ⚠️ 两个价都钉死；「往里收」进了候选、或样本变了，这里会红 —— 那时删掉这一条。
+	kqKnownDivergence := map[string][2]string{
+		"DCE.m2701@3415": {"3619", "3211"}, // 3415 × 1.06 = 3619.90、× 0.94 = 3210.10：涨停向下、跌停向上
+	}
+	divergenceSeen := map[string]bool{}
 	decided, ambiguous := 0, 0
 	roundingByExchange := map[string]map[string]bool{}
 	syms := make([]string, 0, len(rows))
@@ -106,8 +116,9 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 	}
 	sort.Strings(syms)
 
-	for _, sym := range syms {
-		o := rows[sym]
+	for _, key := range syms {
+		o := rows[key]
+		sym, _, _ := strings.Cut(key, "@")
 		var hits []string
 		var ratios []string
 		for r := decimal.RequireFromString("0.005"); r.LessThanOrEqual(decimal.RequireFromString("0.30")); r = r.Add(decimal.RequireFromString("0.005")) {
@@ -118,6 +129,15 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 					ratios = append(ratios, r.String())
 				}
 			}
+		}
+		if pin, known := kqKnownDivergence[key]; known {
+			divergenceSeen[key] = true
+			if len(hits) != 0 || !o.up.Equal(decimal.RequireFromString(pin[0])) || !o.lo.Equal(decimal.RequireFromString(pin[1])) {
+				t.Errorf("⚠️ 已登记分歧 %s 的形状变了：命中 %v、柜台 %s / %s（登记 %s / %s）—— 删掉这一条或重看 §13 #24", key, hits, o.up, o.lo, pin[0], pin[1])
+			} else {
+				t.Logf("ⓘ 已登记分歧 %s：三种候选都命中不了（§13 #24，往里收）", key)
+			}
+			continue
 		}
 		if len(hits) == 0 {
 			t.Errorf("⚠️ %s：没有任何 (比例, 取整) 组合能同时命中涨停 %s 与跌停 %s"+
@@ -167,13 +187,25 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 			roundingByExchange[ex][gotRound] = true
 		} else {
 			ambiguous++
-			if w.rounding != "" {
+			// 同一合约有多个样本时，分不开的样本只要求「登记的方向在命中里」
+			found := false
+			for _, h := range hits {
+				if h[len(ratio)+1:] == w.rounding {
+					found = true
+				}
+			}
+			if w.rounding != "" && !found {
 				t.Errorf("⚠️ %s 登记了取整方向 %s，而本样本命中多种 %v —— "+
 					"那意味着这个样本**分不开**它们，登记是过度断言",
 					sym, w.rounding, hits)
 			}
 		}
-		t.Logf("%-14s 比例 %-6s 取整 %v", sym, ratio, hits)
+		t.Logf("%-20s 比例 %-6s 取整 %v", key, ratio, hits)
+	}
+	for k := range kqKnownDivergence {
+		if !divergenceSeen[k] {
+			t.Errorf("⚠️ 已登记分歧 %s 在语料里没出现 —— 删掉那一条", k)
+		}
 	}
 
 	// ⚠️ 判别力：整除的合约分不开取整方向，必须有**不整除**的样本才谈得上判出来。

@@ -6797,5 +6797,27 @@
 		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
 		"want": "在语料里没出现",
 		"expect": "red"
+	},
+	{
+		"name": "696 涨跌停反解又按合约名收样本（同一合约后读覆盖先读）—— 判别样本 3415 被吞掉",
+		"dir": "",
+		"file": "conformance/fixture/limit_test.go",
+		"old": "\t\t\trows[sym+\"@\"+pre.String()] = obs{pre, up, lo, s.PriceTick}",
+		"new": "\t\t\trows[sym+\"@\"+s.PriceTick.String()] = obs{pre, up, lo, s.PriceTick}",
+		"pkg": "./conformance/fixture/",
+		"test": "TestLimitRatioFromQuotes",
+		"want": "在语料里没出现",
+		"expect": "red"
+	},
+	{
+		"name": "697 快期侧已登记分歧的柜台值钉错（假装柜台也四舍五入）—— 钉值的比较必须是活的",
+		"dir": "",
+		"file": "conformance/fixture/limit_test.go",
+		"old": "\"DCE.m2701@3415\": {\"3619\", \"3211\"},",
+		"new": "\"DCE.m2701@3415\": {\"3620\", \"3210\"},",
+		"pkg": "./conformance/fixture/",
+		"test": "TestLimitRatioFromQuotes",
+		"want": "的形状变了",
+		"expect": "red"
 	}
 ]
