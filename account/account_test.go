@@ -45,7 +45,7 @@ func TestBalanceChain(t *testing.T) {
 		{"出金 20000", func() error { return a.Withdraw(d1, d("20000")) }, "1030000"},
 		{"平仓盈亏 +3000", func() error { return a.AddCloseProfit(d1, d("3000")) }, "1033000"},
 		{"平仓盈亏 −800", func() error { return a.AddCloseProfit(d1, d("-800")) }, "1032200"},
-		{"手续费 120", func() error { return a.AddCommission(d1, d("120")) }, "1032080"},
+		{"手续费 120", func() error { return a.AddCommission(d1, d("120"), d("120")) }, "1032080"},
 		{"持仓盈亏 +5000", func() error { return a.SetPositionProfit(d1, d("5000")) }, "1037080"},
 		{"持仓盈亏改为 −2000", func() error { return a.SetPositionProfit(d1, d("-2000")) }, "1030080"},
 	}
@@ -193,7 +193,7 @@ func TestSettleCrystallizesAndResets(t *testing.T) {
 	a := newAcc(t, "1000000")
 	_ = a.Deposit(d1, d("10000"))
 	_ = a.AddCloseProfit(d1, d("2000"))
-	_ = a.AddCommission(d1, d("100"))
+	_ = a.AddCommission(d1, d("100"), d("100"))
 	_ = a.SetPositionProfit(d1, d("5000"))
 	_ = a.SetMargin(d1, d("30000"), d("30000"))
 
@@ -250,7 +250,7 @@ func TestForgotToSettleIsLoud(t *testing.T) {
 		{"入金", a.Deposit(d2, d("100"))},
 		{"出金", a.Withdraw(d2, d("100"))},
 		{"平仓盈亏", a.AddCloseProfit(d2, d("100"))},
-		{"手续费", a.AddCommission(d2, d("1"))},
+		{"手续费", a.AddCommission(d2, d("1"), d("1"))},
 		{"持仓盈亏", a.SetPositionProfit(d2, d("100"))},
 		{"保证金", a.SetMargin(d2, d("1"), d("1"))},
 		{"冻结", a.Freeze(d2, d("1"), d("0"))},
@@ -311,7 +311,7 @@ func TestRejects(t *testing.T) {
 		{"入金为负", newAcc(t, "1000").Deposit(d1, d("-1"))},
 		{"入金为零", newAcc(t, "1000").Deposit(d1, d("0"))},
 		{"出金超过可用", newAcc(t, "1000").Withdraw(d1, d("1001"))},
-		{"手续费为负", newAcc(t, "1000").AddCommission(d1, d("-1"))},
+		{"手续费为负", newAcc(t, "1000").AddCommission(d1, d("-1"), d("0"))},
 		{"保证金为负", newAcc(t, "1000").SetMargin(d1, d("-1"), d("0"))},
 		{"公司保证金低于交易所", newAcc(t, "1000").SetMargin(d1, d("10"), d("20"))},
 		{"冻结超过可用", newAcc(t, "1000").Freeze(d1, d("2000"), d("0"))},

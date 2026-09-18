@@ -68,7 +68,7 @@ func TestProductionAccountAvailableAgainstCTP(t *testing.T) {
 			must("入金", a.Deposit(day, v))
 		}
 		must("平仓盈亏", a.AddCloseProfit(day, num(t, f.Account, "CloseProfit")))
-		must("手续费", a.AddCommission(day, num(t, f.Account, "Commission")))
+		must("手续费", a.AddCommission(day, num(t, f.Account, "Commission"), num(t, f.Account, "Commission"))) // 本条只比盘中恒等式、不结算：结算口径传同值
 		must("持仓盈亏", a.SetPositionProfit(day, num(t, f.Account, "PositionProfit")))
 		must("保证金", a.SetMargin(day, num(t, f.Account, "CurrMargin"), num(t, f.Account, "ExchangeMargin")))
 		must("冻结", a.Freeze(day, num(t, f.Account, "FrozenMargin"), num(t, f.Account, "FrozenCommission")))

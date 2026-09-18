@@ -4189,6 +4189,19 @@ breakcheck 跑的是这一行：
 
 补法：没有观测的交易所上两档不同时**整笔**报错不猜（`chargeUndated` 开头），破坏 676 钉住；§13 #23 登记新的问题。
 
+**100. ⚠️ 结算口径的手续费只在结算那一刻起作用 —— 它丢了、漏记了，盘中每一个读数都对。**
+
+F10（20260918）起账户记两份手续费：盘中原样累加的 `commission`，与逐笔截断到分之后的 `settleCommission`（§13 #5，CTP 实测）。
+两者**只在结算时分岔**：次日上日结存 = 结存 + commission − settleCommission。于是三种丢法都不会在盘中露面：
+
+    存档漏了 SettleCommission      恢复后按「整笔都不计」结算 ⇒ 次日结存多出当日全部手续费
+    调用方只记了盘中那一份          同上（⇒ AddCommission 改签名，两个数必须一起给，编译期表态）
+    截断挪到结算时对合计做          每天差几分（20260917 十笔上差 0.020），方向恒定、看起来像策略的特性
+
+守卫：`TestSettleCommissionSurvivesStateRestore`（存档往返后结算与直接结算逐分相同）、`TestSettleTruncatesFeesPerTrade`（逐笔 / 合计 / 不取整三者分开点名）、
+`TestSettleTruncationAgainstCTP`（交易日 20260917 一分不差；实现前差 0.028）、`TestRestoreRefusesSettleCommissionAboveCommission`（手改的存档）。
+⚠️ 快期结算**不**截断（kq_facts 53）：本库跟 CTP，快期跨日若将来拿本库结算出的次日结存对拍，差额是声明过的口径差，不是缺陷。
+
 ## 怎么用这份清单
 
 - **动到保证金、今昨仓、结算链路的代码前**，先看第一节对应那条的守卫还在不在

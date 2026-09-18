@@ -365,10 +365,19 @@ func undatedCloseMeasuredOn(ex types.Exchange) bool {
 }
 
 // commit 把算好的数写进账户（并留下这次计价的分组分解）。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。
+//
+// commission 是**一笔成交**的手续费 —— 结算口径（逐笔截断到分，§13 #5，CTP 实测）按这一笔截，
+// 不按当日合计截：两者在 20260917 的十笔上差 0.020（design.md 门面形状 §14，F10）。
+// ⚠️ 截断在这里算、不在 commission() 里算：FreezeOf 也调 commission()，而冻结不进结算。
 func (s *Simulator) commit(day types.TradingDay, v valuation, commission, closeProfit decimal.Decimal) error {
+	atSettle, err := fee.TruncateToCent.Apply(commission)
+	if err != nil {
+		s.broken = err
+		return fmt.Errorf("⚠️ 持仓已更新而结算口径手续费算不出，模拟器失效：%w", err)
+	}
 	s.groups = v.groups
 	steps := []func() error{
-		func() error { return s.acc.AddCommission(day, commission) },
+		func() error { return s.acc.AddCommission(day, commission, atSettle) },
 		func() error { return s.acc.AddCloseProfit(day, closeProfit) },
 		func() error { return s.acc.SetMargin(day, v.marginCompany, v.marginExchange) },
 		func() error { return s.acc.SetPositionProfit(day, v.positionProfit) },

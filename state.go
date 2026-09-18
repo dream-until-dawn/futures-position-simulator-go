@@ -16,7 +16,10 @@ import (
 //
 // ⚠️ State 及其嵌套结构没有 json tag，JSON 键就是 Go 字段名：**改字段名、加删字段都要手动把这个数加一**，
 // 它不会自己跟着变（评审 20260915 要求写在这里，不只写在 design 里）。
-const StateFormat = 1
+//
+//	1  F5 起
+//	2  account.State 加 SettleCommission（F10，结算时逐笔截断到分；使用者 20260918 确认抬版本）
+const StateFormat = 2
 
 // State 是模拟器的全部状态，全是数据。小数在 JSON 里是字符串（decimal.Decimal 的默认）。
 //

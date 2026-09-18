@@ -50,7 +50,10 @@ type Account struct {
 	deposit     decimal.Decimal
 	withdraw    decimal.Decimal
 	closeProfit decimal.Decimal // 逐日盯市口径
-	commission  decimal.Decimal
+	commission  decimal.Decimal // 盘中口径：逐笔费原样累加
+	// settleCommission 是结算时计入结存的手续费：逐笔费**各自**按结算口径处理后的和（CTP 实测逐笔截断到分，§13 #5）。
+	// ⚠️ 它 ≤ commission；两者只在结算那一刻分岔，盘中的结存、可用都用 commission。
+	settleCommission decimal.Decimal
 
 	// 由门面按持仓算出后告知
 	positionProfit decimal.Decimal
@@ -178,15 +181,24 @@ func (a *Account) AddCloseProfit(day types.TradingDay, profit decimal.Decimal) e
 	return nil
 }
 
-// AddCommission 累加手续费。手续费只增不减，传负数报错。
-func (a *Account) AddCommission(day types.TradingDay, fee decimal.Decimal) error {
+// AddCommission 累加一笔成交的手续费。fee 是盘中计入的数，atSettle 是这一笔在**结算时**计入结存的数。
+//
+// ⚠️ 两个数一起给，不拆成两个方法：拆开之后漏调后一个的调用方，结算时会让这笔费**整笔**不计入 ——
+// 静默多出一整笔手续费的钱。改签名让每个调用点在编译期表态（design.md 门面形状 §14，F10）。
+// 约束 0 ≤ atSettle ≤ fee：结算口径只会把费变小（截断），不会变负、不会变大。
+// 不在结算时另行处理的调用方传 atSettle = fee。
+func (a *Account) AddCommission(day types.TradingDay, fee, atSettle decimal.Decimal) error {
 	if err := a.checkDay(day); err != nil {
 		return err
 	}
 	if fee.IsNegative() {
 		return fmt.Errorf("手续费 %s 为负 —— 返佣不在本库范围内，请在外部处理", fee)
 	}
+	if atSettle.IsNegative() || atSettle.GreaterThan(fee) {
+		return fmt.Errorf("结算时计入的手续费 %s 不在 [0, %s] 里 —— 结算口径只会把一笔费变小", atSettle, fee)
+	}
 	a.commission = a.commission.Add(fee)
+	a.settleCommission = a.settleCommission.Add(atSettle)
 	return nil
 }
 
@@ -287,11 +299,13 @@ func (a *Account) Settle(day, nextDay types.TradingDay) error {
 			a.frozenMargin, a.frozenCommission, a.frozenCash)
 	}
 
-	a.preBalance = a.Balance()
+	// ⚠️ 结存按**结算口径**的手续费算：盘中 Balance 扣的是 commission，这里把两者之差还回去（§13 #5，CTP 逐笔截断到分）
+	a.preBalance = a.Balance().Add(a.commission).Sub(a.settleCommission)
 	a.deposit = decimal.Zero
 	a.withdraw = decimal.Zero
 	a.closeProfit = decimal.Zero
 	a.commission = decimal.Zero
+	a.settleCommission = decimal.Zero
 	a.positionProfit = decimal.Zero // 基线已推进，相对新基线的持仓盈亏为零
 	a.Day = nextDay
 	return nil
@@ -365,6 +379,9 @@ func (a *Account) Check() error {
 	}
 	if a.commission.IsNegative() {
 		return fmt.Errorf("累计手续费为负：%s", a.commission)
+	}
+	if a.settleCommission.IsNegative() || a.settleCommission.GreaterThan(a.commission) {
+		return fmt.Errorf("结算口径的累计手续费 %s 不在 [0, 盘中累计 %s] 里", a.settleCommission, a.commission)
 	}
 	return nil
 }

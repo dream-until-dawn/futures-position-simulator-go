@@ -475,10 +475,10 @@
 		"expect": "red"
 	},
 	{
-		"name": "369 手续费不进账户（20260915 重锚：Rebuild 改调门面，记账链条搬进 trade.go）",
+		"name": "369 手续费不进账户（20260915 重锚：Rebuild 改调门面，记账链条搬进 trade.go）（20260918 F10 重锚：AddCommission 加了结算口径那个参数）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "func() error { return s.acc.AddCommission(day, commission) },",
+		"old": "func() error { return s.acc.AddCommission(day, commission, atSettle) },",
 		"new": "func() error { return nil },",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
@@ -6697,6 +6697,116 @@
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "要整笔报错不猜",
+		"expect": "red"
+	},
+	{
+		"name": "684 结算不看结算口径的手续费（F10）：次日上日结存又按盘中原样累加的费算",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\ta.preBalance = a.Balance().Add(a.commission).Sub(a.settleCommission)",
+		"new": "\ta.preBalance = a.Balance()",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestSettleTruncationAgainstCTP",
+		"want": "实现前差 0.028",
+		"expect": "red"
+	},
+	{
+		"name": "685 结算口径的累计结算后不清零 —— 昨天的差额次日再还一次",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\ta.commission = decimal.Zero\n\ta.settleCommission = decimal.Zero\n",
+		"new": "\ta.commission = decimal.Zero\n",
+		"pkg": "./account/",
+		"test": "TestSettleUsesSettleCommission",
+		"want": "结算口径的累计没清零",
+		"expect": "red"
+	},
+	{
+		"name": "686 存档漏了 SettleCommission —— 盘中存档恢复后按「整笔都不计」结算",
+		"dir": "",
+		"file": "account/state.go",
+		"old": "Commission: a.commission, SettleCommission: a.settleCommission, PositionProfit:",
+		"new": "Commission: a.commission, PositionProfit:",
+		"pkg": "./",
+		"test": "TestSettleCommissionSurvivesStateRestore",
+		"want": "没进存档",
+		"expect": "red"
+	},
+	{
+		"name": "687 恢复时不读 SettleCommission",
+		"dir": "",
+		"file": "account/state.go",
+		"old": "\ta.settleCommission = st.SettleCommission\n",
+		"new": "",
+		"pkg": "./account/",
+		"test": "TestRestoreRefusesSettleCommissionAboveCommission",
+		"want": "往返",
+		"expect": "red"
+	},
+	{
+		"name": "688 不变量不管结算口径手续费的上界 —— 手改存档里比盘中还大的数被收下",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\tif a.settleCommission.IsNegative() || a.settleCommission.GreaterThan(a.commission) {",
+		"new": "\tif false {",
+		"pkg": "./account/",
+		"test": "TestRestoreRefusesSettleCommissionAboveCommission",
+		"want": "手改的存档没被拦下",
+		"expect": "red"
+	},
+	{
+		"name": "689 AddCommission 不查结算口径的范围",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\tif atSettle.IsNegative() || atSettle.GreaterThan(fee) {",
+		"new": "\tif false {",
+		"pkg": "./account/",
+		"test": "TestAddCommissionRefusesSettleOutsideFee",
+		"want": "应当报错",
+		"expect": "red"
+	},
+	{
+		"name": "690 门面不截断（结算口径 = 盘中原样）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\tatSettle, err := fee.TruncateToCent.Apply(commission)",
+		"new": "\tatSettle, err := fee.NoRounding.Apply(commission)",
+		"pkg": "./",
+		"test": "TestSettleTruncatesFeesPerTrade",
+		"want": "不取整",
+		"expect": "red"
+	},
+	{
+		"name": "691 门面按四舍五入到分而不是截断（方向错）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\tatSettle, err := fee.TruncateToCent.Apply(commission)",
+		"new": "\tatSettle, err := fee.HalfUpToCent.Apply(commission)",
+		"pkg": "./",
+		"test": "TestSettleTruncatesFeesPerTrade",
+		"want": "期望 100056.24",
+		"expect": "red"
+	},
+	{
+		"name": "692 快期口径差的声明不比较（快期改成截断了也不红）",
+		"dir": "",
+		"file": "conformance/fixture/settle_trunc_test.go",
+		"old": "\tif !pre.Equal(balance) {",
+		"new": "\tif !pre.Equal(balance.Truncate(2)) {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestKQSettleDoesNotTruncateFees",
+		"want": "快期的结算口径变了",
+		"expect": "red"
+	},
+	{
+		"name": "693 存档加了字段而 StateFormat 没抬（格式号指回 1）",
+		"dir": "",
+		"file": "state.go",
+		"old": "const StateFormat = 2",
+		"new": "const StateFormat = 1",
+		"pkg": "./",
+		"test": "TestStateFormatPinsFieldSet",
+		"want": "改了存档里的字段就要抬 StateFormat",
 		"expect": "red"
 	}
 ]

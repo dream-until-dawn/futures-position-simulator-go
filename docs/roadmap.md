@@ -998,6 +998,16 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
 ⚠️ 实现中错的两处，都是单跑破坏抓到的：584 以为零值规格会静默算出 0，跑出来是门面报「合约乘数必须为正」（红错了理由）⇒ 改名与 want 如实写；
 225 改锚点时顺手把 `new` 的形状也改了（原为「跳过并计数」，误写成「照常计数但不用」）⇒ 红错了理由，恢复原形状。**改指一条破坏只该动锚点，不该动它破坏的是什么。**
 
+### 自然日 2026-09-18：F10 —— 结算时手续费逐笔截断到分（设计 design.md 门面形状 §14）
+
+- ⚠️ **导出面 / 存档兼容性变更**（使用者 20260918 确认抬版本）：
+  ① `account.AddCommission(day, fee)` → `AddCommission(day, fee, atSettle)` —— 签名变，**不兼容**：两个数一起给，防漏调后者静默多扣
+  ② `account.State` 新增 `SettleCommission`
+  ③ `futsim.StateFormat` 1 → 2：旧存档（含没有挂单的）在版本号那一步报错，不迁移
+- 行为：盘中不变（结存 / 可用按原样累加的手续费）；结算时次日 `PreBalance` 按逐笔截断到分的手续费算（§13 #5，CTP 实测）。截断用现成的 `fee.TruncateToCent.Apply`，门面 `commit` 逐笔成交调一次
+- 快期那一侧**相反**（结算不截断，kq_facts 53）⇒ 按长期规则跟 CTP，快期侧由 `TestKQSettleDoesNotTruncateFees` 声明
+- 验收：`TestSettleTruncationAgainstCTP`（实现前差 0.028，现在一分不差）；门面 `TestSettleTruncatesFeesPerTrade`（逐笔 / 合计 / 不取整三者两两不同的一对成交）、`TestSettleCommissionSurvivesStateRestore`、`TestSettleTruncationIsIdentityOnCentFees`
+
 ### 自然日 2026-09-17 夜盘：§13 #5 命中「逐笔截断到分」；§13 #21 往郑商所推谁都没预言到 ⇒ #23
 
 **§13 #5**（事前登记 309922a / 86f7053）：次日 PreBalance 比不重新取整的推算多 +0.028，五个预言里只有「逐笔截断到分」相等。
