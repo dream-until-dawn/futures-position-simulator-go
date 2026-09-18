@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
@@ -29,8 +30,12 @@ func captureWithQuote(c *ctp.Client, timeout time.Duration, note, symbol string)
 	if err != nil {
 		return nil, err
 	}
-	if symbol != "" {
-		if err := c.AttachQuote(fx, symbol, timeout); err != nil {
+	// symbol 可以是逗号分隔的多个合约（F10 补测：次日截面要带全部过夜腿的结算价）。任何一个补不上都整份不落盘。
+	for _, s := range strings.Split(symbol, ",") {
+		if s = strings.TrimSpace(s); s == "" {
+			continue
+		}
+		if err := c.AttachQuote(fx, s, timeout); err != nil {
 			return nil, fmt.Errorf("⚠️ 行情没补上，**整份截面不落盘**："+
 				"一份缺了 quotes 的夹具与一份本来就不带 quotes 的分不开：%w", err)
 		}

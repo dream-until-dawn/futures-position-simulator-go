@@ -54,9 +54,14 @@ func settleResidual(in settleInput) (predicted, residual decimal.Decimal) {
 // ⚠️ 判「相等」不判「接近」：两边都先四舍五入到 6 位（与登记里去尾巴的规则一致）再比。
 // 一个都不等 ⇒ 返回空，调用方判 (ii) —— 不往最近的那个上凑（登记里写死的）。
 func settleVerdict(residual decimal.Decimal, preds map[string]decimal.Decimal) []string {
+	return settleVerdictAmong(settleRoundingCandidates, residual, preds)
+}
+
+// settleVerdictAmong 同 settleVerdict，候选名单由调用方给（F10 补测用 settleGranularityCandidates）。
+func settleVerdictAmong(names []string, residual decimal.Decimal, preds map[string]decimal.Decimal) []string {
 	r := residual.Round(6)
 	var out []string
-	for _, name := range settleRoundingCandidates {
+	for _, name := range names {
 		if p, ok := preds[name]; ok && p.Round(6).Equal(r) {
 			out = append(out, name)
 		}
@@ -137,12 +142,13 @@ func runSettleResidual(args []string) error {
 	endPath := fs.String("end", "", "交易日 D 收盘后的 CTP 截面（⚠️ 必填）")
 	nextPath := fs.String("next", "", "交易日 D+1 的 CTP 截面，要带过夜腿的行情（⚠️ 必填）")
 	multArg := fs.String("mult", "", "过夜腿的合约乘数，形如 CZCE.MA701=10（⚠️ 必填；不从截面反解）")
-	feesArg := fs.String("fees", "", "交易日 D 的全部逐笔手续费，逗号分隔（⚠️ 必填；合计要等于账户 Commission）")
+	feesArg := fs.String("fees", "", "交易日 D 的全部逐笔手续费，逗号分隔（合计要等于账户 Commission）；与 -orders 二选一")
+	ordersArg := fs.String("orders", "", "F10 补测：交易日 D 的全部单，形如 23.59:2:1,2:1:1（费:手数:成交笔数），按七个粒度候选判；与 -fees 二选一")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
 	}
-	if *endPath == "" || *nextPath == "" || *feesArg == "" {
-		return fmt.Errorf("⚠️ -end / -next / -fees 都没有默认值")
+	if *endPath == "" || *nextPath == "" || (*feesArg == "") == (*ordersArg == "") {
+		return fmt.Errorf("⚠️ -end / -next 没有默认值；-fees 与 -orders 恰好给一个")
 	}
 	load := func(p string) (*ctp.Fixture, error) {
 		b, err := os.ReadFile(p)
@@ -176,12 +182,35 @@ func runSettleResidual(args []string) error {
 		mult[parts[0]] = m
 	}
 	var fees []decimal.Decimal
-	for _, s := range strings.Split(*feesArg, ",") {
-		f, err := decimal.NewFromString(strings.TrimSpace(s))
-		if err != nil {
-			return err
+	var orders []settleOrder
+	if *ordersArg != "" {
+		for _, s := range strings.Split(*ordersArg, ",") {
+			p := strings.Split(strings.TrimSpace(s), ":")
+			if len(p) != 3 {
+				return fmt.Errorf("⚠️ -orders 写法不对：%q（要 费:手数:成交笔数）", s)
+			}
+			f, err := decimal.NewFromString(p[0])
+			if err != nil {
+				return err
+			}
+			var v, n int
+			if _, err := fmt.Sscan(p[1], &v); err != nil {
+				return err
+			}
+			if _, err := fmt.Sscan(p[2], &n); err != nil {
+				return err
+			}
+			orders = append(orders, settleOrder{Fee: f.Round(6), Volume: v, Trades: n})
+			fees = append(fees, f.Round(6))
 		}
-		fees = append(fees, f.Round(6))
+	} else {
+		for _, s := range strings.Split(*feesArg, ",") {
+			f, err := decimal.NewFromString(strings.TrimSpace(s))
+			if err != nil {
+				return err
+			}
+			fees = append(fees, f.Round(6))
+		}
 	}
 	in, err := settleInputFrom(end, next, mult)
 	if err != nil {
@@ -194,15 +223,21 @@ func runSettleResidual(args []string) error {
 	if !total.Equal(in.Commission.Round(6)) {
 		return fmt.Errorf("⚠️ -fees 合计 %s 不等于交易日 D 账户 Commission %s —— 逐笔费不全或多了，残差归不了因", total, in.Commission.Round(6))
 	}
-	preds := settleRoundingResiduals(fees)
+	names, preds := settleRoundingCandidates, settleRoundingResiduals(fees)
+	if orders != nil {
+		names = settleGranularityCandidates
+		if preds, err = settleGranularityResiduals(orders); err != nil {
+			return err
+		}
+	}
 	predicted, residual := settleResidual(in)
 	fmt.Printf("交易日 %s → %s\n", end.TradingDay, next.TradingDay)
 	fmt.Printf("推算（不重新取整）%s，实际 PreBalance %s ⇒ 残差 %s\n", predicted, in.NextPreBalance, residual.Round(6))
-	for _, n := range settleRoundingCandidates {
+	for _, n := range names {
 		fmt.Printf("  (%s) 预言 %s\n", n, preds[n])
 	}
-	if hit := settleVerdict(residual, preds); len(hit) == 0 {
-		fmt.Println("⇒ 五个候选**一个都不等** —— 判 (ii)，不往最近的凑（事前登记写死的）")
+	if hit := settleVerdictAmong(names, residual, preds); len(hit) == 0 {
+		fmt.Printf("⇒ %d 个候选**一个都不等** —— 判 (ii)，不往最近的凑（事前登记写死的）\n", len(names))
 	} else {
 		fmt.Printf("⇒ 命中：%v\n", hit)
 	}
