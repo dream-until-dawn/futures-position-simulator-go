@@ -93,5 +93,6 @@ func (s *Simulator) Settle(day types.TradingDay, prices map[types.InstrumentID]d
 	}
 	// ⚠️ 留下的是**次日**的分组分解：持仓与计价都已换成次日的，MarginGroups 要与它们一致
 	s.positions, s.prices, s.groups = next, nextPrices, nextVal.groups
+	s.quotas = map[quotaKey]quotaCount{} // 当日开仓额度随交易日翻过去清零（§15）
 	return nil
 }

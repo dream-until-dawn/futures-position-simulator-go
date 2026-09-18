@@ -147,13 +147,14 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 	}
 
 	commission, closeProfit := decimal.Zero, decimal.Zero
+	todayLots := 0 // 这一笔按平今档收了几手（额度记账用，§15）
 
 	switch {
 	case tr.Offset == types.Open:
 		if err := p.Open(tr.Direction, day, tr.Price, tr.Volume); err != nil {
 			return err
 		}
-		if commission, err = s.commission(tr, 0); err != nil {
+		if commission, _, err = s.commission(tr, nil); err != nil {
 			return err
 		}
 	case tr.Offset.IsClose():
@@ -168,7 +169,6 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 			}
 			order = o
 		}
-		todayBefore := p.VolumeToday(held)
 		var res position.CloseResult
 		if tr.Offset.SpecifiesPositionDate() {
 			if res, err = p.Close(held, tr.Offset, day, tr.Volume, order); err != nil {
@@ -210,7 +210,7 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 			return fmt.Errorf("%s 这笔平仓会平掉挂单冻住的手数（平后 今 %d / 昨 %d，挂单冻住 今 %d / 昨 %d）—— 挂单的成交走 Fill",
 				tr.Instrument, p.VolumeToday(held), p.VolumeHistory(held), fz.VolumeToday, fz.VolumeHistory)
 		}
-		if commission, err = s.commission(tr, todayBefore); err != nil {
+		if commission, todayLots, err = s.commission(tr, s.undatedCap(tr.Instrument, tr.Hedge, held, tr.Volume)); err != nil {
 			return err
 		}
 		legs := make([]pnl.Leg, 0, len(res.Consumed))
@@ -236,6 +236,7 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 		return err
 	}
 	s.positions = positions
+	s.bookQuota(tr, todayLots)
 	return s.commit(day, v, commission, closeProfit)
 }
 
@@ -266,23 +267,24 @@ func undatedSplit(inst types.InstrumentID, volume, today, history int, frozen or
 	return toToday, toHistory, nil
 }
 
-// commission 算一笔成交（或一笔报单按报价成交时）的手续费。
+// commission 算一笔成交（或一笔报单按报价成交时）的手续费，并返回其中按平今档收了几手（额度记账用）。
 //
-// todayBefore 是**平仓前**这一侧的今仓手数（开仓传 0）—— 裸 CLOSE 的档位由它定（§13 #21）。
+// undatedCap 只对裸 CLOSE 有用：两档费率不同时调用它取平今档手数（§13 #23 的 (f)，ApplyTrade / FreezeOf 传 undatedCap，
+// 恢复时核挂单冻结传固定的 k）；两档相同时不调用（不论哪种读法都同值，不该因为额度读法分岔而报错）。开仓与显式今昨传 nil。
 // ApplyTrade 与 FreezeOf 共用它：「这一笔收多少」只有一份定义。
-func (s *Simulator) commission(tr match.Trade, todayBefore int) (decimal.Decimal, error) {
+func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (decimal.Decimal, int, error) {
 	inst, err := s.rules.Instrument(tr.Instrument)
 	if err != nil {
-		return decimal.Zero, err
+		return decimal.Zero, 0, err
 	}
 	rates, err := s.rules.CommissionRates(tr.Instrument, tr.Hedge)
 	if err != nil {
-		return decimal.Zero, err
+		return decimal.Zero, 0, err
 	}
 	px := s.prices[tr.Instrument]
 	feePrice, err := fee.BasisPrice(s.choices.FeeBasis, tr.Price, px.pre, px.hasPre)
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("%s：%w", tr.Instrument, err)
+		return decimal.Zero, 0, fmt.Errorf("%s：%w", tr.Instrument, err)
 	}
 	total := decimal.Zero
 	charge := func(off types.Offset, vol int) error {
@@ -296,77 +298,97 @@ func (s *Simulator) commission(tr match.Trade, todayBefore int) (decimal.Decimal
 		total = total.Add(c)
 		return nil
 	}
-	if tr.Offset == types.Open {
+	todayLots := 0
+	switch {
+	case tr.Offset == types.Open:
 		err = charge(types.Open, tr.Volume)
-	} else if tr.Offset.SpecifiesPositionDate() {
+	case tr.Offset.SpecifiesPositionDate():
 		err = charge(tr.Offset, tr.Volume)
-	} else if err := chargeUndated(tr, todayBefore, rates, charge); err != nil {
-		return decimal.Zero, err
+		if tr.Offset == types.CloseToday {
+			todayLots = tr.Volume
+		}
+	default:
+		if undatedCap == nil {
+			return decimal.Zero, 0, fmt.Errorf("%s 裸 CLOSE 没给额度 —— 调用方漏传（内部错误）", tr.Instrument)
+		}
+		if todayLots, err = chargeUndated(tr, undatedCap, rates, charge); err != nil {
+			return decimal.Zero, 0, err
+		}
 	}
-	return total, err
+	if err != nil {
+		return decimal.Zero, 0, err
+	}
+	return total, todayLots, nil
 }
 
-// chargeUndated 给裸 CLOSE 与强平标志收手续费 —— 按 §13 #21 当时收敛的候选 (a)（20260917 夜盘，E1）：
+// chargeUndated 给裸 CLOSE 与强平标志收手续费，返回按平今档收了几手 —— §13 #23 的 (f)（20260918 夜盘收敛，CTP 单柜台，
+// 大商所与郑商所各一次事前登记的三笔，ctp-slices-20260921{,-2..-10}）：
 //
-//	min(平仓量, 平仓前今仓量) 走平今档，其余走平昨档 —— 「日内平仓」按**数量**认定，与消耗了哪一片无关
+//	平今档手数 = min(平仓量, 当日开仓量 − 当日已按平今档收过的手数)，其余走平昨档 —— 与平的是哪一片、平仓前今仓几手都无关
 //
-// ⚠️⚠️ **(a) 已被 §13 #23 推翻（20260918 夜盘，大商所与郑商所各一次，事前登记）**：柜台是 (f) ——
-// 平今档手数 = min(平仓量, 当日开仓量 − 当日已按平今档收过的手数)。两者在「当日开仓额度用完之后再平今仓」时分岔，
-// 本函数在那种形状上**收错档**（silent-risks 100）。⚠️ 它识别不出那种形状：要知道额度，就要记当日开仓量与已按平今档收过的手数，
-// 而门面现在没有这两个数（跨 State / Restore 也没有）⇒ 修正要先写设计、动存档格式；在那之前只能登记，不能先改成报错。
+// 额度由 cap 给（todayTierLots；三处没实测的外推在那里报错不猜，design.md 门面形状 §15）。
 //
-// 证据是同一个柜台、同一个合约上的两笔（DCE.m2701，声明 平今 0.1 / 平昨 0.2）：
+// ⚠️ 它替换的是 §13 #21 在大商所收敛的 (a)「min(平仓量, 平仓前今仓量)」：两者在大商所此前的全部观测上同值，
+// 20260918 夜盘第 3 笔（额度用完之后平剩下的今仓）第一次分岔，柜台收平昨档（silent-risks 100）。
+// ⚠️ E2（大商所显式平昨）在成交记录里被改写成 '1'，从成交记录重放时它就是一笔裸 CLOSE。
 //
-//	ctp-slices-20260915-{2,3}  今1昨1 裸平1、消耗的是昨仓，收 0.1  ⇒ 否掉「按实际消耗的明细拆档」
-//	ctp-slices-20260917{,-2}   今0昨2 裸平1，收 0.2                ⇒ 否掉 (b) 一律平今、(c) 行为平昨费率 ≠ 声明
-//
-// ⚠️ E2（今0昨1 **显式**平昨 1，ctp-slices-20260917-{3,4}）也收 0.2，与 (a) 一致，**但它不是第二次独立判别**：
-// 发出去的是 OF_CloseYesterday，成交记录里的开平标志却是 '1'（通用平仓）—— 大商所把它改写成了平仓，
-// 于是它与 E1 实际上是同一种输入。⇒ 证据是**一次**，不是两次交叉确认。
-//
-// ⚠️⚠️ **范围：只认大商所。** 证据只有 CTP 上 DCE.m2701 一手，而其他 NoUseHistory 交易所的声明费率里
-// 平今 ≠ 平昨的品种不少（ctp-commission-rates-20260915.txt：CZCE CF/OI/SF/SM/CJ 平今 0、MA 平今 6 平昨 2
-// 方向与 m 相反；GFEX ps 平今按额 0）。⇒ 郑商所、广期所及其他 NoUseHistory 交易所在两档费率不同时
-// **整笔报错不猜**，等实测（20260917 夜起是整笔：郑商所 X0 实测连「平仓前今仓那一段走平今」都不成立，§13 #23）。
-//
-// 范围的出处（照实写）：**使用者裁决「只认大商所」**，**双方各自确认**：
-// 评审方在评审会话里用 AskUserQuestion 向使用者本人问到（评审 20260916 夜，exp-21-seed 条件 1）；
-// 实现方随后在自己的会话里把「这条确认发生在评审方一侧」摆给使用者，使用者答「就是这个意思」（同夜）。
-// 对照 §13 #20：那一条「全部 NoUseHistory」同样是使用者裁决，并单独登记了「观测只覆盖大商所」。
-//
-// ⚠️ 收敛之前这里对所有交易所「超出今仓的那一段、两档费率又不同」都报错不猜（那一段 a、b 给不同答案）。
-// ⚠️ 只有一个柜台、一个品种、一手 ⇒ 不进 rules_measured。
-func chargeUndated(tr match.Trade, todayBefore int, rates refdata.CommissionRates, charge func(types.Offset, int) error) error {
+// ⚠️⚠️ **范围：大商所与郑商所**（undatedCloseMeasuredOn）。其余 NoUseHistory 交易所（广期所等）在两档费率不同时**整笔报错不猜**。
+// 两档相同时不问额度：不论哪种读法都同值，按平昨档收、记 0 手平今。
+// ⚠️ 只有一个柜台 ⇒ 不进 rules_measured。
+func chargeUndated(tr match.Trade, cap func() (int, error), rates refdata.CommissionRates, charge func(types.Offset, int) error) (int, error) {
 	tiersDiffer := !rates.CloseTodayByMoney.Equal(rates.CloseByMoney) || !rates.CloseTodayByVolume.Equal(rates.CloseByVolume)
-	// ⚠️⚠️ 没有观测的交易所上，两档不同时**整笔**报错不猜 —— 不只是「超出今仓那一段」（§13 #23）。
-	// 20260917 夜盘郑商所 X0：今1昨0 裸平1、平的是今仓，柜台收的是**平昨档** 2；而下面那段「min(平仓量, 平仓前今仓量) 走平今」会收 6。
-	// 此前这里先按平今收了那一段、剩余 0 手就直接返回 —— **既不报错也不对**。
-	if !undatedCloseMeasuredOn(tr.Instrument.Exchange) && tiersDiffer {
-		return fmt.Errorf("%s 的 %v %d 手（平仓前今仓 %d 手）：平今档与平昨档费率不同，而 %s 上裸平收哪一档没有可用的规则 —— "+
-			"§13 #21 的 (a) 只在大商所有观测（使用者裁决范围：只认大商所），且郑商所 20260918 实测连「平仓前今仓那一段走平今」都不成立（§13 #23），不猜",
-			tr.Instrument, tr.Offset, tr.Volume, todayBefore, tr.Instrument.Exchange)
+	if !tiersDiffer {
+		return 0, charge(types.CloseYesterday, tr.Volume)
 	}
-	todayPart := tr.Volume
-	if todayPart > todayBefore {
-		todayPart = todayBefore
+	if !undatedCloseMeasuredOn(tr.Instrument.Exchange) {
+		return 0, fmt.Errorf("%s 的 %v %d 手：平今档与平昨档费率不同，而 %s 上裸平收哪一档没有观测 —— "+
+			"§13 #23 的 (f) 只在大商所、郑商所实测过，不猜", tr.Instrument, tr.Offset, tr.Volume, tr.Instrument.Exchange)
 	}
-	if err := charge(types.CloseToday, todayPart); err != nil {
-		return err
+	today, err := cap()
+	if err != nil {
+		return 0, err
 	}
-	rest := tr.Volume - todayPart
-	if rest == 0 {
-		return nil
+	if err := charge(types.CloseToday, today); err != nil {
+		return 0, err
 	}
-	// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）
-	return charge(types.CloseYesterday, rest)
+	if rest := tr.Volume - today; rest > 0 {
+		if err := charge(types.CloseYesterday, rest); err != nil {
+			return 0, err
+		}
+	}
+	return today, nil
 }
 
-// undatedCloseMeasuredOn 报告 §13 #21 的 (a)「超出今仓的部分走平昨档」在这个交易所上**有没有观测**。
+// undatedCloseMeasuredOn 报告 §13 #23 的 (f) 在这个交易所上**有没有观测**。
 //
-// ⚠️ 单独立一个函数，是为了让「范围」这件事在代码里只有一处：将来补测了郑商所 / 广期所，改的是这里，
+// ⚠️ 单独立一个函数，是为了让「范围」这件事在代码里只有一处：将来补测了广期所，改的是这里，
 // 而不是在 chargeUndated 里再加一个 || —— 那样范围就散在判断条件里，读不出「它是一张实测名单」。
 func undatedCloseMeasuredOn(ex types.Exchange) bool {
-	return ex == types.DCE
+	return ex == types.DCE || ex == types.CZCE
+}
+
+// bookQuota 在一笔成交换进去之后记额度：开仓加当日开仓量；按平今档收了几手就加几手（显式平今另记一份）。
+func (s *Simulator) bookQuota(tr match.Trade, todayLots int) {
+	if s.quotas == nil {
+		s.quotas = map[quotaKey]quotaCount{}
+	}
+	if tr.Offset == types.Open {
+		k := quotaKey{tr.Instrument, tr.Hedge, tr.Direction}
+		q := s.quotas[k]
+		q.Opened += tr.Volume
+		s.quotas[k] = q
+		return
+	}
+	if todayLots == 0 {
+		return
+	}
+	k := quotaKey{tr.Instrument, tr.Hedge, opposite(tr.Direction)}
+	q := s.quotas[k]
+	q.Charged += todayLots
+	if tr.Offset == types.CloseToday {
+		q.Explicit += todayLots
+	}
+	s.quotas[k] = q
 }
 
 // commit 把算好的数写进账户（并留下这次计价的分组分解）。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。

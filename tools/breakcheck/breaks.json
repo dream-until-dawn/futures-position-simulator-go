@@ -4847,11 +4847,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "507 裸 CLOSE 消耗今仓也按平仓档收费（不拆档）（20260915 重锚：拆档被 §13 #21 否掉后改成 chargeUndated）",
+		"name": "507 裸 CLOSE 消耗今仓也按平仓档收费（不拆档）（20260915 重锚：拆档被 §13 #21 否掉后改成 chargeUndated）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\tif err := charge(types.CloseToday, todayPart); err != nil {",
-		"new": "\tif err := charge(types.CloseYesterday, todayPart); err != nil {",
+		"old": "\tif err := charge(types.CloseToday, today); err != nil {",
+		"new": "\tif err := charge(types.CloseYesterday, today); err != nil {",
 		"pkg": "./",
 		"test": "TestApplyTradeChain",
 		"want": "裸平 1 之后手续费",
@@ -5012,11 +5012,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "522 裸 CLOSE 手续费回到被否的「按消耗拆档」——今1昨1裸平1 消耗昨仓而算平昨档（§13 #21）（第一版留下未用变量，编译红）（20260915 F3 重锚：chargeUndated 的调用挪进 commission()，那里没有 res，编译红）",
+		"name": "522 裸 CLOSE 手续费回到被否的「按消耗拆档」——今1昨1裸平1 消耗昨仓而算平昨档（§13 #21）（第一版留下未用变量，编译红）（20260915 F3 重锚：chargeUndated 的调用挪进 commission()，那里没有 res，编译红）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "if commission, err = s.commission(tr, todayBefore); err != nil {",
-		"new": "if commission, err = s.commission(tr, res.VolumeToday+0*todayBefore); err != nil {",
+		"old": "\t\tif commission, todayLots, err = s.commission(tr, s.undatedCap(tr.Instrument, tr.Hedge, held, tr.Volume)); err != nil {",
+		"new": "\t\tif commission, todayLots, err = s.commission(tr, func() (int, error) { return res.VolumeToday, nil }); err != nil {",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "今1昨1裸平1",
@@ -5101,22 +5101,22 @@
 		"expect": "red"
 	},
 	{
-		"name": "531 裸 CLOSE 超出今仓的部分不收费——少收且不报错（评审 20260915：此前改成这样全绿；20260916 §13 #21 收敛后重锚，形状不变）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
+		"name": "531 裸 CLOSE 超出今仓的部分不收费——少收且不报错（评审 20260915：此前改成这样全绿；20260916 §13 #21 收敛后重锚，形状不变）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn nil",
+		"old": "\t\treturn 0, charge(types.CloseYesterday, tr.Volume)",
+		"new": "\t\treturn 0, nil",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "两档同费率",
 		"expect": "red"
 	},
 	{
-		"name": "532 裸 CLOSE 超出今仓的部分报错——退回 §13 #21 收敛之前的「不猜」（20260916 重锚，形状不变；原来只在两档同费率时算过严）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
+		"name": "532 裸 CLOSE 超出今仓的部分报错——退回 §13 #21 收敛之前的「不猜」（20260916 重锚，形状不变；原来只在两档同费率时算过严）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn fmt.Errorf(\"过严\")",
+		"old": "\t\tif err := charge(types.CloseYesterday, rest); err != nil {\n\t\t\treturn 0, err\n\t\t}",
+		"new": "\t\treturn 0, fmt.Errorf(\"过严\")",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "收敛之后应当照收平昨档而不是报错",
@@ -5486,11 +5486,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "566 裸平挂单的手续费核对形同虚设——「某种拆法算得出才放行」变成「随便哪种不报错就放行」",
+		"name": "566 裸平挂单的手续费核对形同虚设——「某种拆法算得出才放行」变成「随便哪种不报错就放行」（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "state.go",
-		"old": "if c, err := s.commission(tr, k); err == nil && c.Equal(o.Frozen.Commission) {",
-		"new": "if c, err := s.commission(tr, k); err == nil || c.Equal(o.Frozen.Commission) {",
+		"old": "if c, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil && c.Equal(o.Frozen.Commission) {",
+		"new": "if c, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil || c.Equal(o.Frozen.Commission) {",
 		"pkg": "./",
 		"test": "TestRestoreAcceptsBareCloseAfterPositionChanged",
 		"want": "裸平挂单与账户冻结手续费一起 +1 要被拒",
@@ -6491,22 +6491,22 @@
 		"expect": "red"
 	},
 	{
-		"name": "657 裸 CLOSE 超出今仓的部分走平今档——候选 (b)「一律平今」，已被 20260917 E1 否掉（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
+		"name": "657 裸 CLOSE 超出今仓的部分走平今档——候选 (b)「一律平今」，已被 20260917 E1 否掉（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseToday, rest)",
+		"old": "\t\tif err := charge(types.CloseYesterday, rest); err != nil {\n\t\t\treturn 0, err\n\t\t}",
+		"new": "\t\tif err := charge(types.CloseToday, rest); err != nil {\n\t\t\treturn 0, err\n\t\t}",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
 		"want": "Commission：本库 0.1，柜台 0.2",
 		"expect": "red"
 	},
 	{
-		"name": "658 裸 CLOSE 超出今仓的部分报错——退回收敛前，E1 那笔成交进不了门面（对拍那一侧的红）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）",
+		"name": "658 裸 CLOSE 超出今仓的部分报错——退回收敛前，E1 那笔成交进不了门面（对拍那一侧的红）（20260917 夜 §13 #23 整笔报错改动后重锚，形状不变）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn charge(types.CloseYesterday, rest)",
-		"new": "\t// 走到这里：大商所（§13 #21 (a)），或两档同费率（不论哪个候选都同值）\n\treturn fmt.Errorf(\"§13 #21 未收敛\")",
+		"old": "\t\tif err := charge(types.CloseYesterday, rest); err != nil {\n\t\t\treturn 0, err\n\t\t}",
+		"new": "\t\treturn 0, fmt.Errorf(\"§13 #21 未收敛\")",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeUndatedCloseOnYesterdayOnlyAgainstCTP",
 		"want": "那笔成交进不了门面",
@@ -6524,14 +6524,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "660 §13 #21 的 (a) 去掉交易所限定（一手 m2701 的观测被外推到郑商所 / 广期所，而使用者裁决只认大商所）",
+		"name": "660 实测名单去掉交易所限定（(f) 被外推到广期所等没有观测的交易所）（20260918 F11 重锚：名单扩到郑商所，原锚点成了新行的前缀、锚点守卫没发现；原意「(a) 只认大商所」）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\treturn ex == types.DCE",
+		"old": "\treturn ex == types.DCE || ex == types.CZCE",
 		"new": "\treturn true",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
-		"want": "只认大商所",
+		"want": "要报错不猜",
 		"expect": "red"
 	},
 	{
@@ -6689,14 +6689,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "676 没有观测的交易所上两档不同时不再整笔报错（郑商所 X0：先按平今收平仓前今仓那一段，实测是平昨——既不报错也不对）",
+		"name": "676 没有观测的交易所上两档不同时不再整笔报错（郑商所 X0：先按平今收平仓前今仓那一段，实测是平昨——既不报错也不对）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\tif !undatedCloseMeasuredOn(tr.Instrument.Exchange) && tiersDiffer {",
-		"new": "\tif false && !undatedCloseMeasuredOn(tr.Instrument.Exchange) && tiersDiffer {",
+		"old": "\tif !undatedCloseMeasuredOn(tr.Instrument.Exchange) {",
+		"new": "\tif false && !undatedCloseMeasuredOn(tr.Instrument.Exchange) {",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
-		"want": "要整笔报错不猜",
+		"want": "要报错不猜",
 		"expect": "red"
 	},
 	{
@@ -6821,14 +6821,146 @@
 		"expect": "red"
 	},
 	{
-		"name": "712 tickPending 不记「见过」—— 反方向检查必须能抓到登记了却不在语料里的豁免",
+		"name": "699 开仓不记当日开仓量 —— 额度恒为 0，今1昨1 裸平收成平昨档",
 		"dir": "",
-		"file": "conformance/ctpfixture/facade_test.go",
-		"old": "\t\t\t\t\ttickSeen[sym] = true\n",
-		"new": "",
+		"file": "trade.go",
+		"old": "\t\tq.Opened += tr.Volume",
+		"new": "\t\tq.Opened += 0*tr.Volume",
 		"pkg": "./conformance/ctpfixture/",
-		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
-		"want": "tickPending 里的",
+		"test": "TestFacadeUndatedCloseQuotaAgainstCTP",
+		"want": "第 1 笔裸平：本库收",
+		"expect": "red"
+	},
+	{
+		"name": "700 按平今档收了不扣额度 —— 额度用不完，第 3 笔仍收平今（退回 (a) 的形状）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\tq.Charged += todayLots",
+		"new": "\tq.Charged += 0*todayLots",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeUndatedCloseQuotaAgainstCTP",
+		"want": "第 3 笔裸平：本库收",
+		"expect": "red"
+	},
+	{
+		"name": "701 结算不清零额度 —— 昨天的开仓让今天的裸平收平今档",
+		"dir": "",
+		"file": "settle.go",
+		"old": "\ts.quotas = map[quotaKey]quotaCount{} // 当日开仓额度随交易日翻过去清零（§15）\n",
+		"new": "",
+		"pkg": "./",
+		"test": "TestQuotaSurvivesStateAndResetsAtSettle",
+		"want": "额度没随交易日清零",
+		"expect": "red"
+	},
+	{
+		"name": "702 存档不带额度计数",
+		"dir": "",
+		"file": "state.go",
+		"old": "\t\tif q == (quotaCount{}) {",
+		"new": "\t\tif true {",
+		"pkg": "./",
+		"test": "TestQuotaSurvivesStateAndResetsAtSettle",
+		"want": "存档里的额度计数",
+		"expect": "red"
+	},
+	{
+		"name": "703 恢复不读额度计数",
+		"dir": "",
+		"file": "state.go",
+		"old": "\t\ts.quotas[k] = quotaCount{Opened: q.OpenedToday, Charged: q.ChargedToday, Explicit: q.ExplicitToday}",
+		"new": "\t\t_ = k",
+		"pkg": "./",
+		"test": "TestQuotaSurvivesStateAndResetsAtSettle",
+		"want": "额度计数丢了",
+		"expect": "red"
+	},
+	{
+		"name": "704 恢复不核「显式 ≤ 已收平今 ≤ 当日开仓」",
+		"dir": "",
+		"file": "state.go",
+		"old": "\t\tif q.ExplicitToday < 0 || q.ExplicitToday > q.ChargedToday || q.ChargedToday > q.OpenedToday {",
+		"new": "\t\tif false {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedQuota",
+		"want": "额度计数不成立",
+		"expect": "red"
+	},
+	{
+		"name": "705 恢复不核「今仓 ≤ 当日开仓」—— 丢了额度计数的存档被收下",
+		"dir": "",
+		"file": "state.go",
+		"old": "if today, opened := p.VolumeToday(dir), s.quotaOf(key.inst, key.hedge, dir).Opened; today > opened {",
+		"new": "if today, opened := p.VolumeToday(dir), s.quotaOf(key.inst, key.hedge, dir).Opened; false && today > opened {",
+		"pkg": "./",
+		"test": "TestRestoreRefusesTamperedQuota",
+		"want": "额度计数丢了",
+		"expect": "red"
+	},
+	{
+		"name": "706 多手裸平、部分额度不再报错（按某种拆法静默收）",
+		"dir": "",
+		"file": "quota.go",
+		"old": "\t\tif q > 0 && q < vol {",
+		"new": "\t\tif false && q > 0 && q < vol {",
+		"pkg": "./",
+		"test": "TestTodayTierLots",
+		"want": "介于 0 与平仓量之间",
+		"expect": "red"
+	},
+	{
+		"name": "707 读法分岔不再报错（显式平今 / 反方向静默按第一种读法收）",
+		"dir": "",
+		"file": "quota.go",
+		"old": "\t\tif t != lots {",
+		"new": "\t\tif false && t != lots {",
+		"pkg": "./",
+		"test": "TestTodayTierLots",
+		"want": "显式平今扣不扣额度",
+		"expect": "red"
+	},
+	{
+		"name": "708 显式平今不另记 —— 「扣不扣额度」两种读法永远同值，分岔不再被发现",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\tq.Explicit += todayLots",
+		"new": "\t\tq.Explicit += 0*todayLots",
+		"pkg": "./",
+		"test": "TestQuotaRefusalsLeaveNoTrace",
+		"want": "显式平今之后",
+		"expect": "red"
+	},
+	{
+		"name": "709 挂单冻结退回按平仓前今仓算档 —— 额度用掉之后仍按平今冻",
+		"dir": "",
+		"file": "submit.go",
+		"old": "s.commission(tr, s.undatedCap(req.Instrument, req.Hedge, opposite(req.Direction), req.Volume))",
+		"new": "s.commission(tr, func() (int, error) { return today, nil })",
+		"pkg": "./",
+		"test": "TestPendingBareClosesShareQuotaAtFreezeAndConsumeAtFill",
+		"want": "冻结没看额度",
+		"expect": "red"
+	},
+	{
+		"name": "710 实测名单退回只认大商所 —— 郑商所两档不同又整笔报错",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\treturn ex == types.DCE || ex == types.CZCE",
+		"new": "\treturn ex == types.DCE",
+		"pkg": "./",
+		"test": "TestUndatedCloseQuotaFullNightCZCE",
+		"want": "第 1 步",
+		"expect": "red"
+	},
+	{
+		"name": "711 存档加了 Quotas 而 StateFormat 没抬（格式号指回 1）",
+		"dir": "",
+		"file": "state.go",
+		"old": "const StateFormat = 2",
+		"new": "const StateFormat = 1",
+		"pkg": "./",
+		"test": "TestStateFormatPinsFieldSet",
+		"want": "改了存档里的字段就要抬 StateFormat",
 		"expect": "red"
 	},
 	{
@@ -6840,6 +6972,17 @@
 		"pkg": ".",
 		"test": "TestSettleRealPairsKeepTheirVerdicts",
 		"want": "20260918→20260921：推算",
+		"expect": "red"
+	},
+	{
+		"name": "712 tickPending 不记「见过」—— 反方向检查必须能抓到登记了却不在语料里的豁免",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\t\t\t\t\ttickSeen[sym] = true\n",
+		"new": "",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "tickPending 里的",
 		"expect": "red"
 	}
 ]
