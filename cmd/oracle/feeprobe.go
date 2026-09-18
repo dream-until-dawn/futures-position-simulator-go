@@ -24,6 +24,9 @@ type feeDelta struct {
 	Symbol     string `json:"symbol"`
 	Round      int    `json:"round"`
 	Leg        string `json:"leg"` // open / close
+	// Volume 是这一张单的手数（20260918 起；此前的文件没有这一项，读作 0 = 一手）。
+	// ⚠️ F10 补测要分「每笔成交 / 每张单 / 每手」截断，手数是 (i-l) 的输入。
+	Volume int `json:"volume,omitempty"`
 	// Before / After / Fee 用字符串：float64 的 JSON 会把 9.603 写成 9.602999999999999 这类，而判的正是小数位。
 	Before string `json:"commission_before"`
 	After  string `json:"commission_after"`
@@ -47,7 +50,8 @@ func runCTPFeeProbe(args []string) error {
 	fs := flag.NewFlagSet("ctp-feeprobe", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 DCE.j2701（⚠️ 无默认值：会真的成交）")
-	rounds := fs.Int("rounds", 0, "做几个「开一手、平今一手」（⚠️ 无默认值）")
+	rounds := fs.Int("rounds", 0, "做几个「开 N 手、平今 N 手」（⚠️ 无默认值）")
+	volume := fs.Int("volume", 1, "每张单几手（F10 补测分粒度用 2；受 PROBE_MAX_VOLUME 约束）")
 	dump := fs.String("dump", "", "落盘目录（⚠️ 必填；只能是仓库根下的 testdata/ctp）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
@@ -65,6 +69,8 @@ func runCTPFeeProbe(args []string) error {
 		return fmt.Errorf("⚠️ -symbol 没有默认值：本命令会真的成交")
 	case *rounds <= 0:
 		return fmt.Errorf("⚠️ -rounds 没有默认值")
+	case *volume <= 0:
+		return fmt.Errorf("⚠️ -volume 要为正")
 	case *dump == "":
 		return fmt.Errorf("⚠️ -dump 没有给 —— 逐笔费用不许只打 console")
 	}
@@ -96,7 +102,7 @@ func runCTPFeeProbe(args []string) error {
 	record := func(round int, leg string, before, after float64) {
 		d := commissionDelta(before, after)
 		deltas = append(deltas, feeDelta{TradingDay: c.TradingDay(), At: nowClock(), Symbol: *symbol,
-			Round: round, Leg: leg, Before: decimal.NewFromFloat(before).String(),
+			Round: round, Leg: leg, Volume: *volume, Before: decimal.NewFromFloat(before).String(),
 			After: decimal.NewFromFloat(after).String(), Fee: d.String(), Source: "probe"})
 		logf("[fee] 第 %d 轮 %s：手续费 %s → %s，这一笔 %s", round, leg,
 			decimal.NewFromFloat(before), decimal.NewFromFloat(after), d)
@@ -115,9 +121,9 @@ func runCTPFeeProbe(args []string) error {
 		}
 		st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
-			Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, *timeout)
-		if err != nil || st.VolumeTraded != 1 {
-			runErr = fmt.Errorf("第 %d 轮开仓没成交一手：status=%q %s err=%v", r, string(st.Status), st.StatusMsg, err)
+			Volume: *volume, LimitPrice: float64(md.UpperLimitPrice)}, *timeout)
+		if err != nil || int(st.VolumeTraded) != *volume {
+			runErr = fmt.Errorf("第 %d 轮开仓没成交 %d 手：status=%q %s err=%v", r, *volume, string(st.Status), st.StatusMsg, err)
 			break
 		}
 		a1, err := c.Account(*timeout)
@@ -128,10 +134,10 @@ func runCTPFeeProbe(args []string) error {
 		record(r, "open", float64(a0.Commission), float64(a1.Commission))
 		cs, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-			Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
-		if err != nil || cs.VolumeTraded != 1 {
-			runErr = fmt.Errorf("⚠️⚠️ 第 %d 轮平今没成交一手，**账上留着一手今仓** —— 跑 `ctp-flatten -symbol %s`：status=%q %s err=%v",
-				r, *symbol, string(cs.Status), cs.StatusMsg, err)
+			Volume: *volume, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
+		if err != nil || int(cs.VolumeTraded) != *volume {
+			runErr = fmt.Errorf("⚠️⚠️ 第 %d 轮平今没成交 %d 手，**账上留着今仓** —— 跑 `ctp-flatten -symbol %s`：status=%q %s err=%v",
+				r, *volume, *symbol, string(cs.Status), cs.StatusMsg, err)
 			break
 		}
 		a2, err := c.Account(*timeout)
