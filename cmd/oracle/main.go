@@ -621,9 +621,9 @@ var ctpProtectedLegs = []safety.ProtectedLeg{
 	{Symbol: "CZCE.MA701", Side: safety.Long, TradingDay: "20260917", Volume: 2,
 		Why: "§13 #21 往郑商所推的 X1/X2 种子（2 手：X1 消耗一手；X2 开始时还要有一手昨仓）—— 20260917 白天不许平，跨过今晚结算才变昨仓"},
 	{Symbol: "DCE.m2701", Side: safety.Long, TradingDay: "20260918", Volume: 1,
-		Why: "§13 #23 的 ctp-quota 种子（今晚要恰好昨 1）—— 20260918 白天不许平，跨过今晚结算才变昨仓"},
+		Why: "§13 #23 的 ctp-quota 种子（今晚要恰好昨 1）—— 20260918 白天不许平；今天 15:00 收盘后结算，今晚夜盘已是交易日 20260921，它在那时是昨仓"},
 	{Symbol: "CZCE.MA701", Side: safety.Long, TradingDay: "20260918", Volume: 1,
-		Why: "§13 #23 的 ctp-quota 种子（今晚要恰好昨 1）—— 20260918 白天不许平，跨过今晚结算才变昨仓"},
+		Why: "§13 #23 的 ctp-quota 种子（今晚要恰好昨 1）—— 20260918 白天不许平；今天 15:00 收盘后结算，今晚夜盘已是交易日 20260921，它在那时是昨仓"},
 }
 
 // ⚠️ **只登记种植那一天，不登记实验那一天**（20260916 有、20260917 没有）：
