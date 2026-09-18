@@ -58,11 +58,121 @@ func asciiLines(raw []byte, forbidden []string) ([]string, error) {
 
 var englishWord = regexp.MustCompile(`[A-Za-z]{4,}`)
 
+// gbkCells 把结算单的一行（GBK 原始字节）按 '|' 切成格。纯函数。
+//
+// ⚠️ 不能直接按 0x7C 切：GBK 双字节字符的第二个字节范围是 0x40–0xFE，**包括 0x7C**。
+// 所以先按 GBK 规则成对读（首字节 0x81–0xFE 就连下一个字节一起吃掉），只有落在单字节位置上的 0x7C 才是分隔符。
+func gbkCells(line []byte) [][]byte {
+	var cells [][]byte
+	var cur []byte
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		if c >= 0x81 && c <= 0xFE && i+1 < len(line) {
+			cur = append(cur, c, line[i+1])
+			i++
+			continue
+		}
+		if c == '|' {
+			cells = append(cells, bytes.TrimSpace(cur))
+			cur = nil
+			continue
+		}
+		cur = append(cur, c)
+	}
+	return append(cells, bytes.TrimSpace(cur))
+}
+
 var legendLine = regexp.MustCompile(`^---[A-Za-z]`)
 
 // tradeColumns 是成交记录里**允许输出**的列（白名单）。⚠️ tradingcode 与 AccountID 两列是投资者代码，不在里面。
-// ⚠️ Exchange / B/S / O/C 三列在结算单里是中文，ASCII 过滤后是空串 —— 不取（取了会像「柜台给的是空」）。
-var tradeColumns = []string{"Date", "Instrument", "Price", "Lots", "Turnover", "Fee", "Realized P/L"}
+// tradeColumns 是成交记录里**允许输出**的列（白名单）。⚠️ tradingcode 与 AccountID 两列是投资者代码，不在里面。
+// Exchange / B/S / S/H / O/C 四列是中文：按 settleVocab 的固定词表映射成代码，不认识的值报错（评审 20260918：不整列丢，也不带进自由文本）。
+var tradeColumns = []string{"Date", "Exchange", "Instrument", "B/S", "S/H", "Price", "Lots", "Turnover", "O/C", "Fee", "Realized P/L"}
+
+// settleVocab 是结算单四列中文取值（GBK 字节）→ 代码的固定词表。只收**实际在结算单里出现过**的
+// （20260911 / 14 / 15 / 17 / 18 五份）；能源中心、中金所、广期所没见过，不猜它们在结算单上怎么写。
+var settleVocab = map[string]map[string]string{
+	"Exchange": {"\xb4\xf3\xc9\xcc\xcb\xf9": "DCE", "\xc9\xcf\xc6\xda\xcb\xf9": "SHFE", "\xd6\xa3\xc9\xcc\xcb\xf9": "CZCE"},       // 大商所 上期所 郑商所
+	"B/S":      {"\xc2\xf2": "Buy", "\xc2\xf4": "Sell"},                                                                           // 买 卖
+	"S/H":      {"\xcd\xb6\xbb\xfa": "Speculation", "\xd2\xbb\xb0\xe3": "General"},                                                // 投机 一般
+	"O/C":      {"\xbf\xaa": "Open", "\xc6\xbd": "Close", "\xc6\xbd\xbd\xf1": "CloseToday", "\xc6\xbd\xd7\xf2": "CloseYesterday"}, // 开 平 平今 平昨
+}
+
+// tradeRows 从结算单成交记录一节取白名单列。纯函数。直接在 GBK 原始字节上按格切（gbkCells），按表头名取列：
+// 英文 / 数字列只留 ASCII；四列中文按 settleVocab 映射，不认识就报错；输出前逐格断言不含任何屏蔽词。
+func tradeRows(raw []byte, forbidden []string) ([]map[string]string, error) {
+	for _, f := range forbidden {
+		if f == "" {
+			return nil, fmt.Errorf("⚠️ 屏蔽词里有空串 —— 凭据没读到？不往下走")
+		}
+	}
+	var header []string
+	var rows []map[string]string
+	in := false
+	for _, ln := range bytes.Split(raw, []byte("\n")) {
+		ln = bytes.TrimRight(ln, "\r")
+		t := bytes.TrimSpace(ln)
+		if !in {
+			in = bytes.Contains(ln, []byte("Transaction Record"))
+			continue
+		}
+		if legendLine.Match(t) || bytes.Contains(t, []byte("Position Closed")) { // 图例行（---INE ---SHFE …）是一节的尾巴；纯短横线是分隔线，不是
+			break
+		}
+		if !bytes.HasPrefix(t, []byte("|")) {
+			continue
+		}
+		cells := gbkCells(bytes.Trim(t, "|"))
+		if header == nil {
+			if len(cells) > 0 && string(cells[0]) == "Date" {
+				for _, c := range cells {
+					header = append(header, string(c))
+				}
+			}
+			continue
+		}
+		if len(cells) != len(header) || !bytes.HasPrefix(cells[0], []byte("20")) {
+			continue // 合计行、分隔行
+		}
+		row := map[string]string{}
+		for i, h := range header {
+			for _, w := range tradeColumns {
+				if h != w {
+					continue
+				}
+				if vocab, ok := settleVocab[h]; ok {
+					code, known := vocab[string(cells[i])]
+					if !known {
+						return nil, fmt.Errorf("⚠️ 成交记录 %s 列有词表外的取值（%x）—— 不猜，先把它加进 settleVocab", h, cells[i])
+					}
+					row[h] = code
+					continue
+				}
+				for _, c := range cells[i] {
+					if c >= 0x80 {
+						return nil, fmt.Errorf("⚠️ 成交记录 %s 列出现了非 ASCII 字节 —— 这一列应当是数字或代码", h)
+					}
+				}
+				row[h] = string(cells[i])
+			}
+		}
+		for _, v := range row {
+			for _, f := range forbidden {
+				if strings.Contains(v, f) {
+					return nil, fmt.Errorf("⚠️ 白名单列里出现了屏蔽词 —— 表头对错列了，整份不输出")
+				}
+			}
+		}
+		rows = append(rows, row)
+	}
+	if !in {
+		return nil, fmt.Errorf("结算单里没有 Transaction Record 一节")
+	}
+	if header == nil {
+		return nil, fmt.Errorf("成交记录一节没找到表头")
+	}
+	return rows, nil
+}
 
 // summaryKeys 是结算单抬头里允许取的数（资金摘要，不含任何账户标识）。
 var summaryKeys = []string{"Balance B/F", "Balance C/F", "Commission", "Realized P/L", "MTM P/L"}
@@ -83,77 +193,10 @@ func settlementSummary(lines []string) map[string]string {
 	return out
 }
 
-// tradeRows 从结算单成交记录一节取白名单列。纯函数。raw 行**不**经过 asciiLines 的整行丢弃（数据行本来就带账号列）：
-// 按 '|' 切列、按表头名取白名单列，其余列丢掉；输出前逐格断言不含任何屏蔽词。
-func tradeRows(raw []byte, forbidden []string) ([]map[string]string, error) {
-	for _, f := range forbidden {
-		if f == "" {
-			return nil, fmt.Errorf("⚠️ 屏蔽词里有空串 —— 凭据没读到？不往下走")
-		}
-	}
-	all, err := asciiLines(raw, []string{"\x00\x01never"})
-	if err != nil {
-		return nil, err
-	}
-	start := -1
-	for i, l := range all {
-		if strings.Contains(l, "Transaction Record") {
-			start = i
-			break
-		}
-	}
-	if start < 0 {
-		return nil, fmt.Errorf("结算单里没有 Transaction Record 一节")
-	}
-	var header []string
-	var rows []map[string]string
-	for _, l := range all[start+1:] {
-		t := strings.TrimSpace(l)
-		if legendLine.MatchString(t) || strings.Contains(t, "Position Closed") { // 图例行（---INE ---SHFE …）是一节的尾巴；纯短横线是分隔线，不是
-			break
-		}
-		if !strings.HasPrefix(t, "|") {
-			continue
-		}
-		cells := strings.Split(strings.Trim(t, "|"), "|")
-		for i := range cells {
-			cells[i] = strings.TrimSpace(cells[i])
-		}
-		if header == nil {
-			if len(cells) > 0 && cells[0] == "Date" {
-				header = cells
-			}
-			continue
-		}
-		if len(cells) != len(header) || cells[0] == "" || !strings.HasPrefix(cells[0], "20") {
-			continue // 合计行、分隔行
-		}
-		row := map[string]string{}
-		for i, h := range header {
-			for _, w := range tradeColumns {
-				if h == w {
-					row[h] = cells[i]
-				}
-			}
-		}
-		for _, v := range row {
-			for _, f := range forbidden {
-				if strings.Contains(v, f) {
-					return nil, fmt.Errorf("⚠️ 白名单列里出现了屏蔽词 —— 表头对错列了，整份不输出")
-				}
-			}
-		}
-		rows = append(rows, row)
-	}
-	if header == nil {
-		return nil, fmt.Errorf("成交记录一节没找到表头")
-	}
-	return rows, nil
-}
-
 // runCTPSettleTrades 读某个交易日的结算单，只输出白名单部分（F10 补测那 0.010 的线索：结算单里的逐笔手续费）。
 //
 //	-mode headers   只打印带英文单词的行（章节标题），看结构
+//	-mode trades    成交记录的白名单列（四列中文按词表映射）；-dump 落盘
 //	-mode section   打印 -section 指定的那一节（到下一个空行为止）
 //
 // ⚠️ 只读；不落盘。结算单抬头的投资者代码所在行整行丢掉，中文姓名随 ASCII 过滤去掉。
