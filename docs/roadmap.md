@@ -998,6 +998,14 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
 ⚠️ 实现中错的两处，都是单跑破坏抓到的：584 以为零值规格会静默算出 0，跑出来是门面报「合约乘数必须为正」（红错了理由）⇒ 改名与 want 如实写；
 225 改锚点时顺手把 `new` 的形状也改了（原为「跳过并计数」，误写成「照常计数但不用」）⇒ 红错了理由，恢复原形状。**改指一条破坏只该动锚点，不该动它破坏的是什么。**
 
+### 自然日 2026-09-18 夜：F11 —— 裸平按当日开仓额度收档（§13 #23 的 (f)，设计 design.md 门面形状 §15）
+
+- ⚠️ **导出面 / 存档兼容性变更**（使用者 20260918 夜确认「抬一格」）：
+  ① `futsim.State` 新增 `Quotas []QuotaState`；新增导出类型 `futsim.QuotaState{Instrument, Hedge, Direction, OpenedToday, ChargedToday, ExplicitToday}`
+  ② `futsim.StateFormat` 1 → 2：旧存档（含没有挂单、没有额度的）在版本号那一步报错，不迁移。⚠️ `impl-f10`（停着）原先在它的分支上也用了 2，落地时改用 3
+- 行为：大商所、郑商所的裸平按 (f) 收（此前大商所按被推翻的 (a)、郑商所两档不同时整笔报错）；广期所等照旧报错。三处外推报错不猜
+- 新守卫：`TestFacadeUndatedCloseQuotaAgainstCTP`（先红后绿）、`TestTodayTierLots`、`TestUndatedCloseQuotaFullNightCZCE`、`TestQuotaRefusalsLeaveNoTrace`、`TestQuotaSurvivesStateAndResetsAtSettle`、`TestRestoreRefusesTamperedQuota`、`TestPendingBareClosesShareQuotaAtFreezeAndConsumeAtFill`；存档字段指纹 `TestStateFormatPinsFieldSet`（从 impl-f10 带过来）
+
 ### 自然日 2026-09-17 夜盘：§13 #5 命中「逐笔截断到分」；§13 #21 往郑商所推谁都没预言到 ⇒ #23
 
 **§13 #5**（事前登记 309922a / 86f7053）：次日 PreBalance 比不重新取整的推算多 +0.028，五个预言里只有「逐笔截断到分」相等。

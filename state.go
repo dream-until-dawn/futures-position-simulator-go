@@ -2,6 +2,7 @@ package futsim
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/dream-until-dawn/futures-position-simulator-go/account"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
@@ -16,7 +17,10 @@ import (
 //
 // ⚠️ State 及其嵌套结构没有 json tag，JSON 键就是 Go 字段名：**改字段名、加删字段都要手动把这个数加一**，
 // 它不会自己跟着变（评审 20260915 要求写在这里，不只写在 design 里）。
-const StateFormat = 1
+//
+//	1  F5 起
+//	2  State 加 Quotas（F11，裸平按当日开仓额度收档；使用者 20260918 确认抬一格）
+const StateFormat = 2
 
 // State 是模拟器的全部状态，全是数据。小数在 JSON 里是字符串（decimal.Decimal 的默认）。
 //
@@ -31,6 +35,18 @@ type State struct {
 	Positions []PositionState
 	Prices    []PriceState
 	Orders    []OrderState
+	// Quotas 是裸平的当日开仓额度计数（§13 #23 的 (f)，design.md 门面形状 §15）。⚠️ 丢了它，恢复后的裸平会按「今天没开过仓」收平昨档
+	Quotas []QuotaState
+}
+
+// QuotaState 是一个（合约, 投保, 持仓方向）的当日额度计数。
+type QuotaState struct {
+	Instrument    types.InstrumentID
+	Hedge         types.HedgeFlag
+	Direction     types.Direction // 持仓方向：多头 = Buy
+	OpenedToday   int             // 当日开仓手数
+	ChargedToday  int             // 当日已按平今档收过的手数
+	ExplicitToday int             // ChargedToday 里有几手来自显式平今
 }
 
 // PositionState 是一条持仓的明细。
@@ -84,6 +100,23 @@ func (s *Simulator) State() (State, error) {
 		req, fr, _ := s.book.Get(id)
 		st.Orders = append(st.Orders, OrderState{ID: id, Request: req, Frozen: fr})
 	}
+	for k, q := range s.quotas {
+		if q == (quotaCount{}) {
+			continue
+		}
+		st.Quotas = append(st.Quotas, QuotaState{Instrument: k.inst, Hedge: k.hedge, Direction: k.side,
+			OpenedToday: q.Opened, ChargedToday: q.Charged, ExplicitToday: q.Explicit})
+	}
+	sort.Slice(st.Quotas, func(i, j int) bool {
+		a, b := st.Quotas[i], st.Quotas[j]
+		if a.Instrument != b.Instrument {
+			return fmt.Sprint(a.Instrument) < fmt.Sprint(b.Instrument)
+		}
+		if a.Hedge != b.Hedge {
+			return a.Hedge < b.Hedge
+		}
+		return a.Direction < b.Direction
+	})
 	return st, nil
 }
 
@@ -144,6 +177,33 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 			return nil, err
 		}
 		s.positions[key] = p
+	}
+
+	// 额度计数（§15）：非负、显式 ≤ 已收平今 ≤ 当日开仓；该方向今仓不多于当日开仓（今仓都来自今天的开仓）
+	for _, q := range st.Quotas {
+		if _, err := cfg.Rules.Instrument(q.Instrument); err != nil {
+			return nil, fmt.Errorf("存档里的额度计数 %s：%w", q.Instrument, err)
+		}
+		if q.Direction != types.Buy && q.Direction != types.Sell {
+			return nil, fmt.Errorf("存档里 %s 的额度计数方向 %v 认不得", q.Instrument, q.Direction)
+		}
+		if q.ExplicitToday < 0 || q.ExplicitToday > q.ChargedToday || q.ChargedToday > q.OpenedToday {
+			return nil, fmt.Errorf("存档里 %s %v 的额度计数不成立：要 0 ≤ 显式平今 %d ≤ 已收平今 %d ≤ 当日开仓 %d",
+				q.Instrument, q.Direction, q.ExplicitToday, q.ChargedToday, q.OpenedToday)
+		}
+		k := quotaKey{q.Instrument, q.Hedge, q.Direction}
+		if _, dup := s.quotas[k]; dup {
+			return nil, fmt.Errorf("存档里 %s %v 的额度计数出现两次", q.Instrument, q.Direction)
+		}
+		s.quotas[k] = quotaCount{Opened: q.OpenedToday, Charged: q.ChargedToday, Explicit: q.ExplicitToday}
+	}
+	for key, p := range s.positions {
+		for _, dir := range []types.Direction{types.Buy, types.Sell} {
+			if today, opened := p.VolumeToday(dir), s.quotaOf(key.inst, key.hedge, dir).Opened; today > opened {
+				return nil, fmt.Errorf("存档里 %s %v 有今仓 %d 手而当日开仓计数只有 %d —— 额度计数丢了或被改过（今仓都来自今天的开仓）",
+					key.inst, dir, today, opened)
+			}
+		}
 	}
 
 	for _, px := range st.Prices {
@@ -214,8 +274,8 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 //
 // ⚠️ 只核**与挂单那一刻的持仓无关**的部分。裸 CLOSE 的今昨拆分与手续费档位依赖挂单时的持仓，而持仓在挂单之后可能变了：
 // 挂一笔裸平（今1昨1 时冻昨 1、按平今档收）之后再成交一笔平今，账上只剩昨 1 —— 这是合法状态，
-// 可在恢复时的持仓上重算那笔挂单会得到**另一个数**（今仓已经没了，按本库现行的 (a) 那笔要改收平昨档；
-// ⚠️ (a) 已被 §13 #23 推翻为 (f)，见 trade.go chargeUndated —— 「重算会得到另一个数」在 (f) 下同样成立），
+// 可在恢复时的状态上重算那笔挂单会得到**另一个数**（当日开仓额度已被那笔平今用掉，按 §13 #23 的 (f) 那笔要改收平昨档；
+// 收敛到 (f) 之前这里按的是 (a)「平仓前今仓」—— 两种规则下「重算会得到另一个数」都成立），
 // 与存档的冻结对不上。⚠️ 收敛之前这里写的是「会撞 #21 报错」—— 20260917 起不报错，但数仍然不同，所以这层放宽仍然需要。
 // ⇒ 裸 CLOSE：手续费只核「今仓部分走平今档、其余走平昨档」的某种拆法
 // （commission(tr, k)，k = 0…手数）能算出存档的数；拆分只核合计与持仓（上面已核）。
@@ -232,7 +292,8 @@ func (s *Simulator) checkOrderFreeze(day types.TradingDay, o OrderState) error {
 		}
 		tr := match.Trade{Instrument: req.Instrument, Direction: req.Direction, Offset: req.Offset, Hedge: req.Hedge, Price: req.Price, Volume: req.Volume}
 		for k := 0; k <= req.Volume; k++ {
-			if c, err := s.commission(tr, k); err == nil && c.Equal(o.Frozen.Commission) {
+			k := k
+			if c, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil && c.Equal(o.Frozen.Commission) {
 				return nil
 			}
 		}

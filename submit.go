@@ -63,7 +63,7 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			return order.Frozen{}, fmt.Errorf("%s 冻结保证金：%w", req.Instrument, err)
 		}
 		in.Margin = res.Company
-		if in.Commission, err = s.commission(tr, 0); err != nil {
+		if in.Commission, _, err = s.commission(tr, nil); err != nil {
 			return order.Frozen{}, err
 		}
 	} else {
@@ -73,9 +73,9 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 			today, history = p.VolumeToday(opposite(req.Direction)), p.VolumeHistory(opposite(req.Direction))
 			dt = p.DateType()
 		}
-		// ⚠️ 冻结手续费的档位按**持有的**今仓算（与此刻成交时 ApplyTrade 看的「平仓前今仓」一致），不扣挂单冻住的 ——
-		// 挂单阶段用持有还是可用，§13 #21 的候选都没说，是推得
-		if in.Commission, err = s.commission(tr, today); err != nil {
+		// ⚠️ 冻结手续费的档位按**此刻的**当日开仓额度算（与此刻成交时 ApplyTrade 看的一致，§13 #23 的 (f)）；挂单不预占额度 ——
+		// 两笔裸平挂单按同一个额度冻，成交时先成交的那笔用掉额度、后一笔按剩余收（冻结额与成交额可以不同）。挂单阶段怎么算没有观测，是推得
+		if in.Commission, _, err = s.commission(tr, s.undatedCap(req.Instrument, req.Hedge, opposite(req.Direction), req.Volume)); err != nil {
 			return order.Frozen{}, err
 		}
 		if !req.Offset.SpecifiesPositionDate() {

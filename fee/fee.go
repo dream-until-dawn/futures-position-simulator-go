@@ -74,7 +74,7 @@ func pick(r Rates, offset types.Offset) (byMoney, byVolume decimal.Decimal, err 
 		// ⚠️ 本包只按传进来的标志算钱。裸 Close 该收哪一档由门面（futsim.chargeUndated）决定：
 		// 「按实际消耗的明细拆档」已被 #4 夹具否掉（大商所通用平仓消耗昨仓而收平今档），
 		// §13 #21 于 20260917 夜盘收敛到 (a)：min(平仓量, 平仓前今仓量) 走平今，其余走平昨。
-		// ⚠️ 20260918 夜盘被 §13 #23 推翻：柜台是 (f)（按当日开仓额度），本库门面仍按 (a)（silent-risks 100）。
+		// ⚠️ 20260918 夜盘被 §13 #23 推翻：柜台是 (f)（按当日开仓额度）；门面自 F11 起按 (f)（design.md 门面形状 §15）。
 		// 这句注释原写「裸 Close 在不区分今昨的交易所上也走这一档」，写于 §13 #20 裁决之前。
 		// 「裸 Close 在 UseHistory 交易所上算什么」仍未由 SimNow 裁决（simnow_pending#1），那个判断属于 order 包。
 		return r.CloseByMoney, r.CloseByVolume, nil

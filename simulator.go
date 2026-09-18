@@ -60,7 +60,9 @@ type Simulator struct {
 	positions map[posKey]*position.Position
 	prices    map[types.InstrumentID]priceState
 
-	book           *order.Book // 挂着的委托（F4）
+	book *order.Book // 挂着的委托（F4）
+	// quotas 是裸平「当日开仓额度」的计数（§13 #23 的 (f)，design.md 门面形状 §15）。Settle 清零，进存档。
+	quotas         map[quotaKey]quotaCount
 	calendar       *refdata.Calendar
 	tickRounding   map[types.Exchange]refdata.TickRounding
 	positionLimits map[types.InstrumentID]int
@@ -88,6 +90,7 @@ func New(cfg Config) (*Simulator, error) {
 		rules: cfg.Rules, choices: cfg.Choices, acc: acc,
 		positions: map[posKey]*position.Position{},
 		prices:    map[types.InstrumentID]priceState{},
+		quotas:    map[quotaKey]quotaCount{},
 		calendar:  cfg.Calendar, tickRounding: cfg.TickRounding, positionLimits: cfg.PositionLimits,
 		book: order.NewBook(),
 	}, nil

@@ -4200,6 +4200,10 @@ breakcheck 跑的是这一行：
 ⚠️ **修之前也不能先改成报错**（评审 20260918 问过）：要识别「额度已用完」这个形状，本身就要那两个数 —— 持仓明细只有还在账上的片，平掉的今仓与当日开过几手都不在；
 门面现在识别不出 a ≠ f 的那一刻，于是在那之前本条就是守卫的全部：一条**已知**的错，写在这里。
 
+✅ **结局（20260918 夜，F11）**：`chargeUndated` 改按当日开仓额度收（design.md 门面形状 §15），额度计数进存档（StateFormat 2）、Settle 清零。
+守卫：`TestFacadeUndatedCloseQuotaAgainstCTP`（两所 CTP 序列从门面重放，实现前大商所第 3 笔差 0.1、郑商所整笔报错）、`TestUndatedCloseQuotaFullNightCZCE`（X1 / X2 / X0 整晚）、
+`TestQuotaSurvivesStateAndResetsAtSettle`（存档往返与结算清零）、`TestRestoreRefusesTamperedQuota`。⚠️ 三处没实测的外推（多手部分额度、显式平今之后、当日开过反方向）一律报错不猜（`TestTodayTierLots`、`TestQuotaRefusalsLeaveNoTrace`），**没有**再开同形的洞。
+
 **101. ⚠️ 大商所涨跌停价：本库按四舍五入对齐跳，两个柜台都是「往里收」（涨停向下、跌停向上）—— 大约一半的交易日差一跳。**
 
 20260918 夜盘（交易日 20260921）CTP 的 `DCE.m2701`：昨结 3429 × 6% = 3634.74 / 3223.26，柜台 **3634 / 3224**，本库 3635 / 3223。
