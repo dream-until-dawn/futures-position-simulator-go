@@ -6709,5 +6709,93 @@
 		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
 		"want": "豁免的品种已经不在语料里",
 		"expect": "red"
+	},
+	{
+		"name": "678 (f) 的额度判据差一：「> 0」写成「>= 0」—— 用完额度之后还收平今（郑商所 X0 那一笔会被说成对得上）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quota.go",
+		"old": "\t\t\tif s.OpenedToday-s.TodayCharged > 0 {",
+		"new": "\t\t\tif s.OpenedToday-s.TodayCharged >= 0 {",
+		"pkg": ".",
+		"test": "TestQuotaCandidatesRetrodictPastObservations",
+		"want": "(f) 在已有观测上错的是",
+		"expect": "red"
+	},
+	{
+		"name": "679 (k) 丢了「消耗的是昨仓」那半个条件 —— 退化成 (a)，登记的实验分不开两者",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quota.go",
+		"old": "\t\t\tif s.ConsumedYd && s.TodayBefore > 0 {",
+		"new": "\t\t\tif s.TodayBefore > 0 {",
+		"pkg": ".",
+		"test": "TestQuotaExperimentDiscriminates",
+		"want": "这个实验分不开它们",
+		"expect": "red"
+	},
+	{
+		"name": "680 判定里的「已收平今」不按实测累计（charged 永远是 0）—— 第三笔在柜台没走过的状态上被判",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quota.go",
+		"old": "\t\tif actual == tierToday {\n\t\t\tcharged++\n\t\t}\n\t}\n\tfor _, c := range quotaCandidates {",
+		"new": "\t\tif actual == tierToday {\n\t\t\t_ = charged\n\t\t}\n\t}\n\tfor _, c := range quotaCandidates {",
+		"pkg": ".",
+		"test": "TestQuotaVerdictUsesObservedCharges",
+		"want": "第三笔之前实测只收过",
+		"expect": "red"
+	},
+	{
+		"name": "681 判定从「等于」松成「不等于平昨就算平今」—— 两档之外的增量被凑到平今档上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quota.go",
+		"old": "\t\tcase deltas[i].Equal(rateToday):",
+		"new": "\t\tcase !deltas[i].Equal(rateYd):",
+		"pkg": ".",
+		"test": "TestQuotaVerdict",
+		"want": "两档之外的增量",
+		"expect": "red"
+	},
+	{
+		"name": "682 开跑前提放宽成「昨 ≥1」—— 昨 2 时第二笔可能再消耗昨仓，登记表的展开不成立而照跑",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quota.go",
+		"old": "\tif s.Today != 0 || s.Yd != 1 || s.OpenedToday != 0 {",
+		"new": "\tif s.Today != 0 || s.Yd < 1 || s.OpenedToday != 0 {",
+		"pkg": ".",
+		"test": "TestQuotaPremise",
+		"want": "应当拒跑",
+		"expect": "red"
+	},
+	{
+		"name": "683 登记检查放行任何交易所 —— 上期所等没登记预言的交易所照跑",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quota.go",
+		"old": "\tif exchange == \"DCE\" || exchange == \"CZCE\" {",
+		"new": "\tif exchange != \"\" {",
+		"pkg": ".",
+		"test": "TestQuotaPremise",
+		"want": "没登记，应当拒跑",
+		"expect": "red"
+	},
+	{
+		"name": "694 已登记分歧的柜台值钉错了（假装柜台也是四舍五入）—— 钉值的比较必须是活的",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\"DCE.m2701/20260921\": {\"3634\", \"3224\", \"3635\", \"3223\",",
+		"new": "\"DCE.m2701/20260921\": {\"3635\", \"3223\", \"3635\", \"3223\",",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "的形状变了",
+		"expect": "red"
+	},
+	{
+		"name": "695 已登记分歧不记「见过」—— 反方向检查必须能抓到登记了却不在语料里的分歧",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\t\t\t\tdivergenceSeen[sym+\"/\"+day] = true\n",
+		"new": "",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "在语料里没出现",
+		"expect": "red"
 	}
 ]
