@@ -1047,7 +1047,11 @@ cn-futures-rules §13 #5 在 CTP 上命中 (i-t)：**盘中** `Commission` 是�
 - `account.AddCommission(day, fee, atSettle decimal.Decimal)`：**改签名**，同时给「盘中计入的」与「结算时计入的」两个数。
   约束：`0 ≤ atSettle ≤ fee`（截断只会变小，不会变负）。⚠️ 不另开一个 `AddSettleCommission`：两次调用分开时，漏调后者的调用方会让结算按「整笔都不算」算，**静默多出一整笔手续费的钱** —— 改签名让每个调用点在编译期被迫表态
 - 账户新增存储项 `settleCommission`（Σ 截断(费_i)），进 `account.State`；`account.Settle`：`PreBalance(次日) = Balance() + commission − settleCommission`，然后两者一起清零
-- 截断规则**不住在 account**：账户只管记两个数。规则住在 `fee`（`fee.TruncateToCent`，向零截断到 0.01；费非负，向零 = 向下），门面在 `commit` 里对**每一笔成交**调一次
+- 截断规则**不住在 account**：账户只管记两个数。门面在 `commit` 里对**每一笔成交**用现成的 `fee.TruncateToCent.Apply`（`internal/decimalx`，向零截断到 0.01；费非负，向零 = 向下）
+  ⚠️ 初稿写的是「新增函数 `fee.TruncateToCent`」—— 写实现时才发现 `fee.TruncateToCent` 早已是一个**取整口径常量**（`fee.Rounding` 的取值），新增同名函数编译不过；改用它的 `Apply`，不新增导出名
+- ⚠️ **与 `Choices.FeeRounding` 的关系**（初稿漏了，写实现时撞见）：`FeeRounding` 管的是**盘中**逐笔费怎么算（§13 #5 盘中那一半没收敛，零值报错、两个预设都不填），它不动。
+  结算截断作用在**按 `FeeRounding` 算出的逐笔费**上：盘中选 `TruncateToCent` / `HalfUpToCent` 时逐笔费已是整分，结算截断是恒等；选 `NoRounding`（CTP 盘中读数的形状）时结算截断才起作用。
+  ⇒ 两者组合不出矛盾，不需要第十项口径；「快期结算不截断」只在对拍声明里出现
 - 盘中一切不变：`Balance` / `Available` / 风险度都用原样累加的 `commission` —— 与 CTP 盘中读数一致
 - `futsim.StateFormat` 1 → 2（`account.State` 多了一项）。旧存档在版本号那一步报错，不迁移
 
