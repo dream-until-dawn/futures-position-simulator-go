@@ -6819,5 +6819,16 @@
 		"test": "TestLimitRatioFromQuotes",
 		"want": "的形状变了",
 		"expect": "red"
+	},
+	{
+		"name": "698 结算残差只读第一条过夜腿（多合约截面丢腿）—— 真截面上的结算判定要跟着红",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settleresidual.go",
+		"old": "\t\tif vol == 0 {\n\t\t\tcontinue\n\t\t}\n\t\tsym := key",
+		"new": "\t\tif vol == 0 || len(in.Legs) > 0 {\n\t\t\tcontinue\n\t\t}\n\t\tsym := key",
+		"pkg": ".",
+		"test": "TestSettleRealPairsKeepTheirVerdicts",
+		"want": "20260918→20260921：推算",
+		"expect": "red"
 	}
 ]
