@@ -229,6 +229,44 @@ func (c *Client) Trades(timeout time.Duration) ([]*def.CThostFtdcTradeField, err
 	}
 }
 
+// SettlementText 查某个交易日的**结算单正文**（GBK 原始字节）。
+//
+// ⚠️ 结算单抬头带投资者代码与姓名：本方法只把字节交给调用方，调用方只许取白名单里的那一节（成交记录），
+// 不许原样打印、不许落盘（InvestorID 不许打印 / 持久化）。
+// ⚠️ 超时是**没有结论**，不是「那天没有结算单」。
+func (c *Client) SettlementText(tradingDay string, timeout time.Duration) ([]byte, error) {
+	c.q.wait()
+	defer c.q.done()
+	c.stlMu.Lock()
+	c.stl = nil
+	c.stlMu.Unlock()
+	f := def.CThostFtdcQrySettlementInfoField{}
+	copy(f.BrokerID[:], c.cred.BrokerID)
+	copy(f.InvestorID[:], c.cred.UserID)
+	copy(f.TradingDay[:], tradingDay)
+	c.req("ReqQrySettlementInfo", unsafe.Pointer(&f))
+	select {
+	case <-c.stlDone:
+		c.stlMu.Lock()
+		defer c.stlMu.Unlock()
+		out := make([]byte, len(c.stl))
+		copy(out, c.stl)
+		return out, nil
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("%v 内没有等到交易日 %s 结算单的最后一条 —— ⚠️ **没有结论**", timeout, tradingDay)
+	}
+}
+
+// indexZero 返回第一个 0 字节的位置（没有就是 -1）。
+func indexZero(b []byte) int {
+	for i, x := range b {
+		if x == 0 {
+			return i
+		}
+	}
+	return -1
+}
+
 // Instrument 查柜台**声明**的合约参数 —— 本项目要的是 `PriceTick` 与 `VolumeMultiple`。
 //
 // # ⚠️ 它消掉的是一处「猜错了不会报错」
@@ -309,6 +347,28 @@ func (c *Client) registerQueryCallbacks() {
 		}
 		cp := *r
 		c.comm <- &cp
+		return 0
+	})
+	c.on("SetOnRspQrySettlementInfo", func(p *def.CThostFtdcSettlementInfoField,
+		info *def.CThostFtdcRspInfoField, _ int, isLast bool) uintptr {
+		if err := errOf(info); err != nil {
+			c.logf("[ctp] ⚠️ 查结算单失败 %v", err)
+		}
+		if p != nil {
+			b := p.Content[:]
+			if i := indexZero(b); i >= 0 {
+				b = b[:i]
+			}
+			c.stlMu.Lock()
+			c.stl = append(c.stl, b...)
+			c.stlMu.Unlock()
+		}
+		if isLast {
+			select {
+			case c.stlDone <- struct{}{}:
+			default:
+			}
+		}
 		return 0
 	})
 	c.on("SetOnRspQryTrade", func(t *def.CThostFtdcTradeField,

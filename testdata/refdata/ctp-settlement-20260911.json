@@ -1,0 +1,112 @@
+{
+  "source": "ctp-settle-trades（结算单白名单列）",
+  "summary": {
+    "Balance B/F": "19999915.32",
+    "Balance C/F": "19999740.78",
+    "Commission": "34.54",
+    "MTM P/L": "0.00",
+    "Realized P/L": "-140.00"
+  },
+  "trades": [
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3137.000",
+      "Realized P/L": "-100.00",
+      "Turnover": "31370.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3138.000",
+      "Realized P/L": "0.00",
+      "Turnover": "31380.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3136.000",
+      "Realized P/L": "-20.00",
+      "Turnover": "31360.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3138.000",
+      "Realized P/L": "0.00",
+      "Turnover": "31380.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3139.000",
+      "Realized P/L": "-10.00",
+      "Turnover": "31390.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3137.000",
+      "Realized P/L": "0.00",
+      "Turnover": "31370.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3139.000",
+      "Realized P/L": "-20.00",
+      "Turnover": "31390.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3139.000",
+      "Realized P/L": "0.00",
+      "Turnover": "31390.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3139.000",
+      "Realized P/L": "0.00",
+      "Turnover": "31390.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3137.000",
+      "Realized P/L": "0.00",
+      "Turnover": "31370.00"
+    },
+    {
+      "Date": "20260911",
+      "Fee": "3.14",
+      "Instrument": "rb2701",
+      "Lots": "1",
+      "Price": "3136.000",
+      "Realized P/L": "10.00",
+      "Turnover": "31360.00"
+    }
+  ],
+  "trading_day": "20260911"
+}
