@@ -479,7 +479,7 @@
 		"dir": "",
 		"file": "trade.go",
 		"old": "func() error { return s.acc.AddCommission(day, commission, atSettle) },",
-		"new": "func() error { return nil },",
+		"new": "func() error { _ = atSettle; return nil },",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
 		"want": "❌ commission",
@@ -6777,14 +6777,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "691 门面按四舍五入到分而不是截断（方向错）",
+		"name": "691 门面按四舍五入到分而不是截断（方向错）—— 往上进位时结算费 > 原费，被 AddCommission 的上界拦下；往下舍时与截断同值，所以方向由这道上界完整钉住",
 		"dir": "",
 		"file": "trade.go",
 		"old": "\tatSettle, err := fee.TruncateToCent.Apply(commission)",
 		"new": "\tatSettle, err := fee.HalfUpToCent.Apply(commission)",
 		"pkg": "./",
 		"test": "TestSettleTruncatesFeesPerTrade",
-		"want": "期望 100056.24",
+		"want": "结算口径只会把一笔费变小",
 		"expect": "red"
 	},
 	{
