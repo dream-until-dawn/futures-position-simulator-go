@@ -6698,5 +6698,16 @@
 		"test": "TestUndatedCloseFeeTier",
 		"want": "要整笔报错不猜",
 		"expect": "red"
+	},
+	{
+		"name": "677 ratioPending 里留着一个语料里根本没有的品种（夹具删了或改名了，豁免那一条没跟着删）",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\tratioPending := map[string]string{\n",
+		"new": "\tratioPending := map[string]string{\n\t\t\"zz\": \"语料里没有的品种\",\n",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "豁免的品种已经不在语料里",
+		"expect": "red"
 	}
 ]

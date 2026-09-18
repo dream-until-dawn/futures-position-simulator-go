@@ -559,7 +559,7 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 	// 下面那道「已登记比例却还在待登记表里」的检查会红。
 	ratioPending := map[string]string{
 		"j":  "DCE.j2701：20260917 ctp-feeprobe（§13 #5 造带小数的逐笔手续费）的收尾截面顺带落了它的行情",
-		"MA": "CZCE.MA701：20260917 夜 §13 #21 在郑商所的 X1/X2/X0 截面会带它的行情（种子 20260917 日盘种下）",
+		"MA": "CZCE.MA701：20260917 夜 §13 #21 在郑商所的 X1/X2/X0 截面带上了它的行情（ctp-slices-20260918*）",
 	}
 	for p := range ratioPending {
 		if _, dup := ratios[p]; dup {
@@ -622,6 +622,13 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 				discriminating[id.Exchange]++
 			}
 			n++
+		}
+	}
+	// 反方向：豁免表里的品种必须真在语料里出现过。否则那一条已经不豁免任何东西，
+	// 而表外看起来仍像「有个已知缺口」—— 删夹具或改名时它就这样烂在原地（评审 20260917 nit）。
+	for p, why := range ratioPending {
+		if !pendingSeen[p] {
+			t.Errorf("⚠️ ratioPending 里的 %s 在 CTP 行情语料里一次都没出现 —— 豁免的品种已经不在语料里，删掉那一条（理由原写：%s）", p, why)
 		}
 	}
 	if n < 7 {
