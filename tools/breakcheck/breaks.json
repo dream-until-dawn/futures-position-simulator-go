@@ -6775,5 +6775,27 @@
 		"test": "TestQuotaPremise",
 		"want": "没登记，应当拒跑",
 		"expect": "red"
+	},
+	{
+		"name": "694 已登记分歧的柜台值钉错了（假装柜台也是四舍五入）—— 钉值的比较必须是活的",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\"DCE.m2701/20260921\": {\"3634\", \"3224\", \"3635\", \"3223\",",
+		"new": "\"DCE.m2701/20260921\": {\"3635\", \"3223\", \"3635\", \"3223\",",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "的形状变了",
+		"expect": "red"
+	},
+	{
+		"name": "695 已登记分歧不记「见过」—— 反方向检查必须能抓到登记了却不在语料里的分歧",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "\t\t\t\tdivergenceSeen[sym+\"/\"+day] = true\n",
+		"new": "",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "在语料里没出现",
+		"expect": "red"
 	}
 ]
