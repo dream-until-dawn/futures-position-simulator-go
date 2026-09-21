@@ -54,12 +54,14 @@ func stateFields() []string {
 // ⚠️ 加删改 State（含嵌套的 account.State、position.Lot、order.Request……）里任何一个导出字段，指纹就变：
 // 那时要**抬 StateFormat**，并在这里为新格式号添一行 —— 不许只改指纹不抬号（旧存档会被当成新格式读进来，缺的字段静默为零）。
 // 格式 1 是回填的：本表 20260918 才建（写于 F10 分支、随 F11 先落进 main），按 b11c600 的字段集合算（在 b11c600 上核过）。
-// 格式 2 是 F11：State 加 Quotas。⚠️ F10（impl-f10，停着）原先在它自己的分支上把 2 用给了 Account.SettleCommission ——
-// 那一批以后落地时要用 3，并在这里添一行。
+// 格式 2 是 F11：State 加 Quotas。
+// 格式 3 是 F10：account.State 加 SettleCommission / CommissionTrades（结算时按笔重算手续费）。
+// ⚠️ 旧的 impl-f10 分支（按「逐笔截断」写的，已被 F10 改写取代）曾在它自己的分支上把 2 用给了 SettleCommission —— 那一版不落地。
 // ⚠️ F5 到 b11c600 之间格式 1 的字段有没有变过而没抬号，本表回答不了 —— 这张表防的是今后。
 var stateFingerprints = map[int]string{
 	1: "a2b10ae2455cd8891e10313f00448bba",
 	2: "e2605fab03a8811d588cb672f88ffb6e",
+	3: "4a379c6808d44940cc3532d5753a94d8",
 }
 
 func fingerprint(fields []string) string {
@@ -73,8 +75,8 @@ func TestStateFormatPinsFieldSet(t *testing.T) {
 	if len(fields) < 30 {
 		t.Fatalf("⚠️ 只走出 %d 个字段 —— 遍历写错了，本条在空转", len(fields))
 	}
-	if all := strings.Join(fields, "\n"); !strings.Contains(all, "State.Account.Commission ") || !strings.Contains(all, "State.Quotas[].OpenedToday ") {
-		t.Fatal("⚠️ 字段表里没有 Account.Commission / Quotas[].OpenedToday —— 遍历没走进嵌套结构")
+	if all := strings.Join(fields, "\n"); !strings.Contains(all, "State.Account.SettleCommission ") || !strings.Contains(all, "State.Quotas[].OpenedToday ") {
+		t.Fatal("⚠️ 字段表里没有 Account.SettleCommission / Quotas[].OpenedToday —— 遍历没走进嵌套结构")
 	}
 	want, ok := stateFingerprints[StateFormat]
 	if !ok {
@@ -86,16 +88,18 @@ func TestStateFormatPinsFieldSet(t *testing.T) {
 	}
 }
 
-// TestRestoreRefusesOlderFormat：格式 1 的存档（F11 之前，没有 Quotas）在版本号那一步报错，不迁移。
+// TestRestoreRefusesOlderFormat：格式 1 / 2 的存档（F11 / F10 之前）在版本号那一步报错，不迁移。
 func TestRestoreRefusesOlderFormat(t *testing.T) {
 	s := newSim(t)
 	st, err := s.State()
 	if err != nil {
 		t.Fatal(err)
 	}
-	st.Format = 1
-	_, err = Restore(Config{Day: simDay, PreBalance: dec("100000"), Rules: simRules(t), Choices: ctpChoices()}, st)
-	if err == nil || !strings.Contains(err.Error(), "不迁移") {
-		t.Errorf("⚠️ 格式 1 的存档应在版本号那一步报错（不迁移），得到 %v", err)
+	for _, old := range []int{1, 2} {
+		st.Format = old
+		_, err = Restore(Config{Day: simDay, PreBalance: dec("100000"), Rules: simRules(t), Choices: ctpChoices()}, st)
+		if err == nil || !strings.Contains(err.Error(), "不迁移") {
+			t.Errorf("⚠️ 格式 %d 的存档应在版本号那一步报错（不迁移），得到 %v", old, err)
+		}
 	}
 }

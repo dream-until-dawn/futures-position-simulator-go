@@ -100,31 +100,41 @@ func Compute(
 	price, multiplier decimal.Decimal, volume int,
 	rounding decimalx.Rounding,
 ) (decimal.Decimal, error) {
-	if err := validateRates(rates); err != nil {
-		return decimal.Zero, err
-	}
-	byMoney, byVolume, err := pick(rates, offset)
+	amount, perLot, err := Parts(rates, offset, price, multiplier, volume)
 	if err != nil {
 		return decimal.Zero, err
 	}
+	return rounding.Apply(amount.Add(perLot))
+}
+
+// Parts 返回一笔成交手续费的两项，**不取整**：按额部分（成交量 × 价 × 乘数 × ByMoney）与按手部分（成交量 × ByVolume）。
+//
+// ⚠️ 存在的理由是结算口径（§13 #5，design.md 门面形状 §14）：CTP 结算时按笔重算，把**按额部分**四舍五入到分、按手部分照收 ——
+// 要分开取整，就得分开拿到两项。Compute 与它共用这一份算法，不各写各的。
+func Parts(
+	rates Rates, offset types.Offset,
+	price, multiplier decimal.Decimal, volume int,
+) (byMoneyAmount, byVolumeAmount decimal.Decimal, err error) {
+	if err := validateRates(rates); err != nil {
+		return decimal.Zero, decimal.Zero, err
+	}
+	byMoney, byVolume, err := pick(rates, offset)
+	if err != nil {
+		return decimal.Zero, decimal.Zero, err
+	}
 	if volume <= 0 {
-		return decimal.Zero, fmt.Errorf("成交手数必须为正，得到 %d", volume)
+		return decimal.Zero, decimal.Zero, fmt.Errorf("成交手数必须为正，得到 %d", volume)
 	}
 	if !price.IsPositive() {
-		return decimal.Zero, fmt.Errorf("成交价必须为正，得到 %s", price)
+		return decimal.Zero, decimal.Zero, fmt.Errorf("成交价必须为正，得到 %s", price)
 	}
 	if !multiplier.IsPositive() {
 		// ⚠️ 乘数漏乘会得到一个量级正确到肉眼看不出的错值。
-		return decimal.Zero, fmt.Errorf("合约乘数必须为正，得到 %s", multiplier)
+		return decimal.Zero, decimal.Zero, fmt.Errorf("合约乘数必须为正，得到 %s", multiplier)
 	}
-
 	v := decimal.NewFromInt(int64(volume))
-	// ⚠️ 两项都算并相加，哪怕其中一项的费率恒为零。
-	// 一个恒为 0 的加项不会暴露自己被漏掉了。
-	amount := v.Mul(price).Mul(multiplier).Mul(byMoney)
-	perLot := v.Mul(byVolume)
-
-	return rounding.Apply(amount.Add(perLot))
+	// ⚠️ 两项都算，哪怕其中一项的费率恒为零。一个恒为 0 的加项不会暴露自己被漏掉了。
+	return v.Mul(price).Mul(multiplier).Mul(byMoney), v.Mul(byVolume), nil
 }
 
 // ComputeRaw 返回**未取整**的手续费，供判别实验 5 用。

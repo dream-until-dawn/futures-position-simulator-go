@@ -50,7 +50,12 @@ type Account struct {
 	deposit     decimal.Decimal
 	withdraw    decimal.Decimal
 	closeProfit decimal.Decimal // 逐日盯市口径
-	commission  decimal.Decimal
+	commission  decimal.Decimal // 盘中口径：逐笔费原样累加
+	// settleCommission 是结算时计入结存的手续费：每笔按结算口径**重算**后的和（CTP 结算单实测，§13 #5；design.md 门面形状 §14）。
+	// ⚠️ 两者只在结算那一刻分岔，盘中的结存、可用都用 commission。结算口径会进位，所以它**可以大于** commission。
+	settleCommission decimal.Decimal
+	// commissionTrades 是本交易日计入了几笔手续费 —— 「每笔 |结算费 − 盘中费| ≤ 0.01」在累计上的界要它（存档可以手改）
+	commissionTrades int
 
 	// 由门面按持仓算出后告知
 	positionProfit decimal.Decimal
@@ -178,15 +183,35 @@ func (a *Account) AddCloseProfit(day types.TradingDay, profit decimal.Decimal) e
 	return nil
 }
 
-// AddCommission 累加手续费。手续费只增不减，传负数报错。
-func (a *Account) AddCommission(day types.TradingDay, fee decimal.Decimal) error {
+// SettleCommissionTolerance 是一笔成交的结算费与盘中费之差的上界（design.md 门面形状 §14）。
+//
+// 盘中费 = FeeRounding(按额 + 按手)，结算费 = 四舍五入到分(按额) + 按手；按手部分是整分时，差只来自按额部分的取整：
+// 不取整 ∈ (−0.005, +0.005]、截断到分 ∈ {0, +0.01}（**能恰好取到 0.01**）、四舍五入到分 = 0 ⇒ 统一的界 ≤ 0.01。
+var SettleCommissionTolerance = decimal.New(1, -2)
+
+// AddCommission 累加一笔成交的手续费。fee 是盘中计入的数，atSettle 是这一笔在**结算时**计入结存的数。
+//
+// ⚠️ 两个数一起给，不拆成两个方法：拆开之后漏调后一个的调用方，结算时会让这笔费**整笔**不计入 ——
+// 静默多出一整笔手续费的钱。改签名让每个调用点在编译期表态（design.md 门面形状 §14，F10）。
+// 约束：atSettle ≥ 0 且 |atSettle − fee| ≤ SettleCommissionTolerance（结算口径会进位，所以不是 atSettle ≤ fee）。
+// 不在结算时另行处理的调用方传 atSettle = fee。
+func (a *Account) AddCommission(day types.TradingDay, fee, atSettle decimal.Decimal) error {
 	if err := a.checkDay(day); err != nil {
 		return err
 	}
 	if fee.IsNegative() {
 		return fmt.Errorf("手续费 %s 为负 —— 返佣不在本库范围内，请在外部处理", fee)
 	}
+	if atSettle.IsNegative() || atSettle.Sub(fee).Abs().GreaterThan(SettleCommissionTolerance) {
+		return fmt.Errorf("结算时计入的手续费 %s 与盘中 %s 相差超过 %s（或为负）—— 结算口径只在按额部分的取整上与盘中不同",
+			atSettle, fee, SettleCommissionTolerance)
+	}
 	a.commission = a.commission.Add(fee)
+	a.settleCommission = a.settleCommission.Add(atSettle)
+	// 两个数都是零的不计笔数：门面的计价路径（Mark）也走这里；零手续费的成交差本来就是 0，不计入不放宽也不收紧界
+	if !fee.IsZero() || !atSettle.IsZero() {
+		a.commissionTrades++
+	}
 	return nil
 }
 
@@ -287,11 +312,14 @@ func (a *Account) Settle(day, nextDay types.TradingDay) error {
 			a.frozenMargin, a.frozenCommission, a.frozenCash)
 	}
 
-	a.preBalance = a.Balance()
+	// ⚠️ 结存按**结算口径**的手续费算：盘中 Balance 扣的是 commission，这里换成 settleCommission（§13 #5，CTP 结算时按笔重算）
+	a.preBalance = a.Balance().Add(a.commission).Sub(a.settleCommission)
 	a.deposit = decimal.Zero
 	a.withdraw = decimal.Zero
 	a.closeProfit = decimal.Zero
 	a.commission = decimal.Zero
+	a.settleCommission = decimal.Zero
+	a.commissionTrades = 0
 	a.positionProfit = decimal.Zero // 基线已推进，相对新基线的持仓盈亏为零
 	a.Day = nextDay
 	return nil
@@ -365,6 +393,11 @@ func (a *Account) Check() error {
 	}
 	if a.commission.IsNegative() {
 		return fmt.Errorf("累计手续费为负：%s", a.commission)
+	}
+	if a.commissionTrades < 0 || a.settleCommission.IsNegative() ||
+		a.settleCommission.Sub(a.commission).Abs().GreaterThan(SettleCommissionTolerance.Mul(decimal.NewFromInt(int64(a.commissionTrades)))) {
+		return fmt.Errorf("结算口径的累计手续费 %s 与盘中累计 %s 相差超过 %d 笔 × %s（或为负）",
+			a.settleCommission, a.commission, a.commissionTrades, SettleCommissionTolerance)
 	}
 	return nil
 }

@@ -122,7 +122,7 @@ func (s *Simulator) Mark(day types.TradingDay, q Quote) error {
 		return err
 	}
 	s.prices = prices
-	return s.commit(day, v, decimal.Zero, decimal.Zero)
+	return s.commit(day, v, decimal.Zero, decimal.Zero, decimal.Zero)
 }
 
 // ApplyTrade 把一笔**已经发生**的成交记进持仓与资金（灌成交路径，不跑八项校验）。
@@ -146,7 +146,7 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 		return err
 	}
 
-	commission, closeProfit := decimal.Zero, decimal.Zero
+	commission, atSettle, closeProfit := decimal.Zero, decimal.Zero, decimal.Zero
 	todayLots := 0 // 这一笔按平今档收了几手（额度记账用，§15）
 
 	switch {
@@ -154,7 +154,7 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 		if err := p.Open(tr.Direction, day, tr.Price, tr.Volume); err != nil {
 			return err
 		}
-		if commission, _, err = s.commission(tr, nil); err != nil {
+		if commission, _, atSettle, err = s.commission(tr, nil); err != nil {
 			return err
 		}
 	case tr.Offset.IsClose():
@@ -210,7 +210,7 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 			return fmt.Errorf("%s 这笔平仓会平掉挂单冻住的手数（平后 今 %d / 昨 %d，挂单冻住 今 %d / 昨 %d）—— 挂单的成交走 Fill",
 				tr.Instrument, p.VolumeToday(held), p.VolumeHistory(held), fz.VolumeToday, fz.VolumeHistory)
 		}
-		if commission, todayLots, err = s.commission(tr, s.undatedCap(tr.Instrument, tr.Hedge, held, tr.Volume)); err != nil {
+		if commission, todayLots, atSettle, err = s.commission(tr, s.undatedCap(tr.Instrument, tr.Hedge, held, tr.Volume)); err != nil {
 			return err
 		}
 		legs := make([]pnl.Leg, 0, len(res.Consumed))
@@ -237,7 +237,7 @@ func (s *Simulator) ApplyTrade(day types.TradingDay, tr match.Trade) error {
 	}
 	s.positions = positions
 	s.bookQuota(tr, todayLots)
-	return s.commit(day, v, commission, closeProfit)
+	return s.commit(day, v, commission, atSettle, closeProfit)
 }
 
 // datedOffset 按口径 UndatedCloseOnUseHistory 改写开平标志：UseHistory 合约上的裸 CLOSE ⇒ 平昨，其余原样。
@@ -272,30 +272,43 @@ func undatedSplit(inst types.InstrumentID, volume, today, history int, frozen or
 // undatedCap 只对裸 CLOSE 有用：两档费率不同时调用它取平今档手数（§13 #23 的 (f)，ApplyTrade / FreezeOf 传 undatedCap，
 // 恢复时核挂单冻结传固定的 k）；两档相同时不调用（不论哪种读法都同值，不该因为额度读法分岔而报错）。开仓与显式今昨传 nil。
 // ApplyTrade 与 FreezeOf 共用它：「这一笔收多少」只有一份定义。
-func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (decimal.Decimal, int, error) {
+//
+// 第三个返回值是这一笔的**结算口径**手续费（§13 #5，design.md 门面形状 §14，F10）：四舍五入到分(按额部分) + 按手部分 ——
+// CTP 结算时按笔重算，与盘中的 FeeRounding 口径无关。
+// ⚠️ 一笔裸平理论上会拆成平今 / 平昨两段各自收费；在 §13 #23 的 (f) 下这种拆法走不到（有观测的交易所上额度只够一部分就报错，
+// 两档同价时整笔按平昨），所以「每笔」的结算费就是各段之和，不会出现「分段取整还是整笔取整」的歧义。
+func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (decimal.Decimal, int, decimal.Decimal, error) {
 	inst, err := s.rules.Instrument(tr.Instrument)
 	if err != nil {
-		return decimal.Zero, 0, err
+		return decimal.Zero, 0, decimal.Zero, err
 	}
 	rates, err := s.rules.CommissionRates(tr.Instrument, tr.Hedge)
 	if err != nil {
-		return decimal.Zero, 0, err
+		return decimal.Zero, 0, decimal.Zero, err
 	}
 	px := s.prices[tr.Instrument]
 	feePrice, err := fee.BasisPrice(s.choices.FeeBasis, tr.Price, px.pre, px.hasPre)
 	if err != nil {
-		return decimal.Zero, 0, fmt.Errorf("%s：%w", tr.Instrument, err)
+		return decimal.Zero, 0, decimal.Zero, fmt.Errorf("%s：%w", tr.Instrument, err)
 	}
-	total := decimal.Zero
+	total, atSettle := decimal.Zero, decimal.Zero
 	charge := func(off types.Offset, vol int) error {
 		if vol == 0 {
 			return nil
 		}
-		c, err := fee.Compute(rates, off, feePrice, inst.VolumeMultiple, vol, s.choices.FeeRounding)
+		money, perLot, err := fee.Parts(rates, off, feePrice, inst.VolumeMultiple, vol)
 		if err != nil {
 			return fmt.Errorf("%s 手续费：%w", tr.Instrument, err)
 		}
-		total = total.Add(c)
+		c, err := s.choices.FeeRounding.Apply(money.Add(perLot))
+		if err != nil {
+			return fmt.Errorf("%s 手续费：%w", tr.Instrument, err)
+		}
+		st, err := fee.HalfUpToCent.Apply(money)
+		if err != nil {
+			return err
+		}
+		total, atSettle = total.Add(c), atSettle.Add(st).Add(perLot)
 		return nil
 	}
 	todayLots := 0
@@ -309,16 +322,16 @@ func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (
 		}
 	default:
 		if undatedCap == nil {
-			return decimal.Zero, 0, fmt.Errorf("%s 裸 CLOSE 没给额度 —— 调用方漏传（内部错误）", tr.Instrument)
+			return decimal.Zero, 0, decimal.Zero, fmt.Errorf("%s 裸 CLOSE 没给额度 —— 调用方漏传（内部错误）", tr.Instrument)
 		}
 		if todayLots, err = chargeUndated(tr, undatedCap, rates, charge); err != nil {
-			return decimal.Zero, 0, err
+			return decimal.Zero, 0, decimal.Zero, err
 		}
 	}
 	if err != nil {
-		return decimal.Zero, 0, err
+		return decimal.Zero, 0, decimal.Zero, err
 	}
-	return total, todayLots, nil
+	return total, todayLots, atSettle, nil
 }
 
 // chargeUndated 给裸 CLOSE 与强平标志收手续费，返回按平今档收了几手 —— §13 #23 的 (f)（20260918 夜盘收敛，CTP 单柜台，
@@ -392,10 +405,12 @@ func (s *Simulator) bookQuota(tr match.Trade, todayLots int) {
 }
 
 // commit 把算好的数写进账户（并留下这次计价的分组分解）。⚠️ 走到这里状态已经换进去了：任何失败都让模拟器失效。
-func (s *Simulator) commit(day types.TradingDay, v valuation, commission, closeProfit decimal.Decimal) error {
+//
+// atSettle 是同一笔在结算时计入结存的手续费（commission 的第三个返回值；计价路径两者都是零）。
+func (s *Simulator) commit(day types.TradingDay, v valuation, commission, atSettle, closeProfit decimal.Decimal) error {
 	s.groups = v.groups
 	steps := []func() error{
-		func() error { return s.acc.AddCommission(day, commission) },
+		func() error { return s.acc.AddCommission(day, commission, atSettle) },
 		func() error { return s.acc.AddCloseProfit(day, closeProfit) },
 		func() error { return s.acc.SetMargin(day, v.marginCompany, v.marginExchange) },
 		func() error { return s.acc.SetPositionProfit(day, v.positionProfit) },

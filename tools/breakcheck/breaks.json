@@ -475,11 +475,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "369 手续费不进账户（20260915 重锚：Rebuild 改调门面，记账链条搬进 trade.go）",
+		"name": "369 手续费不进账户（20260915 重锚：Rebuild 改调门面，记账链条搬进 trade.go）（20260921 F10 重锚：commission 多返回结算口径那一项 / fee.Parts 拆出来）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "func() error { return s.acc.AddCommission(day, commission) },",
-		"new": "func() error { return nil },",
+		"old": "func() error { return s.acc.AddCommission(day, commission, atSettle) },",
+		"new": "func() error { _ = atSettle; return nil },",
 		"pkg": "./conformance/fixture/",
 		"test": "TestRebuildAccountFieldByField",
 		"want": "❌ commission",
@@ -3100,11 +3100,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "288 手续费按金额那一项漏乘合约乘数",
+		"name": "288 手续费按金额那一项漏乘合约乘数（20260921 F10 重锚：commission 多返回结算口径那一项 / fee.Parts 拆出来）",
 		"dir": "",
 		"file": "fee/fee.go",
-		"old": "\tamount := v.Mul(price).Mul(multiplier).Mul(byMoney)\n",
-		"new": "\tamount := v.Mul(price).Mul(byMoney)\n",
+		"old": "\treturn v.Mul(price).Mul(multiplier).Mul(byMoney), v.Mul(byVolume), nil",
+		"new": "\treturn v.Mul(price).Mul(byMoney), v.Mul(byVolume), nil",
 		"pkg": "./fee/",
 		"test": "TestVolumeAndMultiplierAreLinear",
 		"want": "乘数翻倍时手续费应翻倍",
@@ -5012,11 +5012,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "522 裸 CLOSE 手续费回到被否的「按消耗拆档」——今1昨1裸平1 消耗昨仓而算平昨档（§13 #21）（第一版留下未用变量，编译红）（20260915 F3 重锚：chargeUndated 的调用挪进 commission()，那里没有 res，编译红）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
+		"name": "522 裸 CLOSE 手续费回到被否的「按消耗拆档」——今1昨1裸平1 消耗昨仓而算平昨档（§13 #21）（第一版留下未用变量，编译红）（20260915 F3 重锚：chargeUndated 的调用挪进 commission()，那里没有 res，编译红）（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）（20260921 F10 重锚：commission 多返回结算口径那一项 / fee.Parts 拆出来）",
 		"dir": "",
 		"file": "trade.go",
-		"old": "\t\tif commission, todayLots, err = s.commission(tr, s.undatedCap(tr.Instrument, tr.Hedge, held, tr.Volume)); err != nil {",
-		"new": "\t\tif commission, todayLots, err = s.commission(tr, func() (int, error) { return res.VolumeToday, nil }); err != nil {",
+		"old": "\t\tif commission, todayLots, atSettle, err = s.commission(tr, s.undatedCap(tr.Instrument, tr.Hedge, held, tr.Volume)); err != nil {",
+		"new": "\t\tif commission, todayLots, atSettle, err = s.commission(tr, func() (int, error) { return res.VolumeToday, nil }); err != nil {",
 		"pkg": "./",
 		"test": "TestUndatedCloseFeeTier",
 		"want": "今1昨1裸平1",
@@ -5486,11 +5486,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "566 裸平挂单的手续费核对形同虚设——「某种拆法算得出才放行」变成「随便哪种不报错就放行」（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）",
+		"name": "566 裸平挂单的手续费核对形同虚设——「某种拆法算得出才放行」变成「随便哪种不报错就放行」（20260918 F11 重锚：裸平改按当日开仓额度收，§13 #23 的 (f)）（20260921 F10 重锚：commission 多返回结算口径那一项 / fee.Parts 拆出来）",
 		"dir": "",
 		"file": "state.go",
-		"old": "if c, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil && c.Equal(o.Frozen.Commission) {",
-		"new": "if c, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil || c.Equal(o.Frozen.Commission) {",
+		"old": "if c, _, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil && c.Equal(o.Frozen.Commission) {",
+		"new": "if c, _, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil || c.Equal(o.Frozen.Commission) {",
 		"pkg": "./",
 		"test": "TestRestoreAcceptsBareCloseAfterPositionChanged",
 		"want": "裸平挂单与账户冻结手续费一起 +1 要被拒",
@@ -6953,11 +6953,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "711 存档加了 Quotas 而 StateFormat 没抬（格式号指回 1）",
+		"name": "711 存档加了字段而 StateFormat 没抬（格式号指回上一个）（20260921 F10 重锚：3 → 2）",
 		"dir": "",
 		"file": "state.go",
-		"old": "const StateFormat = 2",
-		"new": "const StateFormat = 1",
+		"old": "const StateFormat = 3",
+		"new": "const StateFormat = 2",
 		"pkg": "./",
 		"test": "TestStateFormatPinsFieldSet",
 		"want": "改了存档里的字段就要抬 StateFormat",
@@ -7038,6 +7038,127 @@
 		"pkg": "./",
 		"test": "TestSplitTableRowsDiscriminates",
 		"want": "被拆开的第 2 行要报出来",
+		"expect": "red"
+	},
+	{
+		"name": "718 结算不看结算口径的手续费（F10 之前的样子）—— 整天重放的次日结存差 0.008",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\ta.preBalance = a.Balance().Add(a.commission).Sub(a.settleCommission)",
+		"new": "\ta.preBalance = a.Balance()",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeSettlesDay20260918AgainstCTP",
+		"want": "上日结存：门面",
+		"expect": "red"
+	},
+	{
+		"name": "719 结算口径按截断而不是四舍五入（k = 10，被 0918 两手单否掉的形状）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\tst, err := fee.HalfUpToCent.Apply(money)",
+		"new": "\t\tst, err := fee.TruncateToCent.Apply(money)",
+		"pkg": "./",
+		"test": "TestSettleFeeFormulaAgainstStatements",
+		"want": "门面结算口径",
+		"expect": "red"
+	},
+	{
+		"name": "720 结算口径漏了按手部分（按手品种 MA / m 结算费变成 0）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\ttotal, atSettle = total.Add(c), atSettle.Add(st).Add(perLot)",
+		"new": "\t\ttotal, atSettle = total.Add(c), atSettle.Add(st)",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeSettlesDay20260918AgainstCTP",
+		"want": "上日结存：门面",
+		"expect": "red"
+	},
+	{
+		"name": "721 每笔的界写成严格小于 —— 截断口径下恰好 +0.01 的那一笔被误拒",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\tif atSettle.IsNegative() || atSettle.Sub(fee).Abs().GreaterThan(SettleCommissionTolerance) {",
+		"new": "\tif atSettle.IsNegative() || atSettle.Sub(fee).Abs().GreaterThanOrEqual(SettleCommissionTolerance) {",
+		"pkg": "./account/",
+		"test": "TestAddCommissionTolerance",
+		"want": "差恰好 0.01",
+		"expect": "red"
+	},
+	{
+		"name": "722 结算口径的累计结算后不清零 —— 昨天的差额次日再算一次",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\ta.settleCommission = decimal.Zero\n\ta.commissionTrades = 0\n",
+		"new": "\ta.commissionTrades = 0\n",
+		"pkg": "./account/",
+		"test": "TestSettleUsesSettleCommission",
+		"want": "结算口径的累计没清零",
+		"expect": "red"
+	},
+	{
+		"name": "723 存档漏了 SettleCommission —— 盘中存档恢复后按「整笔都不计」结算",
+		"dir": "",
+		"file": "account/state.go",
+		"old": "SettleCommission: a.settleCommission, CommissionTrades: a.commissionTrades, PositionProfit:",
+		"new": "CommissionTrades: a.commissionTrades, PositionProfit:",
+		"pkg": "./",
+		"test": "TestSettleCommissionSurvivesStateRestoreF10",
+		"want": "存档里的结算口径手续费",
+		"expect": "red"
+	},
+	{
+		"name": "724 恢复时不读 SettleCommission / CommissionTrades",
+		"dir": "",
+		"file": "account/state.go",
+		"old": "\ta.settleCommission, a.commissionTrades = st.SettleCommission, st.CommissionTrades\n",
+		"new": "",
+		"pkg": "./account/",
+		"test": "TestRestoreRefusesSettleCommissionOutsideTolerance",
+		"want": "往返",
+		"expect": "red"
+	},
+	{
+		"name": "725 不变量不核累计差（手改存档里超出「笔数 × 0.01」的结算口径手续费被收下）",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\t\treturn fmt.Errorf(\"结算口径的累计手续费 %s 与盘中累计 %s 相差超过 %d 笔 × %s（或为负）\",",
+		"new": "\t\t_ = fmt.Errorf(\"结算口径的累计手续费 %s 与盘中累计 %s 相差超过 %d 笔 × %s（或为负）\",",
+		"pkg": "./account/",
+		"test": "TestRestoreRefusesSettleCommissionOutsideTolerance",
+		"want": "手改的存档没被拦下",
+		"expect": "red"
+	},
+	{
+		"name": "726 不计笔数 —— 累计的界收窄到 0，存档里的笔数恒为 0",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\t\ta.commissionTrades++",
+		"new": "\t\ta.commissionTrades += 0",
+		"pkg": "./account/",
+		"test": "TestRestoreRefusesSettleCommissionOutsideTolerance",
+		"want": "State 里的结算口径手续费",
+		"expect": "red"
+	},
+	{
+		"name": "727 进位门槛悄悄改成 k = 4（盲区里换了选择而没人发现）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\t\tst, err := fee.HalfUpToCent.Apply(money)",
+		"new": "\t\tst, err := fee.HalfUpToCent.Apply(money.Add(decimal.New(1, -3)))",
+		"pkg": "./",
+		"test": "TestSettleKBlindSpotPinnedAtFive",
+		"want": "k = 5",
+		"expect": "red"
+	},
+	{
+		"name": "728 快期口径差的声明不比较（快期改成截断了也不红）",
+		"dir": "",
+		"file": "conformance/fixture/settle_trunc_test.go",
+		"old": "\tif !pre.Equal(balance) {",
+		"new": "\tif !pre.Equal(balance.Truncate(2)) {",
+		"pkg": "./conformance/fixture/",
+		"test": "TestKQSettleDoesNotTruncateFees",
+		"want": "快期的结算口径变了",
 		"expect": "red"
 	}
 ]

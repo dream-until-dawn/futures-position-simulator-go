@@ -1032,6 +1032,8 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 
 ##### ⚠️⚠️ 20260921 改写：前提换成「结算时按笔重算」（实现之前写；下面 20260918 的原文保留，凡与本小节冲突的以本小节为准）
 
+✅ **20260921 夜已实现**（`fee.Parts`、`trade.go` `commission` 第三个返回值、`account.AddCommission(day, fee, atSettle)`，StateFormat 3）。
+
 **为什么改**：原文的前提是「结算时对盘中逐笔费截断到分」(i-t)。它在两次结算单上都被否了（0918 两手单第一笔、0921 十二笔三手单全错）。
 结算单（`testdata/refdata/ctp-settlement-*.json`，`oracle ctp-settle-trades` 读出）直接给出结算时的逐笔手续费；20260921 事前登记的一轮（cn-futures-rules §13 #5）十二笔全对：
 **结算费 = 按额部分在第三位小数 d ≥ k 时进一分、否则舍去，k ∈ {1 … 5}**；k = 6 与银行家舍入被否。
