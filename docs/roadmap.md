@@ -1001,6 +1001,17 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
 ⚠️ 实现中错的两处，都是单跑破坏抓到的：584 以为零值规格会静默算出 0，跑出来是门面报「合约乘数必须为正」（红错了理由）⇒ 改名与 want 如实写；
 225 改锚点时顺手把 `new` 的形状也改了（原为「跳过并计数」，误写成「照常计数但不用」）⇒ 红错了理由，恢复原形状。**改指一条破坏只该动锚点，不该动它破坏的是什么。**
 
+### 自然日 2026-09-21 夜：F10 —— 结算时手续费按笔重算（设计 design.md 门面形状 §14「20260921 改写」）
+
+- ⚠️ **导出面 / 存档兼容性变更**（使用者确认「抬一格」）：
+  ① `account.AddCommission(day, fee)` → `AddCommission(day, fee, atSettle)` —— 签名变，**不兼容**；约束 `atSettle ≥ 0` 且 `|atSettle − fee| ≤ account.SettleCommissionTolerance`（新导出变量，0.01）
+  ② `account.State` 新增 `SettleCommission`、`CommissionTrades`
+  ③ `fee.Parts`（新导出函数）：一笔手续费的按额部分与按手部分，不取整；`fee.Compute` 改为调用它
+  ④ `futsim.StateFormat` 2 → 3：旧存档在版本号那一步报错，不迁移
+- 行为：盘中不变；结算时次日 `PreBalance` 按每笔「四舍五入到分(按额) + 按手」重算的手续费算（§13 #5，CTP 结算单）。k 取 5，k ∈ {1 … 4} 盲区（silent-risks 102）
+- 快期结算不重新取整 = kq_facts 53，`TestKQSettleDoesNotTruncateFees` 声明口径差
+- 旧的 `impl-f10` 分支（按被否的「逐笔截断」写的）**不合**，本批从 main 重写；合并后删除远端分支 —— 删之前的 tip 是 **69f2a2a**（`69f2a2a998bd433c1b1d5e02e7dd60f13c48accf`），留作出处（评审 20260921 核过：docs / *.go 里没有任何提交哈希引用它）
+
 ### 自然日 2026-09-18 夜：F11 —— 裸平按当日开仓额度收档（§13 #23 的 (f)，设计 design.md 门面形状 §15）
 
 - ⚠️ **导出面 / 存档兼容性变更**（使用者 20260918 夜确认「抬一格」）：

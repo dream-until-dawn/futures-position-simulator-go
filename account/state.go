@@ -16,14 +16,18 @@ type State struct {
 	Day       types.TradingDay
 	Algorithm Algorithm
 
-	PreBalance     decimal.Decimal
-	Deposit        decimal.Decimal
-	Withdraw       decimal.Decimal
-	CloseProfit    decimal.Decimal
-	Commission     decimal.Decimal
-	PositionProfit decimal.Decimal
-	CurrMargin     decimal.Decimal
-	ExchangeMargin decimal.Decimal
+	PreBalance  decimal.Decimal
+	Deposit     decimal.Decimal
+	Withdraw    decimal.Decimal
+	CloseProfit decimal.Decimal
+	Commission  decimal.Decimal
+	// SettleCommission 是结算时计入结存的手续费（每笔按结算口径重算后的和）；CommissionTrades 是计入了几笔。
+	// ⚠️ 丢了前者，盘中存档 → 恢复 → 结算会按「整笔都不计」算。两项是 StateFormat 3 新增的（F10）。
+	SettleCommission decimal.Decimal
+	CommissionTrades int
+	PositionProfit   decimal.Decimal
+	CurrMargin       decimal.Decimal
+	ExchangeMargin   decimal.Decimal
 
 	FrozenMargin     decimal.Decimal
 	FrozenCommission decimal.Decimal
@@ -35,7 +39,7 @@ func (a *Account) State() State {
 	return State{
 		Currency: a.Currency, Day: a.Day, Algorithm: a.Algorithm,
 		PreBalance: a.preBalance, Deposit: a.deposit, Withdraw: a.withdraw,
-		CloseProfit: a.closeProfit, Commission: a.commission, PositionProfit: a.positionProfit,
+		CloseProfit: a.closeProfit, Commission: a.commission, SettleCommission: a.settleCommission, CommissionTrades: a.commissionTrades, PositionProfit: a.positionProfit,
 		CurrMargin: a.currMargin, ExchangeMargin: a.exchangeMargin,
 		FrozenMargin: a.frozenMargin, FrozenCommission: a.frozenCommission, FrozenCash: a.frozenCash,
 	}
@@ -55,7 +59,7 @@ func Restore(st State) (*Account, error) {
 		name string
 		v    decimal.Decimal
 	}{
-		{"入金", st.Deposit}, {"出金", st.Withdraw}, {"手续费", st.Commission},
+		{"入金", st.Deposit}, {"出金", st.Withdraw}, {"手续费", st.Commission}, {"结算口径手续费", st.SettleCommission},
 		{"公司占用", st.CurrMargin}, {"交易所占用", st.ExchangeMargin},
 		{"冻结保证金", st.FrozenMargin}, {"冻结手续费", st.FrozenCommission}, {"冻结权利金", st.FrozenCash},
 	} {
@@ -68,6 +72,7 @@ func Restore(st State) (*Account, error) {
 	}
 	a.deposit, a.withdraw = st.Deposit, st.Withdraw
 	a.closeProfit, a.commission, a.positionProfit = st.CloseProfit, st.Commission, st.PositionProfit
+	a.settleCommission, a.commissionTrades = st.SettleCommission, st.CommissionTrades
 	a.currMargin, a.exchangeMargin = st.CurrMargin, st.ExchangeMargin
 	a.frozenMargin, a.frozenCommission, a.frozenCash = st.FrozenMargin, st.FrozenCommission, st.FrozenCash
 	if err := a.Check(); err != nil {

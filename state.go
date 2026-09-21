@@ -20,7 +20,8 @@ import (
 //
 //	1  F5 起
 //	2  State 加 Quotas（F11，裸平按当日开仓额度收档；使用者 20260918 确认抬一格）
-const StateFormat = 2
+//	3  account.State 加 SettleCommission / CommissionTrades（F10，结算时按笔重算手续费；使用者确认「抬一格」）
+const StateFormat = 3
 
 // State 是模拟器的全部状态，全是数据。小数在 JSON 里是字符串（decimal.Decimal 的默认）。
 //
@@ -293,7 +294,7 @@ func (s *Simulator) checkOrderFreeze(day types.TradingDay, o OrderState) error {
 		tr := match.Trade{Instrument: req.Instrument, Direction: req.Direction, Offset: req.Offset, Hedge: req.Hedge, Price: req.Price, Volume: req.Volume}
 		for k := 0; k <= req.Volume; k++ {
 			k := k
-			if c, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil && c.Equal(o.Frozen.Commission) {
+			if c, _, _, err := s.commission(tr, func() (int, error) { return k, nil }); err == nil && c.Equal(o.Frozen.Commission) {
 				return nil
 			}
 		}

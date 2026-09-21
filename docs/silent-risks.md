@@ -4218,6 +4218,15 @@ breakcheck 跑的是这一行：
 后果：本库对大商所报单的涨跌停校验会把真实涨停上方一跳的价放进来（或把跌停上一跳的价拒掉），`Advance` 的越停守卫同理。
 现状：CTP 侧对拍里把这个样本登记为**已知分歧**（`knownDivergence`，两边的值都钉死）；修正（新增取整方式、改 `MeasuredTickRounding` 的大商所一格、`TestLimitRatioFromQuotes` 改成逐样本比）另开一批，登记在 §13 #24。
 
+**102. ⚠️ 结算时手续费的进位门槛 k：实测只钉住 k ∈ {1 … 5}，本库取 5（四舍五入到分）—— k ∈ {1 … 4} 是登记过的盲区。**
+
+§13 #5（20260921 事前登记验证）：CTP 结算时按笔重算，按额部分在第三位小数 d ≥ k 时进一分。d = 5 那一笔否掉了 k = 6 与银行家舍入；
+d ∈ {1 … 4} 的成交一笔都没量到，所以 k = 1 … 5 谁对分不开。使用者 20260921 夜定「先按四舍五入实现、k ∈ {1 … 4} 登记盲区」（双方各自确认）。
+**后果若 k ≠ 5**：d ∈ {k … 4} 的每笔结算费少收 0.01 —— 方向恒定，按成交笔数线性累加进结存，长周期回测会漂出可见的量。
+「没观测就报错」在这里不可用：d 由成交价决定，几乎每个交易日都会碰到 d ∈ {1 … 4}，结算时报错等于结算不能用（评审 20260921）。
+守卫：`TestSettleKBlindSpotPinnedAtFive`（d = 4 那一笔钉住「按 k = 5 舍去」，将来测到 k ≤ 4 要红）。补法：一次事前登记的实验，挑 d ∈ {1 … 4} 的成交（三手单、整数价 P ≡ 3 或 4 (mod 5)）。
+⚠️ 同一批的其余守卫：`TestFacadeSettlesDay20260918AgainstCTP`（整天重放，F10 之前差 0.008）、`TestSettleFeeFormulaAgainstStatements`、`TestSettleToleranceTruncateExactlyOneCent`（截断口径下恰好 +0.01 放行）、`TestSettleCommissionSurvivesStateRestoreF10`、`TestRestoreRefusesSettleCommissionOutsideTolerance`。
+
 ## 怎么用这份清单
 
 - **动到保证金、今昨仓、结算链路的代码前**，先看第一节对应那条的守卫还在不在
