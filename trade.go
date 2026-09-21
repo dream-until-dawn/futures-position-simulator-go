@@ -277,6 +277,7 @@ func undatedSplit(inst types.InstrumentID, volume, today, history int, frozen or
 // CTP 结算时按笔重算，与盘中的 FeeRounding 口径无关。
 // ⚠️ 一笔裸平理论上会拆成平今 / 平昨两段各自收费；在 §13 #23 的 (f) 下这种拆法走不到（有观测的交易所上额度只够一部分就报错，
 // 两档同价时整笔按平昨），所以「每笔」的结算费就是各段之和，不会出现「分段取整还是整笔取整」的歧义。
+// ⚠️ 若将来放开「部分额度」（todayTierLots 不再对 0 < 额度 < 平仓量报错），这里要改成**按笔**取整：先把各段的按额部分相加，再四舍五入一次（评审 20260921）。
 func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (decimal.Decimal, int, decimal.Decimal, error) {
 	inst, err := s.rules.Instrument(tr.Instrument)
 	if err != nil {
