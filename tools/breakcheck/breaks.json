@@ -7063,14 +7063,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "720 结算口径漏了按手部分（按手品种 MA / m 结算费变成 0）",
+		"name": "720 结算口径漏了按手部分（按手品种 MA / m 结算费变成 0）—— 先被 AddCommission 的 ±0.01 界拦下（差 4），界本身就是这一类的守卫",
 		"dir": "",
 		"file": "trade.go",
 		"old": "\t\ttotal, atSettle = total.Add(c), atSettle.Add(st).Add(perLot)",
 		"new": "\t\ttotal, atSettle = total.Add(c), atSettle.Add(st)",
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestFacadeSettlesDay20260918AgainstCTP",
-		"want": "上日结存：门面",
+		"want": "结算时计入的手续费",
 		"expect": "red"
 	},
 	{
