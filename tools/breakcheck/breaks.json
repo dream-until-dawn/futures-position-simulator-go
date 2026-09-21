@@ -7006,5 +7006,27 @@
 		"test": "TestTradeRowsTakesOnlyWhitelistedColumns",
 		"want": "应当整份报错",
 		"expect": "red"
+	},
+	{
+		"name": "715 结算单四列中文遇到词表外的取值不报错（空串照收，像「柜台给的是空」）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settletrades.go",
+		"old": "\t\t\t\t\tif !known {",
+		"new": "\t\t\t\t\tif false && !known {",
+		"pkg": ".",
+		"test": "TestTradeRowsMapsChineseColumnsByVocab",
+		"want": "词表外",
+		"expect": "red"
+	},
+	{
+		"name": "716 结算单按字节直接切 '|'（GBK 第二字节是 0x7C 的汉字被劈成两半）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/settletrades.go",
+		"old": "\t\tif c >= 0x81 && c <= 0xFE && i+1 < len(line) {",
+		"new": "\t\tif false && c >= 0x81 && c <= 0xFE && i+1 < len(line) {",
+		"pkg": ".",
+		"test": "TestGBKCellsDoesNotSplitInsideADoubleByteChar",
+		"want": "中间一格是完整的",
+		"expect": "red"
 	}
 ]

@@ -2,6 +2,7 @@ package main
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -48,5 +49,34 @@ func TestTradeRowsTakesOnlyWhitelistedColumns(t *testing.T) {
 	bad := []byte("Transaction Record\r\n|  Date  |   Fee    |\r\n|20260918|1234567|\r\n")
 	if _, err := tradeRows(bad, []string{"1234567"}); err == nil {
 		t.Error("⚠️ 账号落进了白名单列（Fee），应当整份报错")
+	}
+}
+
+// TestGBKCellsDoesNotSplitInsideADoubleByteChar：「亅」的 GBK 是 0x81 0x7C —— 第二个字节就是 '|'，
+// 直接按 0x7C 切会把它劈成两半、多出一格。
+func TestGBKCellsDoesNotSplitInsideADoubleByteChar(t *testing.T) {
+	got := gbkCells([]byte("a|\x81\x7c|b"))
+	if len(got) != 3 || string(got[1]) != "\x81\x7c" {
+		t.Errorf("得到 %q，期望三格、中间一格是完整的「亅」", got)
+	}
+}
+
+// TestTradeRowsMapsChineseColumnsByVocab：交易所 / 买卖 / 投保 / 开平四列按固定词表映射；词表外的取值报错。
+func TestTradeRowsMapsChineseColumnsByVocab(t *testing.T) {
+	head := "Transaction Record\r\n|  Date  |Exchange|   Instrument   | B/S |    S/H     |   Price  | Lots |  Turnover  |       O/C        |   Fee    |\r\n"
+	row := "|20260918|\xb4\xf3\xc9\xcc\xcb\xf9|j2701|\xc2\xf4|\xcd\xb6\xbb\xfa|1964.000|2|392800.00|\xc6\xbd\xbd\xf1|23.57|\r\n"
+	rows, err := tradeRows([]byte(head+row+"---INE\r\n"), []string{"1234567"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"Exchange": "DCE", "B/S": "Sell", "S/H": "Speculation", "O/C": "CloseToday", "Fee": "23.57"}
+	for k, v := range want {
+		if len(rows) != 1 || rows[0][k] != v {
+			t.Errorf("%s：得到 %v，期望 %s", k, rows, v)
+		}
+	}
+	unknown := "|20260918|\xc4\xdc\xd4\xb4|j2701|\xc2\xf4|\xcd\xb6\xbb\xfa|1964.000|2|392800.00|\xc6\xbd|23.57|\r\n" // 「能源」不在词表里
+	if _, err := tradeRows([]byte(head+unknown), []string{"1234567"}); err == nil || !strings.Contains(err.Error(), "词表外") {
+		t.Errorf("⚠️ 词表外的交易所取值应当报错，得到 %v", err)
 	}
 }
