@@ -1,0 +1,26 @@
+[
+  {
+    "trading_day": "20260921",
+    "at": "09:58:59",
+    "symbol": "DCE.j2701",
+    "round": 1,
+    "leg": "open",
+    "volume": 3,
+    "commission_before": "304.16599999999994",
+    "commission_after": "339.84799999999996",
+    "fee": "35.68200000000002",
+    "source": "probe"
+  },
+  {
+    "trading_day": "20260921",
+    "at": "09:59:01",
+    "symbol": "DCE.j2701",
+    "round": 1,
+    "leg": "close",
+    "volume": 3,
+    "commission_before": "339.84799999999996",
+    "commission_after": "375.52099999999996",
+    "fee": "35.673",
+    "source": "probe"
+  }
+]
