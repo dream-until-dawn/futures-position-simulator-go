@@ -7028,5 +7028,16 @@
 		"test": "TestGBKCellsDoesNotSplitInsideADoubleByteChar",
 		"want": "中间一格是完整的",
 		"expect": "red"
+	},
+	{
+		"name": "717 表格行被拆开的检查不看下一行（被拆成几段的表格行照样通过）",
+		"dir": "",
+		"file": "doctable_test.go",
+		"old": "\t\tif next != \"\" && !strings.HasPrefix(next, \"|\") && !strings.HasPrefix(lines[i+1], \"```\") {",
+		"new": "\t\tif false && next != \"\" && !strings.HasPrefix(next, \"|\") && !strings.HasPrefix(lines[i+1], \"```\") {",
+		"pkg": "./",
+		"test": "TestSplitTableRowsDiscriminates",
+		"want": "被拆开的第 2 行要报出来",
+		"expect": "red"
 	}
 ]
