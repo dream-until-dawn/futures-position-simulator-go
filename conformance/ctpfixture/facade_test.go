@@ -565,7 +565,7 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 	// tickPending 是**合约**的最小变动价位不在规格快照（specs-20260908.json，只有少数合约）里的样本 —— 逐个写理由。
 	// ⚠️ 不从同品种别的月份借（那是推得），也不用控制台读数顶（不算落盘证据）；补上规格来源之后删掉。
 	tickPending := map[string]string{
-		"DCE.m2709": "§13 #24 的判别样本（ctp-status-20260921-2：昨结 3133 × 6% ⇒ 柜台 3320 / 2946，只有往里收对上）。判定已记在 state.md 的 #24 登记块；规格来源补上后改进 knownDivergence",
+		"DCE.m2709": "§13 #24 的判别样本（ctp-status-20260921-2：昨结 3133 × 6% ⇒ 柜台 3320 / 2946，只有往里收对上）。判定已记在 state.md 的 #24 登记块；规格来源补上后改进 keySamples",
 	}
 	tickSeen := map[string]bool{}
 	for p := range ratioPending {
@@ -574,18 +574,15 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 		}
 	}
 	pendingSeen := map[string]bool{}
-	// knownDivergence 是**已登记**的分歧样本（合约/交易日）：本库的取整方向与柜台对不上，而规则的修正还没落地。
-	// ⚠️ 不是跳过：柜台值与本库值**两边都钉死**，任何一边变了都红；修好之后这一条要删（下面的反方向检查会逼它）。
-	type divergence struct{ counterUp, counterLo, libUp, libLo, why string }
-	knownDivergence := map[string]divergence{
-		"DCE.m2705/20260922": {"3191", "2831", "3192", "2830",
-			"§13 #24 第二轮（跨日事前登记 93fa8de）：昨结 3011 × 6% = 3191.66 / 2830.34。柜台往里收，本库按大商所四舍五入"},
-		"DCE.m2701/20260921": {"3634", "3224", "3635", "3223",
-			"§13 #24：昨结 3429 × 6% = 3634.74 / 3223.26。柜台往里收（涨停向下、跌停向上），本库按大商所四舍五入。" +
-				"CTP 上大商所第一个能分开两者的样本；快期 20260909 m2701 昨结 3415 早已给出同样的形状（kq_facts 22 当时的候选集里没有「往里收」）"},
+	// keySamples 是 §13 #24 的关键样本（合约/交易日）：大商所「往里收」与「四舍五入」给出不同的价的那几份。
+	// F12 之前它们登记为已知分歧（本库四舍五入、柜台往里收，两边的值都钉死）；F12 之后它们照普通样本逐项比（本库 = 柜台），
+	// 这里另外断言它们**确实**分得开往里收与四舍五入 —— 否则「正向断言」只是在一份两种取整同值的样本上通过。
+	keySamples := map[string]string{
+		"DCE.m2701/20260921": "§13 #24 第一个 CTP 判别样本：昨结 3429 × 6% = 3634.74 / 3223.26 ⇒ 往里收 3634 / 3224，四舍五入 3635 / 3223",
+		"DCE.m2705/20260922": "§13 #24 第二轮（跨日事前登记 93fa8de）：昨结 3011 × 6% = 3191.66 / 2830.34 ⇒ 往里收 3191 / 2831，四舍五入 3192 / 2830",
 	}
-	divergenceSeen := map[string]bool{}
-	other := map[types.Exchange]refdata.TickRounding{types.SHFE: refdata.TickHalfUp, types.DCE: refdata.TickFloor}
+	keySeen := map[string]bool{}
+	other := map[types.Exchange]refdata.TickRounding{types.SHFE: refdata.TickHalfUp, types.DCE: refdata.TickHalfUp}
 	table := futsim.MeasuredTickRounding()
 
 	type sample struct{ sym, day string }
@@ -640,20 +637,19 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 				t.Fatalf("%s：PriceLimits 没给出结果", sym)
 			}
 			wantUp, wantLo := num(t, q, "UpperLimitPrice"), num(t, q, "LowerLimitPrice")
-			if dv, known := knownDivergence[sym+"/"+day]; known {
-				divergenceSeen[sym+"/"+day] = true
-				d := decimal.RequireFromString
-				if !wantUp.Equal(d(dv.counterUp)) || !wantLo.Equal(d(dv.counterLo)) || !up.Equal(d(dv.libUp)) || !lo.Equal(d(dv.libLo)) {
-					t.Errorf("⚠️ 已登记分歧 %s %s 的形状变了：柜台 %s / %s（登记 %s / %s），本库 %s / %s（登记 %s / %s）—— 修好了就删掉这一条，否则重看（%s）",
-						sym, day, wantUp, wantLo, dv.counterUp, dv.counterLo, up, lo, dv.libUp, dv.libLo, dv.why)
-				} else {
-					t.Logf("ⓘ 已登记分歧 %s %s：%s", sym, day, dv.why)
-				}
-			} else if !up.Equal(wantUp) || !lo.Equal(wantLo) {
+			if !up.Equal(wantUp) || !lo.Equal(wantLo) {
 				t.Errorf("⚠️ %s 交易日 %s：昨结 %s × %s 按 %v 得 %s / %s，柜台 %s / %s", sym, day, pre, ratio, rounding, up, lo, wantUp, wantLo)
 			}
-			if u2, l2, _ := inst.PriceLimits(pre, true, other[id.Exchange]); !u2.Equal(wantUp) || !l2.Equal(wantLo) {
+			u2, l2, _ := inst.PriceLimits(pre, true, other[id.Exchange])
+			disc := !u2.Equal(wantUp) || !l2.Equal(wantLo)
+			if disc {
 				discriminating[id.Exchange]++
+			}
+			if why, key := keySamples[sym+"/"+day]; key {
+				keySeen[sym+"/"+day] = true
+				if !disc {
+					t.Errorf("⚠️ 关键样本 %s %s 在 %v 下也给柜台的价 —— 它分不开两种取整了，本条对大商所的正向断言失去判别力（%s）", sym, day, other[id.Exchange], why)
+				}
 			}
 			n++
 		}
@@ -665,9 +661,9 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 			t.Errorf("⚠️ tickPending 里的 %s 在语料里没出现 —— 删掉那一条（%s）", k, why)
 		}
 	}
-	for k, dv := range knownDivergence {
-		if !divergenceSeen[k] {
-			t.Errorf("⚠️ 已登记分歧 %s 在语料里没出现 —— 删掉那一条（%s）", k, dv.why)
+	for k, why := range keySamples {
+		if !keySeen[k] {
+			t.Errorf("⚠️ 关键样本 %s 在语料里没出现 —— 删掉那一条（%s）", k, why)
 		}
 	}
 	for p, why := range ratioPending {

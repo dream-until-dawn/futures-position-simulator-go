@@ -329,15 +329,16 @@ func TestSnapshotSatisfiesProvider(t *testing.T) {
 
 // TestPriceLimitsRounding 把**实测的**取整行为钉在测试里。
 //
-// ⚠️ 两家交易所的取整方向不同（probes.md §12，各两个品种）：
+// ⚠️ 两家交易所的取整方向不同（probes.md §12；大商所 §13 #24）：
 //
-//	上期所  rb2701 昨结 3158、5%  理论 3315.9 / 3000.1  柜台给 3315 / 3000  向下
-//	大商所  i2701  昨结 734.5、9%  理论 800.605 / 668.395 柜台给 800.5 / 668.5 四舍五入
+//	上期所  rb2701 昨结 3158、5%  理论 3315.9 / 3000.1   柜台给 3315 / 3000  向下
+//	大商所  i2701  昨结 734.5、9%  理论 800.605 / 668.395 柜台给 800.5 / 668.5 四舍五入与往里收同值（分不开）
+//	大商所  m2701  昨结 3429、6%   理论 3634.74 / 3223.26 柜台给 3634 / 3224  往里收（四舍五入会给 3635 / 3223）
 //
-// 而这两组数**同时**排除了「上下各取一边」这个很自然的猜测：
-// 上期所两边都向下（3315.9→3315 是向下，3000.1→3000 也是向下），
-// 大商所两边都四舍五入（800.605→800.5 是向下，668.395→668.5 是**向上**）。
-// 若规则是「上取下、下取上」，大商所的上限应当是 800.5、下限 668.0 —— 与实测不符。
+// ⚠️ 本条旧版注释写过「若规则是上取下、下取上，i2701 下限应当是 668.0 —— 与实测不符」，那句算错了：
+// 往里收的下限是 668.395 向**上**到 668.5，与柜台一致 —— i2701 那一组根本排除不了往里收（§13 #24 的起因之一）。
+// 能分开两者的是 m2701 这一组（CTP 行情，20260921）。
+// 上期所两边都向下（3000.1→3000），它排除了往里收（往里收的下限会是 3001）。
 func TestPriceLimitsRounding(t *testing.T) {
 	rb := spec(t, types.SHFE, "rb2701")
 	rb.PriceLimitRatio, rb.HasPriceLimitRatio = d("0.05"), true
@@ -347,6 +348,10 @@ func TestPriceLimitsRounding(t *testing.T) {
 	i.PriceLimitRatio, i.HasPriceLimitRatio = d("0.09"), true
 	i.PriceTick = d("0.5")
 
+	m := spec(t, types.DCE, "m2701")
+	m.PriceLimitRatio, m.HasPriceLimitRatio = d("0.06"), true
+	m.PriceTick = d("1")
+
 	cases := []struct {
 		name           string
 		inst           Instrument
@@ -355,15 +360,18 @@ func TestPriceLimitsRounding(t *testing.T) {
 		wantUp, wantLo string
 	}{
 		{"上期所 rb 向下取整（实测）", rb, "3158", TickFloor, "3315", "3000"},
-		{"大商所 i 四舍五入（实测）", i, "734.5", TickHalfUp, "800.5", "668.5"},
+		{"大商所 i 往里收（实测；与四舍五入同值）", i, "734.5", TickInward, "800.5", "668.5"},
+		{"大商所 m 往里收（实测，分得开）", m, "3429", TickInward, "3634", "3224"},
 		// ⚠️ 反例：拿另一家的取整方向去算，会得到与实测**不同**的数 ——
 		// 那正是「默认挑一种会在另一家上静默错」的具体形状。
 		{"⚠️ 用错方向：rb 四舍五入", rb, "3158", TickHalfUp, "3316", "3000"},
 		{"⚠️ 用错方向：i 向下取整", i, "734.5", TickFloor, "800.5", "668"},
+		{"⚠️ 用错方向：m 四舍五入（F12 之前本库的口径）", m, "3429", TickHalfUp, "3635", "3223"},
+		{"⚠️ 用错方向：rb 往里收", rb, "3158", TickInward, "3315", "3001"},
 		{"不取整", rb, "3158", TickNone, "3315.9", "3000.1"},
 	}
-	if len(cases) != 5 {
-		t.Fatalf("用例 %d 条，应为 5", len(cases))
+	if len(cases) != 8 {
+		t.Fatalf("用例 %d 条，应为 8", len(cases))
 	}
 	for _, c := range cases {
 		up, lo, ok := c.inst.PriceLimits(d(c.pre), true, c.rounding)
@@ -385,6 +393,13 @@ func TestPriceLimitsRounding(t *testing.T) {
 	t.Logf("ⓘ 同一个合约：向下取整 %s，四舍五入 %s —— 差一个 tick，"+
 		"而那个价**报不出去**", rightUp, wrongUp)
 
+	// ⚠️ 往里收与四舍五入在 m 那一组上必须给不同的数，否则上面「往里收（分得开）」那一格没有判别力。
+	inUp, inLo, _ := m.PriceLimits(d("3429"), true, TickInward)
+	huUp, huLo, _ := m.PriceLimits(d("3429"), true, TickHalfUp)
+	if inUp.Equal(huUp) || inLo.Equal(huLo) {
+		t.Error("⚠️ m2701 那一组上往里收与四舍五入同值 —— 换个样本")
+	}
+
 	// ⚠️ 零值必须报「推不出来」，而不是悄悄不取整。
 	if _, _, ok := rb.PriceLimits(d("3158"), true, TickRoundingUnknown); ok {
 		t.Error("⚠️ 没指定取整方向却推出了结果 —— " +
@@ -396,5 +411,32 @@ func TestPriceLimitsRounding(t *testing.T) {
 	noTick.PriceTick = decimal.Zero
 	if _, _, ok := noTick.PriceLimits(d("3158"), true, TickFloor); ok {
 		t.Error("⚠️ 没有最小变动价位却取整成功了")
+	}
+	// ⚠️ 越界的取值（不是任何一种已知取整）同样推不出来。
+	if _, _, ok := rb.PriceLimits(d("3158"), true, TickRounding(99)); ok {
+		t.Error("⚠️ 不认识的取整方式推出了结果 —— 会静默给没对齐的价")
+	}
+}
+
+// TestSnapToTickRejectsUnknownRounding：snapToTick 自己也拒不认识的取值（design.md F12）。
+// PriceLimits 先用 Valid 拦了一道，所以这里直接测 snapToTick —— 它是第二道，将来有别的调用方时不能静默。
+func TestSnapToTickRejectsUnknownRounding(t *testing.T) {
+	for _, r := range []TickRounding{TickRoundingUnknown, TickRounding(99)} {
+		for _, upper := range []bool{true, false} {
+			if px, ok := snapToTick(d("3315.9"), d("1"), r, upper); ok {
+				t.Errorf("⚠️ snapToTick(%v, upper=%v) 给出 %s —— 不认识的取整方式要报不行", r, upper, px)
+			}
+		}
+	}
+	for _, r := range []TickRounding{TickFloor, TickCeil, TickHalfUp, TickInward} {
+		if !r.Valid() {
+			t.Errorf("⚠️ %v 不 Valid", r)
+		}
+		if _, ok := snapToTick(d("3315.9"), d("1"), r, true); !ok {
+			t.Errorf("⚠️ snapToTick 拒了已知取整 %v", r)
+		}
+	}
+	if TickRoundingUnknown.Valid() || TickRounding(99).Valid() {
+		t.Error("⚠️ 未指定 / 越界取值被当成 Valid")
 	}
 }

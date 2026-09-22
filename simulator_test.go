@@ -60,7 +60,7 @@ func simRules(t *testing.T) refdata.Provider {
 		AddCommissionRates(rb, types.Speculation, refdata.CommissionRates{
 			OpenByVolume: dec("1"), CloseByVolume: dec("2"), CloseTodayByVolume: dec("5")}).
 		AddMarginRates(rb, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).
-		// 手数上限与涨跌幅比例给报单路径（Submit）用。m2701 的 6% 按大商所四舍五入对齐后是 3587 / 3181，
+		// 手数上限与涨跌幅比例给报单路径（Submit）用。m2701 的 6% 按大商所往里收对齐后是 3587 / 3181（这一份四舍五入同值），
 		// 与交易日 20260915 行情里的涨跌停价一致（ctp-slices-20260915.json 的 quotes）。
 		AddInstrument(refdata.Instrument{ID: m, VolumeMultiple: dec("10"), PriceTick: dec("1"),
 			PositionDateType: refdata.NoUseHistory, IsTrading: true,

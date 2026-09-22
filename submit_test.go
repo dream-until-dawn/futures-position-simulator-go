@@ -91,7 +91,7 @@ func TestSubmitBooksTheSameAsApplyTrade(t *testing.T) {
 // TestSubmitRejectsWithCorpusCodes 在门面组装的事实上逐条造出语料里的拒因，查 RejectedError.Code。
 //
 // ⚠️ 它核的是「门面喂给 order 的事实让它拒在同一项、给出同一个 Kind」—— 码值本身与 ctperr 的表同源，不算独立。
-// 涨跌停：m2701 昨结 3384 × (1 ± 6%) 按大商所四舍五入 = 3587 / 3181；ag2702 昨结 15785 × (1 ± 9%) 按上期所向下 = 17205 / 14364。
+// 涨跌停：m2701 昨结 3384 × (1 ± 6%) 按大商所往里收 = 3587 / 3181（四舍五入同值）；ag2702 昨结 15785 × (1 ± 9%) 按上期所向下 = 17205 / 14364。
 func TestSubmitRejectsWithCorpusCodes(t *testing.T) {
 	cases := []struct {
 		name   string

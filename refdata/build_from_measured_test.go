@@ -190,7 +190,7 @@ func TestBuildFromMeasuredDataStopsAtWhatIsMissing(t *testing.T) {
 	}
 	// ⚠️ 取整方向按实测给：上期所向下取整（probes.md §12）。
 	// 它**不是默认值** —— PriceLimits 的零值会报「推不出来」，
-	// 因为大商所是四舍五入，默认挑一种会在另一家上静默错。
+	// 因为大商所是往里收（§13 #24），默认挑一种会在另一家上静默错。
 	up, lo, ok := inst.PriceLimits(decimal.RequireFromString("3158"), true, refdata.TickFloor)
 	if !ok {
 		t.Fatal("⚠️ 推不出涨跌停 —— 而涨跌幅比例明明填了")
