@@ -52,7 +52,7 @@
 
 ### 判法与之后
 
-- 逐笔手续费 = 柜台 `Commission` 前后差，`Round(6)` 等值判；每一步落截面到 `testdata/ctp/`（工具另写，送审后再跑）
+- 逐笔手续费 = 柜台 `Commission` 前后差，`Round(6)` 等值判；每一步落截面到 `testdata/ctp/`（工具另写，送审后再跑）。工具是 `cmd/oracle` 下的 `ctp-quota-ext -symbol <合约> -case explicit|opposite -dump ../../testdata/ctp`（登记之后写的；预言表 `extReadings` 由 `TestExtReadingsMatchPreRegistration` 与上面两张表逐行比）
 - 每条在**两个交易所各一个**判别样本；两所读法一致 ⇒ 该条收敛，F11 对应那一格从「报错」放开成测到的读法（另开一批，导出面不变）；两所不一致 ⇒ 按交易所分，不外推到广期所
 - 单柜台（CTP / SimNow），不进 `rules_measured`
 

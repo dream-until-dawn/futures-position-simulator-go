@@ -50,10 +50,19 @@ type longSides struct {
 
 // longSidesOf 从一次持仓查询里取某合约多头的今/昨。
 func longSidesOf(pos map[string]*def.CThostFtdcInvestorPositionField, inst string) longSides {
+	return sidesOf(pos, inst, def.THOST_FTDC_PD_Long)
+}
+
+// shortSidesOf 同 longSidesOf，取空头（F11 外推 C：当日开过反方向）。口径与多头一致，所以类型仍叫 longSides。
+func shortSidesOf(pos map[string]*def.CThostFtdcInvestorPositionField, inst string) longSides {
+	return sidesOf(pos, inst, def.THOST_FTDC_PD_Short)
+}
+
+func sidesOf(pos map[string]*def.CThostFtdcInvestorPositionField, inst string, dir def.TThostFtdcPosiDirectionType) longSides {
 	var s longSides
 	total := 0
 	for _, p := range pos {
-		if ctp.Text(p.InstrumentID[:]) != inst || p.PosiDirection != def.THOST_FTDC_PD_Long {
+		if ctp.Text(p.InstrumentID[:]) != inst || p.PosiDirection != dir {
 			continue
 		}
 		if int(p.Position) == 0 && int(p.YdPosition) == 0 {

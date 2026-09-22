@@ -7160,5 +7160,71 @@
 		"test": "TestKQSettleDoesNotTruncateFees",
 		"want": "快期的结算口径变了",
 		"expect": "red"
+	},
+	{
+		"name": "737 F11 外推 B 的登记表写反（「扣」预言平今档）—— 代码与 state.md 登记块不一致",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "return []extReading{{\"扣\", tierYd}, {\"不扣\", tierToday}}",
+		"new": "return []extReading{{\"扣\", tierToday}, {\"不扣\", tierYd}}",
+		"pkg": ".",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
+		"expect": "red"
+	},
+	{
+		"name": "738 ctp-quota-ext 对任何交易所都放行 —— 没登记的交易所也会下单",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tif exchange == \"DCE\" || exchange == \"CZCE\" {\n\t\treturn nil\n\t}\n\treturn fmt.Errorf(\"⚠️ **不跑**：F11 外推",
+		"new": "\tif true {\n\t\treturn nil\n\t}\n\treturn fmt.Errorf(\"⚠️ **不跑**：F11 外推",
+		"pkg": ".",
+		"test": "TestExtRegistered",
+		"want": "上期所没登记",
+		"expect": "red"
+	},
+	{
+		"name": "739 ctp-quota-ext 的前提不看空头 —— C 在已有反方向仓位时照跑",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tif short.Today != 0 || short.Yd != 0 || short.OpenedToday != 0 {",
+		"new": "\tif false {",
+		"pkg": ".",
+		"test": "TestExtPremise",
+		"want": "空头有今仓",
+		"expect": "red"
+	},
+	{
+		"name": "740 sidesOf 不分方向 —— 空头被算进多头",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\t\tif ctp.Text(p.InstrumentID[:]) != inst || p.PosiDirection != dir {",
+		"new": "\t\tif ctp.Text(p.InstrumentID[:]) != inst {",
+		"pkg": ".",
+		"test": "TestSidesOfSplitsDirections",
+		"want": "多头读成",
+		"expect": "red"
+	},
+	{
+		"name": "741 ctp-quota-ext 丢了登记检查 —— 排在连柜台之前的那道门没了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tif err := extRegistered(ex, cs); err != nil {\n\t\treturn err\n\t}\n",
+		"new": "",
+		"pkg": ".",
+		"test": "TestExtRegisteredRunsBeforeConnect",
+		"want": "找不到 extRegistered",
+		"expect": "red"
+	},
+	{
+		"name": "742 ctp-quota-ext 两档之外也算活（收到 0.3 时两种读法都活）—— 「谁都没预言到」永远不出现",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "if got != 0 && r.Tier == got {",
+		"new": "if got == 0 || r.Tier == got {",
+		"pkg": ".",
+		"test": "TestExtVerdict",
+		"want": "活着",
+		"expect": "red"
 	}
 ]
