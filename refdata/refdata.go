@@ -185,7 +185,8 @@ const (
 	TickFloor
 	// TickCeil 向上取整。
 	TickCeil
-	// TickHalfUp 四舍五入。⚠️ 实测大商所是这一种（probes.md §12）。
+	// TickHalfUp 四舍五入。⚠️ 它曾是 kq_facts 22 在「向下 / 向上 / 四舍五入」三种候选里给大商所的判定 ——
+	// 候选集里没有「往里收」；§13 #24（20260922）已把大商所改判为 TickInward。现在没有实测交易所用它。
 	TickHalfUp
 	// TickNone 不取整，返回理论值。
 	//
@@ -193,7 +194,22 @@ const (
 	// 不取整的涨跌停价不是一个合法价格（3315.9 不是 tick 的整数倍），
 	// 拿它去下单会被拒。选它只应当出于「我要看理论值」这一个理由。
 	TickNone
+	// TickInward 往里收：涨停**向下**、跌停**向上**对齐最小变动价位 —— 两边都往昨结算价那一侧收。
+	// ⚠️ 实测大商所是这一种（§13 #24，20260922 跨日事前登记，三个判别样本全对）。
+	// ⚠️⚠️ 有条件：前提是涨跌幅比例为整百分比（6%）—— 放开比例时四舍五入（m ≈ 5.98%）与往外收也能解释全部样本，
+	// 只有往里收的可行区间含整 6%。拿到独立的比例来源之前这是假设（silent-risks 101）。
+	// ⚠️ 追加在末尾：不改已有取值。
+	TickInward
 )
+
+// Valid 报告 r 是不是本库认得的取整方式（未指定与越界取值都返回 false）。
+func (r TickRounding) Valid() bool {
+	switch r {
+	case TickFloor, TickCeil, TickHalfUp, TickNone, TickInward:
+		return true
+	}
+	return false
+}
 
 func (r TickRounding) String() string {
 	switch r {
@@ -205,6 +221,8 @@ func (r TickRounding) String() string {
 		return "四舍五入"
 	case TickNone:
 		return "不取整"
+	case TickInward:
+		return "往里收"
 	}
 	return "未指定"
 }
@@ -214,15 +232,15 @@ func (r TickRounding) String() string {
 // ⚠️ 基线是**昨结算价**，不是昨收盘价。
 //
 // ⚠️ rounding 必须显式给，零值报错。理由是实测：
-// **两家交易所的取整方向不同** —— 上期所向下取整、大商所四舍五入
-// （probes.md §12，各两个品种）。默认挑一种会在另一家上静默错，
+// **两家交易所的取整方向不同** —— 上期所向下取整（probes.md §12）、大商所往里收（§13 #24，20260922；
+// 此前记作四舍五入，那是三种候选里的判定）。默认挑一种会在另一家上静默错，
 // 而错的量级不到一个 tick：数字看起来完全正常，只是那个价报不出去。
 //
 // ⚠️ 而「按交易所硬编码」同样不行 —— 那正是 PositionDateType 上栽过的形状：
 // 在绝大多数合约上都对，于是错的那几个不会被测出来。
 // 取整方向应当随规则数据来，本结构体尚未承载它，所以由调用方传。
 //
-// ok 为 false 表示**推不出来**（没有涨跌幅比例、没有昨结算价、或没指定取整）。
+// ok 为 false 表示**推不出来**（没有涨跌幅比例、没有昨结算价、没指定取整、或取整方式不认识）。
 // 调用方必须把它当成「跳过涨跌停校验并给出原因」，而**不是**「没有涨跌停限制」。
 func (i Instrument) PriceLimits(preSettlement decimal.Decimal, hasPreSettlement bool,
 	rounding TickRounding) (upper, lower decimal.Decimal, ok bool) {
@@ -230,7 +248,8 @@ func (i Instrument) PriceLimits(preSettlement decimal.Decimal, hasPreSettlement 
 	if !i.HasPriceLimitRatio || !hasPreSettlement || !preSettlement.IsPositive() {
 		return decimal.Zero, decimal.Zero, false
 	}
-	if rounding == TickRoundingUnknown {
+	if !rounding.Valid() {
+		// ⚠️ 未指定与越界取值同形：推不出来。越界取值此前会落进 snapToTick 的「没有 default」，静默返回没对齐跳的价（评审 20260922）。
 		return decimal.Zero, decimal.Zero, false
 	}
 	one := decimal.NewFromInt(1)
@@ -243,17 +262,22 @@ func (i Instrument) PriceLimits(preSettlement decimal.Decimal, hasPreSettlement 
 		// ⚠️ 要取整却没有最小变动价位 —— 那是「推不出来」，不是「不用取整」。
 		return decimal.Zero, decimal.Zero, false
 	}
-	return snapToTick(up, i.PriceTick, rounding),
-		snapToTick(lo, i.PriceTick, rounding), true
+	upper, uok := snapToTick(up, i.PriceTick, rounding, true)
+	lower, lok := snapToTick(lo, i.PriceTick, rounding, false)
+	if !uok || !lok {
+		return decimal.Zero, decimal.Zero, false
+	}
+	return upper, lower, true
 }
 
-// snapToTick 把价格对齐到最小变动价位。
+// snapToTick 把价格对齐到最小变动价位；upper 标明这是涨停那一边。ok 为 false 表示取整方式不认识。
 //
-// ⚠️ 上下两边用**同一个**方向，不是「上取上、下取下」。
+// ⚠️ 向下 / 向上 / 四舍五入：上下两边用**同一个**方向，不是「上取上、下取下」。
 // 实测支持这一点：上期所 rb2701 昨结 3158、5%，理论 3315.9 / 3000.1，
 // 柜台给 3315 / 3000 —— **两边都是向下**（probes.md §12）。
-// 「上下各取一边」是个很自然的猜测，而它在这个样本上是错的。
-func snapToTick(px, tick decimal.Decimal, r TickRounding) decimal.Decimal {
+// ⚠️ 往里收（大商所，§13 #24）是唯一上下方向不同的一种：涨停向下、跌停向上。
+// ⚠️ 必须有 default：此前没有，不认识的取值会把「价 ÷ 跳」原样乘回去，静默返回一个没对齐跳的价（评审 20260922）。
+func snapToTick(px, tick decimal.Decimal, r TickRounding, upper bool) (decimal.Decimal, bool) {
 	n := px.Div(tick)
 	switch r {
 	case TickFloor:
@@ -262,8 +286,16 @@ func snapToTick(px, tick decimal.Decimal, r TickRounding) decimal.Decimal {
 		n = n.Ceil()
 	case TickHalfUp:
 		n = n.Round(0)
+	case TickInward:
+		if upper {
+			n = n.Floor()
+		} else {
+			n = n.Ceil()
+		}
+	default:
+		return decimal.Zero, false
 	}
-	return n.Mul(tick)
+	return n.Mul(tick), true
 }
 
 // Provider 提供规则数据查询。
