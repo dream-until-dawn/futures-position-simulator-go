@@ -31,7 +31,9 @@ func submitCalendar(t *testing.T) *refdata.Calendar {
 	// rb2701（上期所）：给第八项口径的报单路径用，时段形状照抄上面（合成，不是上期所时段表的实测）
 	rb := m
 	rb.Exchange, rb.Product = types.SHFE, "rb"
-	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m, y, rb}, nil)
+	lh, jd := m, m // F13 决策点 1 的报单路径用（合成）
+	lh.Product, jd.Product = "lh", "jd"
+	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m, y, rb, lh, jd}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

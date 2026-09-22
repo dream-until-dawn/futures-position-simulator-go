@@ -275,9 +275,9 @@ func undatedSplit(inst types.InstrumentID, volume, today, history int, frozen or
 //
 // 第三个返回值是这一笔的**结算口径**手续费（§13 #5，design.md 门面形状 §14，F10）：四舍五入到分(按额部分) + 按手部分 ——
 // CTP 结算时按笔重算，与盘中的 FeeRounding 口径无关。
-// ⚠️ 一笔裸平理论上会拆成平今 / 平昨两段各自收费；在 §13 #23 的 (f) 下这种拆法走不到（有观测的交易所上额度只够一部分就报错，
-// 两档同价时整笔按平昨），所以「每笔」的结算费就是各段之和，不会出现「分段取整还是整笔取整」的歧义。
-// ⚠️ 若将来放开「部分额度」（todayTierLots 不再对 0 < 额度 < 平仓量报错），这里要改成**按笔**取整：先把各段的按额部分相加，再四舍五入一次（评审 20260921）。
+// ⚠️ 一笔裸平在额度只够一部分时拆成平今 / 平昨两段（F13 放开，design.md 门面形状 §17）。「按笔取整」（先把两段的按额部分相加、再四舍五入一次）
+// 与「分段取整」（各段各自四舍五入再相加）哪一种是柜台的，**没有观测**（§17 决策点 1）：两种都算，**不同就报错**，相同照收。
+// 结算口径（HalfUpToCent）与盘中口径（FeeRounding）各比一次；FeeRounding = 不取整时盘中两种恒同值。
 func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (decimal.Decimal, int, decimal.Decimal, error) {
 	inst, err := s.rules.Instrument(tr.Instrument)
 	if err != nil {
@@ -293,6 +293,8 @@ func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (
 		return decimal.Zero, 0, decimal.Zero, fmt.Errorf("%s：%w", tr.Instrument, err)
 	}
 	total, atSettle := decimal.Zero, decimal.Zero
+	var sumMoney, sumPerLot decimal.Decimal
+	segments := 0
 	charge := func(off types.Offset, vol int) error {
 		if vol == 0 {
 			return nil
@@ -310,6 +312,7 @@ func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (
 			return err
 		}
 		total, atSettle = total.Add(c), atSettle.Add(st).Add(perLot)
+		sumMoney, sumPerLot, segments = sumMoney.Add(money), sumPerLot.Add(perLot), segments+1
 		return nil
 	}
 	todayLots := 0
@@ -332,7 +335,32 @@ func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, err
 	}
+	if segments > 1 {
+		if err := sameAsWholeTrade(tr, s.choices.FeeRounding, total, atSettle, sumMoney, sumPerLot); err != nil {
+			return decimal.Zero, 0, decimal.Zero, err
+		}
+	}
 	return total, todayLots, atSettle, nil
+}
+
+// sameAsWholeTrade：一笔拆成两段收费时，「分段取整」（total / atSettle，各段各自取整再相加）与「按笔取整」（两段相加再取整一次）
+// 给出不同的数就报错 —— 哪一种是柜台的没有观测（design.md 门面形状 §17 决策点 1）。按值判，不按形状判：同值照收（评审 20260922）。
+func sameAsWholeTrade(tr match.Trade, r fee.Rounding, total, atSettle, sumMoney, sumPerLot decimal.Decimal) error {
+	wholeSettle, err := fee.HalfUpToCent.Apply(sumMoney)
+	if err != nil {
+		return err
+	}
+	wholeSettle = wholeSettle.Add(sumPerLot)
+	whole, err := r.Apply(sumMoney.Add(sumPerLot))
+	if err != nil {
+		return fmt.Errorf("%s 手续费：%w", tr.Instrument, err)
+	}
+	if whole.Equal(total) && wholeSettle.Equal(atSettle) {
+		return nil
+	}
+	return fmt.Errorf("%s 裸平 %d 手拆成平今 / 平昨两段收费：分段取整给 盘中 %s / 结算 %s，按笔取整给 盘中 %s / 结算 %s —— "+
+		"柜台是哪一种没有观测（design.md 门面形状 §17 决策点 1，待排「按额、两档不同的品种一笔 2 手、额度 1」的事前登记实验），不猜",
+		tr.Instrument, tr.Volume, total, atSettle, whole, wholeSettle)
 }
 
 // chargeUndated 给裸 CLOSE 与强平标志收手续费，返回按平今档收了几手 —— §13 #23 的 (f)（20260918 夜盘收敛，CTP 单柜台，
@@ -340,7 +368,7 @@ func (s *Simulator) commission(tr match.Trade, undatedCap func() (int, error)) (
 //
 //	平今档手数 = min(平仓量, 当日开仓量 − 当日已按平今档收过的手数)，其余走平昨档 —— 与平的是哪一片、平仓前今仓几手都无关
 //
-// 额度由 cap 给（todayTierLots；三处没实测的外推在那里报错不猜，design.md 门面形状 §15）。
+// 额度由 cap 给（todayTierLots）：多手按额度拆、额度分方向（F13，design.md 门面形状 §17）；「显式平今扣不扣额度」分岔时在那里报错不猜。
 //
 // ⚠️ 它替换的是 §13 #21 在大商所收敛的 (a)「min(平仓量, 平仓前今仓量)」：两者在大商所此前的全部观测上同值，
 // 20260918 夜盘第 3 笔（额度用完之后平剩下的今仓）第一次分岔，柜台收平昨档（silent-risks 100）。

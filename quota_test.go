@@ -8,31 +8,32 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 )
 
-// TestTodayTierLots 逐格钉住 §13 #23 的 (f) 与三条外推的「分岔报错 / 同值照收」（design.md 门面形状 §15）。
+// TestTodayTierLots 逐格钉住 §13 #23 的 (f)：多手按额度拆、额度分方向（F13，design.md 门面形状 §17），「显式平今扣不扣额度」分岔报错。
 func TestTodayTierLots(t *testing.T) {
 	id := types.InstrumentID{Exchange: types.DCE, Product: "m", Year: 2027, Month: 1}
 	q := func(o, c, e int) quotaCount { return quotaCount{Opened: o, Charged: c, Explicit: e} }
 	cases := []struct {
-		name     string
-		vol      int
-		own, opp quotaCount
-		want     int
-		err      string
+		name string
+		vol  int
+		own  quotaCount
+		want int
+		err  string
 	}{
-		{"当日没开过 ⇒ 平昨档（郑商所 X1、大商所 E1）", 1, q(0, 0, 0), q(0, 0, 0), 0, ""},
-		{"当日开 1 未用 ⇒ 平今档（X2、大商所 0915）", 1, q(1, 0, 0), q(0, 0, 0), 1, ""},
-		{"当日开 1 已用 ⇒ 平昨档（X0；(a) 预言平今）", 1, q(1, 1, 0), q(0, 0, 0), 0, ""},
-		{"当日开 2 已用 2 ⇒ 平昨档（ctp-quota 第 3 笔）", 1, q(2, 2, 0), q(0, 0, 0), 0, ""},
-		{"两手、额度 2 ⇒ 全今", 2, q(2, 0, 0), q(0, 0, 0), 2, ""},
-		{"两手、额度 0 ⇒ 全昨", 2, q(1, 1, 0), q(0, 0, 0), 0, ""},
-		{"两手、额度 1 ⇒ 三种读法分岔，报错", 2, q(1, 0, 0), q(0, 0, 0), 0, "介于 0 与平仓量之间"},
-		{"显式平今用掉额度 ⇒ 扣 / 不扣分岔，报错", 1, q(1, 1, 1), q(0, 0, 0), 0, "显式平今扣不扣额度"},
-		{"显式平今之后额度仍够 ⇒ 同值照收", 1, q(2, 1, 1), q(0, 0, 0), 1, ""},
-		{"当日开过反方向 ⇒ 分 / 不分方向分岔，报错", 1, q(1, 1, 0), q(1, 0, 0), 0, "额度分不分方向"},
-		{"反方向开过但本方向额度够 ⇒ 同值照收", 1, q(1, 0, 0), q(1, 0, 0), 1, ""},
+		{"当日没开过 ⇒ 平昨档（郑商所 X1、大商所 E1）", 1, q(0, 0, 0), 0, ""},
+		{"当日开 1 未用 ⇒ 平今档（X2、大商所 0915）", 1, q(1, 0, 0), 1, ""},
+		{"当日开 1 已用 ⇒ 平昨档（X0；(a) 预言平今）", 1, q(1, 1, 0), 0, ""},
+		{"当日开 2 已用 2 ⇒ 平昨档（ctp-quota 第 3 笔）", 1, q(2, 2, 0), 0, ""},
+		{"两手、额度 2 ⇒ 全今", 2, q(2, 0, 0), 2, ""},
+		{"两手、额度 0 ⇒ 全昨", 2, q(1, 1, 0), 0, ""},
+		{"两手、额度 1 ⇒ 按额度拆 1 手平今（外推 A，m2703 / MA703）", 2, q(1, 0, 0), 1, ""},
+		{"三手、额度 2 ⇒ 2 手平今", 3, q(2, 0, 0), 2, ""},
+		{"显式平今用掉额度 ⇒ 扣 / 不扣分岔，报错", 1, q(1, 1, 1), 0, "显式平今扣不扣额度"},
+		{"两手、显式平今之后 ⇒ 扣给 1、不扣给 2，报错", 2, q(2, 1, 1), 0, "显式平今扣不扣额度"},
+		{"显式平今之后额度仍够 ⇒ 同值照收", 1, q(2, 1, 1), 1, ""},
+		{"两手、显式平今之后额度仍够两手 ⇒ 同值照收", 2, q(3, 1, 1), 2, ""},
 	}
 	for _, c := range cases {
-		got, err := todayTierLots(id, c.vol, c.own, c.opp)
+		got, err := todayTierLots(id, c.vol, c.own)
 		switch {
 		case c.err != "":
 			if err == nil || !strings.Contains(err.Error(), c.err) {
@@ -102,7 +103,6 @@ func TestQuotaRefusalsLeaveNoTrace(t *testing.T) {
 			}
 		}
 	}
-	run("多手裸平、额度 1", open(types.Buy, 1), 2, "介于 0 与平仓量之间")
 	run("显式平今之后", func(s *Simulator) {
 		open(types.Buy, 1)(s)
 		open(types.Buy, 1)(s) // 今 2：显式平今 1 之后仍有今仓，额度 2 − 1
@@ -113,13 +113,40 @@ func TestQuotaRefusalsLeaveNoTrace(t *testing.T) {
 			t.Fatal(err) // 额度还剩 1：扣 / 不扣都 ≥ 1，照收平今
 		}
 	}, 1, "显式平今扣不扣额度")
-	run("当日开过反方向", func(s *Simulator) {
-		open(types.Buy, 1)(s)
-		open(types.Sell, 1)(s)
-		if err := s.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.Close, "3000", 1)); err != nil {
-			t.Fatal(err) // 用掉多头额度 1
+}
+
+// TestQuotaMultiLotAndDirectionF13：F11 外推 A、C 放开之后在门面上的形状（design.md 门面形状 §17）。
+// 合成费率 m2701 平昨 1.2 / 平今 0.75（simRules）；昨 1 由真结算造出。
+func TestQuotaMultiLotAndDirectionF13(t *testing.T) {
+	open := func(s *Simulator, dir types.Direction) {
+		t.Helper()
+		if err := s.ApplyTrade(simNext, trade(t, "DCE.m2701", dir, types.Open, "3000", 1)); err != nil {
+			t.Fatal(err)
 		}
-	}, 1, "额度分不分方向")
+	}
+	closeFee := func(s *Simulator, vol int) string {
+		t.Helper()
+		before := s.Account().Commission
+		if err := s.ApplyTrade(simNext, trade(t, "DCE.m2701", types.Sell, types.Close, "3000", vol)); err != nil {
+			t.Fatalf("⚠️ 裸平 %d 手不该报错（F13 已放开）：%v", vol, err)
+		}
+		return s.Account().Commission.Sub(before).String()
+	}
+	// A：昨 1、开今 1（额度 1）、一笔裸平 2 手 ⇒ 1 手平今 0.75 + 1 手平昨 1.2
+	s := withHistoryOn(t, "DCE.m2701", "3000")
+	open(s, types.Buy)
+	if got := closeFee(s, 2); got != "1.95" {
+		t.Errorf("⚠️ 外推 A：裸平 2 手收 %s，期望 0.75 + 1.2 = 1.95（按额度拆）", got)
+	}
+	if q := s.quotaOf(simInst(t, "DCE.m2701"), types.Speculation, types.Buy); q.Charged != 1 {
+		t.Errorf("⚠️ 外推 A：按平今档收了 %d 手，期望 1", q.Charged)
+	}
+	// C：多头昨 1、卖开 1（空头额度 1，多头额度 0）、裸平多头 1 ⇒ 平昨档 1.2
+	s = withHistoryOn(t, "DCE.m2701", "3000")
+	open(s, types.Sell)
+	if got := closeFee(s, 1); got != "1.2" {
+		t.Errorf("⚠️ 外推 C：开过反方向之后裸平多头收 %s，期望平昨档 1.2（额度分方向）", got)
+	}
 }
 
 // TestQuotaSurvivesStateAndResetsAtSettle：额度用掉一半时存档往返，裸平收费与不经存档相同；跨一次 Settle 之后额度从 0 起算。

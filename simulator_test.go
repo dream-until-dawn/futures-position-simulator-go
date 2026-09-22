@@ -36,7 +36,24 @@ func simRules(t *testing.T) refdata.Provider {
 	m, ag, y, rb := simInst(t, "DCE.m2701"), simInst(t, "SHFE.ag2702"), simInst(t, "DCE.y2701"), simInst(t, "SHFE.rb2701")
 	ma := simInst(t, "CZCE.MA2701")
 	si := simInst(t, "GFEX.si2701")
+	lh, jd := simInst(t, "DCE.lh2701"), simInst(t, "DCE.jd2701")
 	b := refdata.NewBuilder(1).
+		// lh2701：按额、平昨 0.0002 / 平今 0.0004（照 ctp-commission-rates-20260915.txt 的声明；乘数 16、跳 5 是合成的）——
+		// 给 F13 决策点 1「拆两段、两种取整写法不同 ⇒ 报错」用（design.md 门面形状 §17）
+		AddInstrument(refdata.Instrument{ID: lh, VolumeMultiple: dec("16"), PriceTick: dec("5"),
+			PositionDateType: refdata.NoUseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.07"), HasPriceLimitRatio: true}).
+		AddCommissionRates(lh, types.Speculation, refdata.CommissionRates{
+			OpenByMoney: dec("0.0002"), CloseByMoney: dec("0.0002"), CloseTodayByMoney: dec("0.0004")}).
+		AddMarginRates(lh, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).
+		// jd2701：⚠️ **合成费率**「按额三档同价、每手平昨 2 / 平今 1」—— 真实声明里 jd 每手是 0；这一格给「按额同价、每手不同也会拆段」用（评审 20260922）
+		AddInstrument(refdata.Instrument{ID: jd, VolumeMultiple: dec("16"), PriceTick: dec("5"),
+			PositionDateType: refdata.NoUseHistory, IsTrading: true,
+			MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, PriceLimitRatio: dec("0.07"), HasPriceLimitRatio: true}).
+		AddCommissionRates(jd, types.Speculation, refdata.CommissionRates{
+			OpenByMoney: dec("0.00015"), CloseByMoney: dec("0.00015"), CloseTodayByMoney: dec("0.00015"),
+			CloseByVolume: dec("2"), CloseTodayByVolume: dec("1")}).
+		AddMarginRates(jd, types.Speculation, refdata.MarginRates{LongByMoney: dec("0.1"), ShortByMoney: dec("0.1")}).
 		// si2701（广期所）：NoUseHistory、两档不同 —— 给「§13 #23 的 (f) 只在大商所、郑商所实测，其余报错不猜」那一格用
 		AddInstrument(refdata.Instrument{ID: si, VolumeMultiple: dec("5"), PriceTick: dec("5"),
 			PositionDateType: refdata.NoUseHistory, IsTrading: true,
