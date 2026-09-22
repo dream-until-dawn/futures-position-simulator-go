@@ -7350,14 +7350,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "748 ctp-quota-ext 收尾不扫活委托 —— 退出时本合约可能还挂着单",
+		"name": "748 ctp-quota-ext 收尾不做最后那道扫单 —— 平仓收尾之后本合约可能还挂着单（2d54548 起收尾有两道 sweepLive，只看「调没调过」分不开，改指收尾顺序那条）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/closefee_quotaext.go",
 		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
 		"new": "\t\tif err := error(nil); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
 		"pkg": ".",
-		"test": "TestImmediateFillPathsCancelOnMiss",
-		"want": "收尾没有扫活委托",
+		"test": "TestExtDeferSweepsBeforeClosing",
+		"want": "收尾顺序",
 		"expect": "red"
 	},
 	{
