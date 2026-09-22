@@ -7403,5 +7403,27 @@
 		"test": "TestDirectInsertOnlyInAllowedFuncs",
 		"want": "runCTPHold 直接调了 c.Insert",
 		"expect": "red"
+	},
+	{
+		"name": "758 openOneLotResting 下单报错时不撤 —— 挂在最新价 − 一跳、之后会真成交的单漏在柜台上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\tif cerr := cancelAndConfirm(c, st.OrderRef, req, timeout, logf); cerr != nil {\n\t\t\treturn 0, errors.Join(err, cerr)\n\t\t}\n",
+		"new": "\t\t_ = errors.Join\n",
+		"pkg": ".",
+		"test": "TestRestingPathsCancelOnEveryExit",
+		"want": "openOneLotResting 只有",
+		"expect": "red"
+	},
+	{
+		"name": "759 ctp-fee 收尾不兜底撤单 —— Insert 报错 continue、Account 失败提前返回时挂着的单漏撤",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/fee.go",
+		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {",
+		"new": "\t\tif err := error(nil); err != nil {",
+		"pkg": ".",
+		"test": "TestRestingPathsCancelOnEveryExit",
+		"want": "runCTPFee 的收尾没有 defer sweepLive",
+		"expect": "red"
 	}
 ]

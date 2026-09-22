@@ -740,6 +740,12 @@ func runCTPOrder(args []string) error {
 		return err
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// 兜底：退出前撤掉本合约的全部活委托 —— 中途报错提前返回的路径上，已挂的单会漏撤（评审 20260922）。
+	defer func() {
+		if err := sweepLive(c, inst, *timeout, logf); err != nil {
+			logf("⚠️⚠️ **%s 还有活委托，去看账户**：%v", *symbol, err)
+		}
+	}()
 	// ⚠️ 方向与开平**成对**决定，不许分开设：买开挂跌停、卖平挂涨停，
 	// 两者都是「挂得上、成不了」的那一端。⚠️ 拆开设会让人配出
 	// 「卖平挂跌停」这种当场成交的组合，而那与本命令要验的往返完全不是一回事。
@@ -906,11 +912,8 @@ func runCTPRoundTrip(args []string) error {
 	logf("[RT] 买开 1 手 @%.2f（涨停，保证成交；⚠️ 实际成交价由对手价决定）", open.LimitPrice)
 	st, err := insertOrCancel(c, open, *timeout, logf)
 	if err != nil {
+		// ⚠️ 没成交也走这里（insertOrCancel 撤掉并报错）：本轮没有建成仓，**不要**当成失败去改判据，先查为什么没成。
 		return fmt.Errorf("买开：%w", err)
-	}
-	if st.VolumeTraded == 0 {
-		return fmt.Errorf("⚠️ 买开没有成交（status=%q %s）—— 本轮没有建成仓，"+
-			"**不要**当成失败去改判据，先查为什么没成", string(st.Status), st.StatusMsg)
 	}
 	logf("[RT] 已成交 %d 手  status=%q", st.VolumeTraded, string(st.Status))
 

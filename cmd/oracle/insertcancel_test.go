@@ -130,11 +130,14 @@ func TestImmediateFillPathsCancelOnMiss(t *testing.T) {
 	if !callsIn(t, "closefee_quotaext.go", "runCTPQuotaExt")["sweepLive"] {
 		t.Error("⚠️ runCTPQuotaExt 的收尾没有扫活委托")
 	}
-	ic := callsIn(t, "insertcancel.go", "insertOrCancel")
-	if !ic["sweepLive"] {
+	if !callsIn(t, "insertcancel.go", "insertOrCancel")["cancelAndConfirm"] {
+		t.Error("⚠️ insertOrCancel 没成交时不走 cancelAndConfirm")
+	}
+	cc := callsIn(t, "insertcancel.go", "cancelAndConfirm")
+	if !cc["sweepLive"] {
 		t.Error("⚠️ insertOrCancel 没成交时不扫活委托 —— 超时拿不到 ref 的那一笔撤不掉")
 	}
-	if !ic["afterCancel"] {
+	if !cc["afterCancel"] {
 		t.Error("⚠️ insertOrCancel 扫完不看本地簿 —— 停在 'a' 上的那一笔会被当成干净")
 	}
 }
@@ -145,16 +148,19 @@ func TestImmediateFillPathsCancelOnMiss(t *testing.T) {
 // ⚠️ 这张表以外的函数一律走 insertOrCancel —— 要求立刻成交的委托没成交就撤、撤干净再返回（评审 20260922）。
 // 新写一个工具直接调 Insert，本条会红：那时要么改走 insertOrCancel，要么把它加进来并写清它自己怎么撤。
 var directInsertAllowed = map[string]string{
-	"insertOrCancel":      "它就是那道撤单",
-	"runControlDeclaring": "controlVerdict 判出要撤时撤",
-	"runCTPDup":           "重复报单：格子挂着是判据，收尾撤",
-	"runCTPFee":           "冻结手续费：每个价位挂上读完就撤",
-	"runCTPOrder":         "P3 冻结往返：挂上、拍截面、撤",
-	"runCTPPairs":         "成对报单：挂着是判据，收尾撤",
-	"runCTPPriority":      "拒单优先级：盘中休息报不进，被拒或撤",
-	"runCTPReject":        "拒单码：被拒是判据，挂上了就撤",
-	"openOneLotResting":   "挂低一跳等成交，等不到就撤",
+	"insertOrCancel":      "它就是那道撤单（cancelAndConfirm）",
+	"runControlDeclaring": "controlVerdict 判出要撤时按 ref 撤；报错提前返回的路径由调用方（runCTPPairs / runCTPReject / runCTPPriority）的收尾 sweepLive 兜底",
+	"runCTPDup":           "重复报单：格子挂着是判据，正常路径逐格按 ref 撤；中途报错由收尾 defer sweepLive 兜底",
+	"runCTPFee":           "冻结手续费：每个价位挂上读完按 ref 撤；Insert 报错 continue、Account 失败提前返回由收尾 defer sweepLive 兜底",
+	"runCTPOrder":         "P3 冻结往返：挂上、拍截面、按 ref 撤；其余提前返回由收尾 defer sweepLive 兜底",
+	"runCTPPairs":         "成对报单：挂着是判据，正常路径撤；中途报错由收尾 defer sweepLive 兜底",
+	"runCTPPriority":      "拒单优先级：盘中休息报不进，被拒或撤；中途报错由收尾 defer sweepLive 兜底",
+	"runCTPReject":        "拒单码：被拒是判据，挂上了就撤；中途报错由收尾 defer sweepLive 兜底",
+	"openOneLotResting":   "挂低一跳等成交：Insert 报错与等不到成交两条路径都走 cancelAndConfirm",
 }
+
+// sweptOnExit 是白名单里自己连柜台的入口函数：它们必须在收尾 defer 里 sweepLive 本合约（评审 20260922）。
+var sweptOnExit = []string{"runCTPDup", "runCTPFee", "runCTPOrder", "runCTPPairs", "runCTPPriority", "runCTPReject"}
 
 // TestDirectInsertOnlyInAllowedFuncs 扫全包：直接调 Insert 的函数只能是白名单里的。
 func TestDirectInsertOnlyInAllowedFuncs(t *testing.T) {
@@ -208,5 +214,72 @@ func TestDirectInsertOnlyInAllowedFuncs(t *testing.T) {
 	}
 	if len(seen) < 5 {
 		t.Fatalf("⚠️ 只扫到 %d 个调 Insert 的函数 —— 扫描写错了，本条在空转", len(seen))
+	}
+}
+
+// TestRestingPathsCancelOnEveryExit：白名单里的挂单路径，出错提前返回也要撤干净（评审 20260922）。
+//   - openOneLotResting：Insert 报错与等不到成交两条路径都走 cancelAndConfirm（数调用次数，至少 2）
+//   - sweptOnExit 里的入口：有一个 defer 调 sweepLive
+func TestRestingPathsCancelOnEveryExit(t *testing.T) {
+	f, err := parser.ParseFile(token.NewFileSet(), "slice.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, d := range f.Decls {
+		if fd, ok := d.(*ast.FuncDecl); ok && fd.Name.Name == "openOneLotResting" {
+			ast.Inspect(fd, func(x ast.Node) bool {
+				if call, ok := x.(*ast.CallExpr); ok {
+					if id, ok := call.Fun.(*ast.Ident); ok && id.Name == "cancelAndConfirm" {
+						n++
+					}
+				}
+				return true
+			})
+		}
+	}
+	if n < 2 {
+		t.Errorf("⚠️ openOneLotResting 只有 %d 处走 cancelAndConfirm（要 ≥ 2：Insert 报错、等不到成交）—— 挂在最新价 − 一跳的单会漏撤", n)
+	}
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	swept := map[string]bool{}
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		f, err := parser.ParseFile(token.NewFileSet(), name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, d := range f.Decls {
+			fd, ok := d.(*ast.FuncDecl)
+			if !ok || fd.Body == nil {
+				continue
+			}
+			ast.Inspect(fd.Body, func(x ast.Node) bool {
+				ds, ok := x.(*ast.DeferStmt)
+				if !ok {
+					return true
+				}
+				ast.Inspect(ds, func(y ast.Node) bool {
+					if call, ok := y.(*ast.CallExpr); ok {
+						if id, ok := call.Fun.(*ast.Ident); ok && id.Name == "sweepLive" {
+							swept[fd.Name.Name] = true
+						}
+					}
+					return true
+				})
+				return true
+			})
+		}
+	}
+	for _, fn := range sweptOnExit {
+		if !swept[fn] {
+			t.Errorf("⚠️ %s 的收尾没有 defer sweepLive —— 中途报错提前返回时已挂的单会漏撤", fn)
+		}
 	}
 }

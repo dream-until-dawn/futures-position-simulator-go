@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"math"
@@ -613,6 +614,10 @@ func openOneLotResting(c *ctp.Client, ex, inst string, mult, tick float64,
 		Volume: 1, LimitPrice: px}
 	st, err := c.Insert(req, timeout)
 	if err != nil {
+		// ⚠️ 报错（含超时）时那笔可能已经挂上了，而它挂在最新价 − 一跳，之后是会真成交的 —— 撤、确认干净再返回（评审 20260922）。
+		if cerr := cancelAndConfirm(c, st.OrderRef, req, timeout, logf); cerr != nil {
+			return 0, errors.Join(err, cerr)
+		}
 		return 0, err
 	}
 	logf("[sl] 腿1 挂在 %.4f（最新 %.4f − 一个价位）等成交，上限 %s ——",
@@ -625,8 +630,8 @@ func openOneLotResting(c *ctp.Client, ex, inst string, mult, tick float64,
 		}
 	}
 	if st.VolumeTraded == 0 {
-		if err := c.Cancel(st.OrderRef, req); err != nil {
-			return 0, fmt.Errorf("⚠️⚠️ 挂单没成交**而且撤不掉**，它还在柜台上：%w", err)
+		if err := cancelAndConfirm(c, st.OrderRef, req, timeout, logf); err != nil {
+			return 0, fmt.Errorf("⚠️⚠️ 挂单没成交**而且没确认撤干净**：%w", err)
 		}
 		return 0, fmt.Errorf("⚠️ 腿1 挂在 %.4f 等了 %s 没成交，已撤 —— "+
 			"不当结论，重跑（或把 -fillwait 调大）", px, fillWait)

@@ -140,6 +140,12 @@ func runCTPReject(args []string) error {
 		float64(md.LastPrice), float64(md.UpperLimitPrice), float64(md.LowerLimitPrice))
 
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// 兜底：退出前撤掉本合约的全部活委托 —— 中途报错提前返回的路径上，已挂的单会漏撤（评审 20260922）。
+	defer func() {
+		if err := sweepLive(c, inst, *timeout, logf); err != nil {
+			logf("⚠️⚠️ **%s 还有活委托，去看账户**：%v", *symbol, err)
+		}
+	}()
 	traded := 0
 	var obs []rejectObservation
 	// ⚠️ 每一条用例都要产出一条观测，**包括没被拒的那些** ——

@@ -110,6 +110,12 @@ func runCTPDup(args []string) error {
 	logf("       这正是被测的那条路径：手工指定引用等于绕开它，那样测的是别的东西。")
 
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// 兜底：退出前撤掉本合约的全部活委托 —— 中途报错提前返回的路径上，已挂的单会漏撤（评审 20260922）。
+	defer func() {
+		if err := sweepLive(c, inst, *timeout, logf); err != nil {
+			logf("⚠️⚠️ **%s 还有活委托，去看账户**：%v", *symbol, err)
+		}
+	}()
 	type row struct {
 		cell     dupCell
 		px       float64

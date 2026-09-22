@@ -84,36 +84,47 @@ func sweepLive(c *ctp.Client, inst string, timeout time.Duration, logf func(stri
 	return fmt.Errorf("⚠️⚠️ %s 撤了 6 轮还没连续两次查到 0 个活委托 —— **去看账户**", inst)
 }
 
-// insertOrCancel 发一笔要求立刻成交的委托；没成交（或报错 / 超时）就先按 ref 撤，再扫一遍本合约的活委托，确认撤干净再返回错误。
+// insertOrCancel 发一笔要求立刻成交的委托；没成交（或报错 / 超时）就撤、确认撤干净（cancelAndConfirm）再返回错误。
 func insertOrCancel(c *ctp.Client, req ctp.OrderReq, timeout time.Duration, logf func(string, ...any)) (ctp.OrderState, error) {
 	st, err := c.Insert(req, timeout)
 	if !needsCancel(st, req.Volume, err) {
 		return st, nil
 	}
 	failed := fmt.Errorf("没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
-	if st.OrderRef != "" {
-		if cerr := c.Cancel(st.OrderRef, req); cerr != nil {
+	if cerr := cancelAndConfirm(c, st.OrderRef, req, timeout, logf); cerr != nil {
+		return st, errors.Join(failed, cerr)
+	}
+	return st, failed
+}
+
+// cancelAndConfirm 撤一笔委托并确认撤干净：按 ref 撤（有 ref 时）→ 扫本合约活委托 → 看本地簿落到终态（afterCancel）。
+// 返回 nil = 干净、一手没成交；否则说明为什么不干净（撤不掉 / 撤之前已成交 / 没有结论）。
+//
+// ⚠️ 要求立刻成交的路径（insertOrCancel）与有意挂单、自己负责撤的路径（openOneLotResting 等）共用这一段（评审 20260922）。
+func cancelAndConfirm(c *ctp.Client, ref string, req ctp.OrderReq, timeout time.Duration, logf func(string, ...any)) error {
+	if ref != "" {
+		if cerr := c.Cancel(ref, req); cerr != nil {
 			logf("[cancel] ⚠️ 按 ref 撤单失败：%v", cerr)
 		}
 	}
 	if serr := sweepLive(c, req.Instrument, timeout, logf); serr != nil {
-		return st, errors.Join(failed, serr)
+		return serr
 	}
-	if st.OrderRef != "" {
+	if ref != "" {
 		// 撤单回报要一点时间进本地簿：最多等 3 秒看它落到终态。
 		var clean bool
 		var why string
 		for i := 0; i < 6; i++ {
-			cur, known := c.Order(st.OrderRef)
+			cur, known := c.Order(ref)
 			if clean, why = afterCancel(cur, known); clean || (known && cur.VolumeTraded > 0) {
 				break
 			}
 			time.Sleep(500 * time.Millisecond)
 		}
 		if !clean {
-			return st, errors.Join(failed, fmt.Errorf("⚠️⚠️ %s ref=%s：%s", req.Instrument, st.OrderRef, why))
+			return fmt.Errorf("⚠️⚠️ %s ref=%s：%s", req.Instrument, ref, why)
 		}
 	}
-	logf("[cancel] %s 没成交的那笔已撤、本合约没有活委托", req.Instrument)
-	return st, failed
+	logf("[cancel] %s 那笔已撤、本合约没有活委托", req.Instrument)
+	return nil
 }
