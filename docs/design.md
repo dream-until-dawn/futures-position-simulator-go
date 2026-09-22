@@ -1217,6 +1217,19 @@ cn-futures-rules §13 #5 在 CTP 上命中 (i-t)（⚠️ 20260917 那一次；2
 - `PriceLimits`：`TickInward` 时上边 `Floor`、下边 `Ceil`；其余取整方式照旧上下同向
 - `MeasuredTickRounding()` 的大商所一格：`TickHalfUp` → `TickInward`（注释写前提与 §13 #24 出处）；上期所照旧 `TickFloor`；郑商所 / 广期所照旧没有（不外推）
 - `TickHalfUp` 的注释从「实测大商所是这一种」改成历史：它曾是 kq_facts 22 在三种候选里的判定，已被 §13 #24 推翻
+- ⚠️ **`snapToTick` 补 default**（评审 20260922 条件 1）：现在的 switch 只列了向下 / 向上 / 四舍五入、没有 default —— 不认识的取值会把「价 ÷ 跳」原样乘回去，**静默返回一个没对齐跳的价**。
+  加了 `TickInward` 常量却漏了 `PriceLimits` 里的分支（或将来再加第 6 种），本库就会给出错的涨跌停价而不报错。
+  ⇒ 不认识的取值让 `PriceLimits` 返回 `ok = false`，与「没指定取整」同形（由 `order` 记进 Unchecked）；配一格单测（越界取值 ⇒ `ok = false`）与一条破坏（删掉 `TickInward` 分支 ⇒ 正向断言红，而不是静默给理论价）
+
+##### 要改的现行说法（F12 之后会过期；评审 20260922 条件 2 列出、实现方复核并补了一处）
+
+- `refdata/refdata.go:188`（`TickHalfUp` 注释「实测大商所是这一种」）、`:217`（`PriceLimits` 注释「上期所向下取整、大商所四舍五入」）
+- `order/order.go:326`（跳过涨跌停校验的原因文字「上期所向下、大商所四舍五入」）
+- `docs/design.md:505`（「`MeasuredTickRounding` 只给实测过的两家 —— 上期所向下、大商所四舍五入」）
+- `refdata/refdata_test.go:335 / 339 / 358`（注释与用例名「大商所 i 四舍五入（实测）」）
+- `refdata/build_from_measured_test.go:193` 注释、`simulator_test.go:63` 注释（「m2701 的 6% 按大商所四舍五入对齐后是 3587 / 3181」）
+- ⚠️ 后面几处的**数不变**：3384 × 6% 与 734.5 × 9% 在四舍五入和往里收下给同一个价 ⇒ 测试不会红 —— 这正是它们容易被漏改的原因，只改措辞
+- 带日期的历史实测记录（`probes.md:2255` 等）保留
 
 ##### 验收（先红后绿）
 
