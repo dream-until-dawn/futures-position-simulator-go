@@ -4228,6 +4228,8 @@ d ∈ {1 … 4} 的成交一笔都没量到，所以 k = 1 … 5 谁对分不开
 **后果若 k ≠ 5**：d ∈ {k … 4} 的每笔结算费少收 0.01 —— 方向恒定，按成交笔数线性累加进结存，长周期回测会漂出可见的量。
 「没观测就报错」在这里不可用：d 由成交价决定，几乎每个交易日都会碰到 d ∈ {1 … 4}，结算时报错等于结算不能用（评审 20260921）。
 守卫：`TestSettleKBlindSpotPinnedAtFive`（d = 4 那一笔钉住「按 k = 5 舍去」，将来测到 k ≤ 4 要红）。补法：一次事前登记的实验，挑 d ∈ {1 … 4} 的成交（三手单、整数价 P ≡ 3 或 4 (mod 5)）。
+⚠️ **20260922 更新**：回溯重算已落盘的全部结算单，0911 `rb2701` 3104（d = 4 舍去）/ 3105（d = 5 进位）已把 k 钉到 5 —— 当初写「k ∈ {1 … 5} 分不开」是漏看了手头的结算单。
+同日事前登记的一手 j 单确认：d = 2 五笔全是 11.92 ⇒ **k ∈ {3, 4, 5}**（k = 1、2 被否）。证据分层：{1, 2} 事前登记排除、{3, 4} 回溯排除 —— 事前登记层面仍差一次 d ∈ {3, 4} 的成交。本库照旧 k = 5，这一条的后果（k ≠ 5 时少收 0.01）现在只剩「回溯证据错了」这一种可能。
 ⚠️ 同一批的其余守卫：`TestFacadeSettlesDay20260918AgainstCTP`（整天重放，F10 之前差 0.008）、`TestSettleFeeFormulaAgainstStatements`、`TestSettleToleranceTruncateExactlyOneCent`（截断口径下恰好 +0.01 放行）、`TestSettleCommissionSurvivesStateRestoreF10`、`TestRestoreRefusesSettleCommissionOutsideTolerance`。
 
 ## 怎么用这份清单

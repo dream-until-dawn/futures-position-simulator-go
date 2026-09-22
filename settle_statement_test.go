@@ -16,7 +16,8 @@ import (
 // TestSettleFeeFormulaAgainstStatements：CTP 结算单上 j2701（按额）与 m2701（按手）的每一笔，
 // 用门面自己的 commission 算出的结算口径手续费逐笔等于结算单 Fee（§13 #5，design.md 门面形状 §14）。
 //
-// 0918 四笔两手单里含 1965 那一笔：盘中 23.59、(i-t) 给 23.59，结算单 23.58；0921 十二笔三手单里含 1982.5 那一笔（d = 5）。
+// 0918 四笔两手单里含 1965 那一笔：盘中 23.59、(i-t) 给 23.59，结算单 23.58；0921 十二笔三手单里含 1982.5 那一笔（d = 5）；
+// 0922 十二笔一手单里 d = 2 那 5 笔（1987，按额 11.922 ⇒ 11.92）是 k 确认实验的判别样本（k ≤ 2 会给 11.93）。
 // ⚠️ 费率是柜台声明值（j 按额 6e-05 三档同、m 按手 0.2 / 0.2 / 0.1），乘数 j 100 / m 10。只比与额度无关的笔（j 全部、m 开仓）；
 // m 的平仓与郑商所那几笔的档位依赖额度序列，由整天重放那条对拍管。
 func TestSettleFeeFormulaAgainstStatements(t *testing.T) {
@@ -51,7 +52,7 @@ func TestSettleFeeFormulaAgainstStatements(t *testing.T) {
 	}
 	ids := map[string]types.InstrumentID{"j2701": j, "m2701": m}
 	n := 0
-	for _, f := range []string{"ctp-settlement-20260918.json", "ctp-settlement-20260921.json"} {
+	for _, f := range []string{"ctp-settlement-20260918.json", "ctp-settlement-20260921.json", "ctp-settlement-20260922.json"} {
 		raw, err := os.ReadFile(filepath.Join("testdata", "refdata", f))
 		if err != nil {
 			t.Fatal(err)
@@ -93,7 +94,7 @@ func TestSettleFeeFormulaAgainstStatements(t *testing.T) {
 			n++
 		}
 	}
-	if n < 17 {
-		t.Fatalf("⚠️ 只比了 %d 笔（下界 17：0918 j 四笔 + m 一笔、0921 j 十二笔）—— 结算单或读法变了", n)
+	if n != 32 {
+		t.Fatalf("⚠️ 比了 %d 笔，应为 32（0918 j 4 + m2701 开 1、0921 j 12 + m2701 开 2、0922 j 12 + m2701 开 1）—— 结算单或读法变了", n)
 	}
 }
