@@ -888,7 +888,7 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 ⇒ **`Advance` 不引入新的记账路径**：守卫 → 按规则挑出可成交的挂单 → 逐笔 `Fill` → `Mark(Close)`。
 这句话本身就是验证的主轴：**`Advance(bar)` 的账 ≡ 同一串 `Fill` 加一次 `Mark` 的账**。
 
-##### 形状（实现方倾向，待评审）
+##### 形状（评审 20260917 有条件通过，条件补在 238a5b3，合进 main 438c951；决策点 1 / 3 的使用者裁决见本节「分期」末尾，都不改 `Bar` / `Advance` 的形状）
 
     type Bar struct {
         Instrument types.InstrumentID
@@ -1084,7 +1084,7 @@ cn-futures-rules §13 #5 在 CTP 上命中 (i-t)（⚠️ 20260917 那一次；2
 | 快期跨日对拍里**没有**一条拿本库结算出的次日结存与柜台比（跨日重建都从夹具的 `pre_balance` 起步） | `conformance/fixture/*_test.go` | 改了之后快期侧不会有测试自动红 ⇒ 口径差要**主动**写进对拍声明，不能等它红 |
 | `AddCommission` 的生产调用点只有一处（`trade.go` 的 `commit`） | grep | 改签名的波及面小 |
 
-##### 形状（实现方倾向，待评审）
+##### 形状（初版：评审 20260918 同意，合进 main ba43a12 —— ⚠️ **已被本节「20260921 改写」取代**，约束以改写为准：`|atSettle − fee| ≤ 0.01`，不是这里的 `0 ≤ atSettle ≤ fee`）
 
 - `account.AddCommission(day, fee, atSettle decimal.Decimal)`：**改签名**，同时给「盘中计入的」与「结算时计入的」两个数。
   约束：`0 ≤ atSettle ≤ fee`（截断只会变小，不会变负）。⚠️ 不另开一个 `AddSettleCommission`：两次调用分开时，漏调后者的调用方会让结算按「整笔都不算」算，**静默多出一整笔手续费的钱** —— 改签名让每个调用点在编译期被迫表态
@@ -1160,7 +1160,7 @@ cn-futures-rules §13 #5 在 CTP 上命中 (i-t)（⚠️ 20260917 那一次；2
 | `Fill` = 解冻 → `ApplyTrade`：成交时按**当时**的状态重算，不按冻结额收 | `place.go` | 额度在成交那一刻消耗；挂单不预占额度 |
 | 持仓明细只有**还在账上**的片；平掉的今仓、当日开过几手都不在 | `position` | 额度**推不出来**，必须另记（这也是修好之前没法先改成报错的原因，silent-risks 100） |
 
-##### 形状（实现方倾向，待评审）
+##### 形状（评审 20260918 同意，合进 main 468608b；已实现，合并 78633c1）
 
 - 门面按 **(合约, 投保标志, 持仓方向)** 记两个整数：`openedToday`（当日开仓手数）、`chargedToday`（当日已按平今档收过的手数）。开仓 `openedToday += 手数`；任何一笔按平今档收费的平仓 `chargedToday += 平今档手数`
 - 裸 CLOSE 的档位：`平今档手数 = min(平仓量, openedToday − chargedToday)`，其余平昨 —— 进 `commission` 的是这个额度，不再是平仓前今仓
@@ -1215,7 +1215,7 @@ cn-futures-rules §13 #5 在 CTP 上命中 (i-t)（⚠️ 20260917 那一次；2
 | `PriceLimits` 的生产调用点只有 `order` 的涨跌停校验一处；取整方式由 `Config.TickRounding`（`MeasuredTickRounding()`）给 | `order/order.go:319`、`submit.go` | 改一处表、一处函数；取整方式在配置里、**不在存档里** ⇒ **不抬 `StateFormat`** |
 | `TickRounding` 零值是「未指定」、使用即报错；现有取值 1 … 4 | `refdata/refdata.go` | 新取值**追加在末尾**（`TickInward` = 5），不改已有取值 |
 
-##### 形状（实现方倾向，待评审）
+##### 形状（评审 20260922 有条件通过、条件已改，合进 main 7600876；已实现，合并 e0bfcbf）
 
 - `refdata.TickInward`（新导出取值）：涨停向下、跌停向上。`String()` 给「往里收」
 - `PriceLimits`：`TickInward` 时上边 `Floor`、下边 `Ceil`；其余取整方式照旧上下同向
