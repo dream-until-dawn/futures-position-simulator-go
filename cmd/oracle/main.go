@@ -57,6 +57,7 @@ func usage() {
   oracle ctp-pairs -symbol SHFE.rb2701 -out testdata/refdata     ⚠️ 只在**交易时段内**跑（与上一条相反）
   oracle ctp-feeprobe -symbol DCE.j2701 -rounds 3 -dump ../../testdata/ctp  ⚠️ 真成交：开一手平今一手，逐笔记柜台手续费增量（§13 #5）
   oracle ctp-quota -symbol DCE.m2701 -dump ../../testdata/ctp  ⚠️ 真成交（§13 #23）：前提 今0 昨1 当日未开；开今两手、通用平仓三手，逐笔判收哪一档
+  oracle ctp-quota-ext -symbol DCE.m2701 -case explicit|opposite -dump ../../testdata/ctp  ⚠️ 真成交（F11 外推 B / C）：前提 多头今0昨1当日未开、空头0；逐笔判读法
   oracle settle-residual -end <D 收盘后截面> -next <D+1 截面> -mult CZCE.MA701=10 -fees 0.2,…  离线：按 §13 #5 登记的判法算残差、判候选
   oracle ctp-inst -symbols SHFE.rb2701,GFEX.si2601   ⚠️ 只读：柜台声明的最小变动价位 / 乘数
   oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
@@ -198,6 +199,11 @@ func main() {
 		}
 	case "ctp-quota":
 		if err := runCTPQuota(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "ctp-quota-ext":
+		if err := runCTPQuotaExt(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}

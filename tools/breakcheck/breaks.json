@@ -7249,5 +7249,181 @@
 		"test": "TestLimitRatioFromQuotes",
 		"want": "应唯一判出",
 		"expect": "red"
+	},
+	{
+		"name": "737 F11 外推 B 的登记表写反（「扣」预言平今档）—— 代码与 state.md 登记块不一致",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "return []extReading{{\"扣\", 0, 1}, {\"不扣\", 1, 1}}",
+		"new": "return []extReading{{\"扣\", 1, 1}, {\"不扣\", 0, 1}}",
+		"pkg": ".",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
+		"expect": "red"
+	},
+	{
+		"name": "738 ctp-quota-ext 对任何交易所都放行 —— 没登记的交易所也会下单",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tif exchange == \"DCE\" || exchange == \"CZCE\" {\n\t\treturn nil\n\t}\n\treturn fmt.Errorf(\"⚠️ **不跑**：F11 外推",
+		"new": "\tif true {\n\t\treturn nil\n\t}\n\treturn fmt.Errorf(\"⚠️ **不跑**：F11 外推",
+		"pkg": ".",
+		"test": "TestExtRegistered",
+		"want": "上期所没登记",
+		"expect": "red"
+	},
+	{
+		"name": "739 ctp-quota-ext 的前提不看空头 —— C 在已有反方向仓位时照跑",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tif short.Today != 0 || short.Yd != 0 || short.OpenedToday != 0 {",
+		"new": "\tif false {",
+		"pkg": ".",
+		"test": "TestExtPremise",
+		"want": "空头有今仓",
+		"expect": "red"
+	},
+	{
+		"name": "740 sidesOf 不分方向 —— 空头被算进多头",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\t\tif ctp.Text(p.InstrumentID[:]) != inst || p.PosiDirection != dir {",
+		"new": "\t\tif ctp.Text(p.InstrumentID[:]) != inst {",
+		"pkg": ".",
+		"test": "TestSidesOfSplitsDirections",
+		"want": "多头读成",
+		"expect": "red"
+	},
+	{
+		"name": "741 ctp-quota-ext 丢了登记检查 —— 排在连柜台之前的那道门没了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tif err := extRegistered(ex, cs); err != nil {\n\t\treturn err\n\t}\n",
+		"new": "",
+		"pkg": ".",
+		"test": "TestExtRegisteredRunsBeforeConnect",
+		"want": "找不到 extRegistered",
+		"expect": "red"
+	},
+	{
+		"name": "742 ctp-quota-ext 的判定不比数（任何增量都让全部读法活）—— 「谁都没预言到」永远不出现",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "if delta.Equal(r.fee(rateToday, rateYd)) {",
+		"new": "if true {",
+		"pkg": ".",
+		"test": "TestExtVerdict",
+		"want": "活着",
+		"expect": "red"
+	},
+	{
+		"name": "745 needsCancel 只看报错 —— 挂上了没成交（NoTradeQueueing）的单不撤，留在柜台上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "return err != nil || st.VolumeTraded < want",
+		"new": "return err != nil",
+		"pkg": ".",
+		"test": "TestNeedsCancel",
+		"want": "挂上了没成交",
+		"expect": "red"
+	},
+	{
+		"name": "746 insertOrCancel 没成交时不扫活委托 —— 超时拿不到 ref 的那一笔撤不掉",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "\tif serr := sweepLive(c, req.Instrument, timeout, logf); serr != nil {",
+		"new": "\tif serr := error(nil); serr != nil {",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "insertOrCancel 没成交时不扫活委托",
+		"expect": "red"
+	},
+	{
+		"name": "747 closeTodayOnly 退回直接 Insert（没成交的平今单留在柜台上）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\t\tif _, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\t\tDirection: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,\n\t\t\tVolume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout, logf); err != nil {",
+		"new": "\t\tif _, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\t\tDirection: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,\n\t\t\tVolume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout); err != nil {",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "closeTodayOnly 直接调了 Insert",
+		"expect": "red"
+	},
+	{
+		"name": "748 ctp-quota-ext 收尾不扫活委托 —— 退出时本合约可能还挂着单",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
+		"new": "\t\tif err := error(nil); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "收尾没有扫活委托",
+		"expect": "red"
+	},
+	{
+		"name": "753 F11 外推 A 的登记表写错（「按额度拆」预言成 2 手平今）—— 代码与 state.md 登记块不一致",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "{\"按额度拆\", 1, 2}",
+		"new": "{\"按额度拆\", 2, 2}",
+		"pkg": ".",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
+		"expect": "red"
+	},
+	{
+		"name": "754 A 的判别那一笔退成 1 手 —— 「多手裸平」根本没被量到",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tr.Volume = 2\n",
+		"new": "\tr.Volume = 1\n",
+		"pkg": ".",
+		"test": "TestExtRequestFlags",
+		"want": "A 的判别那一笔",
+		"expect": "red"
+	},
+	{
+		"name": "755 读法的预言合计丢了平昨那一部分 —— 1 今 1 昨被算成只收 1 手平今",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "return rateToday.Mul(decimal.NewFromInt(int64(r.TodayLots))).Add(rateYd.Mul(decimal.NewFromInt(int64(r.Lots - r.TodayLots))))",
+		"new": "return rateToday.Mul(decimal.NewFromInt(int64(r.TodayLots)))",
+		"pkg": ".",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
+		"expect": "red"
+	},
+	{
+		"name": "750 needsCancel 只看「一手没成交」—— 多手单部分成交、余量还挂着时不撤",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "return err != nil || st.VolumeTraded < want",
+		"new": "return err != nil || st.VolumeTraded == 0",
+		"pkg": ".",
+		"test": "TestNeedsCancelPartialFill",
+		"want": "只成交 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "756 A 不核成交记录条数 —— 柜台拆成两条 1 手时照合计判（与「按额度拆」同值，回答不了 A）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tdn, dl := nAfter-nBefore, lotsAfter-lotsBefore\n\tif dn == 1 && dl == 2 {",
+		"new": "\tdn, dl := nAfter-nBefore, lotsAfter-lotsBefore\n\tif true {",
+		"pkg": ".",
+		"test": "TestMultiRecordVerdict",
+		"want": "拆成两条 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "757 ctp-quota-ext 收尾先平仓后撤单 —— 挂着的平仓单冻住可平量，今仓留在账上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **收尾第一道撤单没撤干净，去看账户**：%v\", err)\n\t\t}\n",
+		"new": "",
+		"pkg": ".",
+		"test": "TestExtDeferSweepsBeforeClosing",
+		"want": "收尾顺序",
+		"expect": "red"
 	}
 ]
