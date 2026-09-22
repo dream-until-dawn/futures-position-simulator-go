@@ -578,6 +578,8 @@ func TestMeasuredTickRoundingAgainstCTPQuotes(t *testing.T) {
 	// ⚠️ 不是跳过：柜台值与本库值**两边都钉死**，任何一边变了都红；修好之后这一条要删（下面的反方向检查会逼它）。
 	type divergence struct{ counterUp, counterLo, libUp, libLo, why string }
 	knownDivergence := map[string]divergence{
+		"DCE.m2705/20260922": {"3191", "2831", "3192", "2830",
+			"§13 #24 第二轮（跨日事前登记 93fa8de）：昨结 3011 × 6% = 3191.66 / 2830.34。柜台往里收，本库按大商所四舍五入"},
 		"DCE.m2701/20260921": {"3634", "3224", "3635", "3223",
 			"§13 #24：昨结 3429 × 6% = 3634.74 / 3223.26。柜台往里收（涨停向下、跌停向上），本库按大商所四舍五入。" +
 				"CTP 上大商所第一个能分开两者的样本；快期 20260909 m2701 昨结 3415 早已给出同样的形状（kq_facts 22 当时的候选集里没有「往里收」）"},
