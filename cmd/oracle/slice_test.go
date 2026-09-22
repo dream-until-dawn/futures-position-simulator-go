@@ -119,7 +119,7 @@ func TestSlicePreconditionCheckedBeforeAnyOrder(t *testing.T) {
 				orderPos == token.NoPos {
 				orderPos = v.Pos()
 			}
-			if id, ok := v.Fun.(*ast.Ident); ok && id.Name == "openOneLot" &&
+			if id, ok := v.Fun.(*ast.Ident); ok && (id.Name == "openOneLot" || id.Name == "insertOrCancel") &&
 				orderPos == token.NoPos {
 				orderPos = v.Pos()
 			}
@@ -259,6 +259,10 @@ func TestSliceDumpsPinDownBothOrderAndConsumption(t *testing.T) {
 				stages = append(stages, stage)
 			case "openOneLot", "openOneLotResting":
 				opens = append(opens, c.Pos())
+			case "insertOrCancel": // 平今委托经它发出（没成交就撤，评审 20260922）
+				if closePos == token.NoPos && containsAll(sourceOf(fset, c), "OF_CloseToday") {
+					closePos = c.Pos()
+				}
 			}
 		case *ast.SelectorExpr:
 			if v.Sel.Name == "Insert" && closePos == token.NoPos &&
@@ -413,7 +417,7 @@ func TestFlattenDeferRegisteredBeforeAnyOrder(t *testing.T) {
 					orderPos = c.Pos()
 				}
 			case *ast.Ident:
-				if v.Name == "openOneLot" || v.Name == "openOneLotResting" {
+				if v.Name == "openOneLot" || v.Name == "openOneLotResting" || v.Name == "insertOrCancel" {
 					orderPos = c.Pos()
 				}
 			}

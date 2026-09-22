@@ -9,12 +9,36 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
 )
 
-// needsCancel 判一笔要求「立刻成交」的委托发出之后要不要撤：报错（含超时拿不到结论）或一手都没成交 ⇒ 要撤。
+// needsCancel 判一笔要求「立刻成交」的委托发出之后要不要撤：报错（含超时拿不到结论）或成交手数少于下单手数 ⇒ 要撤。
+// （多手单部分成交时，余量还挂在队列里 —— 与一手没成交同一种残留。）
 //
 // ⚠️ ctp.Client.Insert 在「未成交还在队列」（OST_NoTradeQueueing）时也返回 —— 那张 GFD 单还挂在柜台上。
 // 不撤就返回，工具退出后它随时可能成交，账上多一手没人照看的仓（评审 20260922）。
-func needsCancel(st ctp.OrderState, err error) bool {
-	return err != nil || st.VolumeTraded == 0
+func needsCancel(st ctp.OrderState, want int, err error) bool {
+	return err != nil || st.VolumeTraded < want
+}
+
+// afterCancel 判撤单、扫单之后，本地簿里这一笔的状态说明了什么。
+//
+//	clean = true   已终态且一手没成交（已撤 / 未成交不在队列）⇒ 干净，照原错误报
+//	clean = false  why 说明：超时之后其实成交了（账上有仓）/ 还停在过渡态或本地簿里没有（没有结论）/ 还挂着
+//
+// ⚠️ LiveOrders 只收「还在队列」的委托：停在 'a'（已提交）上的那一笔在两次扫单里都是 0，会被误判为干净 ——
+// 所以扫完还要看本地簿（评审 20260922）。
+func afterCancel(st ctp.OrderState, known bool) (clean bool, why string) {
+	if !known {
+		return false, "本地簿里没有这一笔的任何回报 —— **没有结论**，它可能还在路上，去看账户"
+	}
+	if st.VolumeTraded > 0 {
+		return false, fmt.Sprintf("撤单之前已经成交了 %d 手 —— **账上有这笔仓**，去看账户", st.VolumeTraded)
+	}
+	switch st.Status {
+	case def.THOST_FTDC_OST_Canceled, def.THOST_FTDC_OST_NoTradeNotQueueing:
+		return true, ""
+	case def.THOST_FTDC_OST_NoTradeQueueing, def.THOST_FTDC_OST_PartTradedQueueing:
+		return false, "扫单之后本地簿里它**还挂着** —— 去看账户"
+	}
+	return false, fmt.Sprintf("本地簿里它还停在过渡态 %q —— **没有结论**，去看账户", string(st.Status))
 }
 
 // liveOn 从一次委托查询里挑出某合约还活着的委托。
@@ -63,7 +87,7 @@ func sweepLive(c *ctp.Client, inst string, timeout time.Duration, logf func(stri
 // insertOrCancel 发一笔要求立刻成交的委托；没成交（或报错 / 超时）就先按 ref 撤，再扫一遍本合约的活委托，确认撤干净再返回错误。
 func insertOrCancel(c *ctp.Client, req ctp.OrderReq, timeout time.Duration, logf func(string, ...any)) (ctp.OrderState, error) {
 	st, err := c.Insert(req, timeout)
-	if !needsCancel(st, err) {
+	if !needsCancel(st, req.Volume, err) {
 		return st, nil
 	}
 	failed := fmt.Errorf("没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
@@ -74,6 +98,21 @@ func insertOrCancel(c *ctp.Client, req ctp.OrderReq, timeout time.Duration, logf
 	}
 	if serr := sweepLive(c, req.Instrument, timeout, logf); serr != nil {
 		return st, errors.Join(failed, serr)
+	}
+	if st.OrderRef != "" {
+		// 撤单回报要一点时间进本地簿：最多等 3 秒看它落到终态。
+		var clean bool
+		var why string
+		for i := 0; i < 6; i++ {
+			cur, known := c.Order(st.OrderRef)
+			if clean, why = afterCancel(cur, known); clean || (known && cur.VolumeTraded > 0) {
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+		if !clean {
+			return st, errors.Join(failed, fmt.Errorf("⚠️⚠️ %s ref=%s：%s", req.Instrument, st.OrderRef, why))
+		}
 	}
 	logf("[cancel] %s 没成交的那笔已撤、本合约没有活委托", req.Instrument)
 	return st, failed

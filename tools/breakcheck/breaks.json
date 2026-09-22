@@ -7320,7 +7320,7 @@
 		"name": "745 needsCancel 只看报错 —— 挂上了没成交（NoTradeQueueing）的单不撤，留在柜台上",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/insertcancel.go",
-		"old": "return err != nil || st.VolumeTraded == 0",
+		"old": "return err != nil || st.VolumeTraded < want",
 		"new": "return err != nil",
 		"pkg": ".",
 		"test": "TestNeedsCancel",
@@ -7358,6 +7358,50 @@
 		"pkg": ".",
 		"test": "TestImmediateFillPathsCancelOnMiss",
 		"want": "收尾没有扫活委托",
+		"expect": "red"
+	},
+	{
+		"name": "749 afterCancel 把停在过渡态（'a'）的那一笔判成干净 —— 超时之后还在路上的单被当成撤掉了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "\treturn false, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
+		"new": "\treturn true, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
+		"pkg": ".",
+		"test": "TestAfterCancel",
+		"want": "停在 'a'",
+		"expect": "red"
+	},
+	{
+		"name": "750 needsCancel 只看「一手没成交」—— 多手单部分成交、余量还挂着时不撤",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "return err != nil || st.VolumeTraded < want",
+		"new": "return err != nil || st.VolumeTraded == 0",
+		"pkg": ".",
+		"test": "TestNeedsCancelPartialFill",
+		"want": "只成交 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "751 insertOrCancel 扫完不看本地簿 —— 停在 'a' 上的那一笔会被当成干净",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "\t\t\tif clean, why = afterCancel(cur, known); clean ||",
+		"new": "\t\t\tif clean, why = true, \"\"; clean ||",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "扫完不看本地簿",
+		"expect": "red"
+	},
+	{
+		"name": "752 ctp-hold 建仓退回直接 Insert（没成交的建仓单留在柜台上）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\tst, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\tDirection: openDir, Offset: def.THOST_FTDC_OF_Open,\n\t\tVolume: 1, LimitPrice: openPx}, *timeout, logf)",
+		"new": "\tst, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\tDirection: openDir, Offset: def.THOST_FTDC_OF_Open,\n\t\tVolume: 1, LimitPrice: openPx}, *timeout)",
+		"pkg": ".",
+		"test": "TestDirectInsertOnlyInAllowedFuncs",
+		"want": "runCTPHold 直接调了 c.Insert",
 		"expect": "red"
 	}
 ]

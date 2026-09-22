@@ -271,7 +271,7 @@ func runCTPSlices(args []string) error {
 			why = fmt.Sprintf("落在 %q 的反面", *second)
 		}
 		logf("[sl] ⚠️ 腿2 %s（p1=%.4f p2=%.4f）—— **平掉它重来**", why, p1, p2)
-		if err := flattenOneLongToday(c, ex, inst, *timeout); err != nil {
+		if err := flattenOneLongToday(c, ex, inst, *timeout, logf); err != nil {
 			return fmt.Errorf("平掉不合格的腿2 失败，账上现在有两片：%w", err)
 		}
 		if !time.Now().Before(deadline) {
@@ -328,10 +328,10 @@ func runCTPSlices(args []string) error {
 	if err != nil {
 		return err
 	}
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout, logf)
+	if err != nil {
 		return fmt.Errorf("平一手没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
 	posQ3, err := c.Positions(*timeout)
@@ -565,10 +565,10 @@ func openOneLot(c *ctp.Client, ex, inst string, mult float64,
 		return 0, err
 	}
 	// ⚠️ 挂涨停 ⇒ 一定成交（本命令要的是真持仓，不是挂单）。
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
-		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, timeout, logf)
+	if err != nil {
 		return 0, fmt.Errorf("开一手没成交：status=%q %s err=%v",
 			string(st.Status), st.StatusMsg, err)
 	}
@@ -674,15 +674,15 @@ func filledPrice(c *ctp.Client, inst string, before, mult float64,
 // ⚠️ 它与 flattenLongToday 是两件事：后者是收尾、清空；
 // 这一个是**撤回一步**，账上还得留着腿 1。用错了会把腿 1 也平掉，
 // 而那之后的一切读数仍然会打印得很正常。
-func flattenOneLongToday(c *ctp.Client, ex, inst string, timeout time.Duration) error {
+func flattenOneLongToday(c *ctp.Client, ex, inst string, timeout time.Duration, logf func(string, ...any)) error {
 	md, err := c.MarketData(ex+"."+inst, timeout)
 	if err != nil {
 		return err
 	}
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout, logf)
+	if err != nil {
 		return fmt.Errorf("平一手没成交：status=%q %s err=%v",
 			string(st.Status), st.StatusMsg, err)
 	}
@@ -720,10 +720,10 @@ func flattenLongToday(c *ctp.Client, ex, inst string,
 		if err != nil {
 			return err
 		}
-		st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-			Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout)
-		if err != nil || st.VolumeTraded == 0 {
+			Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout, logf)
+		if err != nil {
 			return fmt.Errorf("平仓没成交：status=%q %s err=%v",
 				string(st.Status), st.StatusMsg, err)
 		}

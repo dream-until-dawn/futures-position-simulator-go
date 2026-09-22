@@ -190,6 +190,10 @@ func TestFlattenLoopFinishesAndChecksFirst(t *testing.T) {
 		case *ast.ReturnStmt:
 			returns++
 		case *ast.CallExpr:
+			// 委托经 insertOrCancel 发出（没成交就撤，评审 20260922）—— 与直接 c.Insert 同算「下单」。
+			if id, ok := v.Fun.(*ast.Ident); ok && id.Name == "insertOrCancel" {
+				insertAt = int(v.Pos())
+			}
 			if sel, ok := v.Fun.(*ast.SelectorExpr); ok {
 				switch sel.Sel.Name {
 				case "Check":

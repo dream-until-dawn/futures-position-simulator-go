@@ -121,6 +121,11 @@ func (c *Client) Insert(r OrderReq, timeout time.Duration) (OrderState, error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	s, _ := c.book.get(ref)
+	// ⚠️ 一条回报都没等到时 book 里没有这一笔，s 是零值 —— 连 ref 都没有，调用方就既撤不了、也查不了本地簿。
+	// ⇒ 把 ref 带回去（评审 20260922：超时分支要能按 ref 撤、事后看 c.Order(ref)）。
+	if s.OrderRef == "" {
+		s.OrderRef = ref
+	}
 	// ⚠️ 超时是**没有结论**，不是「被拒」——两者要人做的事完全不同：
 	// 前者要去查这笔单还在不在，后者不必。
 	return s, fmt.Errorf("%v 内没有等到 %s 的任何状态回报 —— "+

@@ -119,10 +119,10 @@ func runCTPFeeProbe(args []string) error {
 			runErr = err
 			break
 		}
-		st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
-			Volume: *volume, LimitPrice: float64(md.UpperLimitPrice)}, *timeout)
-		if err != nil || int(st.VolumeTraded) != *volume {
+			Volume: *volume, LimitPrice: float64(md.UpperLimitPrice)}, *timeout, logf)
+		if err != nil {
 			runErr = fmt.Errorf("第 %d 轮开仓没成交 %d 手：status=%q %s err=%v", r, *volume, string(st.Status), st.StatusMsg, err)
 			break
 		}
@@ -132,10 +132,10 @@ func runCTPFeeProbe(args []string) error {
 			break
 		}
 		record(r, "open", float64(a0.Commission), float64(a1.Commission))
-		cs, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		cs, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-			Volume: *volume, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
-		if err != nil || int(cs.VolumeTraded) != *volume {
+			Volume: *volume, LimitPrice: float64(md.LowerLimitPrice)}, *timeout, logf)
+		if err != nil {
 			runErr = fmt.Errorf("⚠️⚠️ 第 %d 轮平今没成交 %d 手，**账上留着今仓** —— 跑 `ctp-flatten -symbol %s`：status=%q %s err=%v",
 				r, *volume, *symbol, string(cs.Status), cs.StatusMsg, err)
 			break
