@@ -112,6 +112,12 @@ func runCTPPairs(args []string) error {
 		return err
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// 兜底：退出前撤掉本合约的全部活委托 —— 中途报错提前返回的路径上，已挂的单会漏撤（评审 20260922）。
+	defer func() {
+		if err := sweepLive(c, inst, *timeout, logf); err != nil {
+			logf("⚠️⚠️ **%s 还有活委托，去看账户**：%v", *symbol, err)
+		}
+	}()
 
 	tk, err := resolveTick(c, *symbol, 0, *timeout, logf)
 	if err != nil {

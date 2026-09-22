@@ -7350,14 +7350,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "748 ctp-quota-ext 收尾不扫活委托 —— 退出时本合约可能还挂着单",
+		"name": "748 ctp-quota-ext 收尾不做最后那道扫单 —— 平仓收尾之后本合约可能还挂着单（2d54548 起收尾有两道 sweepLive，只看「调没调过」分不开，改指收尾顺序那条）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/closefee_quotaext.go",
 		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
 		"new": "\t\tif err := error(nil); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
 		"pkg": ".",
-		"test": "TestImmediateFillPathsCancelOnMiss",
-		"want": "收尾没有扫活委托",
+		"test": "TestExtDeferSweepsBeforeClosing",
+		"want": "收尾顺序",
 		"expect": "red"
 	},
 	{
@@ -7424,6 +7424,61 @@
 		"pkg": ".",
 		"test": "TestExtDeferSweepsBeforeClosing",
 		"want": "收尾顺序",
+		"expect": "red"
+	},
+	{
+		"name": "749 afterCancel 把停在过渡态（'a'）的那一笔判成干净 —— 超时之后还在路上的单被当成撤掉了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "\treturn false, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
+		"new": "\treturn true, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
+		"pkg": ".",
+		"test": "TestAfterCancel",
+		"want": "停在 'a'",
+		"expect": "red"
+	},
+	{
+		"name": "751 insertOrCancel 扫完不看本地簿 —— 停在 'a' 上的那一笔会被当成干净",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "\t\t\tif clean, why = afterCancel(cur, known); clean ||",
+		"new": "\t\t\tif clean, why = true, \"\"; clean ||",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "扫完不看本地簿",
+		"expect": "red"
+	},
+	{
+		"name": "752 ctp-hold 建仓退回直接 Insert（没成交的建仓单留在柜台上）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/main.go",
+		"old": "\tst, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\tDirection: openDir, Offset: def.THOST_FTDC_OF_Open,\n\t\tVolume: 1, LimitPrice: openPx}, *timeout, logf)",
+		"new": "\tst, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\tDirection: openDir, Offset: def.THOST_FTDC_OF_Open,\n\t\tVolume: 1, LimitPrice: openPx}, *timeout)",
+		"pkg": ".",
+		"test": "TestDirectInsertOnlyInAllowedFuncs",
+		"want": "runCTPHold 直接调了 c.Insert",
+		"expect": "red"
+	},
+	{
+		"name": "758 openOneLotResting 下单报错时不撤 —— 挂在最新价 − 一跳、之后会真成交的单漏在柜台上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/slice.go",
+		"old": "\t\tif cerr := cancelAndConfirm(c, st.OrderRef, req, timeout, logf); cerr != nil {\n\t\t\treturn 0, errors.Join(err, cerr)\n\t\t}\n",
+		"new": "\t\t_ = errors.Join\n",
+		"pkg": ".",
+		"test": "TestRestingPathsCancelOnEveryExit",
+		"want": "openOneLotResting 只有",
+		"expect": "red"
+	},
+	{
+		"name": "759 ctp-fee 收尾不兜底撤单 —— Insert 报错 continue、Account 失败提前返回时挂着的单漏撤",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/fee.go",
+		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {",
+		"new": "\t\tif err := error(nil); err != nil {",
+		"pkg": ".",
+		"test": "TestRestingPathsCancelOnEveryExit",
+		"want": "runCTPFee 的收尾没有 defer sweepLive",
 		"expect": "red"
 	}
 ]

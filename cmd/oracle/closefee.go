@@ -201,8 +201,8 @@ func runCTPCloseFee(args []string) error {
 	req := ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: m.offset(),
 		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}
-	st, err := c.Insert(req, *timeout)
-	if err != nil || st.VolumeTraded == 0 {
+	st, err := insertOrCancel(c, req, *timeout, logf)
+	if err != nil {
 		return fmt.Errorf("%s 没成交：status=%q %s err=%v", m, string(st.Status), st.StatusMsg, err)
 	}
 	logf("[cf] %s 成交：%d 手（挂单价 %.2f = 跌停）", m, st.VolumeTraded, float64(md.LowerLimitPrice))

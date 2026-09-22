@@ -740,6 +740,12 @@ func runCTPOrder(args []string) error {
 		return err
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
+	// 兜底：退出前撤掉本合约的全部活委托 —— 中途报错提前返回的路径上，已挂的单会漏撤（评审 20260922）。
+	defer func() {
+		if err := sweepLive(c, inst, *timeout, logf); err != nil {
+			logf("⚠️⚠️ **%s 还有活委托，去看账户**：%v", *symbol, err)
+		}
+	}()
 	// ⚠️ 方向与开平**成对**决定，不许分开设：买开挂跌停、卖平挂涨停，
 	// 两者都是「挂得上、成不了」的那一端。⚠️ 拆开设会让人配出
 	// 「卖平挂跌停」这种当场成交的组合，而那与本命令要验的往返完全不是一回事。
@@ -904,13 +910,10 @@ func runCTPRoundTrip(args []string) error {
 		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
 		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}
 	logf("[RT] 买开 1 手 @%.2f（涨停，保证成交；⚠️ 实际成交价由对手价决定）", open.LimitPrice)
-	st, err := c.Insert(open, *timeout)
+	st, err := insertOrCancel(c, open, *timeout, logf)
 	if err != nil {
+		// ⚠️ 没成交也走这里（insertOrCancel 撤掉并报错）：本轮没有建成仓，**不要**当成失败去改判据，先查为什么没成。
 		return fmt.Errorf("买开：%w", err)
-	}
-	if st.VolumeTraded == 0 {
-		return fmt.Errorf("⚠️ 买开没有成交（status=%q %s）—— 本轮没有建成仓，"+
-			"**不要**当成失败去改判据，先查为什么没成", string(st.Status), st.StatusMsg)
 	}
 	logf("[RT] 已成交 %d 手  status=%q", st.VolumeTraded, string(st.Status))
 
@@ -948,8 +951,8 @@ func runCTPRoundTrip(args []string) error {
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
 		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}
 	logf("[RT] 卖平今 1 手 @%.2f（跌停，保证成交）", close.LimitPrice)
-	cs, err := c.Insert(close, *timeout)
-	if err != nil || cs.VolumeTraded == 0 {
+	cs, err := insertOrCancel(c, close, *timeout, logf)
+	if err != nil {
 		// ⚠️ 到这里说明**账上还留着一手多仓**。不静默返回。
 		return fmt.Errorf("⚠️⚠️ **平仓没有成交，账上还留着 1 手 %s 多头今仓** —— "+
 			"status=%q %s err=%v。"+
@@ -1074,8 +1077,8 @@ func runCTPFlatten(args []string) error {
 			continue
 		}
 		logf("[flat] %s → @%.2f", lg, px)
-		st, err := c.Insert(req, *timeout)
-		if err != nil || st.VolumeTraded == 0 {
+		st, err := insertOrCancel(c, req, *timeout, logf)
+		if err != nil {
 			msg := fmt.Sprintf("%s：status=%q %s err=%v", lg, string(st.Status), st.StatusMsg, err)
 			logf("[flat] ⚠️⚠️ 没平掉，**接着平别的**：%s", msg)
 			tally.Failed = append(tally.Failed, msg)
@@ -1173,10 +1176,10 @@ func runCTPHold(args []string) error {
 	if *short {
 		openDir, openPx = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Sell), float64(md.LowerLimitPrice)
 	}
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: openDir, Offset: def.THOST_FTDC_OF_Open,
-		Volume: 1, LimitPrice: openPx}, *timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: openPx}, *timeout, logf)
+	if err != nil {
 		return fmt.Errorf("建仓没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
 	logf("[hold] 建%s成交 %d 手", map[bool]string{false: "多", true: "空"}[*short], st.VolumeTraded)
@@ -1277,10 +1280,10 @@ func runCTPHold(args []string) error {
 		return nil
 	}
 	logf("[hold] 平仓 ——")
-	cs, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	cs, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
-	if err != nil || cs.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout, logf)
+	if err != nil {
 		return fmt.Errorf("⚠️⚠️ **平仓没成交，账上还留着 1 手 %s 多头今仓** —— "+
 			"status=%q %s err=%v。跑 `ctp-flatten -symbol %s` 收拾", *symbol, string(cs.Status), cs.StatusMsg, err, *symbol)
 	}

@@ -332,8 +332,8 @@ func runCTPCloseOrder(args []string) error {
 	if err != nil {
 		return err
 	}
-	st, err := c.Insert(genericCloseReq(ex, inst, float64(md.LowerLimitPrice)), *timeout)
-	if err != nil || st.VolumeTraded == 0 {
+	st, err := insertOrCancel(c, genericCloseReq(ex, inst, float64(md.LowerLimitPrice)), *timeout, logf)
+	if err != nil {
 		return fmt.Errorf("通用平仓没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
 	pos2, err := c.Positions(*timeout)
@@ -506,8 +506,8 @@ func runCZCEX0(c *ctp.Client, env probe.Env, ex, inst, symbol, dump string, time
 	if err != nil {
 		return err
 	}
-	st, err := c.Insert(genericCloseReq(ex, inst, float64(md.LowerLimitPrice)), timeout)
-	if err != nil || st.VolumeTraded == 0 {
+	st, err := insertOrCancel(c, genericCloseReq(ex, inst, float64(md.LowerLimitPrice)), timeout, logf)
+	if err != nil {
 		return fmt.Errorf("X0 通用平仓没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
 	pos, err := c.Positions(timeout)

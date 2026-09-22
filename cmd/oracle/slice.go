@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"math"
@@ -271,7 +272,7 @@ func runCTPSlices(args []string) error {
 			why = fmt.Sprintf("落在 %q 的反面", *second)
 		}
 		logf("[sl] ⚠️ 腿2 %s（p1=%.4f p2=%.4f）—— **平掉它重来**", why, p1, p2)
-		if err := flattenOneLongToday(c, ex, inst, *timeout); err != nil {
+		if err := flattenOneLongToday(c, ex, inst, *timeout, logf); err != nil {
 			return fmt.Errorf("平掉不合格的腿2 失败，账上现在有两片：%w", err)
 		}
 		if !time.Now().Before(deadline) {
@@ -328,10 +329,10 @@ func runCTPSlices(args []string) error {
 	if err != nil {
 		return err
 	}
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, *timeout, logf)
+	if err != nil {
 		return fmt.Errorf("平一手没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
 	}
 	posQ3, err := c.Positions(*timeout)
@@ -565,10 +566,10 @@ func openOneLot(c *ctp.Client, ex, inst string, mult float64,
 		return 0, err
 	}
 	// ⚠️ 挂涨停 ⇒ 一定成交（本命令要的是真持仓，不是挂单）。
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
-		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}, timeout, logf)
+	if err != nil {
 		return 0, fmt.Errorf("开一手没成交：status=%q %s err=%v",
 			string(st.Status), st.StatusMsg, err)
 	}
@@ -613,6 +614,10 @@ func openOneLotResting(c *ctp.Client, ex, inst string, mult, tick float64,
 		Volume: 1, LimitPrice: px}
 	st, err := c.Insert(req, timeout)
 	if err != nil {
+		// ⚠️ 报错（含超时）时那笔可能已经挂上了，而它挂在最新价 − 一跳，之后是会真成交的 —— 撤、确认干净再返回（评审 20260922）。
+		if cerr := cancelAndConfirm(c, st.OrderRef, req, timeout, logf); cerr != nil {
+			return 0, errors.Join(err, cerr)
+		}
 		return 0, err
 	}
 	logf("[sl] 腿1 挂在 %.4f（最新 %.4f − 一个价位）等成交，上限 %s ——",
@@ -625,8 +630,8 @@ func openOneLotResting(c *ctp.Client, ex, inst string, mult, tick float64,
 		}
 	}
 	if st.VolumeTraded == 0 {
-		if err := c.Cancel(st.OrderRef, req); err != nil {
-			return 0, fmt.Errorf("⚠️⚠️ 挂单没成交**而且撤不掉**，它还在柜台上：%w", err)
+		if err := cancelAndConfirm(c, st.OrderRef, req, timeout, logf); err != nil {
+			return 0, fmt.Errorf("⚠️⚠️ 挂单没成交**而且没确认撤干净**：%w", err)
 		}
 		return 0, fmt.Errorf("⚠️ 腿1 挂在 %.4f 等了 %s 没成交，已撤 —— "+
 			"不当结论，重跑（或把 -fillwait 调大）", px, fillWait)
@@ -674,15 +679,15 @@ func filledPrice(c *ctp.Client, inst string, before, mult float64,
 // ⚠️ 它与 flattenLongToday 是两件事：后者是收尾、清空；
 // 这一个是**撤回一步**，账上还得留着腿 1。用错了会把腿 1 也平掉，
 // 而那之后的一切读数仍然会打印得很正常。
-func flattenOneLongToday(c *ctp.Client, ex, inst string, timeout time.Duration) error {
+func flattenOneLongToday(c *ctp.Client, ex, inst string, timeout time.Duration, logf func(string, ...any)) error {
 	md, err := c.MarketData(ex+"."+inst, timeout)
 	if err != nil {
 		return err
 	}
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout, logf)
+	if err != nil {
 		return fmt.Errorf("平一手没成交：status=%q %s err=%v",
 			string(st.Status), st.StatusMsg, err)
 	}
@@ -720,10 +725,10 @@ func flattenLongToday(c *ctp.Client, ex, inst string,
 		if err != nil {
 			return err
 		}
-		st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-			Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout)
-		if err != nil || st.VolumeTraded == 0 {
+			Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout, logf)
+		if err != nil {
 			return fmt.Errorf("平仓没成交：status=%q %s err=%v",
 				string(st.Status), st.StatusMsg, err)
 		}

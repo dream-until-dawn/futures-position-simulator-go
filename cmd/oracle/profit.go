@@ -80,10 +80,10 @@ func runCTPProfit(args []string) error {
 	}
 	cp0 := float64(before.CloseProfit)
 	logf("[pf] 这一笔之前的当日累计平仓盈亏 = %.4f", cp0)
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: openDir, Offset: def.THOST_FTDC_OF_Open,
-		Volume: 1, LimitPrice: openPx}, *timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: openPx}, *timeout, logf)
+	if err != nil {
 		return fmt.Errorf("⚠️ 开仓没成交（status=%q %s err=%v）—— 本轮什么都没发生",
 			string(st.Status), st.StatusMsg, err)
 	}
@@ -185,10 +185,10 @@ func flattenNow(c *ctp.Client, ex, inst string, timeout time.Duration,
 	if short {
 		closeDir, closePx = def.TThostFtdcDirectionType(def.THOST_FTDC_D_Buy), float64(md.UpperLimitPrice)
 	}
-	st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+	st, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: closeDir, Offset: def.THOST_FTDC_OF_CloseToday,
-		Volume: 1, LimitPrice: closePx}, timeout)
-	if err != nil || st.VolumeTraded == 0 {
+		Volume: 1, LimitPrice: closePx}, timeout, logf)
+	if err != nil {
 		return fmt.Errorf("⚠️⚠️ **平仓没成交，仓还在账上** —— status=%q %s err=%v",
 			string(st.Status), st.StatusMsg, err)
 	}

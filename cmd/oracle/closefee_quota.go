@@ -320,8 +320,8 @@ func runCTPQuota(args []string) error {
 		if err != nil {
 			return err
 		}
-		st, err := c.Insert(genericCloseReq(ex, inst, float64(md.LowerLimitPrice)), *timeout)
-		if err != nil || st.VolumeTraded == 0 {
+		st, err := insertOrCancel(c, genericCloseReq(ex, inst, float64(md.LowerLimitPrice)), *timeout, logf)
+		if err != nil {
 			return fmt.Errorf("第 %d 笔通用平仓没成交：status=%q %s err=%v", i+1, string(st.Status), st.StatusMsg, err)
 		}
 		pos, err := c.Positions(*timeout)
