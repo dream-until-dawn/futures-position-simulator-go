@@ -19,10 +19,10 @@ import (
 // 第一版在这里自己写了一套 floor/ceil/round，于是本测试验的是
 // 「我在测试里写的取整能命中柜台」，而**生产代码对不对，它一个字都没说**。
 // 两个实现同一件事，一起退化时测试全绿 —— 那正是本项目反复警告的形状。
-// ⚠️ 候选集里**没有「往里收」**（涨停向下、跌停向上；refdata 还没有这种取整）⇒ 大商所那句「判出四舍五入」只是三选一的结果，
-// 这里的大商所样本同样与往里收一致（§13 #24）。能分开两者的那一份登记在 kqKnownDivergence 里。
+// 「往里收」（涨停向下、跌停向上）F12 起进了候选（§13 #24）。F12 之前候选只有三种，大商所那句「判出四舍五入」是三选一的结果；
+// 现在大商所多数样本同时命中四舍五入与往里收（分不开），能分开两者的样本登记在 kqMustDecide 里、必须唯一判出往里收。
 var candidates = []refdata.TickRounding{
-	refdata.TickFloor, refdata.TickCeil, refdata.TickHalfUp,
+	refdata.TickFloor, refdata.TickCeil, refdata.TickHalfUp, refdata.TickInward,
 }
 
 // limitsFor 用**生产代码**推一个合约在给定比例与取整下的涨跌停。
@@ -46,7 +46,7 @@ func limitsFor(tick, ratio decimal.Decimal, r refdata.TickRounding,
 // 判据：找出**同时**命中涨停与跌停的 (比例, 取整) 组合。
 //
 //	比例遍历 0.5% … 30%，步长 0.5%
-//	取整三种：向下 / 向上 / 四舍五入
+//	取整四种：向下 / 向上 / 四舍五入 / 往里收
 //
 // ⚠️ 只命中一种时才算判出来；命中多种说明这个样本**分不开**它们
 // （整除的合约就是这样，比如 ag 的 20% 与 rb2610 的 5%）——
@@ -96,18 +96,19 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 		// ⚠️ 这一行是被那条棘轮逼着改的：样本变好了守卫也要红，
 		// 否则「分不开」会一直挂着，而它已经不成立了。
 		"SHFE.ag2702": {"0.2", "向下取整"}, // 16262×20% = 3252.4，不整除
-		"DCE.m2701":   {"0.06", "四舍五入"},
-		"DCE.m2703":   {"0.06", "四舍五入"},
-		"DCE.m2705":   {"0.06", "四舍五入"},
-		"DCE.i2701":   {"0.09", "四舍五入"},
+		"DCE.m2701":   {"0.06", "往里收"},
+		"DCE.m2703":   {"0.06", "往里收"},
+		"DCE.m2705":   {"0.06", "往里收"},
+		"DCE.i2701":   {"0.09", "往里收"},
 	}
 
-	// kqKnownDivergence 是三种候选（向下 / 向上 / 四舍五入）都命中不了的**已登记**样本：大商所的「往里收」（§13 #24）。
-	// ⚠️ 两个价都钉死；「往里收」进了候选、或样本变了，这里会红 —— 那时删掉这一条。
-	kqKnownDivergence := map[string][2]string{
-		"DCE.m2701@3415": {"3619", "3211"}, // 3415 × 1.06 = 3619.90、× 0.94 = 3210.10：涨停向下、跌停向上
+	// kqMustDecide 是能分开「往里收」与「四舍五入」的样本（§13 #24）：它们必须**唯一**判出登记的取整。
+	// F12 之前这一份登记为已知分歧（三种候选都命中不了）；F12 把往里收加进候选后，它是大商所那一行登记的判别力来源 ——
+	// 没有它，大商所的样本全是「分不开」，登记的「往里收」只是「在命中里」。
+	kqMustDecide := map[string]string{
+		"DCE.m2701@3415": "往里收", // 3415 × 1.06 = 3619.90、× 0.94 = 3210.10：柜台 3619 / 3211，四舍五入会给 3620 / 3210
 	}
-	divergenceSeen := map[string]bool{}
+	mustSeen := map[string]bool{}
 	decided, ambiguous := 0, 0
 	roundingByExchange := map[string]map[string]bool{}
 	syms := make([]string, 0, len(rows))
@@ -130,14 +131,11 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 				}
 			}
 		}
-		if pin, known := kqKnownDivergence[key]; known {
-			divergenceSeen[key] = true
-			if len(hits) != 0 || !o.up.Equal(decimal.RequireFromString(pin[0])) || !o.lo.Equal(decimal.RequireFromString(pin[1])) {
-				t.Errorf("⚠️ 已登记分歧 %s 的形状变了：命中 %v、柜台 %s / %s（登记 %s / %s）—— 删掉这一条或重看 §13 #24", key, hits, o.up, o.lo, pin[0], pin[1])
-			} else {
-				t.Logf("ⓘ 已登记分歧 %s：三种候选都命中不了（§13 #24，往里收）", key)
+		if must, ok := kqMustDecide[key]; ok {
+			mustSeen[key] = true
+			if len(hits) != 1 || !strings.HasSuffix(hits[0], "@"+must) {
+				t.Errorf("⚠️ 判别样本 %s 应唯一判出 %s，得到 %v —— 大商所那一行登记失去判别力，重看 §13 #24", key, must, hits)
 			}
-			continue
 		}
 		if len(hits) == 0 {
 			t.Errorf("⚠️ %s：没有任何 (比例, 取整) 组合能同时命中涨停 %s 与跌停 %s"+
@@ -202,9 +200,9 @@ func TestLimitRatioFromQuotes(t *testing.T) {
 		}
 		t.Logf("%-20s 比例 %-6s 取整 %v", key, ratio, hits)
 	}
-	for k := range kqKnownDivergence {
-		if !divergenceSeen[k] {
-			t.Errorf("⚠️ 已登记分歧 %s 在语料里没出现 —— 删掉那一条", k)
+	for k := range kqMustDecide {
+		if !mustSeen[k] {
+			t.Errorf("⚠️ 判别样本 %s 在语料里没出现 —— 删掉那一条", k)
 		}
 	}
 

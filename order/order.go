@@ -322,8 +322,8 @@ func Validate(req Request, f Facts) Result {
 		skip(CheckPriceLimit, "合约规格")
 	case !f.HasPreSettlement:
 		skip(CheckPriceLimit, "昨结算价")
-	case f.Rounding == refdata.TickRoundingUnknown:
-		skip(CheckPriceLimit, "取整方向 —— ⚠️ 两家交易所不同（上期所向下、大商所四舍五入），挑一个会静默错")
+	case !f.Rounding.Valid():
+		skip(CheckPriceLimit, "取整方向 —— ⚠️ 两家交易所不同（上期所向下、大商所往里收），挑一个会静默错")
 	case !ok:
 		skip(CheckPriceLimit, "涨跌幅比例（规则数据里没有）")
 	case req.Price.GreaterThan(up):

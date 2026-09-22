@@ -148,6 +148,28 @@ func TestMissingInputMeansUncheckedNotPassed(t *testing.T) {
 	}
 }
 
+// TestUnknownRoundingSkipsWithReason：未指定与越界的取整方式都要以「取整方向」为缺项跳过涨跌停 ——
+// 不能落进「涨跌幅比例（规则数据里没有）」那一格：那会把调用方的配置错误说成规则数据缺（design.md F12）。
+func TestUnknownRoundingSkipsWithReason(t *testing.T) {
+	for _, r := range []refdata.TickRounding{refdata.TickRoundingUnknown, refdata.TickRounding(99)} {
+		f := fullFacts(t)
+		f.Rounding = r
+		res := Validate(openReq(), f)
+		found := false
+		for _, u := range res.Unchecked {
+			if u.Check == CheckPriceLimit {
+				found = true
+				if !strings.Contains(u.Missing, "取整方向") {
+					t.Errorf("⚠️ 取整方式 %d：涨跌停跳过的缺项是 %q，应点名「取整方向」", int(r), u.Missing)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("⚠️ 取整方式 %d：涨跌停没落进 Unchecked", int(r))
+		}
+	}
+}
+
 // TestRejections 穷举八项各自的拒绝。
 func TestRejections(t *testing.T) {
 	cases := []struct {

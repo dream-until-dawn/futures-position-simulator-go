@@ -14,13 +14,13 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 )
 
-// MeasuredTickRounding 返回**实测过**的涨跌停取整方向：上期所向下、大商所四舍五入（probes.md §12，七个合约反解）。
+// MeasuredTickRounding 返回**实测过**的涨跌停取整方向：上期所向下（probes.md §12）、大商所往里收（§13 #24，有条件：前提是比例为整百分比）。
 //
 // ⚠️ 能源中心、郑商所、广期所、中金所不在里面 —— 没测过就不填。报单落在这些交易所时，涨跌停那一项「没查成」，不成交。
 func MeasuredTickRounding() map[types.Exchange]refdata.TickRounding {
 	return map[types.Exchange]refdata.TickRounding{
 		types.SHFE: refdata.TickFloor,
-		types.DCE:  refdata.TickHalfUp,
+		types.DCE:  refdata.TickInward, // §13 #24 有条件收敛（前提：比例为整百分比），见 refdata.TickInward
 	}
 }
 
