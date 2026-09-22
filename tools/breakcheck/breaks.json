@@ -6777,18 +6777,7 @@
 		"expect": "red"
 	},
 	{
-		"name": "694 关键样本判别力的对照组用了往里收本身（F12 之前：已登记分歧的柜台值钉错）—— 「分得开两种取整」的断言必须是活的",
-		"dir": "",
-		"file": "conformance/ctpfixture/facade_test.go",
-		"old": "types.DCE: refdata.TickHalfUp}",
-		"new": "types.DCE: refdata.TickInward}",
-		"pkg": "./conformance/ctpfixture/",
-		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
-		"want": "分不开两种取整了",
-		"expect": "red"
-	},
-	{
-		"name": "695 关键样本不记「见过」（F12 之前：已登记分歧不记见过）—— 反方向检查必须能抓到登记了却不在语料里的样本",
+		"name": "695 关键样本不记「见过」—— 反方向检查必须能抓到登记了却不在语料里的样本",
 		"dir": "",
 		"file": "conformance/ctpfixture/facade_test.go",
 		"old": "\t\t\t\tkeySeen[sym+\"/\"+day] = true\n",
@@ -6807,17 +6796,6 @@
 		"pkg": "./conformance/fixture/",
 		"test": "TestLimitRatioFromQuotes",
 		"want": "在语料里没出现",
-		"expect": "red"
-	},
-	{
-		"name": "697 快期判别样本登记成四舍五入（F12 之前：快期侧已登记分歧的柜台值钉错）—— 「唯一判出」的比较必须是活的",
-		"dir": "",
-		"file": "conformance/fixture/limit_test.go",
-		"old": "\"DCE.m2701@3415\": \"往里收\",",
-		"new": "\"DCE.m2701@3415\": \"四舍五入\",",
-		"pkg": "./conformance/fixture/",
-		"test": "TestLimitRatioFromQuotes",
-		"want": "应唯一判出",
 		"expect": "red"
 	},
 	{
@@ -7248,6 +7226,28 @@
 		"pkg": "./conformance/ctpfixture/",
 		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
 		"want": "柜台 3634 / 3224",
+		"expect": "red"
+	},
+	{
+		"name": "743 关键样本判别力的对照组用了往里收本身 —— 「分得开两种取整」的断言必须是活的",
+		"dir": "",
+		"file": "conformance/ctpfixture/facade_test.go",
+		"old": "types.DCE: refdata.TickHalfUp}",
+		"new": "types.DCE: refdata.TickInward}",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestMeasuredTickRoundingAgainstCTPQuotes",
+		"want": "分不开两种取整了",
+		"expect": "red"
+	},
+	{
+		"name": "744 快期判别样本登记成四舍五入 —— 「唯一判出」的比较必须是活的",
+		"dir": "",
+		"file": "conformance/fixture/limit_test.go",
+		"old": "\"DCE.m2701@3415\": \"往里收\",",
+		"new": "\"DCE.m2701@3415\": \"四舍五入\",",
+		"pkg": "./conformance/fixture/",
+		"test": "TestLimitRatioFromQuotes",
+		"want": "应唯一判出",
 		"expect": "red"
 	}
 ]
