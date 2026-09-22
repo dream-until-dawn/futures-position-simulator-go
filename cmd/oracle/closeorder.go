@@ -416,11 +416,11 @@ func closeTodayOnly(c *ctp.Client, ex, inst string, timeout time.Duration,
 		if err != nil {
 			return err
 		}
-		st, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,
+		// ⚠️ 没成交就撤、撤干净再返回（评审 20260922：此前没成交的平今单会留在柜台上）。
+		if _, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,
 			Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
-			Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout)
-		if err != nil || st.VolumeTraded == 0 {
-			return fmt.Errorf("平今没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
+			Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout, logf); err != nil {
+			return fmt.Errorf("平今：%w", err)
 		}
 	}
 	return fmt.Errorf("⚠️ 平了 5 次今仓还没清空 —— 停手，去看账户")

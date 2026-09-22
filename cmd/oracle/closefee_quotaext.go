@@ -167,9 +167,8 @@ func closeShortTodayOnly(c *ctp.Client, ex, inst string, timeout time.Duration, 
 		if err != nil {
 			return err
 		}
-		st, err := c.Insert(shortCloseTodayReq(ex, inst, float64(md.UpperLimitPrice)), timeout)
-		if err != nil || st.VolumeTraded == 0 {
-			return fmt.Errorf("空头平今没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)
+		if _, err := insertOrCancel(c, shortCloseTodayReq(ex, inst, float64(md.UpperLimitPrice)), timeout, logf); err != nil {
+			return fmt.Errorf("空头平今：%w", err)
 		}
 	}
 	return fmt.Errorf("⚠️ 平了 3 次空头今仓还没清空 —— 停手，去看账户")
@@ -256,6 +255,12 @@ func runCTPQuotaExt(args []string) error {
 		if err := closeShortTodayOnly(c, ex, inst, *timeout, logf); err != nil {
 			logf("[qx] ⚠️⚠️ **空头今仓没平干净**：%v", err)
 		}
+		// 最后一道：本合约不许留活委托（没成交的单挂在柜台上，工具退出后随时会成交）。
+		if err := sweepLive(c, inst, *timeout, logf); err != nil {
+			logf("[qx] ⚠️⚠️ **本合约还有活委托，去看账户**：%v", err)
+		} else {
+			logf("[qx] 收尾：%s 没有活委托", inst)
+		}
 	}()
 	commission := func() (decimal.Decimal, error) {
 		a, err := c.Account(*timeout)
@@ -274,9 +279,8 @@ func runCTPQuotaExt(args []string) error {
 		if err != nil {
 			return decimal.Zero, longSides{}, longSides{}, err
 		}
-		st, err := c.Insert(mk(md), *timeout)
-		if err != nil || st.VolumeTraded == 0 {
-			return decimal.Zero, longSides{}, longSides{}, fmt.Errorf("第 %d 步没成交：status=%q %s err=%v", n, string(st.Status), st.StatusMsg, err)
+		if _, err := insertOrCancel(c, mk(md), *timeout, logf); err != nil {
+			return decimal.Zero, longSides{}, longSides{}, fmt.Errorf("第 %d 步：%w", n, err)
 		}
 		l, s, err := sides()
 		if err != nil {

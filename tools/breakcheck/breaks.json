@@ -7315,5 +7315,49 @@
 		"test": "TestExtVerdict",
 		"want": "活着",
 		"expect": "red"
+	},
+	{
+		"name": "745 needsCancel 只看报错 —— 挂上了没成交（NoTradeQueueing）的单不撤，留在柜台上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "return err != nil || st.VolumeTraded == 0",
+		"new": "return err != nil",
+		"pkg": ".",
+		"test": "TestNeedsCancel",
+		"want": "挂上了没成交",
+		"expect": "red"
+	},
+	{
+		"name": "746 insertOrCancel 没成交时不扫活委托 —— 超时拿不到 ref 的那一笔撤不掉",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "\tif serr := sweepLive(c, req.Instrument, timeout, logf); serr != nil {",
+		"new": "\tif serr := error(nil); serr != nil {",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "insertOrCancel 没成交时不扫活委托",
+		"expect": "red"
+	},
+	{
+		"name": "747 closeTodayOnly 退回直接 Insert（没成交的平今单留在柜台上）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closeorder.go",
+		"old": "\t\tif _, err := insertOrCancel(c, ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\t\tDirection: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,\n\t\t\tVolume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout, logf); err != nil {",
+		"new": "\t\tif _, err := c.Insert(ctp.OrderReq{Exchange: ex, Instrument: inst,\n\t\t\tDirection: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,\n\t\t\tVolume: 1, LimitPrice: float64(md.LowerLimitPrice)}, timeout); err != nil {",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "closeTodayOnly 直接调了 Insert",
+		"expect": "red"
+	},
+	{
+		"name": "748 ctp-quota-ext 收尾不扫活委托 —— 退出时本合约可能还挂着单",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
+		"new": "\t\tif err := error(nil); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **本合约还有活委托",
+		"pkg": ".",
+		"test": "TestImmediateFillPathsCancelOnMiss",
+		"want": "收尾没有扫活委托",
+		"expect": "red"
 	}
 ]
