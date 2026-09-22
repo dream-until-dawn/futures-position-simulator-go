@@ -7254,8 +7254,8 @@
 		"name": "737 F11 外推 B 的登记表写反（「扣」预言平今档）—— 代码与 state.md 登记块不一致",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/closefee_quotaext.go",
-		"old": "return []extReading{{\"扣\", tierYd}, {\"不扣\", tierToday}}",
-		"new": "return []extReading{{\"扣\", tierToday}, {\"不扣\", tierYd}}",
+		"old": "return []extReading{{\"扣\", 0, 1}, {\"不扣\", 1, 1}}",
+		"new": "return []extReading{{\"扣\", 1, 1}, {\"不扣\", 0, 1}}",
 		"pkg": ".",
 		"test": "TestExtReadingsMatchPreRegistration",
 		"want": "代码预言",
@@ -7306,11 +7306,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "742 ctp-quota-ext 两档之外也算活（收到 0.3 时两种读法都活）—— 「谁都没预言到」永远不出现",
+		"name": "742 ctp-quota-ext 的判定不比数（任何增量都让全部读法活）—— 「谁都没预言到」永远不出现",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/closefee_quotaext.go",
-		"old": "if got != 0 && r.Tier == got {",
-		"new": "if got == 0 || r.Tier == got {",
+		"old": "if delta.Equal(r.fee(rateToday, rateYd)) {",
+		"new": "if true {",
 		"pkg": ".",
 		"test": "TestExtVerdict",
 		"want": "活着",
@@ -7361,14 +7361,36 @@
 		"expect": "red"
 	},
 	{
-		"name": "749 afterCancel 把停在过渡态（'a'）的那一笔判成干净 —— 超时之后还在路上的单被当成撤掉了",
+		"name": "753 F11 外推 A 的登记表写错（「按额度拆」预言成 2 手平今）—— 代码与 state.md 登记块不一致",
 		"dir": "cmd/oracle",
-		"file": "cmd/oracle/insertcancel.go",
-		"old": "\treturn false, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
-		"new": "\treturn true, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "{\"按额度拆\", 1, 2}",
+		"new": "{\"按额度拆\", 2, 2}",
 		"pkg": ".",
-		"test": "TestAfterCancel",
-		"want": "停在 'a'",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
+		"expect": "red"
+	},
+	{
+		"name": "754 A 的判别那一笔退成 1 手 —— 「多手裸平」根本没被量到",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tr.Volume = 2\n",
+		"new": "\tr.Volume = 1\n",
+		"pkg": ".",
+		"test": "TestExtRequestFlags",
+		"want": "A 的判别那一笔",
+		"expect": "red"
+	},
+	{
+		"name": "755 读法的预言合计丢了平昨那一部分 —— 1 今 1 昨被算成只收 1 手平今",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "return rateToday.Mul(decimal.NewFromInt(int64(r.TodayLots))).Add(rateYd.Mul(decimal.NewFromInt(int64(r.Lots - r.TodayLots))))",
+		"new": "return rateToday.Mul(decimal.NewFromInt(int64(r.TodayLots)))",
+		"pkg": ".",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
 		"expect": "red"
 	},
 	{
@@ -7380,6 +7402,39 @@
 		"pkg": ".",
 		"test": "TestNeedsCancelPartialFill",
 		"want": "只成交 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "756 A 不核成交记录条数 —— 柜台拆成两条 1 手时照合计判（与「按额度拆」同值，回答不了 A）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tdn, dl := nAfter-nBefore, lotsAfter-lotsBefore\n\tif dn == 1 && dl == 2 {",
+		"new": "\tdn, dl := nAfter-nBefore, lotsAfter-lotsBefore\n\tif true {",
+		"pkg": ".",
+		"test": "TestMultiRecordVerdict",
+		"want": "拆成两条 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "757 ctp-quota-ext 收尾先平仓后撤单 —— 挂着的平仓单冻住可平量，今仓留在账上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **收尾第一道撤单没撤干净，去看账户**：%v\", err)\n\t\t}\n",
+		"new": "",
+		"pkg": ".",
+		"test": "TestExtDeferSweepsBeforeClosing",
+		"want": "收尾顺序",
+		"expect": "red"
+	},
+	{
+		"name": "749 afterCancel 把停在过渡态（'a'）的那一笔判成干净 —— 超时之后还在路上的单被当成撤掉了",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "\treturn false, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
+		"new": "\treturn true, fmt.Sprintf(\"本地簿里它还停在过渡态 %q",
+		"pkg": ".",
+		"test": "TestAfterCancel",
+		"want": "停在 'a'",
 		"expect": "red"
 	},
 	{
