@@ -9,12 +9,13 @@ import (
 	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
 )
 
-// needsCancel 判一笔要求「立刻成交」的委托发出之后要不要撤：报错（含超时拿不到结论）或一手都没成交 ⇒ 要撤。
+// needsCancel 判一笔要求「立刻成交」的委托发出之后要不要撤：报错（含超时拿不到结论）或成交手数少于下单手数 ⇒ 要撤。
+// （多手单部分成交时，余量还挂在队列里 —— 与一手没成交同一种残留。）
 //
 // ⚠️ ctp.Client.Insert 在「未成交还在队列」（OST_NoTradeQueueing）时也返回 —— 那张 GFD 单还挂在柜台上。
 // 不撤就返回，工具退出后它随时可能成交，账上多一手没人照看的仓（评审 20260922）。
-func needsCancel(st ctp.OrderState, err error) bool {
-	return err != nil || st.VolumeTraded == 0
+func needsCancel(st ctp.OrderState, want int, err error) bool {
+	return err != nil || st.VolumeTraded < want
 }
 
 // liveOn 从一次委托查询里挑出某合约还活着的委托。
@@ -63,7 +64,7 @@ func sweepLive(c *ctp.Client, inst string, timeout time.Duration, logf func(stri
 // insertOrCancel 发一笔要求立刻成交的委托；没成交（或报错 / 超时）就先按 ref 撤，再扫一遍本合约的活委托，确认撤干净再返回错误。
 func insertOrCancel(c *ctp.Client, req ctp.OrderReq, timeout time.Duration, logf func(string, ...any)) (ctp.OrderState, error) {
 	st, err := c.Insert(req, timeout)
-	if !needsCancel(st, err) {
+	if !needsCancel(st, req.Volume, err) {
 		return st, nil
 	}
 	failed := fmt.Errorf("没成交：status=%q %s err=%v", string(st.Status), st.StatusMsg, err)

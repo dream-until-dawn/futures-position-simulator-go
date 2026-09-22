@@ -163,6 +163,31 @@ func explicitCloseTodayReq(ex, inst string, lowerLimit float64) ctp.OrderReq {
 		Volume: 1, LimitPrice: lowerLimit}
 }
 
+// closeRecordsOn 数某合约的卖平成交记录：条数与手数合计（A 用它判 ③ 是不是**一条** 2 手的记录）。
+func closeRecordsOn(trades []*def.CThostFtdcTradeField, inst string) (n, lots int) {
+	for _, tr := range trades {
+		if tr == nil || ctp.Text(tr.InstrumentID[:]) != inst || tr.Direction != def.THOST_FTDC_D_Sell || tr.OffsetFlag == def.THOST_FTDC_OF_Open {
+			continue
+		}
+		n++
+		lots += int(tr.Volume)
+	}
+	return n, lots
+}
+
+// multiRecordVerdict 判 ③ 新增的卖平成交记录是不是恰好一条 2 手。
+//
+// ⚠️ 本库在 F11 里报错的形状是**一条** 2 手的成交记录；柜台若拆成两条 1 手，本库本来就逐条算（额度 1 ⇒ 平今、额度 0 ⇒ 平昨），
+// 合计与「按额度拆」同值 —— 回答不了 A 的问题（评审 20260922）。那时 A 不判，「柜台拆成 N 条」另记一条观测。
+func multiRecordVerdict(nBefore, lotsBefore, nAfter, lotsAfter int) error {
+	dn, dl := nAfter-nBefore, lotsAfter-lotsBefore
+	if dn == 1 && dl == 2 {
+		return nil
+	}
+	return fmt.Errorf("⚠️ **A 不判**：③ 新增 %d 条卖平成交记录、合计 %d 手（要恰好 1 条 2 手）—— "+
+		"柜台把这笔 2 手拆成了多条回报，这本身记一条观测，但不是 A 的判据", dn, dl)
+}
+
 // multiCloseReq 是 A 的判别那一笔：一笔通用平仓（OF_Close）卖 2 手。标志必须是通用的，同 genericCloseReq。
 func multiCloseReq(ex, inst string, lowerLimit float64) ctp.OrderReq {
 	r := genericCloseReq(ex, inst, lowerLimit)
@@ -282,6 +307,10 @@ func runCTPQuotaExt(args []string) error {
 	}
 	// 收尾：注册在第一笔委托之前。只平今仓（多头与空头），昨仓（种子）不碰。
 	defer func() {
+		// ⚠️ 先撤挂单、再平仓（评审 20260922）：挂着的平仓单冻住可平量，先平的话平今单会因可平量不足被拒、今仓留在账上。
+		if err := sweepLive(c, inst, *timeout, logf); err != nil {
+			logf("[qx] ⚠️⚠️ **收尾第一道撤单没撤干净，去看账户**：%v", err)
+		}
 		if err := closeTodayOnly(c, ex, inst, *timeout, logf); err != nil {
 			logf("[qx] ⚠️⚠️ **多头今仓没平干净**：%v", err)
 		}
@@ -406,6 +435,11 @@ func runCTPQuotaExt(args []string) error {
 		if l.Today != 1 || l.Yd != 1 {
 			return fmt.Errorf("⚠️ 买开之后不是 今 1 / 昨 1 —— 不往下平")
 		}
+		tr0, err := c.Trades(*timeout)
+		if err != nil {
+			return fmt.Errorf("⚠️ ③ 之前查不到成交记录（没有结论）—— 不往下平：%w", err)
+		}
+		n0, lots0 := closeRecordsOn(tr0, inst)
 		d3, l3, _, err := step(3, func(md *def.CThostFtdcDepthMarketDataField) ctp.OrderReq {
 			return multiCloseReq(ex, inst, float64(md.LowerLimitPrice))
 		})
@@ -414,6 +448,15 @@ func runCTPQuotaExt(args []string) error {
 		}
 		if l3.Today != 0 || l3.Yd != 0 {
 			return fmt.Errorf("⚠️ **A 不判**：③ 之后不是 今 0 / 昨 0（今 %d 昨 %d）", l3.Today, l3.Yd)
+		}
+		tr1, err := c.Trades(*timeout)
+		if err != nil {
+			return fmt.Errorf("⚠️ **A 不判**：③ 之后查不到成交记录（没有结论；增量 %s 照记）：%w", d3, err)
+		}
+		n1, lots1 := closeRecordsOn(tr1, inst)
+		logf("[qx] ③ 新增卖平成交记录 %d 条、合计 %d 手", n1-n0, lots1-lots0)
+		if err := multiRecordVerdict(n0, lots0, n1, lots1); err != nil {
+			return fmt.Errorf("%w（增量 %s 照记）", err, d3)
 		}
 		delta = d3
 	}

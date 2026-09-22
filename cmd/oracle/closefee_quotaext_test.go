@@ -167,6 +167,81 @@ func TestExtRequestFlags(t *testing.T) {
 	}
 }
 
+// TestMultiRecordVerdict：③ 新增的卖平记录要恰好一条 2 手；拆成两条 1 手 ⇒ 不判。
+func TestMultiRecordVerdict(t *testing.T) {
+	if err := multiRecordVerdict(0, 0, 1, 2); err != nil {
+		t.Errorf("一条 2 手应判：%v", err)
+	}
+	for name, c := range map[string][4]int{
+		"拆成两条 1 手": {0, 0, 2, 2},
+		"只成 1 手":   {0, 0, 1, 1},
+		"没有新记录":    {3, 3, 3, 3},
+	} {
+		if err := multiRecordVerdict(c[0], c[1], c[2], c[3]); err == nil {
+			t.Errorf("⚠️ %s：应判「A 不判」", name)
+		}
+	}
+}
+
+func TestCloseRecordsOn(t *testing.T) {
+	mk := func(inst string, dir def.TThostFtdcDirectionType, off def.TThostFtdcOffsetFlagType, vol int) *def.CThostFtdcTradeField {
+		tr := &def.CThostFtdcTradeField{Direction: dir, OffsetFlag: off, Volume: def.TThostFtdcVolumeType(vol)}
+		copy(tr.InstrumentID[:], inst)
+		return tr
+	}
+	n, lots := closeRecordsOn([]*def.CThostFtdcTradeField{
+		mk("m2703", def.THOST_FTDC_D_Sell, def.THOST_FTDC_OF_Close, 2),
+		mk("m2703", def.THOST_FTDC_D_Buy, def.THOST_FTDC_OF_Open, 1),   // 开仓不算
+		mk("m2703", def.THOST_FTDC_D_Sell, def.THOST_FTDC_OF_Open, 1),  // 卖开不算
+		mk("m2701", def.THOST_FTDC_D_Sell, def.THOST_FTDC_OF_Close, 1), // 别的合约不算
+		mk("m2703", def.THOST_FTDC_D_Sell, def.THOST_FTDC_OF_CloseToday, 1),
+		nil,
+	}, "m2703")
+	if n != 2 || lots != 3 {
+		t.Errorf("⚠️ 数出 %d 条 / %d 手，应为 2 条 / 3 手", n, lots)
+	}
+}
+
+// TestExtDeferSweepsBeforeClosing：runCTPQuotaExt 的收尾先撤挂单再平仓（挂着的平仓单冻住可平量）。
+func TestExtDeferSweepsBeforeClosing(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "closefee_quotaext.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d *ast.DeferStmt
+	ast.Inspect(f, func(n ast.Node) bool {
+		if fd, ok := n.(*ast.FuncDecl); ok && fd.Name.Name != "runCTPQuotaExt" {
+			return false
+		}
+		if ds, ok := n.(*ast.DeferStmt); ok && d == nil {
+			if _, ok := ds.Call.Fun.(*ast.FuncLit); ok {
+				d = ds
+			}
+		}
+		return true
+	})
+	if d == nil {
+		t.Fatal("⚠️ runCTPQuotaExt 里找不到收尾的 defer func —— 本条守卫失效")
+	}
+	var order []string
+	ast.Inspect(d, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok {
+			if id, ok := call.Fun.(*ast.Ident); ok {
+				switch id.Name {
+				case "sweepLive", "closeTodayOnly", "closeShortTodayOnly":
+					order = append(order, id.Name)
+				}
+			}
+		}
+		return true
+	})
+	want := []string{"sweepLive", "closeTodayOnly", "closeShortTodayOnly", "sweepLive"}
+	if strings.Join(order, ",") != strings.Join(want, ",") {
+		t.Errorf("⚠️ 收尾顺序 %v，应为 %v —— 先撤挂单释放冻结再平，最后再扫一遍", order, want)
+	}
+}
+
 // TestSidesOfSplitsDirections：多头与空头的记录各归各的 —— C 的前提与判定都要分开读两个方向。
 func TestSidesOfSplitsDirections(t *testing.T) {
 	rec := func(dir def.TThostFtdcPosiDirectionType, position, today, opened int) *def.CThostFtdcInvestorPositionField {

@@ -7320,7 +7320,7 @@
 		"name": "745 needsCancel 只看报错 —— 挂上了没成交（NoTradeQueueing）的单不撤，留在柜台上",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/insertcancel.go",
-		"old": "return err != nil || st.VolumeTraded == 0",
+		"old": "return err != nil || st.VolumeTraded < want",
 		"new": "return err != nil",
 		"pkg": ".",
 		"test": "TestNeedsCancel",
@@ -7391,6 +7391,39 @@
 		"pkg": ".",
 		"test": "TestExtReadingsMatchPreRegistration",
 		"want": "代码预言",
+		"expect": "red"
+	},
+	{
+		"name": "750 needsCancel 只看「一手没成交」—— 多手单部分成交、余量还挂着时不撤",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/insertcancel.go",
+		"old": "return err != nil || st.VolumeTraded < want",
+		"new": "return err != nil || st.VolumeTraded == 0",
+		"pkg": ".",
+		"test": "TestNeedsCancelPartialFill",
+		"want": "只成交 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "756 A 不核成交记录条数 —— 柜台拆成两条 1 手时照合计判（与「按额度拆」同值，回答不了 A）",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tdn, dl := nAfter-nBefore, lotsAfter-lotsBefore\n\tif dn == 1 && dl == 2 {",
+		"new": "\tdn, dl := nAfter-nBefore, lotsAfter-lotsBefore\n\tif true {",
+		"pkg": ".",
+		"test": "TestMultiRecordVerdict",
+		"want": "拆成两条 1 手",
+		"expect": "red"
+	},
+	{
+		"name": "757 ctp-quota-ext 收尾先平仓后撤单 —— 挂着的平仓单冻住可平量，今仓留在账上",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\t\tif err := sweepLive(c, inst, *timeout, logf); err != nil {\n\t\t\tlogf(\"[qx] ⚠️⚠️ **收尾第一道撤单没撤干净，去看账户**：%v\", err)\n\t\t}\n",
+		"new": "",
+		"pkg": ".",
+		"test": "TestExtDeferSweepsBeforeClosing",
+		"want": "收尾顺序",
 		"expect": "red"
 	}
 ]

@@ -24,9 +24,19 @@ func TestNeedsCancel(t *testing.T) {
 		{"被拒", ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled}, nil, true},
 		{"全部成交", ctp.OrderState{Status: def.THOST_FTDC_OST_AllTraded, VolumeTraded: 1}, nil, false},
 	} {
-		if got := needsCancel(c.st, c.err); got != c.want {
+		if got := needsCancel(c.st, 1, c.err); got != c.want {
 			t.Errorf("⚠️ %s：needsCancel = %v，应为 %v", c.name, got, c.want)
 		}
+	}
+}
+
+// TestNeedsCancelPartialFill：多手单部分成交（余量还在队列）也要撤。
+func TestNeedsCancelPartialFill(t *testing.T) {
+	if !needsCancel(ctp.OrderState{Status: def.THOST_FTDC_OST_PartTradedQueueing, VolumeTraded: 1}, 3, nil) {
+		t.Error("⚠️ 3 手单只成交 1 手，余量还挂着 —— 应走撤单分支")
+	}
+	if needsCancel(ctp.OrderState{Status: def.THOST_FTDC_OST_AllTraded, VolumeTraded: 3}, 3, nil) {
+		t.Error("⚠️ 3 手全成交不该撤")
 	}
 }
 
