@@ -1193,6 +1193,44 @@ cn-futures-rules §13 #5 在 CTP 上命中 (i-t)（⚠️ 20260917 那一次；2
 - 计数是「当日」的：调用方跨交易日不调 `Settle`、直接用新交易日 `ApplyTrade`，门面本来就报错（`usable`），计数不会跨日漂
 - `ApplyTrade` 的灌成交路径：调用方从柜台成交记录重放时，开平标志是柜台改写后的（大商所显式平昨记成 `'1'`）—— 重放出来的计数与柜台一致，与「调用方当初发的是什么标志」无关
 
+#### 16. F12：大商所涨跌停价往里收 —— §13 #24 接进规则层（2026-09-22，实现之前写）
+
+§13 #24 有条件收敛（20260922 跨日事前登记，三个判别样本全对）：大商所的涨跌停价 = 昨结 × (1 ± 比例)，**涨停向下、跌停向上**对齐最小变动价位（往里收）。
+本库 `MeasuredTickRounding` 的大商所一格是四舍五入 ⇒ 大约一半的交易日差一跳（silent-risks 101）。
+
+##### ⚠️ 前提（照实写进实现）
+
+收敛依赖「SimNow 的涨跌幅比例为整百分比（6%）」：放开比例时四舍五入（m ≈ 5.98%）与往外收也能解释 0921 + 0922 全部样本，只有往里收的可行区间含整 6%。
+两头向下 / 两头向上无论比例都被否 —— 这一半不依赖前提。⇒ `TickInward` 与 `MeasuredTickRounding` 的注释都要写明这个前提；拿到独立的比例来源之前它是假设。
+
+##### 已核（20260922，读代码）
+
+| 事实 | 出处 | 对设计的影响 |
+|---|---|---|
+| `snapToTick` 上下两边用**同一个**方向（注释里还专门写了「不是上取上、下取下」—— 那是上期所的实测） | `refdata/refdata.go` | 往里收上下方向不同 ⇒ `PriceLimits` 要按取整方式分别给上下两边的方向，不能再只调一个 `snapToTick` |
+| `PriceLimits` 的生产调用点只有 `order` 的涨跌停校验一处；取整方式由 `Config.TickRounding`（`MeasuredTickRounding()`）给 | `order/order.go:319`、`submit.go` | 改一处表、一处函数；取整方式在配置里、**不在存档里** ⇒ **不抬 `StateFormat`** |
+| `TickRounding` 零值是「未指定」、使用即报错；现有取值 1 … 4 | `refdata/refdata.go` | 新取值**追加在末尾**（`TickInward` = 5），不改已有取值 |
+
+##### 形状（实现方倾向，待评审）
+
+- `refdata.TickInward`（新导出取值）：涨停向下、跌停向上。`String()` 给「往里收」
+- `PriceLimits`：`TickInward` 时上边 `Floor`、下边 `Ceil`；其余取整方式照旧上下同向
+- `MeasuredTickRounding()` 的大商所一格：`TickHalfUp` → `TickInward`（注释写前提与 §13 #24 出处）；上期所照旧 `TickFloor`；郑商所 / 广期所照旧没有（不外推）
+- `TickHalfUp` 的注释从「实测大商所是这一种」改成历史：它曾是 kq_facts 22 在三种候选里的判定，已被 §13 #24 推翻
+
+##### 验收（先红后绿）
+
+- CTP 侧 `TestMeasuredTickRoundingAgainstCTPQuotes`：`knownDivergence` 里的 `m2701 / 20260921`、`m2705 / 20260922` **转成正向断言**（本库给出柜台的价）；`discriminating` 的「换成另一个方向就对不上」对大商所改成与 `TickHalfUp` 比
+- 快期侧 `TestLimitRatioFromQuotes`：候选集加 `TickInward`；`kqKnownDivergence` 里 3415 那个样本转成正向（只命中往里收）；大商所的登记方向改成「往里收」
+- `refdata` 单测：往里收在「上边小数 ≥ .5、下边小数 < .5」（四舍五入会往外走）那一格给出与四舍五入不同的价
+- ⚠️ 实现之前先跑一次：把 `MeasuredTickRounding` 改成 `TickInward` 之前，上面第一条的正向断言会红（本库给四舍五入的价）
+
+##### ⚠️ 风险与盲区
+
+- 前提（整百分比）是假设；SimNow 调了比例时 CTP 侧对拍会红，那是比例变了而不一定是取整错了
+- 只有一个柜台（CTP）的事前登记样本；快期 20260909 的 3415 是回溯样本（同向）
+- 郑商所 / 广期所的取整方向没有观测：`MeasuredTickRounding` 里照旧没有它们，调用方拿不到就报错，不猜
+
 ### 为什么这样切
 
 **纯函数层与状态层的分界是这套结构的主轴。** `fee` / `margin` / `pnl` 只做计算：
