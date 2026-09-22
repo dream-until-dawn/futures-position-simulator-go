@@ -6876,22 +6876,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "706 多手裸平、部分额度不再报错（按某种拆法静默收）",
+		"name": "707 读法分岔不再报错（显式平今之后静默按「扣」那种读法收）",
 		"dir": "",
 		"file": "quota.go",
-		"old": "\t\tif q > 0 && q < vol {",
-		"new": "\t\tif false && q > 0 && q < vol {",
-		"pkg": "./",
-		"test": "TestTodayTierLots",
-		"want": "介于 0 与平仓量之间",
-		"expect": "red"
-	},
-	{
-		"name": "707 读法分岔不再报错（显式平今 / 反方向静默按第一种读法收）",
-		"dir": "",
-		"file": "quota.go",
-		"old": "\t\tif t != lots {",
-		"new": "\t\tif false && t != lots {",
+		"old": "\tif deduct != noDeduct {",
+		"new": "\tif false && deduct != noDeduct {",
 		"pkg": "./",
 		"test": "TestTodayTierLots",
 		"want": "显式平今扣不扣额度",
@@ -7479,6 +7468,50 @@
 		"pkg": ".",
 		"test": "TestRestingPathsCancelOnEveryExit",
 		"want": "runCTPFee 的收尾没有 defer sweepLive",
+		"expect": "red"
+	},
+	{
+		"name": "760 多手裸平退回「额度 > 0 就全今」—— 外推 A 测到的是按额度拆",
+		"dir": "",
+		"file": "quota.go",
+		"old": "\ttake := func(quota int) int { return min(vol, max(quota, 0)) }",
+		"new": "\ttake := func(quota int) int {\n\t\tif quota > 0 {\n\t\t\treturn vol\n\t\t}\n\t\treturn 0\n\t}",
+		"pkg": "./",
+		"test": "TestTodayTierLots",
+		"want": "两手、额度 1 ⇒ 按额度拆",
+		"expect": "red"
+	},
+	{
+		"name": "761 额度退回两个方向合计 —— 外推 C 测到的是分方向",
+		"dir": "",
+		"file": "quota.go",
+		"old": "\t\treturn todayTierLots(inst, vol, s.quotaOf(inst, hedge, held))",
+		"new": "\t\ta, o := s.quotaOf(inst, hedge, held), s.quotaOf(inst, hedge, opposite(held))\n\t\treturn todayTierLots(inst, vol, quotaCount{a.Opened + o.Opened, a.Charged + o.Charged, a.Explicit + o.Explicit})",
+		"pkg": "./",
+		"test": "TestQuotaMultiLotAndDirectionF13",
+		"want": "外推 C",
+		"expect": "red"
+	},
+	{
+		"name": "762 拆两段时两种取整写法不同也不报错（静默按分段取整）",
+		"dir": "",
+		"file": "trade.go",
+		"old": "\tif whole.Equal(total) && wholeSettle.Equal(atSettle) {",
+		"new": "\tif true {",
+		"pkg": "./",
+		"test": "TestSplitCloseRoundingDivergenceRefuses",
+		"want": "要报错（点名 §17 决策点 1）",
+		"expect": "red"
+	},
+	{
+		"name": "763 多手裸平退回全今 —— CTP 对拍（交易日 20260923 的 A 序列）要红",
+		"dir": "",
+		"file": "quota.go",
+		"old": "\ttake := func(quota int) int { return min(vol, max(quota, 0)) }",
+		"new": "\ttake := func(quota int) int {\n\t\tif quota > 0 {\n\t\t\treturn vol\n\t\t}\n\t\treturn 0\n\t}",
+		"pkg": "./conformance/ctpfixture/",
+		"test": "TestFacadeF11ExtrapolationsAgainstCTP",
+		"want": "A DCE.m2703",
 		"expect": "red"
 	}
 ]

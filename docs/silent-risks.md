@@ -4202,7 +4202,7 @@ breakcheck 跑的是这一行：
 
 ✅ **结局（20260918 夜，F11）**：`chargeUndated` 改按当日开仓额度收（design.md 门面形状 §15），额度计数进存档（StateFormat 2）、Settle 清零。
 守卫：`TestFacadeUndatedCloseQuotaAgainstCTP`（两所 CTP 序列从门面重放，实现前大商所第 3 笔差 0.1、郑商所整笔报错）、`TestUndatedCloseQuotaFullNightCZCE`（X1 / X2 / X0 整晚）、
-`TestQuotaSurvivesStateAndResetsAtSettle`（存档往返与结算清零）、`TestRestoreRefusesTamperedQuota`。⚠️ 三处没实测的外推（多手部分额度、显式平今之后、当日开过反方向）一律报错不猜（`TestTodayTierLots`、`TestQuotaRefusalsLeaveNoTrace`），**没有**再开同形的洞。
+`TestQuotaSurvivesStateAndResetsAtSettle`（存档往返与结算清零）、`TestRestoreRefusesTamperedQuota`。⚠️ 三处没实测的外推（多手部分额度、显式平今之后、当日开过反方向）当时一律报错不猜（`TestTodayTierLots`、`TestQuotaRefusalsLeaveNoTrace`），**没有**再开同形的洞。20260922 F13：多手与分方向两条由事前登记实验放开（design.md 门面形状 §17，`TestFacadeF11ExtrapolationsAgainstCTP` 先红后绿），「显式平今之后」照旧报错。
 
 **101. ⚠️ 大商所涨跌停价：本库按四舍五入对齐跳，两个柜台都是「往里收」（涨停向下、跌停向上）—— 大约一半的交易日差一跳。**
 
