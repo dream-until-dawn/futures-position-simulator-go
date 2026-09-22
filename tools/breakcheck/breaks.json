@@ -7254,8 +7254,8 @@
 		"name": "737 F11 外推 B 的登记表写反（「扣」预言平今档）—— 代码与 state.md 登记块不一致",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/closefee_quotaext.go",
-		"old": "return []extReading{{\"扣\", tierYd}, {\"不扣\", tierToday}}",
-		"new": "return []extReading{{\"扣\", tierToday}, {\"不扣\", tierYd}}",
+		"old": "return []extReading{{\"扣\", 0, 1}, {\"不扣\", 1, 1}}",
+		"new": "return []extReading{{\"扣\", 1, 1}, {\"不扣\", 0, 1}}",
 		"pkg": ".",
 		"test": "TestExtReadingsMatchPreRegistration",
 		"want": "代码预言",
@@ -7306,11 +7306,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "742 ctp-quota-ext 两档之外也算活（收到 0.3 时两种读法都活）—— 「谁都没预言到」永远不出现",
+		"name": "742 ctp-quota-ext 的判定不比数（任何增量都让全部读法活）—— 「谁都没预言到」永远不出现",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/closefee_quotaext.go",
-		"old": "if got != 0 && r.Tier == got {",
-		"new": "if got == 0 || r.Tier == got {",
+		"old": "if delta.Equal(r.fee(rateToday, rateYd)) {",
+		"new": "if true {",
 		"pkg": ".",
 		"test": "TestExtVerdict",
 		"want": "活着",
@@ -7358,6 +7358,39 @@
 		"pkg": ".",
 		"test": "TestImmediateFillPathsCancelOnMiss",
 		"want": "收尾没有扫活委托",
+		"expect": "red"
+	},
+	{
+		"name": "753 F11 外推 A 的登记表写错（「按额度拆」预言成 2 手平今）—— 代码与 state.md 登记块不一致",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "{\"按额度拆\", 1, 2}",
+		"new": "{\"按额度拆\", 2, 2}",
+		"pkg": ".",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
+		"expect": "red"
+	},
+	{
+		"name": "754 A 的判别那一笔退成 1 手 —— 「多手裸平」根本没被量到",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tr.Volume = 2\n",
+		"new": "\tr.Volume = 1\n",
+		"pkg": ".",
+		"test": "TestExtRequestFlags",
+		"want": "A 的判别那一笔",
+		"expect": "red"
+	},
+	{
+		"name": "755 读法的预言合计丢了平昨那一部分 —— 1 今 1 昨被算成只收 1 手平今",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "return rateToday.Mul(decimal.NewFromInt(int64(r.TodayLots))).Add(rateYd.Mul(decimal.NewFromInt(int64(r.Lots - r.TodayLots))))",
+		"new": "return rateToday.Mul(decimal.NewFromInt(int64(r.TodayLots)))",
+		"pkg": ".",
+		"test": "TestExtReadingsMatchPreRegistration",
+		"want": "代码预言",
 		"expect": "red"
 	}
 ]

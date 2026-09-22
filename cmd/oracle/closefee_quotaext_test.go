@@ -30,9 +30,22 @@ func TestExtReadingsMatchPreRegistration(t *testing.T) {
 	if j := strings.Index(block[1:], "\n## "); j >= 0 {
 		block = block[:j+1]
 	}
-	rate := map[feeTier][2]string{tierToday: {"0.1", "6"}, tierYd: {"0.2", "2"}}
+	d := decimal.RequireFromString
+	dceT, dceY, czceT, czceY := d("0.1"), d("0.2"), d("6"), d("2")
 	n := 0
-	for _, c := range []extCase{extExplicit, extOpposite} {
+	for _, c := range []extCase{extExplicit, extOpposite, extMulti} {
+		block := block
+		if c == extMulti {
+			// A 的登记块单独一段（「事前登记：F11 第三条外推 A」）
+			k := strings.Index(doc, "事前登记：F11 第三条外推 A")
+			if k < 0 {
+				t.Fatal("⚠️ state.md 里找不到「事前登记：F11 第三条外推 A」登记块")
+			}
+			block = doc[k:]
+			if j := strings.Index(block[1:], "\n## "); j >= 0 {
+				block = block[:j+1]
+			}
+		}
 		for _, r := range extReadings(c) {
 			var row string
 			for _, line := range strings.Split(block, "\n") {
@@ -44,15 +57,18 @@ func TestExtReadingsMatchPreRegistration(t *testing.T) {
 				t.Errorf("⚠️ 登记块里没有读法 %s 那一行", r.Name)
 				continue
 			}
-			rt := rate[r.Tier]
-			if want := "| " + r.Tier.String() + " | " + rt[0] + " | " + rt[1] + " |"; !strings.HasSuffix(row, want) {
-				t.Errorf("⚠️ %v 读法 %s：登记行 %q，代码预言 %s（应以 %q 结尾）", c, r.Name, row, r.Tier, want)
+			want := " | " + r.fee(dceT, dceY).String() + " | " + r.fee(czceT, czceY).String() + " |"
+			if r.Lots == 1 {
+				want = "| " + r.tiers() + want
+			}
+			if !strings.HasSuffix(row, want) {
+				t.Errorf("⚠️ %v 读法 %s：登记行 %q，代码预言 %s（应以 %q 结尾）", c, r.Name, row, r.tiers(), want)
 			}
 			n++
 		}
 	}
-	if n != 4 {
-		t.Fatalf("⚠️ 比了 %d 种读法，应为 4（B、C 各两种）", n)
+	if n != 7 {
+		t.Fatalf("⚠️ 比了 %d 种读法，应为 7（B、C 各两种，A 三种）", n)
 	}
 }
 
@@ -71,6 +87,13 @@ func TestExtVerdict(t *testing.T) {
 		{extOpposite, "0.1", "0.1", "0.2", "不分方向"},
 		{extOpposite, "6", "6", "2", "不分方向"},
 		{extOpposite, "0.3", "0.1", "0.2", ""},
+		{extMulti, "0.3", "0.1", "0.2", "按额度拆"},
+		{extMulti, "0.2", "0.1", "0.2", "全今"},
+		{extMulti, "0.4", "0.1", "0.2", "全昨"},
+		{extMulti, "8", "6", "2", "按额度拆"},
+		{extMulti, "12", "6", "2", "全今"},
+		{extMulti, "4", "6", "2", "全昨"},
+		{extMulti, "0.1", "0.1", "0.2", ""},
 	} {
 		alive, err := extVerdict(c.cs, d(c.delta), d(c.td), d(c.yd))
 		if err != nil {
@@ -111,7 +134,7 @@ func TestExtPremise(t *testing.T) {
 
 func TestExtRegistered(t *testing.T) {
 	for _, ex := range []string{"DCE", "CZCE"} {
-		for _, cs := range []extCase{extExplicit, extOpposite} {
+		for _, cs := range []extCase{extExplicit, extOpposite, extMulti} {
 			if err := extRegistered(ex, cs); err != nil {
 				t.Errorf("%s %v 应已登记：%v", ex, cs, err)
 			}
@@ -132,6 +155,9 @@ func TestExtRegistered(t *testing.T) {
 func TestExtRequestFlags(t *testing.T) {
 	if r := explicitCloseTodayReq("DCE", "m2701", 1); r.Direction != def.THOST_FTDC_D_Sell || r.Offset != def.THOST_FTDC_OF_CloseToday || r.Volume != 1 {
 		t.Errorf("⚠️ 显式平今：方向 %c 开平 %c 手数 %d，应为 卖 / 平今 / 1", r.Direction, r.Offset, r.Volume)
+	}
+	if r := multiCloseReq("DCE", "m2703", 1); r.Direction != def.THOST_FTDC_D_Sell || r.Offset != def.THOST_FTDC_OF_Close || r.Volume != 2 {
+		t.Errorf("⚠️ A 的判别那一笔：方向 %c 开平 %c 手数 %d，应为 卖 / 通用平仓 / 2", r.Direction, r.Offset, r.Volume)
 	}
 	if r := shortOpenReq("DCE", "m2705", 1); r.Direction != def.THOST_FTDC_D_Sell || r.Offset != def.THOST_FTDC_OF_Open || r.Volume != 1 {
 		t.Errorf("⚠️ 卖开：方向 %c 开平 %c 手数 %d，应为 卖 / 开 / 1", r.Direction, r.Offset, r.Volume)
