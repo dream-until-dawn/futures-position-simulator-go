@@ -81,7 +81,7 @@ func TestUndatedCloseQuotaFullNightCZCE(t *testing.T) {
 	}
 }
 
-// TestQuotaRefusalsLeaveNoTrace：三条外推报错之后，账户、持仓、额度都不动。
+// TestQuotaRefusalsLeaveNoTrace：「显式平今扣不扣额度」分岔报错之后，账户、持仓、额度都不动（F13 之后只剩这一条外推报错）。
 func TestQuotaRefusalsLeaveNoTrace(t *testing.T) {
 	run := func(name string, setup func(s *Simulator), vol int, want string) {
 		t.Helper()
