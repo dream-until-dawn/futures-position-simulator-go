@@ -224,6 +224,8 @@ func judgeMoneyRates(symbol string, ydMoney, todayMoney, ydVolume, todayVolume d
 func roundingCandidates(price, mult, rToday, rYd decimal.Decimal, today, yd int) (whole, segment decimal.Decimal, discriminating bool) {
 	mToday := price.Mul(mult).Mul(rToday).Mul(decimal.NewFromInt(int64(today)))
 	mYd := price.Mul(mult).Mul(rYd).Mul(decimal.NewFromInt(int64(yd)))
+	// ⚠️ 与主模块 fee.HalfUpToCent **同口径**（四舍五入到分）—— cmd/oracle 是独立模块，拿不到那个包，
+	// 所以这里自己写一份：**改一处要改两处**（评审 20260923）。
 	half := func(v decimal.Decimal) decimal.Decimal { return v.Round(2) }
 	whole = half(mToday.Add(mYd))
 	segment = half(mToday).Add(half(mYd))
