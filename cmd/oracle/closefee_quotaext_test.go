@@ -136,7 +136,7 @@ func TestExtPremise(t *testing.T) {
 
 func TestExtRegistered(t *testing.T) {
 	for _, ex := range []string{"DCE", "CZCE"} {
-		for _, cs := range []extCase{extExplicit, extOpposite, extMulti, extRewrite} {
+		for _, cs := range []extCase{extExplicit, extOpposite, extMulti, extRewrite, extRounding} {
 			if err := extRegistered(ex, cs); err != nil {
 				t.Errorf("%s %v 应已登记：%v", ex, cs, err)
 			}
@@ -402,5 +402,52 @@ func TestRejectedByCounter(t *testing.T) {
 		if got := rejectedByCounter(c.st, c.err); got != c.want {
 			t.Errorf("⚠️ %s：判为拒单 = %v，应为 %v", c.name, got, c.want)
 		}
+	}
+}
+
+// TestRoundingCandidates 逐格钉住 F13 决策点 1 的两个候选（登记块「事前登记：F13 决策点 1」在 docs/state.md）。
+//
+//	lh：乘数 16、按额 平今 0.0004 / 平昨 0.0002，一笔 2 手（今 1 昨 1）
+//	  @11885  平今段 76.0640、平昨段 38.0320 ⇒ 分段 114.09、按笔 114.10   ⇒ 分得开
+//	  @11875  平今段 76.0000、平昨段 38.0000 ⇒ 两者都是 114.00           ⇒ 判不出来
+func TestRoundingCandidates(t *testing.T) {
+	d := decimal.RequireFromString
+	mult, rT, rY := d("16"), d("0.0004"), d("0.0002")
+	for _, c := range []struct {
+		price, whole, segment string
+		disc                  bool
+	}{
+		{"11885", "114.10", "114.09", true},
+		{"11875", "114.00", "114.00", false},
+	} {
+		whole, segment, disc := roundingCandidates(d(c.price), mult, rT, rY, 1, 1)
+		if !whole.Equal(d(c.whole)) || !segment.Equal(d(c.segment)) || disc != c.disc {
+			t.Errorf("⚠️ @%s：按笔 %s / 分段 %s / 分得开 %v，期望 %s / %s / %v",
+				c.price, whole, segment, disc, c.whole, c.segment, c.disc)
+		}
+	}
+	// 手数进得去：今 2 昨 1 时平今段翻倍
+	if whole, _, _ := roundingCandidates(d("11885"), mult, rT, rY, 2, 1); !whole.Equal(d("190.16")) {
+		t.Errorf("⚠️ 今 2 昨 1 @11885：按笔应为 HalfUp(152.128 + 38.032) = 190.16，得到 %s", whole)
+	}
+}
+
+// TestMoneyRatesRefusesMixed：按额口径的实验只在**纯按额**的品种上做 —— 费率里混着每手固定额时拒跑。
+// ⚠️ 这里不连柜台：judgeMoneyRates 是从 CommissionRate 的四个数里做判断的那一段，抽出来单测。
+func TestMoneyRatesRefusesMixed(t *testing.T) {
+	d := decimal.RequireFromString
+	if _, _, err := judgeMoneyRates("DCE.lh2701", d("0.0002"), d("0.0004"), d("0"), d("1")); err == nil ||
+		!strings.Contains(err.Error(), "每手固定额") {
+		t.Errorf("⚠️ 混着每手固定额应拒跑，得到 %v", err)
+	}
+	if _, _, err := judgeMoneyRates("DCE.m2701", d("0"), d("0"), d("0.2"), d("0.1")); err == nil {
+		t.Error("⚠️ 纯按手的品种（按额都是 0）应拒跑")
+	}
+	if _, _, err := judgeMoneyRates("X", d("0.0002"), d("0.0002"), d("0"), d("0")); err == nil {
+		t.Error("⚠️ 按额两档相同（不会拆两段）应拒跑")
+	}
+	rT, rY, err := judgeMoneyRates("DCE.lh2701", d("0.0002"), d("0.0004"), d("0"), d("0"))
+	if err != nil || !rT.Equal(d("0.0004")) || !rY.Equal(d("0.0002")) {
+		t.Errorf("⚠️ 纯按额、两档不同应通过：平今 %s / 平昨 %s / %v", rT, rY, err)
 	}
 }

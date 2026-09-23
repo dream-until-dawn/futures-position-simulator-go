@@ -193,19 +193,26 @@ func moneyRates(c *ctp.Client, symbol string, timeout time.Duration, logf func(s
 	if err != nil {
 		return decimal.Zero, decimal.Zero, err
 	}
-	byVolume := decimal.NewFromFloat(float64(r.CloseRatioByVolume)).Add(decimal.NewFromFloat(float64(r.CloseTodayRatioByVolume)))
-	if !byVolume.IsZero() {
-		return decimal.Zero, decimal.Zero, fmt.Errorf("⚠️ %s 的平仓费率里有**每手固定额**（平昨 %v / 平今 %v）—— "+
-			"本实验判的是按额部分的取整，混进每手那部分就判不清，换一个纯按额的品种",
-			symbol, r.CloseRatioByVolume, r.CloseTodayRatioByVolume)
-	}
-	rYd = decimal.NewFromFloat(float64(r.CloseRatioByMoney))
-	rToday = decimal.NewFromFloat(float64(r.CloseTodayRatioByMoney))
+	rToday, rYd, err = judgeMoneyRates(symbol,
+		decimal.NewFromFloat(float64(r.CloseRatioByMoney)), decimal.NewFromFloat(float64(r.CloseTodayRatioByMoney)),
+		decimal.NewFromFloat(float64(r.CloseRatioByVolume)), decimal.NewFromFloat(float64(r.CloseTodayRatioByVolume)))
 	logf("[qx] 声明费率（按额）：平昨 %s / 平今 %s", rYd, rToday)
-	if rYd.Equal(rToday) {
-		return rToday, rYd, fmt.Errorf("⚠️ %s 的按额平今档与平昨档相同（都是 %s）—— 不会拆两段，本实验没有判别力", symbol, rYd)
+	return rToday, rYd, err
+}
+
+// judgeMoneyRates 是 moneyRates 的判断部分（纯函数）：只收纯按额、两档不同的品种。
+func judgeMoneyRates(symbol string, ydMoney, todayMoney, ydVolume, todayVolume decimal.Decimal) (rToday, rYd decimal.Decimal, err error) {
+	if !ydVolume.Add(todayVolume).IsZero() {
+		return decimal.Zero, decimal.Zero, fmt.Errorf("⚠️ %s 的平仓费率里有**每手固定额**（平昨 %s / 平今 %s）—— "+
+			"本实验判的是按额部分的取整，混进每手那部分就判不清，换一个纯按额的品种", symbol, ydVolume, todayVolume)
 	}
-	return rToday, rYd, nil
+	if ydMoney.Add(todayMoney).IsZero() {
+		return decimal.Zero, decimal.Zero, fmt.Errorf("⚠️ %s 的平仓费率按额部分全是 0 —— 这是纯按手的品种，本实验不适用", symbol)
+	}
+	if ydMoney.Equal(todayMoney) {
+		return todayMoney, ydMoney, fmt.Errorf("⚠️ %s 的按额平今档与平昨档相同（都是 %s）—— 不会拆两段，本实验没有判别力", symbol, ydMoney)
+	}
+	return todayMoney, ydMoney, nil
 }
 
 // roundingCandidates 按**实际成交价**算出 F13 决策点 1 的两个候选（登记块「事前登记：F13 决策点 1」在 docs/state.md）：

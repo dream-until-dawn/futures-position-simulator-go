@@ -7557,5 +7557,38 @@
 		"test": "TestRejectedByCounter",
 		"want": "前缀码在自由文本里",
 		"expect": "red"
+	},
+	{
+		"name": "775 F13 决策点 1 的「分段取整」候选也按整笔算 —— 两个候选永远同值，实验永远判不出来",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tsegment = half(mToday).Add(half(mYd))",
+		"new": "\tsegment = half(mToday.Add(mYd))",
+		"pkg": ".",
+		"test": "TestRoundingCandidates",
+		"want": "分得开",
+		"expect": "red"
+	},
+	{
+		"name": "776 两个候选同值时仍报「分得开」—— 判不出来的样本会被当成判据",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\treturn whole, segment, !whole.Equal(segment)",
+		"new": "\treturn whole, segment, true",
+		"pkg": ".",
+		"test": "TestRoundingCandidates",
+		"want": "分得开 true，期望",
+		"expect": "red"
+	},
+	{
+		"name": "777 按额口径不查「每手固定额为 0」—— 混口径的品种上两种取整之差会被每手那部分盖住",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tif !ydVolume.Add(todayVolume).IsZero() {",
+		"new": "\tif false {",
+		"pkg": ".",
+		"test": "TestMoneyRatesRefusesMixed",
+		"want": "每手固定额",
+		"expect": "red"
 	}
 ]
