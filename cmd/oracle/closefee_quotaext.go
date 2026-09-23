@@ -175,10 +175,22 @@ func explicitCloseTodayReq(ex, inst string, lowerLimit float64) ctp.OrderReq {
 		Volume: 1, LimitPrice: lowerLimit}
 }
 
-// rejectedByCounter 判一笔没成交的委托是不是**柜台拒的**（有数值错误码）——
-// 与「没有结论」（超时 / 撤单没核干净）分开：#25 的 ④ 上「被拒」本身是判据之一，不是故障（登记块写明）。
+// rejectedByCounter 判一笔没成交的委托是不是**柜台拒的** —— 与「没有结论」（超时 / 撤单没核干净）分开：
+// #25 的 ④ 上「被拒」本身是判据之一，不是故障（登记块写明）。
+//
+// ⚠️ **不能只看 ErrorID**：交易所级的价格类拒单根本不经过 RspInfo，`ErrorID` 是 0，码在 `StatusMsg` 的
+// 文本前缀里（`48:` / `49:` / `50:`，见 ctp/send_windows.go 20260910 夜盘那四条用例的记录）。
+// 「可平今不足」这一形状没进过语料（ctperr.go 里 CTP 50 出自 state.md 记载、未进语料）⇒ 两条通道都认（评审 20260923）。
+// 判据：没成交 + 已撤销态 + （有数值码 或 自由文本里解析得出前缀码）。
 func rejectedByCounter(st ctp.OrderState, err error) bool {
-	return err != nil && st.ErrorID != 0
+	if err == nil || st.Status != def.THOST_FTDC_OST_Canceled {
+		return false
+	}
+	if st.ErrorID != 0 {
+		return true
+	}
+	_, ok := msgCode(st.StatusMsg)
+	return ok
 }
 
 // rewriteVerdict 判 §13 #25 复现的两说谁活着（纯函数；登记块「事前登记：§13 #25 复现」在 docs/state.md）。
@@ -540,6 +552,16 @@ func runCTPQuotaExt(args []string) error {
 		consumedYd := k == coConsumedYesterday
 		logf("[qx] ③ 显式平今收 %s，消耗%s（改写说预言昨仓、标志说预言今仓；这一笔的费用两说同为平今档 %s，不判别）",
 			d3, map[bool]string{true: "昨仓", false: "今仓"}[consumedYd], rateToday)
+		if tr3, terr := c.Trades(*timeout); terr != nil {
+			logf("[qx] ⚠️ ③ 之后查不到成交记录（开平标志抄不到，不影响判据）：%v", terr)
+		} else {
+			for _, t3 := range tr3 {
+				if t3 != nil && ctp.Text(t3.InstrumentID[:]) == inst && t3.Direction == def.THOST_FTDC_D_Sell {
+					logf("[qx] ③ 成交回报：TradeID=%s 开平标志=%q（'1' = 通用平仓 ⇒ 被改写；'3' = 平今 ⇒ 按标志办）",
+						ctp.Text(t3.TradeID[:]), string(t3.OffsetFlag))
+				}
+			}
+		}
 
 		// ④ 额度已被 ③ 用掉：改写说预言平昨档成交；标志说在「③ 消耗今仓」那一支预言柜台拒单。
 		// ⚠️ 被拒是**判据之一**，不是故障 —— 所以这里把「有错误码的拒单」与「没有结论」分开。
@@ -565,7 +587,15 @@ func runCTPQuotaExt(args []string) error {
 		}
 		d4 := accA.Sub(accB)
 		rejected := rejectedByCounter(st4, err4)
-		logf("[qx] ④ 手续费增量 %s；多头 今 %d / 昨 %d；状态 %q 错误码 %d", d4, l4.Today, l4.Yd, string(st4.Status), st4.ErrorID)
+		// ⚠️ StatusMsg 是柜台自由文本：**可以进本地日志，不进入库的夹具 / 文档**（与 ctp-reject 语料同一条纪律，
+		// 见 control.go 的 codeText）。写进 state.md 的只有 Status、ErrorID 与前缀码。
+		code, hasCode := msgCode(st4.StatusMsg)
+		codeStr := "无"
+		if hasCode {
+			codeStr = fmt.Sprintf("%d", code)
+		}
+		logf("[qx] ④ 手续费增量 %s；多头 今 %d / 昨 %d；状态 %q 错误码 %d 前缀码 %s；柜台原话（只进本地日志，不入库）：%s",
+			d4, l4.Today, l4.Yd, string(st4.Status), st4.ErrorID, codeStr, st4.StatusMsg)
 		if err4 != nil && !rejected {
 			return fmt.Errorf("⚠️ **#25 不判**：④ 既没成交也没有错误码（没有结论）：%w", err4)
 		}
@@ -575,6 +605,12 @@ func runCTPQuotaExt(args []string) error {
 		alive, why := rewriteVerdict(consumedYd, rejected, d4, rateToday, rateYd)
 		logf("")
 		logf("[qx] %s ⇒ 活着的读法：%v", why, alive)
+		logf("[qx] 记进结果时抄这三样（不抄柜台原话）：Status=%q ErrorID=%d 前缀码=%s；④ 之后 多头 今 %d / 昨 %d",
+			string(st4.Status), st4.ErrorID, codeStr, l4.Today, l4.Yd)
+		if rejected && l4.Yd > 0 {
+			logf("[qx] ⚠️⚠️ **④ 被拒，账上还剩昨 %d 手**（收尾只平今仓，昨仓是有意留的种子）—— "+
+				"今晚之后 9/24 夜盘休市、接着中秋休市：这手仓要不要节前平掉，**由人决定**，本工具不动它", l4.Yd)
+		}
 		if len(alive) == 0 {
 			logf("[qx] ⚠️ **谁都没预言到** —— 先别改本库，把截面拿去重看")
 		}

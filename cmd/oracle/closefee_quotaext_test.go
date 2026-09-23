@@ -382,15 +382,25 @@ func TestRewritePreRegistrationNumbers(t *testing.T) {
 	}
 }
 
-// TestRejectedByCounter：只有「有数值错误码」才算柜台拒单；超时 / 撤干净了但没成交都是「没有结论」。
+// TestRejectedByCounter：柜台拒单的两条通道都要认 —— 数值码（CTP 空间，走 RspInfo / ErrRtn）与
+// StatusMsg 的前缀码（交易所级的价格类拒单不经过 RspInfo，ErrorID 是 0）。撤掉的挂单、超时都是「没有结论」。
 func TestRejectedByCounter(t *testing.T) {
-	if !rejectedByCounter(ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled, ErrorID: 30, StatusMsg: "CTP:平仓量不足"}, errors.New("没成交")) {
-		t.Error("⚠️ 有错误码的拒单应判为柜台拒单")
-	}
-	if rejectedByCounter(ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled}, errors.New("没成交")) {
-		t.Error("⚠️ 没有错误码（例如撤掉了没成交的挂单）不该判为拒单 —— 那是没有结论")
-	}
-	if rejectedByCounter(ctp.OrderState{ErrorID: 30}, nil) {
-		t.Error("⚠️ 成交了就不该判为拒单")
+	no := errors.New("没成交")
+	for _, c := range []struct {
+		name string
+		st   ctp.OrderState
+		err  error
+		want bool
+	}{
+		{"CTP 空间的数值码（可平量不足 30）", ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled, ErrorID: 30, StatusMsg: "CTP:平仓量不足"}, no, true},
+		{"交易所空间：ErrorID 0、前缀码在自由文本里", ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled, StatusMsg: "50:平今仓位不足"}, no, true},
+		{"撤掉的没成交挂单：无码无前缀 ⇒ 没有结论", ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled, StatusMsg: "已撤单"}, no, false},
+		{"超时：连状态都没有 ⇒ 没有结论", ctp.OrderState{}, no, false},
+		{"还挂着（不是撤销态）⇒ 没有结论", ctp.OrderState{Status: def.THOST_FTDC_OST_NoTradeQueueing, StatusMsg: "50:x"}, no, false},
+		{"成交了就不是拒单", ctp.OrderState{Status: def.THOST_FTDC_OST_AllTraded, VolumeTraded: 1}, nil, false},
+	} {
+		if got := rejectedByCounter(c.st, c.err); got != c.want {
+			t.Errorf("⚠️ %s：判为拒单 = %v，应为 %v", c.name, got, c.want)
+		}
 	}
 }
