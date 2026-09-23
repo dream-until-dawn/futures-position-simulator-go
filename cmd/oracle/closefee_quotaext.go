@@ -426,12 +426,17 @@ func runCTPQuotaExt(args []string) error {
 	if err := extPremise(long0, short0); err != nil {
 		return err
 	}
-	rateToday, rateYd, err := closeFeeRates(c, *symbol, *timeout, logf)
-	if err != nil {
-		return err
-	}
-	if rateToday.Equal(rateYd) {
-		return fmt.Errorf("⚠️ **不跑**：%s 平今 / 平昨声明同为 %s —— 没有判别力", *symbol, rateToday)
+	// ⚠️ 按手口径的费率只给 A / B / C 与 #25 用；`-case rounding` 是**按额**品种，它自己查 moneyRates ——
+	// 这里无条件查会把按额品种当场拒掉（20260923 夜盘实跑撞到）。
+	var rateToday, rateYd decimal.Decimal
+	if cs != extRounding {
+		var err error
+		if rateToday, rateYd, err = closeFeeRates(c, *symbol, *timeout, logf); err != nil {
+			return err
+		}
+		if rateToday.Equal(rateYd) {
+			return fmt.Errorf("⚠️ **不跑**：%s 平今 / 平昨声明同为 %s —— 没有判别力", *symbol, rateToday)
+		}
 	}
 	// 收尾：注册在第一笔委托之前。只平今仓（多头与空头），昨仓（种子）不碰。
 	defer func() {
