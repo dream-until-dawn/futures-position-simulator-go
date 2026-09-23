@@ -7513,5 +7513,38 @@
 		"test": "TestFacadeF11ExtrapolationsAgainstCTP",
 		"want": "A DCE.m2703",
 		"expect": "red"
+	},
+	{
+		"name": "764 #25 的判定不看 ③ 消耗了哪一片 —— 两说在 ③ 上分不开还照样判",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\trewriteOK, flagOK := consumedYd, !consumedYd",
+		"new": "\trewriteOK, flagOK := true, true",
+		"pkg": ".",
+		"test": "TestRewriteVerdict",
+		"want": "③ 昨、④ 平今档",
+		"expect": "red"
+	},
+	{
+		"name": "765 #25 的 ④ 被拒时改写说也算活 —— 改写说预言的是成交",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "\tcase rejected:\n\t\t// 拒单：改写说预言成交（平昨档），标志说只在「③ 消耗今、账上只剩昨仓」时预言拒单\n\t\trewriteOK = false",
+		"new": "\tcase rejected:\n\t\t// 拒单：改写说预言成交（平昨档），标志说只在「③ 消耗今、账上只剩昨仓」时预言拒单\n\t\trewriteOK = rewriteOK",
+		"pkg": ".",
+		"test": "TestRewriteVerdict",
+		"want": "③ 昨、④ 被拒",
+		"expect": "red"
+	},
+	{
+		"name": "766 「没有结论」被当成柜台拒单 —— 超时 / 撤掉的挂单会被算进 #25 的判据",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/closefee_quotaext.go",
+		"old": "return err != nil && st.ErrorID != 0",
+		"new": "return err != nil",
+		"pkg": ".",
+		"test": "TestRejectedByCounter",
+		"want": "不该判为拒单",
+		"expect": "red"
 	}
 ]

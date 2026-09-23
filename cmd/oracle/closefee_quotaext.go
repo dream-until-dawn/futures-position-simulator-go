@@ -21,6 +21,8 @@ const (
 	extOpposite
 	// extMulti 是 A：多手裸平、0 < 额度 < 平仓量 —— 按额度拆 / 全今 / 全昨。
 	extMulti
+	// extRewrite 是 §13 #25 的复现：显式平今是不是被柜台改写成通用平仓（改写说 / 标志说）。
+	extRewrite
 )
 
 func (c extCase) String() string {
@@ -31,6 +33,8 @@ func (c extCase) String() string {
 		return "C 当日开过反方向之后的裸平"
 	case extMulti:
 		return "A 多手裸平（额度 1、平 2 手）"
+	case extRewrite:
+		return "§13 #25 复现 显式平今是不是被改写成通用平仓"
 	}
 	return fmt.Sprintf("⚠️ 认不得的外推 %d", int(c))
 }
@@ -95,8 +99,8 @@ func extVerdict(c extCase, delta, rateToday, rateYd decimal.Decimal) (alive []st
 
 // extRegistered 在下单之前判：只对大商所、郑商所事前登记过。
 func extRegistered(exchange string, c extCase) error {
-	if c != extExplicit && c != extOpposite && c != extMulti {
-		return fmt.Errorf("⚠️ -case 要显式给 explicit（B）、opposite（C）或 multi（A）")
+	if c != extExplicit && c != extOpposite && c != extMulti && c != extRewrite {
+		return fmt.Errorf("⚠️ -case 要显式给 explicit（B）、opposite（C）、multi（A）或 rewrite（§13 #25 复现）")
 	}
 	if exchange == "DCE" || exchange == "CZCE" {
 		return nil
@@ -144,12 +148,20 @@ func (s extStage) note() string {
 		2: "ctp-quota-ext A ②：买开一手之后（今 1 昨 1）",
 		3: "ctp-quota-ext A ③：一笔通用平仓（OF_Close）卖 2 手之后 —— 判别那一笔",
 	}
+	w := map[int]string{
+		1: "ctp-quota-ext #25 ①：只有跨过结算的种子（多头 今 0 昨 1）",
+		2: "ctp-quota-ext #25 ②：买开一手之后（今 1 昨 1，额度 1）",
+		3: "ctp-quota-ext #25 ③：第 1 笔显式平今（OF_CloseToday）之后 —— 判消耗了哪一片",
+		4: "ctp-quota-ext #25 ④：第 2 笔显式平今之后（额度 0）—— 判收哪一档 / 被不被拒",
+	}
 	m := b
 	switch s.c {
 	case extOpposite:
 		m = c
 	case extMulti:
 		m = a
+	case extRewrite:
+		m = w
 	}
 	if t, ok := m[s.n]; ok {
 		return t
@@ -161,6 +173,49 @@ func explicitCloseTodayReq(ex, inst string, lowerLimit float64) ctp.OrderReq {
 	return ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
 		Volume: 1, LimitPrice: lowerLimit}
+}
+
+// rejectedByCounter 判一笔没成交的委托是不是**柜台拒的**（有数值错误码）——
+// 与「没有结论」（超时 / 撤单没核干净）分开：#25 的 ④ 上「被拒」本身是判据之一，不是故障（登记块写明）。
+func rejectedByCounter(st ctp.OrderState, err error) bool {
+	return err != nil && st.ErrorID != 0
+}
+
+// rewriteVerdict 判 §13 #25 复现的两说谁活着（纯函数；登记块「事前登记：§13 #25 复现」在 docs/state.md）。
+//
+//	③ 显式平今：改写说 ⇒ 消耗昨仓；标志说 ⇒ 消耗今仓（费用两说同为平今档，不判别）
+//	④ 额度 0 时再发显式平今：改写说 ⇒ 按通用平仓收**平昨档**（不论 ③ 消耗的是哪一片）；
+//	   标志说 ⇒ ③ 消耗今时账上只剩昨仓、可平今 0 ⇒ **柜台拒单**；③ 消耗昨时账上剩今仓 ⇒ 收平今档
+//
+// rejected = ④ 被柜台拒（有错误码）。两处同向才算复现。
+func rewriteVerdict(consumedYd, rejected bool, delta, rateToday, rateYd decimal.Decimal) (alive []string, why string) {
+	rewriteOK, flagOK := consumedYd, !consumedYd
+	switch {
+	case rejected:
+		// 拒单：改写说预言成交（平昨档），标志说只在「③ 消耗今、账上只剩昨仓」时预言拒单
+		rewriteOK = false
+		flagOK = flagOK && true
+	case consumedYd:
+		rewriteOK = rewriteOK && delta.Equal(rateYd)
+		flagOK = flagOK && delta.Equal(rateToday)
+	default:
+		rewriteOK = rewriteOK && delta.Equal(rateYd)
+		flagOK = false // 标志说在这一支预言拒单，而 ④ 成交了
+	}
+	if rewriteOK {
+		alive = append(alive, "改写说")
+	}
+	if flagOK {
+		alive = append(alive, "标志说")
+	}
+	piece, tail := "今仓", fmt.Sprintf("④ 收 %s（平今档 %s / 平昨档 %s）", delta, rateToday, rateYd)
+	if consumedYd {
+		piece = "昨仓"
+	}
+	if rejected {
+		tail = "④ 被柜台拒单"
+	}
+	return alive, fmt.Sprintf("③ 消耗%s；%s", piece, tail)
 }
 
 // closeRecordsOn 数某合约的卖平成交记录：条数与手数合计（A 用它判 ③ 是不是**一条** 2 手的记录）。
@@ -237,7 +292,7 @@ func runCTPQuotaExt(args []string) error {
 	fs := flag.NewFlagSet("ctp-quota-ext", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 DCE.m2701（⚠️ 无默认值：会真的下单、平掉种子）")
-	caseName := fs.String("case", "", "explicit = B 显式平今之后的裸平；opposite = C 当日开过反方向；multi = A 一笔裸平 2 手（⚠️ 无默认值；multi 要 PROBE_MAX_VOLUME ≥ 2）")
+	caseName := fs.String("case", "", "explicit = B 显式平今之后的裸平；opposite = C 当日开过反方向；multi = A 一笔裸平 2 手；rewrite = §13 #25 复现（⚠️ 无默认值；multi 要 PROBE_MAX_VOLUME ≥ 2）")
 	dump := fs.String("dump", "", "截面落盘目录（⚠️ 只能是仓库根下的 testdata/ctp）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
@@ -254,6 +309,8 @@ func runCTPQuotaExt(args []string) error {
 		cs = extOpposite
 	case "multi":
 		cs = extMulti
+	case "rewrite":
+		cs = extRewrite
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
 	// ⚠️ 没登记就不许跑 —— 排在连柜台之前（TestExtRegisteredRunsBeforeConnect）。
@@ -459,6 +516,69 @@ func runCTPQuotaExt(args []string) error {
 			return fmt.Errorf("%w（增量 %s 照记）", err, d3)
 		}
 		delta = d3
+	case extRewrite:
+		_, l, _, err := step(2, func(md *def.CThostFtdcDepthMarketDataField) ctp.OrderReq {
+			return ctp.OrderReq{Exchange: ex, Instrument: inst, Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
+				Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}
+		})
+		if err != nil {
+			return err
+		}
+		if l.Today != 1 || l.Yd != 1 {
+			return fmt.Errorf("⚠️ 买开之后不是 今 1 / 昨 1 —— 不往下平")
+		}
+		d3, l3, _, err := step(3, func(md *def.CThostFtdcDepthMarketDataField) ctp.OrderReq {
+			return explicitCloseTodayReq(ex, inst, float64(md.LowerLimitPrice))
+		})
+		if err != nil {
+			return fmt.Errorf("⚠️ **#25 不判**（③ 显式平今没成交）：%w", err)
+		}
+		k := closeOrderPieceVerdict(l, l3)
+		if k != coConsumedToday && k != coConsumedYesterday {
+			return fmt.Errorf("⚠️ **#25 不判**：③ 消耗了哪一片判不出来（今 %d→%d / 昨 %d→%d）", l.Today, l3.Today, l.Yd, l3.Yd)
+		}
+		consumedYd := k == coConsumedYesterday
+		logf("[qx] ③ 显式平今收 %s，消耗%s（改写说预言昨仓、标志说预言今仓；这一笔的费用两说同为平今档 %s，不判别）",
+			d3, map[bool]string{true: "昨仓", false: "今仓"}[consumedYd], rateToday)
+
+		// ④ 额度已被 ③ 用掉：改写说预言平昨档成交；标志说在「③ 消耗今仓」那一支预言柜台拒单。
+		// ⚠️ 被拒是**判据之一**，不是故障 —— 所以这里把「有错误码的拒单」与「没有结论」分开。
+		accB, err := commission()
+		if err != nil {
+			return err
+		}
+		md, err := c.MarketData(*symbol, *timeout)
+		if err != nil {
+			return err
+		}
+		st4, err4 := insertOrCancel(c, explicitCloseTodayReq(ex, inst, float64(md.LowerLimitPrice)), *timeout, logf)
+		l4, _, err := sides()
+		if err != nil {
+			return err
+		}
+		accA, err := commission()
+		if err != nil {
+			return err
+		}
+		if derr := dumpSlices(c, env, *dump, *timeout, *symbol, extStage{cs, 4}, logf); derr != nil {
+			return derr
+		}
+		d4 := accA.Sub(accB)
+		rejected := rejectedByCounter(st4, err4)
+		logf("[qx] ④ 手续费增量 %s；多头 今 %d / 昨 %d；状态 %q 错误码 %d", d4, l4.Today, l4.Yd, string(st4.Status), st4.ErrorID)
+		if err4 != nil && !rejected {
+			return fmt.Errorf("⚠️ **#25 不判**：④ 既没成交也没有错误码（没有结论）：%w", err4)
+		}
+		if !rejected && (l4.Today != 0 || l4.Yd != 0) {
+			return fmt.Errorf("⚠️ **#25 不判**：④ 成交了而账上不是 今 0 / 昨 0（今 %d 昨 %d）", l4.Today, l4.Yd)
+		}
+		alive, why := rewriteVerdict(consumedYd, rejected, d4, rateToday, rateYd)
+		logf("")
+		logf("[qx] %s ⇒ 活着的读法：%v", why, alive)
+		if len(alive) == 0 {
+			logf("[qx] ⚠️ **谁都没预言到** —— 先别改本库，把截面拿去重看")
+		}
+		return nil
 	}
 	alive, err := extVerdict(cs, delta, rateToday, rateYd)
 	if err != nil {
