@@ -2338,7 +2338,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |
 | `docs/probes.md` | 127 |
-| `docs/roadmap.md` | 67 |
+| `docs/roadmap.md` | 68 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 105 |
@@ -2358,16 +2358,16 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 ## `doc_debt`：文档里写着、代码里还没有的标识符
 
 ⚠️ **规划可以先于代码，但那笔债必须是机械可见的**，而不是靠谁在消息里说一句
-「这是我欠的」。当前 3 项，每项写明预定版本（`Version` 已随 `refdata` 落地，2026-09-07 移除；`Restore` 已随门面 F5 落地，2026-09-17 移除）：
+「这是我欠的」。**当前 0 项**（`Version` 已随 `refdata` 落地，2026-09-07 移除；`Restore` 已随门面 F5 落地，2026-09-17 移除；
+`Bar` / `Advance` 已随 F9b 落地，2026-09-23 移除；`NotModeledUntil` 早在 2026-09-08 就随对拍判定机制落地（6b3fe2a），这一行挂了半个月才销账 —— 由新守卫抓到）：
 
 | 标识符 | 是什么 | 预定版本 |
 |---|---|---|
-| `Bar` | `Advance` 的入参 | v0.2.0 |
-| `Advance` | 盘中推进 | v0.2.0 |
-| `NotModeledUntil` | 对拍「不建模」声明的到期版本 | v0.2.0 |
 
 ⚠️ **20260917：`Restore` 这一行过期了两天才被发现** —— 它 20260915 随 F5 进了 `state.go`，而这张表还写着「v0.9.0 未落地」。
-发现它的不是守卫（这张表**没有**机械核对），是写 F9 设计时读代码撞见的。⇒ 这张表缺一条「表里的标识符在代码里确实还不存在」的守卫，登记，另做。
+发现它的不是守卫（这张表当时**没有**机械核对），是写 F9 设计时读代码撞见的。
+✅ **20260923 补上了那条守卫**：`TestDocDebtIdentifiersAreStillMissing` —— 把表里的标识符与主模块里**已经存在**的导出标识符（顶层 type / func / const / var、方法、结构体字段）比一遍，落地了还挂在表上就红。
+它一上来就抓到三行：`Bar` / `Advance`（F9b 当天落地）与 `NotModeledUntil`（挂了半个月）。⚠️ 表空着时这一条不空转：遍历收不到 50 个导出标识符就 Fatal。
 
 ⚠️ **第一次量出来的数是 77，那个数是错的。** 判据把 CTP 字段名、DIFF 字段名、
 第三方 API（`ReqQryInstrument` / `TqKq` / `TrimSpace`）都算成了「本库该实现的」，
