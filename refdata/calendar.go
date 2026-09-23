@@ -240,19 +240,47 @@ func (c *Calendar) NextTradingDay(d types.TradingDay) (types.TradingDay, bool) {
 // 不是「不在时段内」。报单校验对前者该拒单、对后者该报「没查成」；靠报错文案分就是在拿自由文本做判断。
 var ErrOutsideSession = errors.New("不在任何交易时段内")
 
-// TradingDayAt 答一个墙钟时刻属于哪个交易日。
+// SessionSpan 是一个时刻所在的交易时段，连同它属于哪个交易日。
+//
+// ⚠️ 它存在的理由是 K 线：`Advance` 的一根 K 线按 [Start, End) 读，而 `Session.Contains` 左闭右开 ——
+// 拿 `TradingDayAt` 单点查 K 线的 End，每个时段的最后一根（10:15 / 11:30 / 15:00 / 23:00）都会被误拒
+// （design.md 门面形状 §13，评审 20260917 条件 1）。要判「同一个连续时段」得拿到时段的边界本身。
+type SessionSpan struct {
+	// Session 是命中的那一段（一天内的时钟，跨零点的夜盘 End < Start）。
+	Session Session
+	// TradingDay 是该时刻所属的交易日。
+	TradingDay types.TradingDay
+	// Night 报告命中的是不是夜盘时段。
+	Night bool
+	// Anchor 是夜盘锚定的自然日（yyyymmdd）；日盘时等于该自然日。
+	//
+	// ⚠️ 跨零点夜盘的后半段（零点到收盘）锚在**前一个自然日**上 —— 调用方要判「同一个连续时段」时，
+	// 两个时刻的 Anchor 必须相同，否则它们分属两场盘。
+	Anchor int32
+}
+
+// TradingDayAt 答一个墙钟时刻属于哪个交易日。判定见 SessionAt：本函数只取它的交易日那一项。
+func (c *Calendar) TradingDayAt(t time.Time, ex types.Exchange, product string) (types.TradingDay, error) {
+	span, err := c.SessionAt(t, ex, product)
+	if err != nil {
+		return 0, err
+	}
+	return span.TradingDay, nil
+}
+
+// SessionAt 答一个墙钟时刻落在哪一段交易时段里、那一段属于哪个交易日。
 //
 // 判定两条：
 //
 //	落在**日盘**时段 → 交易日 = 该自然日
 //	落在**夜盘**时段 → 交易日 = 该自然日**之后的下一个交易日**
 //
-// ⚠️ 落在任何时段之外时**报错，不猜**。收盘到夜盘开盘之间的时刻不属于任何交易日，
+// ⚠️ 落在任何时段之外时**报错，不猜**（`ErrOutsideSession`）。收盘到夜盘开盘之间的时刻不属于任何交易日，
 // 这是一个事实，不是一个需要填充的空缺。
-func (c *Calendar) TradingDayAt(t time.Time, ex types.Exchange, product string) (types.TradingDay, error) {
+func (c *Calendar) SessionAt(t time.Time, ex types.Exchange, product string) (SessionSpan, error) {
 	tab, ok := c.tables[productKey(ex, product)]
 	if !ok {
-		return 0, fmt.Errorf("没有 %s.%s 的时段表 —— 不知道它什么时候开盘，就答不了归属",
+		return SessionSpan{}, fmt.Errorf("没有 %s.%s 的时段表 —— 不知道它什么时候开盘，就答不了归属",
 			ex, product)
 	}
 	clock := clockOf(t)
@@ -265,16 +293,16 @@ func (c *Calendar) TradingDayAt(t time.Time, ex types.Exchange, product string) 
 		}
 		// ⚠️ 跨零点的日盘不存在；若数据里出现，那是数据错，不是要处理的情形。
 		if s.CrossesMidnight() {
-			return 0, fmt.Errorf("%s.%s 的日盘时段 %s→%s 跨零点 —— 这是时段表的数据错误",
+			return SessionSpan{}, fmt.Errorf("%s.%s 的日盘时段 %s→%s 跨零点 —— 这是时段表的数据错误",
 				ex, product, s.Start, s.End)
 		}
 		d := types.TradingDay(natural)
 		if !c.dayset[d] {
-			return 0, fmt.Errorf("%s 落在 %s.%s 的日盘时段内，但自然日 %d 不在交易日列表里 —— "+
+			return SessionSpan{}, fmt.Errorf("%s 落在 %s.%s 的日盘时段内，但自然日 %d 不在交易日列表里 —— "+
 				"时段表与交易日历互相矛盾，**不猜**",
 				t.In(cnZone).Format("2006-01-02 15:04:05"), ex, product, natural)
 		}
-		return d, nil
+		return SessionSpan{Session: s, TradingDay: d, Anchor: natural}, nil
 	}
 
 	// —— 夜盘 ——
@@ -290,24 +318,24 @@ func (c *Calendar) TradingDayAt(t time.Time, ex types.Exchange, product string) 
 			anchor = naturalDayOf(t.In(cnZone).AddDate(0, 0, -1))
 		}
 		if c.noNight[anchor] {
-			return 0, fmt.Errorf("自然日 %d 当晚**夜盘不开**（长假前等），"+
+			return SessionSpan{}, fmt.Errorf("自然日 %d 当晚**夜盘不开**（长假前等），"+
 				"而 %s 落在夜盘时段内 —— 数据与时刻矛盾，**不猜**",
 				anchor, t.In(cnZone).Format("2006-01-02 15:04:05"))
 		}
 		if !c.dayset[types.TradingDay(anchor)] {
-			return 0, fmt.Errorf("夜盘锚在自然日 %d，但它不在交易日列表里 —— "+
+			return SessionSpan{}, fmt.Errorf("夜盘锚在自然日 %d，但它不在交易日列表里 —— "+
 				"没有日盘的那天不会有夜盘，**不猜**", anchor)
 		}
 		next, ok := c.NextTradingDay(types.TradingDay(anchor))
 		if !ok {
 			first, last := c.Range()
-			return 0, fmt.Errorf("自然日 %d 之后没有已知的交易日（日历覆盖 %d–%d）—— "+
+			return SessionSpan{}, fmt.Errorf("自然日 %d 之后没有已知的交易日（日历覆盖 %d–%d）—— "+
 				"**不外推**", anchor, first, last)
 		}
-		return next, nil
+		return SessionSpan{Session: s, TradingDay: next, Night: true, Anchor: anchor}, nil
 	}
 
-	return 0, fmt.Errorf("%s 不落在 %s.%s 的任何交易时段内 —— "+
+	return SessionSpan{}, fmt.Errorf("%s 不落在 %s.%s 的任何交易时段内 —— "+
 		"收盘到夜盘开盘之间不属于任何交易日，这是事实，不是待填的空缺：%w",
 		t.In(cnZone).Format("2006-01-02 15:04:05"), ex, product, ErrOutsideSession)
 }

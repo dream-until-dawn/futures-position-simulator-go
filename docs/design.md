@@ -988,7 +988,7 @@ F3 的 `Submit` 按裁决「通过即立刻全量成交」，没有「挂着」�
 ##### 分期
 
     F9a  委托簿记挂单序号；State / Restore 带上；抬 StateFormat（旧存档在版本号那一步报错，不迁移）
-    F9b  Advance 只做 ① 守卫 + ④ 计价（不撮合）+ 新增「按时刻返回所在时段及边界」的 Calendar 查询
+    F9b  Advance 只做 ① 守卫 + ④ 计价（不撮合）+ 新增「按时刻返回所在时段及边界」的 Calendar 查询  ✅ **20260923 已实现**（`advance.go`、`refdata.Calendar.SessionAt`）
     F9c  ② ③ 撮合 + Choices.RestingFill（第九项口径）+ 导出面文档写明乐观 / 保守两侧
 
 每一期单独送审；F9c 等 P-resting-price 的结果再动。

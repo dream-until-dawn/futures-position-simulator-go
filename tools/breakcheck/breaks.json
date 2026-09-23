@@ -7515,6 +7515,83 @@
 		"expect": "red"
 	},
 	{
+		"name": "767 K 线的 End 当单点查 —— 每个时段的最后一根（10:15 / 11:30 / 15:00）被误拒",
+		"dir": "",
+		"file": "advance.go",
+		"old": "\tlast := bar.End.Add(-time.Nanosecond)",
+		"new": "\tlast := bar.End",
+		"pkg": "./",
+		"test": "TestAdvanceAcceptsLastBarOfSession",
+		"want": "被拒了",
+		"expect": "red"
+	},
+	{
+		"name": "768 K 线跨两个时段不判 —— 越过休息的那一根照样推进",
+		"dir": "",
+		"file": "advance.go",
+		"old": "\tif from.Session != to.Session || from.Anchor != to.Anchor {",
+		"new": "\tif false {",
+		"pkg": "./",
+		"test": "TestAdvanceGuardsRefuseAndLeaveNoTrace",
+		"want": "跨了两个时段",
+		"expect": "red"
+	},
+	{
+		"name": "769 K 线声称的交易日不与日历比 —— 夜盘那一根会被记进当天而不是下一个交易日",
+		"dir": "",
+		"file": "advance.go",
+		"old": "\tif from.TradingDay != bar.TradingDay {",
+		"new": "\tif false {",
+		"pkg": "./",
+		"test": "TestAdvanceNightBarBelongsToNextTradingDay",
+		"want": "应当被判给交易日 20260916",
+		"expect": "red"
+	},
+	{
+		"name": "770 High / Low 越涨跌停不报错 —— 数据错被静默吃掉",
+		"dir": "",
+		"file": "advance.go",
+		"old": "\tif bar.High.GreaterThan(up) || bar.Low.LessThan(lo) {",
+		"new": "\tif false {",
+		"pkg": "./",
+		"test": "TestAdvanceGuardsRefuseAndLeaveNoTrace",
+		"want": "越过当日涨跌停",
+		"expect": "red"
+	},
+	{
+		"name": "771 算不出涨跌停时报错而不是跳过 —— 没配 TickRounding 的调用方完全用不了 Advance",
+		"dir": "",
+		"file": "advance.go",
+		"old": "\t\tskip(\"昨结算价\")\n\t\treturn nil",
+		"new": "\t\tskip(\"昨结算价\")\n\t\treturn fmt.Errorf(\"%s 算不出涨跌停\", bar.Instrument)",
+		"pkg": "./",
+		"test": "TestAdvanceSkipsPriceLimitWhenUnknowable",
+		"want": "应当跳过而不是报错",
+		"expect": "red"
+	},
+	{
+		"name": "772 Advance 不按 Close 计价 —— 一根 K 线推完账没动",
+		"dir": "",
+		"file": "advance.go",
+		"old": "\tif err := s.Mark(bar.TradingDay, Quote{Instrument: bar.Instrument, Last: bar.Close, HasLast: true}); err != nil {\n\t\treturn Advanced{}, err\n\t}\n",
+		"new": "",
+		"pkg": "./",
+		"test": "TestAdvanceMarksCloseAndSkipsMatching",
+		"want": "按 Close 计价后持仓盈亏",
+		"expect": "red"
+	},
+	{
+		"name": "773 doc_debt 守卫的遍历收不到任何文件 —— 表里的标识符再怎么过期都不会红",
+		"dir": "",
+		"file": "docdebt_test.go",
+		"old": "\t\tif !strings.HasSuffix(path, \".go\") || strings.HasSuffix(path, \"_test.go\") {\n\t\t\treturn nil\n\t\t}",
+		"new": "\t\tif true {\n\t\t\treturn nil\n\t\t}",
+		"pkg": "./",
+		"test": "TestDocDebtIdentifiersAreStillMissing",
+		"want": "在空转",
+		"expect": "red"
+	},
+	{
 		"name": "764 #25 的判定不看 ③ 消耗了哪一片 —— 两说在 ③ 上分不开还照样判",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/closefee_quotaext.go",

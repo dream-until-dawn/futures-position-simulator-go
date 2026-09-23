@@ -1001,6 +1001,15 @@ UseHistory 裸 CLOSE 加第八项口径（快期 = 平昨、CTP 留空、零值�
 ⚠️ 实现中错的两处，都是单跑破坏抓到的：584 以为零值规格会静默算出 0，跑出来是门面报「合约乘数必须为正」（红错了理由）⇒ 改名与 want 如实写；
 225 改锚点时顺手把 `new` 的形状也改了（原为「跳过并计数」，误写成「照常计数但不用」）⇒ 红错了理由，恢复原形状。**改指一条破坏只该动锚点，不该动它破坏的是什么。**
 
+### 自然日 2026-09-23：F9b —— `Advance` 只做守卫与计价（设计 design.md 门面形状 §13）
+
+- ⚠️ **导出面新增**（不改已有签名、**不抬 `StateFormat`**）：`futsim.Bar`（Instrument / TradingDay / Start / End / High / Low / Close）、`futsim.Filled`、`futsim.Advanced`、`(*Simulator).Advance(Bar) (Advanced, error)`；`refdata.SessionSpan` 与 `(*Calendar).SessionAt`（`TradingDayAt` 改为调用它，判定只剩一份）
+- 行为：① 守卫（交易日、[Start, End) 正时长、低 ≤ 收 ≤ 高、低 > 0、同一个连续时段且属于本交易日、High / Low 不越涨跌停）→ ④ 按 `Close` 计价。**不撮合**，`Filled` 恒为空（F9c）
+- 算不出涨跌停（没 Mark 昨结算价 / 没给取整方向 / 规格没比例）⇒ 记进 `Unchecked`、**不报错**；没给日历 ⇒ 不判时段
+- 原子性：只有最后一步 `Mark` 动状态，`Mark` 自己算完才 commit ⇒ 不需要快照（F9c 有候选挂单时才需要）
+- 新守卫：`TestAdvanceMarksCloseAndSkipsMatching`、`TestAdvanceGuardsRefuseAndLeaveNoTrace`（八格）、`TestAdvanceAcceptsLastBarOfSession`（10:15 / 11:30 / 15:00 不被误拒）、`TestAdvanceNightBarBelongsToNextTradingDay`、`TestAdvanceSkipsPriceLimitWhenUnknowable`、`TestAdvanceWithoutCalendarSkipsSession`、`TestAdvanceEqualsMarkOnTheBooks`
+- 顺带：补上 `doc_debt` 那张表缺的守卫 `TestDocDebtIdentifiersAreStillMissing`（20260917 登记「另做」）——它一上来抓到三行过期：`Bar` / `Advance`（当天落地）与 `NotModeledUntil`（2026-09-08 就落地了，挂了半个月）
+
 ### 自然日 2026-09-22 夜：F13 —— F11 两条外推放开（设计 design.md 门面形状 §17）
 
 - 行为：大商所、郑商所的一笔多手裸平在额度只够一部分时**按额度拆**（min 手平今、其余平昨），不再报错；额度**分方向**（反方向开过不算）。依据：交易日 20260923 两所各一次事前登记实验（§13 #23 行尾）
