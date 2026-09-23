@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	def "gitee.com/haifengat/goctp/ctpdefine"
+	"github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp"
 	"github.com/shopspring/decimal"
 )
 
@@ -134,7 +136,7 @@ func TestExtPremise(t *testing.T) {
 
 func TestExtRegistered(t *testing.T) {
 	for _, ex := range []string{"DCE", "CZCE"} {
-		for _, cs := range []extCase{extExplicit, extOpposite, extMulti} {
+		for _, cs := range []extCase{extExplicit, extOpposite, extMulti, extRewrite} {
 			if err := extRegistered(ex, cs); err != nil {
 				t.Errorf("%s %v 应已登记：%v", ex, cs, err)
 			}
@@ -145,6 +147,9 @@ func TestExtRegistered(t *testing.T) {
 	}
 	if err := extRegistered("GFEX", extOpposite); err == nil {
 		t.Error("⚠️ 广期所没登记，应拒跑")
+	}
+	if err := extRegistered("DCE", extCase(99)); err == nil {
+		t.Error("⚠️ 认不得的 -case 应拒跑")
 	}
 	if err := extRegistered("DCE", extCase(0)); err == nil {
 		t.Error("⚠️ 没给 -case 应拒跑")
@@ -306,5 +311,96 @@ func TestExtRegisteredRunsBeforeConnect(t *testing.T) {
 	}
 	if guard > connect {
 		t.Error("⚠️ extRegistered 排在 Connect 之后 —— 没登记的交易所也会先连柜台")
+	}
+}
+
+// TestRewriteVerdict 逐格钉住 §13 #25 复现的判定（登记块「事前登记：§13 #25 复现」在 docs/state.md）。
+//
+//	③ 消耗昨仓 ⇒ 改写说活；④ 收平昨档 ⇒ 改写说仍活、标志说（预言平今档）被否
+//	③ 消耗今仓 ⇒ 标志说活；④ 被拒 ⇒ 标志说仍活（可平今 0）、改写说（预言成交）被否
+func TestRewriteVerdict(t *testing.T) {
+	d := decimal.RequireFromString
+	for _, c := range []struct {
+		name          string
+		consumedYd    bool
+		rejected      bool
+		delta, td, yd string
+		want          string
+	}{
+		{"大商所 ③ 昨、④ 平昨档 ⇒ 改写说", true, false, "0.2", "0.1", "0.2", "改写说"},
+		{"郑商所 ③ 昨、④ 平昨档 ⇒ 改写说", true, false, "2", "6", "2", "改写说"},
+		{"③ 昨、④ 平今档 ⇒ 两说都被否（③ 与 ④ 不同向）", true, false, "0.1", "0.1", "0.2", ""},
+		{"③ 今、④ 被拒 ⇒ 标志说", false, true, "0", "0.1", "0.2", "标志说"},
+		{"③ 今、④ 平昨档成交 ⇒ 两说都被否", false, false, "0.2", "0.1", "0.2", ""},
+		{"③ 昨、④ 被拒 ⇒ 两说都被否", true, true, "0", "0.1", "0.2", ""},
+		{"③ 昨、④ 两档之外 ⇒ 两说都被否", true, false, "0.3", "0.1", "0.2", ""},
+	} {
+		alive, why := rewriteVerdict(c.consumedYd, c.rejected, d(c.delta), d(c.td), d(c.yd))
+		if got := strings.Join(alive, ","); got != c.want {
+			t.Errorf("⚠️ %s：活着 %q，应为 %q（%s）", c.name, got, c.want, why)
+		}
+		if why == "" {
+			t.Errorf("⚠️ %s：没给出说明", c.name)
+		}
+	}
+}
+
+// TestRewritePreRegistrationNumbers：④ 那张表里的两档数与声明费率一致（大商所 0.2 / 0.1，郑商所 2 / 6），
+// 且「改写说 ⇒ 平昨档」「标志说 ⇒ 平今档 / 拒单」两行都在 —— 代码的判定与登记同一套数。
+func TestRewritePreRegistrationNumbers(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "state.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := string(raw)
+	i := strings.Index(doc, "事前登记：§13 #25 复现")
+	if i < 0 {
+		t.Fatal("⚠️ 找不到登记块「事前登记：§13 #25 复现」—— 改名或被挪走，本条失效")
+	}
+	block := doc[i:]
+	if j := strings.Index(block[1:], "\n## "); j >= 0 {
+		block = block[:j+1]
+	}
+	for _, want := range []string{
+		"| 按通用平仓、额度 0 ⇒ **平昨档** | 0.2 | 2 |",
+		"| 按标志 ⇒ 平今档 | 0.1 | 6 |",
+		"| 可平今 0 ⇒ **柜台拒单**（不成交） | — | — |",
+	} {
+		if !strings.Contains(block, want) {
+			t.Errorf("⚠️ 登记块里没有这一行：%q", want)
+		}
+	}
+	// 判定函数在同一套数上给出登记表说的结论
+	d := decimal.RequireFromString
+	for _, c := range []struct {
+		ex             string
+		td, yd, atFour string
+	}{{"大商所", "0.1", "0.2", "0.2"}, {"郑商所", "6", "2", "2"}} {
+		if alive, _ := rewriteVerdict(true, false, d(c.atFour), d(c.td), d(c.yd)); strings.Join(alive, ",") != "改写说" {
+			t.Errorf("⚠️ %s：③ 昨仓 + ④ 平昨档应只剩改写说，得到 %v", c.ex, alive)
+		}
+	}
+}
+
+// TestRejectedByCounter：柜台拒单的两条通道都要认 —— 数值码（CTP 空间，走 RspInfo / ErrRtn）与
+// StatusMsg 的前缀码（交易所级的价格类拒单不经过 RspInfo，ErrorID 是 0）。撤掉的挂单、超时都是「没有结论」。
+func TestRejectedByCounter(t *testing.T) {
+	no := errors.New("没成交")
+	for _, c := range []struct {
+		name string
+		st   ctp.OrderState
+		err  error
+		want bool
+	}{
+		{"CTP 空间的数值码（可平量不足 30）", ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled, ErrorID: 30, StatusMsg: "CTP:平仓量不足"}, no, true},
+		{"交易所空间：ErrorID 0、前缀码在自由文本里", ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled, StatusMsg: "50:平今仓位不足"}, no, true},
+		{"撤掉的没成交挂单：无码无前缀 ⇒ 没有结论", ctp.OrderState{Status: def.THOST_FTDC_OST_Canceled, StatusMsg: "已撤单"}, no, false},
+		{"超时：连状态都没有 ⇒ 没有结论", ctp.OrderState{}, no, false},
+		{"还挂着（不是撤销态）⇒ 没有结论", ctp.OrderState{Status: def.THOST_FTDC_OST_NoTradeQueueing, StatusMsg: "50:x"}, no, false},
+		{"成交了就不是拒单", ctp.OrderState{Status: def.THOST_FTDC_OST_AllTraded, VolumeTraded: 1}, nil, false},
+	} {
+		if got := rejectedByCounter(c.st, c.err); got != c.want {
+			t.Errorf("⚠️ %s：判为拒单 = %v，应为 %v", c.name, got, c.want)
+		}
 	}
 }
