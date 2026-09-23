@@ -355,7 +355,7 @@ func TestRewritePreRegistrationNumbers(t *testing.T) {
 	doc := string(raw)
 	i := strings.Index(doc, "事前登记：§13 #25 复现")
 	if i < 0 {
-		t.Fatal("⚠️ state.md 里找不到「事前登记：§13 #25 复现」登记块 —— 改名或被挪走，本条失效")
+		t.Fatal("⚠️ 找不到登记块「事前登记：§13 #25 复现」—— 改名或被挪走，本条失效")
 	}
 	block := doc[i:]
 	if j := strings.Index(block[1:], "\n## "); j >= 0 {
