@@ -23,6 +23,8 @@ const (
 	extMulti
 	// extRewrite 是 §13 #25 的复现：显式平今是不是被柜台改写成通用平仓（改写说 / 标志说）。
 	extRewrite
+	// extRounding 是 F13 决策点 1 的实验：一笔裸平拆两段时，结算按笔取整还是分段取整（按额收费的品种）。
+	extRounding
 )
 
 func (c extCase) String() string {
@@ -35,6 +37,8 @@ func (c extCase) String() string {
 		return "A 多手裸平（额度 1、平 2 手）"
 	case extRewrite:
 		return "§13 #25 复现 显式平今是不是被改写成通用平仓"
+	case extRounding:
+		return "F13 决策点 1 拆两段时结算按笔取整还是分段取整"
 	}
 	return fmt.Sprintf("⚠️ 认不得的外推 %d", int(c))
 }
@@ -99,8 +103,8 @@ func extVerdict(c extCase, delta, rateToday, rateYd decimal.Decimal) (alive []st
 
 // extRegistered 在下单之前判：只对大商所、郑商所事前登记过。
 func extRegistered(exchange string, c extCase) error {
-	if c != extExplicit && c != extOpposite && c != extMulti && c != extRewrite {
-		return fmt.Errorf("⚠️ -case 要显式给 explicit（B）、opposite（C）、multi（A）或 rewrite（§13 #25 复现）")
+	if c != extExplicit && c != extOpposite && c != extMulti && c != extRewrite && c != extRounding {
+		return fmt.Errorf("⚠️ -case 要显式给 explicit（B）、opposite（C）、multi（A）、rewrite（§13 #25 复现）或 rounding（F13 决策点 1）")
 	}
 	if exchange == "DCE" || exchange == "CZCE" {
 		return nil
@@ -148,6 +152,11 @@ func (s extStage) note() string {
 		2: "ctp-quota-ext A ②：买开一手之后（今 1 昨 1）",
 		3: "ctp-quota-ext A ③：一笔通用平仓（OF_Close）卖 2 手之后 —— 判别那一笔",
 	}
+	rd := map[int]string{
+		1: "ctp-quota-ext 取整 ①：只有跨过结算的种子（多头 今 0 昨 1）",
+		2: "ctp-quota-ext 取整 ②：买开一手之后（今 1 昨 1，额度 1）",
+		3: "ctp-quota-ext 取整 ③：一笔通用平仓（OF_Close）卖 2 手之后 —— 判据在当日结算单上这一笔的 Fee",
+	}
 	w := map[int]string{
 		1: "ctp-quota-ext #25 ①：只有跨过结算的种子（多头 今 0 昨 1）",
 		2: "ctp-quota-ext #25 ②：买开一手之后（今 1 昨 1，额度 1）",
@@ -162,6 +171,8 @@ func (s extStage) note() string {
 		m = a
 	case extRewrite:
 		m = w
+	case extRounding:
+		m = rd
 	}
 	if t, ok := m[s.n]; ok {
 		return t
@@ -173,6 +184,52 @@ func explicitCloseTodayReq(ex, inst string, lowerLimit float64) ctp.OrderReq {
 	return ctp.OrderReq{Exchange: ex, Instrument: inst,
 		Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday,
 		Volume: 1, LimitPrice: lowerLimit}
+}
+
+// moneyRates 取**按额**的平今 / 平昨费率（F13 决策点 1 的实验只在按额品种上做）。
+// ⚠️ 每手固定额必须为 0：两种口径混在一笔里时，「按笔 / 分段」之差会被每手那部分盖住，判不清。
+func moneyRates(c *ctp.Client, symbol string, timeout time.Duration, logf func(string, ...any)) (rToday, rYd decimal.Decimal, err error) {
+	r, err := c.CommissionRate(symbol, timeout)
+	if err != nil {
+		return decimal.Zero, decimal.Zero, err
+	}
+	rToday, rYd, err = judgeMoneyRates(symbol,
+		decimal.NewFromFloat(float64(r.CloseRatioByMoney)), decimal.NewFromFloat(float64(r.CloseTodayRatioByMoney)),
+		decimal.NewFromFloat(float64(r.CloseRatioByVolume)), decimal.NewFromFloat(float64(r.CloseTodayRatioByVolume)))
+	logf("[qx] 声明费率（按额）：平昨 %s / 平今 %s", rYd, rToday)
+	return rToday, rYd, err
+}
+
+// judgeMoneyRates 是 moneyRates 的判断部分（纯函数）：只收纯按额、两档不同的品种。
+func judgeMoneyRates(symbol string, ydMoney, todayMoney, ydVolume, todayVolume decimal.Decimal) (rToday, rYd decimal.Decimal, err error) {
+	if !ydVolume.Add(todayVolume).IsZero() {
+		return decimal.Zero, decimal.Zero, fmt.Errorf("⚠️ %s 的平仓费率里有**每手固定额**（平昨 %s / 平今 %s）—— "+
+			"本实验判的是按额部分的取整，混进每手那部分就判不清，换一个纯按额的品种", symbol, ydVolume, todayVolume)
+	}
+	if ydMoney.Add(todayMoney).IsZero() {
+		return decimal.Zero, decimal.Zero, fmt.Errorf("⚠️ %s 的平仓费率按额部分全是 0 —— 这是纯按手的品种，本实验不适用", symbol)
+	}
+	if ydMoney.Equal(todayMoney) {
+		return todayMoney, ydMoney, fmt.Errorf("⚠️ %s 的按额平今档与平昨档相同（都是 %s）—— 不会拆两段，本实验没有判别力", symbol, ydMoney)
+	}
+	return todayMoney, ydMoney, nil
+}
+
+// roundingCandidates 按**实际成交价**算出 F13 决策点 1 的两个候选（登记块「事前登记：F13 决策点 1」在 docs/state.md）：
+//
+//	按笔取整   HalfUpToCent( 平今段按额 + 平昨段按额 )
+//	分段取整   HalfUpToCent( 平今段按额 ) + HalfUpToCent( 平昨段按额 )
+//
+// today / yd 是各自的手数（本实验 1 / 1）。⚠️ 两者同值时**判不出来**（成交价的零头决定），照实记「不判」。
+func roundingCandidates(price, mult, rToday, rYd decimal.Decimal, today, yd int) (whole, segment decimal.Decimal, discriminating bool) {
+	mToday := price.Mul(mult).Mul(rToday).Mul(decimal.NewFromInt(int64(today)))
+	mYd := price.Mul(mult).Mul(rYd).Mul(decimal.NewFromInt(int64(yd)))
+	// ⚠️ 与主模块 fee.HalfUpToCent **同口径**（四舍五入到分）—— cmd/oracle 是独立模块，拿不到那个包，
+	// 所以这里自己写一份：**改一处要改两处**（评审 20260923）。
+	half := func(v decimal.Decimal) decimal.Decimal { return v.Round(2) }
+	whole = half(mToday.Add(mYd))
+	segment = half(mToday).Add(half(mYd))
+	return whole, segment, !whole.Equal(segment)
 }
 
 // rejectedByCounter 判一笔没成交的委托是不是**柜台拒的** —— 与「没有结论」（超时 / 撤单没核干净）分开：
@@ -304,7 +361,7 @@ func runCTPQuotaExt(args []string) error {
 	fs := flag.NewFlagSet("ctp-quota-ext", flag.ExitOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	symbol := fs.String("symbol", "", "合约，形如 DCE.m2701（⚠️ 无默认值：会真的下单、平掉种子）")
-	caseName := fs.String("case", "", "explicit = B 显式平今之后的裸平；opposite = C 当日开过反方向；multi = A 一笔裸平 2 手；rewrite = §13 #25 复现（⚠️ 无默认值；multi 要 PROBE_MAX_VOLUME ≥ 2）")
+	caseName := fs.String("case", "", "explicit = B 显式平今之后的裸平；opposite = C 当日开过反方向；multi = A 一笔裸平 2 手；rewrite = §13 #25 复现；rounding = F13 决策点 1（按额品种）（⚠️ 无默认值；multi / rounding 要 PROBE_MAX_VOLUME ≥ 2）")
 	dump := fs.String("dump", "", "截面落盘目录（⚠️ 只能是仓库根下的 testdata/ctp）")
 	timeout := fs.Duration("timeout", 40*time.Second, "每一步的超时")
 	if err := fs.Parse(args[2:]); err != nil {
@@ -323,6 +380,8 @@ func runCTPQuotaExt(args []string) error {
 		cs = extMulti
 	case "rewrite":
 		cs = extRewrite
+	case "rounding":
+		cs = extRounding
 	}
 	ex, inst := ctp.SplitSymbol(*symbol)
 	// ⚠️ 没登记就不许跑 —— 排在连柜台之前（TestExtRegisteredRunsBeforeConnect）。
@@ -367,12 +426,17 @@ func runCTPQuotaExt(args []string) error {
 	if err := extPremise(long0, short0); err != nil {
 		return err
 	}
-	rateToday, rateYd, err := closeFeeRates(c, *symbol, *timeout, logf)
-	if err != nil {
-		return err
-	}
-	if rateToday.Equal(rateYd) {
-		return fmt.Errorf("⚠️ **不跑**：%s 平今 / 平昨声明同为 %s —— 没有判别力", *symbol, rateToday)
+	// ⚠️ 按手口径的费率只给 A / B / C 与 #25 用；`-case rounding` 是**按额**品种，它自己查 moneyRates ——
+	// 这里无条件查会把按额品种当场拒掉（20260923 夜盘实跑撞到）。
+	var rateToday, rateYd decimal.Decimal
+	if cs != extRounding {
+		var err error
+		if rateToday, rateYd, err = closeFeeRates(c, *symbol, *timeout, logf); err != nil {
+			return err
+		}
+		if rateToday.Equal(rateYd) {
+			return fmt.Errorf("⚠️ **不跑**：%s 平今 / 平昨声明同为 %s —— 没有判别力", *symbol, rateToday)
+		}
 	}
 	// 收尾：注册在第一笔委托之前。只平今仓（多头与空头），昨仓（种子）不碰。
 	defer func() {
@@ -528,6 +592,72 @@ func runCTPQuotaExt(args []string) error {
 			return fmt.Errorf("%w（增量 %s 照记）", err, d3)
 		}
 		delta = d3
+	case extRounding:
+		rToday, rYd, rerr := moneyRates(c, *symbol, *timeout, logf)
+		if rerr != nil {
+			return rerr
+		}
+		instField, ierr := c.Instrument(*symbol, *timeout)
+		if ierr != nil {
+			return ierr
+		}
+		mult := decimal.NewFromInt(int64(instField.VolumeMultiple))
+		logf("[qx] 合约乘数 %s", mult)
+		_, l, _, err := step(2, func(md *def.CThostFtdcDepthMarketDataField) ctp.OrderReq {
+			return ctp.OrderReq{Exchange: ex, Instrument: inst, Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
+				Volume: 1, LimitPrice: float64(md.UpperLimitPrice)}
+		})
+		if err != nil {
+			return err
+		}
+		if l.Today != 1 || l.Yd != 1 {
+			return fmt.Errorf("⚠️ 买开之后不是 今 1 / 昨 1 —— 不往下平")
+		}
+		tr0, err := c.Trades(*timeout)
+		if err != nil {
+			return fmt.Errorf("⚠️ ③ 之前查不到成交记录（没有结论）—— 不往下平：%w", err)
+		}
+		n0, lots0 := closeRecordsOn(tr0, inst)
+		d3, l3, _, err := step(3, func(md *def.CThostFtdcDepthMarketDataField) ctp.OrderReq {
+			return multiCloseReq(ex, inst, float64(md.LowerLimitPrice))
+		})
+		if err != nil {
+			return fmt.Errorf("⚠️ **不判**（③ 2 手没有全部成交，余量已撤）：%w", err)
+		}
+		if l3.Today != 0 || l3.Yd != 0 {
+			return fmt.Errorf("⚠️ **不判**：③ 之后不是 今 0 / 昨 0（今 %d 昨 %d）", l3.Today, l3.Yd)
+		}
+		tr1, err := c.Trades(*timeout)
+		if err != nil {
+			return fmt.Errorf("⚠️ **不判**：③ 之后查不到成交记录（盘中增量 %s 照记）：%w", d3, err)
+		}
+		n1, lots1 := closeRecordsOn(tr1, inst)
+		if verr := multiRecordVerdict(n0, lots0, n1, lots1); verr != nil {
+			return fmt.Errorf("%w（盘中增量 %s 照记）", verr, d3)
+		}
+		var fill decimal.Decimal
+		var tradeID string
+		for _, t3 := range tr1 {
+			if t3 != nil && ctp.Text(t3.InstrumentID[:]) == inst && t3.Direction == def.THOST_FTDC_D_Sell &&
+				t3.OffsetFlag != def.THOST_FTDC_OF_Open && int(t3.Volume) == 2 {
+				fill = decimal.NewFromFloat(float64(t3.Price))
+				tradeID = ctp.Text(t3.TradeID[:])
+			}
+		}
+		if fill.IsZero() {
+			return fmt.Errorf("⚠️ **不判**：③ 那条 2 手记录的成交价读不到（盘中增量 %s 照记）", d3)
+		}
+		whole, segment, disc := roundingCandidates(fill, mult, rToday, rYd, 1, 1)
+		logf("")
+		logf("[qx] ③ 一条 2 手记录成交在 %s（TradeID=%s）；盘中手续费增量 %s（盘中不取整，不判本题）", fill, tradeID, d3)
+		logf("[qx] 两个候选（判据是**当日结算单**上这一笔的 Fee）：按笔取整 %s / 分段取整 %s", whole, segment)
+		if !disc {
+			logf("[qx] ⚠️ **这个成交价上两个候选同值 ⇒ 判不出来**，照实记「不判」，改日再排 —— 不许换算法去凑")
+		} else {
+			logf("[qx] ⇒ 明日读 %s 的结算单：Fee = %s ⇒ 按笔取整；Fee = %s ⇒ 分段取整；两者都不是 ⇒ 谁都没预言到", c.TradingDay(), whole, segment)
+		}
+		logf("[qx] 第二阶段要写进登记的：成交价 %s、乘数 %s、按额费率 平今 %s / 平昨 %s、两个候选 %s / %s", fill, mult, rToday, rYd, whole, segment)
+		return nil
 	case extRewrite:
 		_, l, _, err := step(2, func(md *def.CThostFtdcDepthMarketDataField) ctp.OrderReq {
 			return ctp.OrderReq{Exchange: ex, Instrument: inst, Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open,
