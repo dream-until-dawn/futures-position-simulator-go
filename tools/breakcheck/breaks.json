@@ -2320,11 +2320,11 @@
 		"expect": "red"
 	},
 	{
-		"name": "218 分子被单独抬高：rules_measured 报得比已收敛还多",
+		"name": "218 分子被单独抬高：rules_measured 报得比已收敛还多（阈值 20 → 40：20260924 已收敛涨到 20 条，原来的数不再违反上界、破坏变成空转，由 TestCountBreaksStillViolateTheirBound 抓到）",
 		"dir": "",
 		"file": "docs/state.md",
 		"old": "| `rules_measured` | **3** |",
-		"new": "| `rules_measured` | **20** |",
+		"new": "| `rules_measured` | **40** |",
 		"pkg": "./",
 		"test": "TestRulesListedMatchesTable",
 		"want": "分子不可能比它大",
