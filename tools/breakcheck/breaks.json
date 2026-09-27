@@ -1,5 +1,80 @@
 [
 	{
+		"name": "778 委托改写漏掉郑商所",
+		"dir": "", "file": "request_rewrite.go",
+		"old": "req.Instrument.Exchange == types.DCE || req.Instrument.Exchange == types.CZCE",
+		"new": "req.Instrument.Exchange == types.DCE",
+		"pkg": "./", "test": "TestRewriteScopeAndIdempotence", "want": "委托改写范围错误", "expect": "red"
+	},
+	{
+		"name": "779 委托改写错误外推到 UseHistory",
+		"dir": "", "file": "request_rewrite.go",
+		"old": "inst.PositionDateType == refdata.NoUseHistory &&",
+		"new": "(inst.PositionDateType == refdata.NoUseHistory || true) &&",
+		"pkg": "./", "test": "TestRewriteScopeAndIdempotence", "want": "委托改写范围错误", "expect": "red"
+	},
+	{
+		"name": "780 委托改写错误外推到套保",
+		"dir": "", "file": "request_rewrite.go",
+		"old": "req.Hedge == types.Speculation &&", "new": "(req.Hedge == types.Speculation || true) &&",
+		"pkg": "./", "test": "TestRewriteScopeAndIdempotence", "want": "委托改写范围错误", "expect": "red"
+	},
+	{
+		"name": "781 委托改写不检查原始标志：已转换的Close也被重复改写",
+		"dir": "", "file": "request_rewrite.go",
+		"old": "req.Offset == types.CloseToday {", "new": "(req.Offset == types.CloseToday || true) {",
+		"pkg": "./", "test": "TestRewriteScopeAndIdempotence", "want": "委托改写不幂等", "expect": "red"
+	},
+	{
+		"name": "782 独立冻结入口漏掉委托改写",
+		"dir": "", "file": "submit.go",
+		"old": "req, _ = rewriteCloseToday(inst, req)", "new": "_, _ = rewriteCloseToday(inst, req)",
+		"pkg": "./", "test": "TestRewriteOrdersRoundTrip", "want": "独立冻结应冻昨仓", "expect": "red"
+	},
+	{
+		"name": "783 校验入口丢失改写来源而返回未实测拒因码",
+		"dir": "", "file": "submit.go",
+		"old": "req, rewritten = rewriteCloseToday(inst, req)", "new": "req, _ = rewriteCloseToday(inst, req)",
+		"pkg": "./", "test": "TestRewriteRejectsWithoutCodesAndTrace", "want": "改写拒单不得返回未实测柜台码", "expect": "red"
+	},
+	{
+		"name": "784 Place 把原始显式平今请求重新写进簿",
+		"dir": "", "file": "place.go",
+		"old": "req, _ = rewriteCloseToday(facts.Instrument, req)", "new": "_, _ = rewriteCloseToday(facts.Instrument, req)",
+		"pkg": "./", "test": "TestRewriteOrdersRoundTrip", "want": "挂单必须保存有效请求和冻结分片", "expect": "red"
+	},
+	{
+		"name": "785 PlaceAccepted 把原始显式平今请求重新写进簿",
+		"dir": "", "file": "place.go",
+		"old": "req, _ = rewriteCloseToday(inst, req)", "new": "_, _ = rewriteCloseToday(inst, req)",
+		"pkg": "./", "test": "TestRewriteOrdersRoundTrip", "want": "挂单必须保存有效请求和冻结分片", "expect": "red"
+	},
+	{
+		"name": "786 Submit 将有效成交标志改回原始平今",
+		"dir": "", "file": "submit.go",
+		"old": "trade.Offset = effective.Offset", "new": "trade.Offset = req.Offset; _ = effective",
+		"pkg": "./", "test": "TestRewriteSubmitConsumesHistory", "want": "改写成交标志应为 Close", "expect": "red"
+	},
+	{
+		"name": "787 恢复新格式时不拒绝未转换挂单",
+		"dir": "", "file": "state.go",
+		"old": "if _, rewritten := rewriteCloseToday(inst, o.Request); rewritten {",
+		"new": "if _, rewritten := rewriteCloseToday(inst, o.Request); rewritten && false {",
+		"pkg": "./", "test": "TestRewriteRestoreRefusesLegacySemantics", "want": "新格式中的未转换挂单必须明确拒绝", "expect": "red"
+	},
+	{
+		"name": "788 字段未变就错误沿用旧委托语义格式3",
+		"dir": "", "file": "state.go",
+		"old": "const StateFormat = 4", "new": "const StateFormat = 3",
+		"pkg": "./", "test": "TestRewriteRestoreRefusesLegacySemantics", "want": "旧语义格式 3 必须拒绝", "expect": "red"
+	},
+	{
+		"name": "789 委托改写停用时两所原始截面对拍必须失败",
+		"dir": "", "file": "request_rewrite.go",
+		"old": "req.Offset = types.Close", "new": "req.Offset = types.CloseToday",
+		"pkg": "./conformance/ctpfixture", "test": "TestFacadeCloseTodayRewriteAgainstCTP", "want": "风险103", "expect": "red"
+	},
+	{
 		"name": "320 空仓均价改成 Num(0)",
 		"dir": "",
 		"file": "view/position.go",
@@ -5865,8 +5940,8 @@
 		"name": "600 Submit 返回的成交带改写后的平昨（成交记录与委托、与快期成交里的 CLOSE 对不上）",
 		"dir": "",
 		"file": "submit.go",
-		"old": "\ttrade.Offset = req.Offset //",
-		"new": "\t_ = req.Offset //",
+		"old": "\ttrade.Offset = effective.Offset",
+		"new": "\t_ = effective.Offset",
 		"pkg": "./",
 		"test": "TestUndatedCloseAsYesterdayInValidation",
 		"want": "应保留委托上的 CLOSE",
@@ -6920,10 +6995,10 @@
 		"expect": "red"
 	},
 	{
-		"name": "711 存档加了字段而 StateFormat 没抬（格式号指回上一个）（20260921 F10 重锚：3 → 2）",
+		"name": "711 存档新增结算字段却退回格式2（20260927 重锚：4 → 2；委托语义退回格式3由788守）",
 		"dir": "",
 		"file": "state.go",
-		"old": "const StateFormat = 3",
+		"old": "const StateFormat = 4",
 		"new": "const StateFormat = 2",
 		"pkg": "./",
 		"test": "TestStateFormatPinsFieldSet",

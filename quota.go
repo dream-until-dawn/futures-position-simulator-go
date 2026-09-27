@@ -26,7 +26,7 @@ type quotaCount struct {
 //
 //	多手裸平、0 < 额度 < 平仓量   按额度拆：min 手平今档、其余平昨档（A：一条 2 手记录，m2703 收 0.3、MA703 收 8）
 //	额度分不分方向                 分方向：只看本方向的计数，反方向开过不算（C：m2705 收 0.2、MA705 收 2）
-//	显式平今扣不扣额度             ⚠️ 照旧「分岔报错」—— 这两所上显式平今被柜台改写成了通用平仓（§13 #25，观测、未收敛；silent-risks 103）
+//	灌入显式平今后的额度           ⚠️ 照旧「分岔报错」—— #25 证明的是委托被改写成通用平仓；不证明仍标显式平今的已发生成交如何扣额度
 //
 // 两种读法（本方向 × 扣 / 不扣显式平今）逐一算；给出不同手数就报错，同值照收。
 func todayTierLots(inst types.InstrumentID, vol int, own quotaCount) (int, error) {
@@ -35,7 +35,7 @@ func todayTierLots(inst types.InstrumentID, vol int, own quotaCount) (int, error
 	noDeduct := take(own.Opened - (own.Charged - own.Explicit))
 	if deduct != noDeduct {
 		return 0, fmt.Errorf("%s 裸平 %d 手：按「显式平今扣额度」平今档 %d 手，按「不扣」%d 手 —— "+
-			"显式平今扣不扣额度没测到（大商所 / 郑商所上显式平今被柜台改写成通用平仓，§13 #25 未收敛），不猜", inst, vol, deduct, noDeduct)
+			"显式平今扣不扣额度没测到（§13 #25 已证明委托改写，但不证明直接灌入显式平今成交后的额度），不猜", inst, vol, deduct, noDeduct)
 	}
 	return deduct, nil
 }

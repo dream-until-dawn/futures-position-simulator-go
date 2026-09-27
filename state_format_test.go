@@ -62,6 +62,7 @@ var stateFingerprints = map[int]string{
 	1: "a2b10ae2455cd8891e10313f00448bba",
 	2: "e2605fab03a8811d588cb672f88ffb6e",
 	3: "4a379c6808d44940cc3532d5753a94d8",
+	4: "4a379c6808d44940cc3532d5753a94d8", // 字段不变，委托语义改变；另有风险 103 的恢复反向测试。
 }
 
 func fingerprint(fields []string) string {
@@ -88,14 +89,14 @@ func TestStateFormatPinsFieldSet(t *testing.T) {
 	}
 }
 
-// TestRestoreRefusesOlderFormat：格式 1 / 2 的存档（F11 / F10 之前）在版本号那一步报错，不迁移。
+// TestRestoreRefusesOlderFormat：格式 1 / 2 / 3 的存档在版本号那一步报错，不迁移。
 func TestRestoreRefusesOlderFormat(t *testing.T) {
 	s := newSim(t)
 	st, err := s.State()
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, old := range []int{1, 2} {
+	for _, old := range []int{1, 2, 3} {
 		st.Format = old
 		_, err = Restore(Config{Day: simDay, PreBalance: dec("100000"), Rules: simRules(t), Choices: ctpChoices()}, st)
 		if err == nil || !strings.Contains(err.Error(), "不迁移") {

@@ -12,6 +12,7 @@ import (
 // Place 挂一笔单：与 Submit 同一套校验，通过就冻结（账户侧保证金 + 手续费，持仓侧可平量）并记进挂单簿，**不成交**。
 //
 // 给自己撮合的引擎用：何时成交由引擎决定（Fill），撤单用 Cancel。被拒 / 没查成与 Submit 返回同样的错误，状态不动。
+// 规则 #25 的显式平今存为有效 Close，State.Orders.Request 和 Fill 返回该有效标志。
 func (s *Simulator) Place(day types.TradingDay, at time.Time, id string, req order.Request) (order.Frozen, error) {
 	if err := s.usable(day); err != nil {
 		return order.Frozen{}, err
@@ -19,10 +20,12 @@ func (s *Simulator) Place(day types.TradingDay, at time.Time, id string, req ord
 	if _, _, dup := s.book.Get(id); dup {
 		return order.Frozen{}, fmt.Errorf("委托 %s 已经在簿上", id)
 	}
-	_, fr, _, err := s.validate(day, at, req)
+	_, fr, facts, err := s.validate(day, at, req)
 	if err != nil {
 		return order.Frozen{}, err
 	}
+	// 只保存委托侧的有效标志；UseHistory 的记账口径转换不写回请求。
+	req, _ = rewriteCloseToday(facts.Instrument, req)
 	if err := s.acc.Freeze(day, fr.Margin, fr.Commission); err != nil {
 		return order.Frozen{}, err
 	}
@@ -39,6 +42,7 @@ func (s *Simulator) Place(day types.TradingDay, at time.Time, id string, req ord
 //
 // 与 ApplyTrade 之于 Submit 同一个关系（design.md §4「两条并存的路径」）：快期接受的单里有本库校验会拒的
 // （零头价位 kq_facts 45、不查时段 kq_facts 48），灌对拍夹具或接外部柜台时走这里。冻结照 FreezeOf（口径跟 Choices）。
+// 输入仍是委托，规则 #25 的显式平今同样转 Close；与接收已发生成交的 ApplyTrade 区分。
 //
 // ⚠️ 不校验不等于不守：两条账必须对得上 ——
 //   - 冻住的手数不超过持仓（扣掉簿上已冻的）：柜台接受了而本库账上没这么多仓，说明两边的持仓不一致
@@ -52,6 +56,11 @@ func (s *Simulator) PlaceAccepted(day types.TradingDay, id string, req order.Req
 	if !req.Price.IsPositive() {
 		return order.Frozen{}, fmt.Errorf("委托 %s 的价格 %s 不为正 —— 簿上的单要能按挂单价成交", id, req.Price)
 	}
+	inst, err := s.rules.Instrument(req.Instrument)
+	if err != nil {
+		return order.Frozen{}, err
+	}
+	req, _ = rewriteCloseToday(inst, req)
 	fr, err := s.FreezeOf(day, req)
 	if err != nil {
 		return order.Frozen{}, fmt.Errorf("委托 %s：%w", id, err)

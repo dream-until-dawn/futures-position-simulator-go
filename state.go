@@ -21,7 +21,8 @@ import (
 //	1  F5 起
 //	2  State 加 Quotas（F11，裸平按当日开仓额度收档；使用者 20260918 确认抬一格）
 //	3  account.State 加 SettleCommission / CommissionTrades（F10，结算时按笔重算手续费；使用者确认「抬一格」）
-const StateFormat = 3
+//	4  委托侧平今改写：Orders.Request 保存有效标志，字段不变但旧语义不能沿用。
+const StateFormat = 4
 
 // State 是模拟器的全部状态，全是数据。小数在 JSON 里是字符串（decimal.Decimal 的默认）。
 //
@@ -69,7 +70,7 @@ type PriceState struct {
 	HasPreSettlement bool
 }
 
-// OrderState 是一笔挂单。
+// OrderState 是一笔挂单。Request 保存规则 #25 改写后的有效请求，原始发单请求由调用方留存。
 type OrderState struct {
 	ID      string
 	Request order.Request
@@ -218,8 +219,12 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 	}
 
 	for _, o := range st.Orders {
-		if _, err := cfg.Rules.Instrument(o.Request.Instrument); err != nil {
+		inst, err := cfg.Rules.Instrument(o.Request.Instrument)
+		if err != nil {
 			return nil, fmt.Errorf("存档里的挂单 %s：%w", o.ID, err)
+		}
+		if _, rewritten := rewriteCloseToday(inst, o.Request); rewritten {
+			return nil, fmt.Errorf("存档里挂单 %s 是未转换的显式平今 —— 新格式必须保存有效请求，不自动迁移", o.ID)
 		}
 		if err := s.book.Insert(o.ID, o.Request, freezeInputOf(o.Frozen)); err != nil {
 			return nil, fmt.Errorf("存档里的挂单：%w", err)
