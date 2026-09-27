@@ -28,6 +28,7 @@ func MeasuredTickRounding() map[types.Exchange]refdata.TickRounding {
 //
 // 保证金（只有开仓）按 Choices.FreezeMargin 取价：挂单价走 margin.Compute 的今仓腿（开仓价 = 挂单价），
 // 昨结算价走 PreSettleAll —— 不另写「名义额 × 费率」。手续费与成交走同一个 commission（挂单价顶成交价的位置）。
+// DCE / CZCE 的投机、NoUseHistory 显式平今先按规则 #25 转通用平仓，冻结取可用今昨拆分。
 func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Frozen, error) {
 	if err := s.usable(day); err != nil {
 		return order.Frozen{}, err
@@ -37,6 +38,7 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 		return order.Frozen{}, err
 	}
 	in := order.FreezeInput{}
+	req, _ = rewriteCloseToday(inst, req)
 	req.Offset = s.datedOffset(inst.PositionDateType, req.Offset) // 冻昨仓，与成交时平昨一致
 	tr := match.Trade{Instrument: req.Instrument, Direction: req.Direction, Offset: req.Offset,
 		Hedge: req.Hedge, Price: req.Price, Volume: req.Volume}
@@ -103,6 +105,7 @@ func (s *Simulator) FreezeOf(day types.TradingDay, req order.Request) (order.Fro
 // 调用方选的恰恰是快期口径，报错对判据的描述与实际行为不一致。
 // 改写得来的拒单**不给 CTP 拒因码**（Kind 清成 ReasonUnknown），**不论拒在哪一项**：上期所裸 CLOSE 这种单整笔都不在 CTP 语料里
 // （simnow_pending#1：连柜台先查价位还是先查开平都不知道），给哪个码都是外推。
+// 规则 #25 的两所委托改写也适用清码：实测覆盖成功成交，没有观测这类委托被拒时的码。
 func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Request) (order.Request, order.Frozen, order.Facts, error) {
 	var f order.Facts
 
@@ -110,6 +113,7 @@ func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Reque
 	rewritten := false
 	if err == nil {
 		f.Instrument, f.HasInstrument = inst, true
+		req, rewritten = rewriteCloseToday(inst, req)
 		if off := s.datedOffset(inst.PositionDateType, req.Offset); off != req.Offset {
 			req.Offset, rewritten = off, true
 		}
@@ -185,6 +189,7 @@ func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Reque
 //
 // at 是报单时刻，查交易时段用。被拒返回 *match.RejectedError（带 Code()），没查成返回 *match.UncheckedError ——
 // 调用方用 errors.As 分：被拒要改单，没查成要补事实（取行情、给限仓、给日历）。两种都不动状态。
+// 规则 #25 范围的显式平今返回 Close；需要原始委托标志时由调用方保存请求。
 func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request) (match.Trade, error) {
 	if err := s.usable(day); err != nil {
 		return match.Trade{}, err
@@ -197,7 +202,9 @@ func (s *Simulator) Submit(day types.TradingDay, at time.Time, req order.Request
 	if err != nil {
 		return match.Trade{}, err
 	}
-	trade.Offset = req.Offset // 成交记录报的是委托上的开平标志（快期成交里裸 CLOSE 仍记作 CLOSE）；记账时 ApplyTrade 照口径再改写
+	// 委托改写与记账口径分开：两所显式平今回报 Close，快期裸 CLOSE 仍保留 Close。
+	effective, _ := rewriteCloseToday(f.Instrument, req)
+	trade.Offset = effective.Offset
 	if err := s.ApplyTrade(day, trade); err != nil {
 		return match.Trade{}, err
 	}

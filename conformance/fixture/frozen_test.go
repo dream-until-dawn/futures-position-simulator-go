@@ -73,6 +73,16 @@ func synthetic(t *testing.T, orders map[string]map[string]Value) (*Fixture, map[
 	return f, specs
 }
 
+// TestFrozenBookRefusesRewriteWithoutPositions：当前冻结适配器未重建持仓，不能猜改写平今的今昨拆分。
+func TestFrozenBookRefusesRewriteWithoutPositions(t *testing.T) {
+	f, specs := synthetic(t, map[string]map[string]Value{
+		"rewrite": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "DCE", "instrument_id", "m2701", "direction", "SELL", "offset", "CLOSETODAY"), "1"), "3000"),
+	})
+	if _, _, err := FrozenBook(f, specs, positionDates); err == nil || !strings.Contains(err.Error(), "超过可平") {
+		t.Fatalf("没有持仓输入的改写冻结必须明确拒绝：%v", err)
+	}
+}
+
 // TestFrozenBookDistinguishesNoOrdersFromNoRecord 是本文件最要紧的一条。
 //
 // ⚠️ 「这份夹具里没有挂着的委托」与「这份夹具根本没记委托」——
@@ -121,9 +131,9 @@ func TestFrozenBookSidesAndDates(t *testing.T) {
 		// 已终结的不冻
 		"d": withPrice(withLeft(ord("status", "FINISHED", "exchange_id", "SHFE",
 			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSETODAY"), "7"), "3170"),
-		// 别的合约不算进来
+		// 别的合约不算进来。用显式平昨，避免把本测试变成需要持仓输入的委托改写测试。
 		"e": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "DCE",
-			"instrument_id", "m2701", "direction", "SELL", "offset", "CLOSETODAY"), "5"), "3000"),
+			"instrument_id", "m2701", "direction", "SELL", "offset", "CLOSEYESTERDAY"), "5"), "3000"),
 		// UseHistory 上的裸 CLOSE 冻昨仓（快期口径，kq_facts 32）：SELL 平多头
 		"g": withPrice(withLeft(ord("status", "ALIVE", "exchange_id", "SHFE",
 			"instrument_id", "rb2701", "direction", "SELL", "offset", "CLOSE"), "4"), "3170"),
