@@ -20,10 +20,10 @@
 		"pkg": "./", "test": "TestRewriteScopeAndIdempotence", "want": "委托改写范围错误", "expect": "red"
 	},
 	{
-		"name": "781 委托改写误改开仓平昨与强平",
+		"name": "781 委托改写不检查原始标志：已转换的Close也被重复改写",
 		"dir": "", "file": "request_rewrite.go",
 		"old": "req.Offset == types.CloseToday {", "new": "(req.Offset == types.CloseToday || true) {",
-		"pkg": "./", "test": "TestRewriteScopeAndIdempotence", "want": "委托改写范围错误", "expect": "red"
+		"pkg": "./", "test": "TestRewriteScopeAndIdempotence", "want": "委托改写不幂等", "expect": "red"
 	},
 	{
 		"name": "782 独立冻结入口漏掉委托改写",
