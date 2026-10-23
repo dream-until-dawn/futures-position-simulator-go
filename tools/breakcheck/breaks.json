@@ -3604,17 +3604,17 @@
 		"want": "必须挂在跌停那一端",
 		"expect": "red"
 	},
-	{
-		"name": "387 持仓缓存的键丢掉方向（多空互相覆盖，且丢失是静默的）",
-		"dir": "cmd/oracle",
-		"file": "cmd/oracle/ctp/query_windows.go",
-		"old": "c.pos[key+\"/\"+string(rune(cp.PosiDirection))+\"/\"+string(rune(cp.PositionDate))] = &cp",
-		"new": "c.pos[key+\"/\"+string(rune(cp.PositionDate))] = &cp",
-		"pkg": "./",
-		"test": "TestPositionKeyCarriesBothDimensions",
-		"want": "键里没有 PosiDirection",
-		"expect": "red"
-	},
+{
+	"name": "387 持仓缓存的键丢掉方向（多空互相覆盖，且丢失是静默的）",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/ctp/position_rows.go",
+	"old": "out[key+\"/\"+string(rune(cp.PosiDirection))+\"/\"+string(rune(cp.PositionDate))+\"/\"+string(rune(cp.HedgeFlag))] = &cp",
+	"new": "out[key+\"/\"+string(rune(cp.PositionDate))+\"/\"+string(rune(cp.HedgeFlag))] = &cp",
+	"pkg": "./",
+	"test": "TestPositionKeyCarriesBothDimensions",
+	"want": "键里没有 PosiDirection",
+	"expect": "red"
+},
 	{
 		"name": "388 导出结构上多出一个没登记的字段（守卫此前完全不数字段）",
 		"dir": "cmd/oracle",
@@ -7813,6 +7813,39 @@
 	"pkg": ".",
 	"test": "TestFlatPositionKeepsOpenedToday",
 	"want": "空仓丢失当日开仓累计",
+	"expect": "red"
+},
+{
+	"name": "797 迟到回报污染新查询",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/ctp/query_batch.go",
+	"old": "|| id != b.id",
+	"new": "|| false",
+	"pkg": "./ctp",
+	"test": "TestQueryBatchIgnoresLateReplies",
+	"want": "迟到或重复结束污染新请求",
+	"expect": "red"
+},
+{
+	"name": "798 查询失败仍返回空成功",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/ctp/query_batch.go",
+	"old": "if b.err != nil {",
+	"new": "if false && b.err != nil {",
+	"pkg": "./ctp",
+	"test": "TestQueryBatchSeparatesEmptyAndFailure",
+	"want": "失败被洗成空成功",
+	"expect": "red"
+},
+{
+	"name": "799 持仓键遗漏投保维度",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/ctp/position_rows.go",
+	"old": "+\"/\"+string(rune(cp.HedgeFlag))",
+	"new": "",
+	"pkg": "./ctp",
+	"test": "TestPositionRowsKeepAllDimensions",
+	"want": "持仓维度被覆盖",
 	"expect": "red"
 }
 ]

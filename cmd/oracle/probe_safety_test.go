@@ -157,21 +157,21 @@ func TestFeeProbeOnlyBuysAtTheLowEnd(t *testing.T) {
 // 这是它声明的盲区。真正的判据要一次「同合约同时有多空」的观测，
 // 而那要两笔反向开仓，超出当前安全阀（MaxVolume=1 不限制笔数，但那是另一次实验）。
 func TestPositionKeyCarriesBothDimensions(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join("ctp", "query_windows.go"))
+	b, err := os.ReadFile(filepath.Join("ctp", "position_rows.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	src := string(b)
-	// 找形如 `c.pos[...] = ` 的那一行，只看它。
-	i := strings.Index(src, "c.pos[")
+	// 找形如 `out[...] = ` 的那一行，只看它。
+	i := strings.Index(src, "out[")
 	if i < 0 {
-		t.Fatal("⚠️ 找不到 `c.pos[` —— 形状变了，本条在空转")
+		t.Fatal("⚠️ 找不到 `out[` —— 形状变了，本条在空转")
 	}
 	line := src[i:]
 	if j := strings.IndexByte(line, '\n'); j > 0 {
 		line = line[:j]
 	}
-	for _, want := range []string{"PosiDirection", "PositionDate"} {
+	for _, want := range []string{"PosiDirection", "PositionDate", "HedgeFlag"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("⚠️ 持仓缓存的键里没有 %s —— 键是 %q。\n"+
 				"同一合约的多条记录由**两个**维度区分（方向、今昨），"+

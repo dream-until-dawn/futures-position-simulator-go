@@ -49,17 +49,15 @@ type Client struct {
 	// 第一次被调用之前就被回收 —— 那种崩溃看起来像 DLL 的问题。
 	keep []any
 
-	tradingDay string
-	loggedIn   chan error
-	q          queryer
-	account    chan *def.CThostFtdcTradingAccountField
-	posMu      sync.Mutex
-	pos        map[string]*def.CThostFtdcInvestorPositionField
-	posDone    chan struct{}
-	ordMu      sync.Mutex
-	ord        []*def.CThostFtdcOrderField
-	ordDone    chan struct{}
-	book       orderBook
+	tradingDay     string
+	loggedIn       chan error
+	q              queryer
+	positionRows   queryBatch[def.CThostFtdcInvestorPositionField]
+	orderRows      queryBatch[def.CThostFtdcOrderField]
+	tradeRows      queryBatch[def.CThostFtdcTradeField]
+	settlementRows queryBatch[def.CThostFtdcSettlementInfoField]
+	account        chan *def.CThostFtdcTradingAccountField
+	book           orderBook
 	// orderSeq 是本次会话的委托序号，**单调递增**。⚠️ 见 send 里的理由：
 	// 不递增的 OrderRef 会被 CTP 拒（ErrorID=22），而它只在第二笔单上暴露。
 	orderSeq int64
@@ -77,15 +75,7 @@ type Client struct {
 	// comm 是手续费率查询的应答。⚠️ 深度 1 且**只收一条** ——
 	// 这个查询按合约问、按合约答，不像持仓那样一问多条。
 	comm chan *def.CThostFtdcInstrumentCommissionRateField
-	// trd 是成交查询的应答累积。⚠️ 深度靠 isLast 收尾，与持仓同形。
-	trdMu   sync.Mutex
-	trd     []*def.CThostFtdcTradeField
-	trdDone chan struct{}
 
-	// stl 是结算单正文（GBK 原始字节，分多条回报拼起来）。⚠️ 抬头带投资者代码与姓名 —— 调用方不许原样打印或落盘
-	stlMu   sync.Mutex
-	stl     []byte
-	stlDone chan struct{}
 	// ins 是合约查询的应答累积。⚠️ 按 isLast 收尾而不是「收到一条就算完」：
 	// 查询字段填得不够窄时柜台会回一整批，那时「第一条」不一定是要的那个合约。
 	insMu   sync.Mutex
@@ -102,14 +92,10 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 		loggedIn: make(chan error, 1),
 		params:   make(chan *def.CThostFtdcBrokerTradingParamsField, 1),
 		account:  make(chan *def.CThostFtdcTradingAccountField, 1),
-		posDone:  make(chan struct{}, 1),
-		ordDone:  make(chan struct{}, 1),
 		md:       make(chan *def.CThostFtdcDepthMarketDataField, 1),
 		comm:     make(chan *def.CThostFtdcInstrumentCommissionRateField, 1),
-		trdDone:  make(chan struct{}, 1),
-		stlDone:  make(chan struct{}, 1),
 		insDone:  make(chan struct{}, 1),
-		pos:      map[string]*def.CThostFtdcInvestorPositionField{}}
+	}
 }
 
 // TradingDay 返回柜台报的交易日；登录之前是空串。
@@ -122,11 +108,15 @@ func (c *Client) call(name string, args ...uintptr) uintptr {
 
 // req 发一笔请求，自增 RequestID。
 func (c *Client) req(name string, p unsafe.Pointer) {
+	c.h.MustFindProc(name).Call(c.api, uintptr(p), uintptr(c.nextRequestID()))
+}
+
+// nextRequestID 在发送前分配编号，使收集器先就位再等待可能立即到来的回调。
+func (c *Client) nextRequestID() int {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.nReq++
-	n := c.nReq
-	c.mu.Unlock()
-	c.h.MustFindProc(name).Call(c.api, uintptr(p), uintptr(n))
+	return c.nReq
 }
 
 // on 注册一个回调，并把它钉在 c.keep 里防止被 GC。
@@ -245,9 +235,14 @@ func (c *Client) Connect(timeout time.Duration) error {
 		c.finishLogin(errOf(info))
 		return 0
 	})
-	c.on("SetOnRspError", func(info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
+	c.on("SetOnRspError", func(info *def.CThostFtdcRspInfoField, id int, _ bool) uintptr {
 		if err := errOf(info); err != nil {
 			c.logf("[ctp] ⚠️ OnRspError %v", err)
+			// 通用错误回调也带请求编号；不能只打印后让调用方误读为空成功。
+			c.positionRows.receive(id, nil, err, true)
+			c.orderRows.receive(id, nil, err, true)
+			c.tradeRows.receive(id, nil, err, true)
+			c.settlementRows.receive(id, nil, err, true)
 		}
 		return 0
 	})
