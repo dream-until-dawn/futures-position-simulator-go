@@ -34,6 +34,7 @@ type roundingPreflightReport struct {
 	OpenMoney, CloseMoney, TodayMoney    string
 	OpenVolume, CloseVolume, TodayVolume string
 	FeeScope                             string
+	DeclaredTrading                      bool
 	Long, Short                          longSides
 	QueuedOrders                         int
 	Available, Commission                string
@@ -66,6 +67,10 @@ func collectRoundingPreflight(c roundingReader, symbol string, timeout time.Dura
 	report.Tick = decimal.NewFromFloat(float64(spec.PriceTick)).String()
 	report.Multiplier = fmt.Sprint(spec.VolumeMultiple)
 	report.Expiry = ctp.Text(spec.ExpireDate[:])
+	report.DeclaredTrading = spec.IsTrading != 0
+	if !report.DeclaredTrading {
+		report.Blockers = append(report.Blockers, "柜台声明合约不可交易")
+	}
 	if expiry, err := time.Parse("20060102", report.Expiry); err != nil || expiry.Format("20060102") < day {
 		return nil, fmt.Errorf("合约到期日无效或已到期")
 	}
@@ -89,6 +94,9 @@ func collectRoundingPreflight(c roundingReader, symbol string, timeout time.Dura
 	report.CloseVolume = decimal.NewFromFloat(values[4]).String()
 	report.TodayVolume = decimal.NewFromFloat(values[5]).String()
 	report.FeeScope = investorRange(rates)
+	if rates.InvestorRange != def.THOST_FTDC_IR_All && rates.InvestorRange != def.THOST_FTDC_IR_Group && rates.InvestorRange != def.THOST_FTDC_IR_Single {
+		report.Blockers = append(report.Blockers, "费率适用范围取值未知，不能直接用于登记")
+	}
 	if values[3] != 0 || values[4] != 0 || values[5] != 0 || values[1] <= 0 || values[2] <= 0 || values[1] == values[2] {
 		report.Blockers = append(report.Blockers, "费率结构不能用于本次纯按额差别取整实验")
 	}

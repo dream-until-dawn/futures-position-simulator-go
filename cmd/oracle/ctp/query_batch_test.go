@@ -3,6 +3,7 @@ package ctp
 import (
 	"errors"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 )
@@ -23,6 +24,30 @@ func TestQueryBatchSeparatesEmptyAndFailure(t *testing.T) {
 	b.receive(2, nil, nil, true)
 	if rows, err := b.wait(2, time.Second); !errors.Is(err, sentinel) || rows != nil {
 		t.Fatalf("失败被洗成空成功或返回半截数据：%v %v", rows, err)
+	}
+}
+
+// TestQueryBatchConcurrentCallbacks 并发回调要逐条保留，结束后不再接收任何数据。
+func TestQueryBatchConcurrentCallbacks(t *testing.T) {
+	var b queryBatch[int]
+	b.begin(30)
+	var group sync.WaitGroup
+	for value := 0; value < 100; value++ {
+		group.Add(1)
+		go func(v int) { defer group.Done(); b.receive(30, &v, nil, false) }(value)
+	}
+	group.Wait()
+	b.receive(30, nil, nil, true)
+	rows, err := b.wait(30, time.Second)
+	if err != nil || len(rows) != 100 {
+		t.Fatalf("并发回调丢数据：%d %v", len(rows), err)
+	}
+	seen := make(map[int]bool)
+	for _, value := range rows {
+		if seen[value] {
+			t.Fatal("并发回调出现重复数据")
+		}
+		seen[value] = true
 	}
 }
 

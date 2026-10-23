@@ -47,6 +47,8 @@ func (f *preflightFake) Account(time.Duration) (*def.CThostFtdcTradingAccountFie
 func newPreflightFake() *preflightFake {
 	f := &preflightFake{spec: &def.CThostFtdcInstrumentField{PriceTick: 5, VolumeMultiple: 16}, rates: &def.CThostFtdcInstrumentCommissionRateField{OpenRatioByMoney: .0002, CloseRatioByMoney: .0002, CloseTodayRatioByMoney: .0004}, account: &def.CThostFtdcTradingAccountField{Available: 100000}}
 	copy(f.spec.ExchangeID[:], "DCE")
+	f.spec.IsTrading = 1
+	f.rates.InvestorRange = def.THOST_FTDC_IR_All
 	copy(f.spec.InstrumentID[:], "lh2701")
 	copy(f.spec.ExpireDate[:], "20270126")
 	copy(f.rates.InstrumentID[:], "lh2701")
