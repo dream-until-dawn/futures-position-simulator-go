@@ -131,6 +131,8 @@
 
 ## 开发
 
+挂单序号与存档示例见 [sequence_example_test.go](order/sequence_example_test.go)，可运行 `go test ./order -run Example -count=1`。`Live` 按 ID 排序；`OrderedIDs` 表示本地成功接收顺序。低层 Book 不执行完整报单校验；一般业务应通过 Simulator 的 Place / PlaceAccepted 接入，并用 State / Restore 保存完整账户。当前 StateFormat 为 5，旧格式明确拒绝且不自动迁移。K线撮合 F9c 仍待真实探针证据，当前 Advance 只守卫并计价。
+
 ```bash
 go env -w GOPROXY=https://goproxy.cn,direct
 ```
@@ -149,7 +151,7 @@ cp .env.example .env
 `cmd/oracle`（独立嵌套模块，含 `probe` 与 `conformance` 两个子命令）使用。
 
 分支约定见 [roadmap.md](docs/roadmap.md)：`dev` 是开发分支，`main` 只接受来自 `dev`
-的合并并在合并时打 tag。
+的合并，在版本验收达成时才打 tag。
 
 ---
 

@@ -65,12 +65,13 @@ func sidesOf(pos map[string]*def.CThostFtdcInvestorPositionField, inst string, d
 		if ctp.Text(p.InstrumentID[:]) != inst || p.PosiDirection != dir {
 			continue
 		}
+		// 当日开仓是累计值：即使已平到零，也不能把“开过”洗成“没开过”。
+		s.OpenedToday += int(p.OpenVolume)
 		if int(p.Position) == 0 && int(p.YdPosition) == 0 {
 			continue
 		}
 		s.Records++
 		total += int(p.Position)
-		s.OpenedToday += int(p.OpenVolume)
 		s.YdField += int(p.YdPosition)
 		if p.PositionDate == def.THOST_FTDC_PSD_Today {
 			s.Today += int(p.TodayPosition)

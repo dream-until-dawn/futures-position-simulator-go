@@ -56,6 +56,9 @@ func (s *Simulator) PlaceAccepted(day types.TradingDay, id string, req order.Req
 	if !req.Price.IsPositive() {
 		return order.Frozen{}, fmt.Errorf("委托 %s 的价格 %s 不为正 —— 簿上的单要能按挂单价成交", id, req.Price)
 	}
+	if req.Direction != types.Buy && req.Direction != types.Sell {
+		return order.Frozen{}, fmt.Errorf("委托 %s 的方向 %v 认不得", id, req.Direction)
+	}
 	inst, err := s.rules.Instrument(req.Instrument)
 	if err != nil {
 		return order.Frozen{}, err

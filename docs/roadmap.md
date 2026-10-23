@@ -608,6 +608,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
     函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots /
            Text / SplitSymbol / FarPrice
     方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
+           **UnfinishedOrders**（20261023：查所有未终结委托，包含未知及过渡态，供前置检查；非 Windows 明确未实现）
            **LiveOrders**（20260911 夜盘新增：查还挂着的委托 —— 此前这个包
            **能下单、却不能清理自己下出去的单**）/
            **CancelByOrder**（20260911 夜盘新增：按**交易所的 OrderSysID** 撤单。

@@ -1,0 +1,36 @@
+{
+  "source_commit": "66acde20e448422354decb6e92ded67f1939dd79",
+  "finished_audit_utc": "2026-10-23T12:07:41.270817+00:00",
+  "command": "go run ./tools/breakcheck -out C:/Temp/restore-stop-full-66acde2.json",
+  "mode": "full independent clean worktree run; no per-case retries or result merging",
+  "registered": 751,
+  "executed": 751,
+  "expected_red": 713,
+  "expected_green": 38,
+  "unexpected": 0,
+  "exit_code": 0,
+  "coverage_audit": "every report entry matches registry name/pkg/test/expect/want in order; names unique",
+  "closeout": "worktree restored to source commit; porcelain empty; no external changes reported",
+  "registry_git_blob_sha256": "7e9584cf0af1f453699d635442c970d5ff1461d2908a11ce683fee81f3b298dc",
+  "report_sha256": "b15b11d30edee566408ca9ef8a876ed0c1af88699ff60a3fd604593433aaae1e",
+  "raw_report_local": "C:/Temp/restore-stop-full-66acde2.json",
+  "raw_log_local": "C:/Temp/restore-stop-full-66acde2.log",
+  "regressions": [
+    "restore failure stops following cases after recording failure",
+    "write success with incorrect bytes stops",
+    "all files receive restoration attempts despite earlier restoration failure",
+    "ordinary verdicts and filtering retain order",
+    "Windows retry is bounded and limited to sharing/lock/mapped errors"
+  ],
+  "other_checks": [
+    "root go test ./... -count=1 passed",
+    "cmd/oracle go test ./... -count=1 passed",
+    "go vet ./tools/breakcheck passed",
+    "linux amd64 CGO_ENABLED=0 breakcheck cross-build passed"
+  ],
+  "limitations": [
+    "38 expected-green cases remain explicitly declared coverage gaps",
+    "old 742-case failed scan is not reused as passing evidence",
+    "no order/cancel execution; no F9c matching implementation"
+  ]
+}
