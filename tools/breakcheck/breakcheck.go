@@ -386,7 +386,7 @@ func run(b Break) (verdict, detail string) {
 		// ⚠️ 括号不是装饰：`^A|B$` 在正则里是 `(^A)|(B$)` —— **前缀或后缀**，
 		// 不是「A 或 B 的全名」。清单里有 5 条用 `A|B` 写多个测试名，
 		// 它们此前选对了人纯属侥幸：恰好没有别的测试名以 A 开头、以 B 结尾。
-		cmd := exec.Command("go", "test", b.Pkg, "-run", "^("+b.Test+")$", "-v")
+		cmd := exec.Command("go", "test", b.Pkg, "-run", "^("+b.Test+")$", "-v", "-count=1")
 		cmd.Dir = b.Dir // 空串表示当前目录
 		out, runErr := cmd.CombinedOutput()
 		return classify(b, string(out), runErr == nil)
@@ -483,6 +483,11 @@ func withBreak(b Break, body func() (string, string)) (verdict, detail string) {
 
 // classify 按 go test 的输出与退出码给一条破坏定判定。纯函数，单测直接喂输出文本。
 func classify(b Break, text string, green bool) (verdict, detail string) {
+	// 跳过（包括仅部分子测试跳过）不构成有效的红/绿证据。
+	// 只匹配完整结果行，避免日志中提及 SKIP 就被误判。
+	if skipResultRe.MatchString(text) {
+		return "零层未成立", "被选测试发生跳过，前置条件未成立，不能用于验证破坏；检查测试输出与运行权限"
+	}
 
 	// ⚠️ **跑了零条测试，也是退出 0。**
 	//
@@ -542,6 +547,8 @@ func classify(b Break, text string, green bool) (verdict, detail string) {
 	return "红错了理由", fmt.Sprintf(
 		"断言失败了，但断言输出里没有 %q（第三层不成立）%s：\n%s", b.Want, hint, tail(text, 600))
 }
+
+var skipResultRe = regexp.MustCompile(`(?m)^[ \t]*--- SKIP: [^\r\n ]+ \([0-9.]+s\)\r?$`)
 
 // compilerLineRe 认编译器 / vet 的报错行：`[vet: ]路径.go:行:列: 说明`（可带缩进）。测试断言行是 `xxx_test.go:行: 说明`，没有列号。
 //
