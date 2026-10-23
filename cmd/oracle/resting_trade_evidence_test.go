@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -168,4 +170,78 @@ func TestRestingPersistDelayStopsBeforeSend(t *testing.T) {
 			t.Fatalf("落盘后陈旧行情仍报单：%s sent=%d report=%+v err=%v", stage, f.sent, report, err)
 		}
 	}
+}
+
+// TestRestingOfflineRejectsMalformedStream 覆盖文件截断、未知字段、重复与阶段中途换计划。
+func TestRestingOfflineRejectsMalformedStream(t *testing.T) {
+	_, raw := recordedRestingFixture(t)
+	lines := bytes.Split(bytes.TrimSpace(raw), []byte("\n"))
+	changed := bytes.Replace(lines[1], []byte(strings.Repeat("a", 40)), []byte(strings.Repeat("b", 40)), 1)
+	mixed := append([][]byte(nil), lines...)
+	mixed[1] = changed
+	unknown := bytes.Replace(raw, []byte(`"Format":1`), []byte(`"Format":1,"UnregisteredField":true`), 1)
+	cases := map[string][]byte{
+		"空文件":    nil,
+		"末行截断":   raw[:len(raw)-10],
+		"最终阶段重复": append(append([]byte(nil), raw...), lines[len(lines)-1]...),
+		"未登记字段":  unknown,
+		"中途更换计划": bytes.Join(mixed, []byte("\n")),
+	}
+	for name, data := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := readRestingReport(bytes.NewReader(data)); err == nil {
+				t.Fatal("损坏的阶段文件仍通过")
+			}
+		})
+	}
+}
+
+// TestRestingVerifyCLI 确认离线入口不需要柜台凭据，且文件上限与命令行错误会失败。
+func TestRestingVerifyCLI(t *testing.T) {
+	_, raw := recordedRestingFixture(t)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "report.jsonl")
+	if err := os.WriteFile(path, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := runRestingVerify([]string{"oracle", "resting-verify", "-file", path}); err != nil {
+		t.Fatalf("有效报告不能通过离线入口：%v", err)
+	}
+	for _, args := range [][]string{
+		{"oracle", "resting-verify"},
+		{"oracle", "resting-verify", "-file", filepath.Join(dir, "missing")},
+		{"oracle", "resting-verify", "-file", path, "extra"},
+		{"oracle", "resting-verify", "-not-a-flag"},
+	} {
+		if err := runRestingVerify(args); err == nil {
+			t.Fatal("无效离线命令未失败")
+		}
+	}
+	if err := os.WriteFile(path, bytes.Repeat([]byte(" "), (1<<20)+1), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := runRestingVerify([]string{"oracle", "resting-verify", "-file", path}); err == nil || !strings.Contains(err.Error(), "上限") {
+		t.Fatalf("超大报告没有在读取上限处失败：%v", err)
+	}
+}
+
+// FuzzReadRestingReport 针对不可信本地文件检查解析边界，不连接柜台或生成交易。
+func FuzzReadRestingReport(f *testing.F) {
+	client := newFakeRestingProbe()
+	var raw bytes.Buffer
+	plan := strings.Repeat("a", 40)
+	encoder := json.NewEncoder(&raw)
+	_, err := executeRestingPrice(client, restingProbeConfig{PlanCommit: plan, BuildCommit: plan, Wait: 3 * time.Second, Timeout: time.Second}, client.clock, func(r *restingProbeReport) error { return encoder.Encode(r) })
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(raw.Bytes())
+	f.Add([]byte(`{"Stage":"finished"}`))
+	f.Add([]byte("\x00\r\n{}"))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) > 1<<20 {
+			t.Skip("入口已限制一MiB，超限不属于解析范围")
+		}
+		_, _ = readRestingReport(bytes.NewReader(data))
+	})
 }
