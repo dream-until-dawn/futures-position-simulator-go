@@ -202,10 +202,7 @@ func main() {
 	ran := 0
 	// ⚠️ 分解要单独数：只有总数时，「内部分解」只能靠人手数，而人会编。
 	red, green := 0, 0
-	for _, b := range breaks {
-		if *only != "" && !strings.Contains(b.Name, *only) {
-			continue
-		}
+	stopped, unrun := visitBreaks(breaks, *only, func(b Break) string {
 		ran++
 		verdict, detail := "", ""
 		if *compileOnly {
@@ -228,6 +225,10 @@ func main() {
 		default:
 			bad++
 		}
+		return verdict
+	})
+	if stopped {
+		fmt.Fprintf(os.Stderr, "\n⚠️ 还原失败，已立即停止；后续 %d 条未执行，不能作为完整验证。\n", unrun)
 	}
 	// ⚠️ 跑完再查一次工作树，但与**运行前的基线**比，不是要求绝对干净。
 	//
@@ -265,7 +266,7 @@ func main() {
 		if failed {
 			fmt.Fprintf(os.Stderr,
 				"\n⚠️⚠️ 跑完之后**清单里的文件**仍有改动，说明有破坏没还原：\n%s\n"+
-					"   立刻 git checkout -- <那些文件>\n", mine)
+					"   已停止；先保存差异并核对来源，再恢复明确的原始版本，不要盲目覆盖索引或他人改动。\n", mine)
 			bad++
 		}
 		if foreign != "" {
@@ -417,6 +418,11 @@ func buildFailed(text string) bool { return buildFailedRe.MatchString(text) }
 
 // withBreak 施加一条破坏、跑 body、无论如何还原；零层（锚点）不成立时不跑 body。
 func withBreak(b Break, body func() (string, string)) (verdict, detail string) {
+	return withBreakFiles(b, body, breakFileIO{read: os.ReadFile, write: os.WriteFile})
+}
+
+// withBreakFiles 通过文件边界注入真实的恢复故障，不改变生产调用的默认文件操作。
+func withBreakFiles(b Break, body func() (string, string), files breakFileIO) (verdict, detail string) {
 	// ⚠️ File 一律相对**仓库根**，而 go test 在 Dir 里跑。
 	// 两者的基准不同是刻意的：破坏改的是源码（按仓库定位），
 	// 测试跑的是模块（按模块定位）。混成一个会在嵌套模块上错。
@@ -434,7 +440,7 @@ func withBreak(b Break, body func() (string, string)) (verdict, detail string) {
 	}
 	var plan []staged
 	for _, e := range edits {
-		orig, err := os.ReadFile(e.File)
+		orig, err := files.read(e.File)
 		if err != nil {
 			return "零层未成立", fmt.Sprintf("读不到 %s：%v", e.File, err)
 		}
@@ -453,28 +459,25 @@ func withBreak(b Break, body func() (string, string)) (verdict, detail string) {
 	// ⚠️ defer **先装好再写**：装在写之后的话，第二个文件写失败时
 	// 第一个文件没有任何东西负责还原它。
 	defer func() {
+		var failures []string
 		for _, s := range plan {
-			if err := os.WriteFile(s.file, s.orig, 0o644); err != nil {
-				verdict = "⚠️ 还原失败"
-				detail = fmt.Sprintf("%s 没还原回去：%v —— 立刻 git checkout", s.file, err)
-				return
+			if err := restoreOriginal(files, s.file, s.orig); err != nil {
+				failures = append(failures, fmt.Sprintf("%s 没还原回去：%v", s.file, err))
+				continue
 			}
-			// ⚠️ 写回去了不等于还原了 —— 读回来逐字节比一次。
-			//
-			// 这一条比看起来重要：还原失败会让**后面每一条破坏**都跑在
-			// 一份被改坏的代码上，而它们的红绿从此不说明任何事。
-			back, rerr := os.ReadFile(s.file)
+			// 写回成功仍须读回一致；失败时也继续尽力恢复本条其余文件。
+			back, rerr := files.read(s.file)
 			if rerr != nil || string(back) != string(s.orig) {
-				verdict = "⚠️ 还原失败"
-				detail = fmt.Sprintf("%s 写回去了但内容对不上（%v）—— "+
-					"⚠️ 后面每一条破坏都会跑在被改坏的代码上，立刻 git checkout",
-					s.file, rerr)
-				return
+				failures = append(failures, fmt.Sprintf("%s 写回去了但内容对不上（%v）", s.file, rerr))
 			}
+		}
+		if len(failures) != 0 {
+			verdict = "⚠️ 还原失败"
+			detail = strings.Join(failures, "\n") + "\n已停止后续破坏；请保存差异并核对来源，再从明确的原始版本恢复，勿盲目覆盖工作区或索引"
 		}
 	}()
 	for _, s := range plan {
-		if err := os.WriteFile(s.file, s.broken, 0o644); err != nil {
+		if err := files.write(s.file, s.broken, 0o644); err != nil {
 			return "零层未成立", err.Error()
 		}
 	}
