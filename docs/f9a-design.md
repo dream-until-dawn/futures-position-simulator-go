@@ -1,6 +1,8 @@
 # F9a：挂单顺序与存档设计复核
 
-本稿以 main `6254e46` 为基线；当前执行状态与评审责任见 [state.md](./state.md)。仅设计，不实现 F9c 撮合或新增成交口径。
+本稿保留以 main `6254e46` 为基线的事前设计。F9a 已实现并合入 main `c7a00f8`，StateFormat 为 5；下文“拟/建议/请确认”属于当时设计记录。使用者已取消单独评审，当前执行状态见 [state.md](./state.md)。本批未实现 F9c 撮合或新增成交口径。
+
+可运行示例见 [sequence_example_test.go](../order/sequence_example_test.go)：展示接收序与字典序、重复 ID 拒绝、高水位及乱序数组恢复。低层 Book 只管理挂单与冻结，不能替代 Simulator 报单校验；一般业务保存 Simulator.State，再通过 Restore 恢复，避免遗漏账户、持仓与额度。
 
 ## 源码核验与边界
 
