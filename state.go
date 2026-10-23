@@ -232,6 +232,13 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 		return nil, err
 	}
 	for _, o := range st.Orders {
+		// 存档不应绕过接受挂单的基本形状检查；按昨结算价算冻结也不能洗掉零挂单价。
+		if !o.Request.Price.IsPositive() {
+			return nil, fmt.Errorf("存档里挂单 %s 的价格 %s 不为正", o.ID, o.Request.Price)
+		}
+		if o.Request.Direction != types.Buy && o.Request.Direction != types.Sell {
+			return nil, fmt.Errorf("存档里挂单 %s 的方向 %v 认不得", o.ID, o.Request.Direction)
+		}
 		inst, err := cfg.Rules.Instrument(o.Request.Instrument)
 		if err != nil {
 			return nil, fmt.Errorf("存档里的挂单 %s：%w", o.ID, err)

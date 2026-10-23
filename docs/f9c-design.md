@@ -24,6 +24,8 @@ High/Low/Close 不含 Open、盘口、成交量与真实排队信息。封板时
 
 同时核验 PlaceAccepted / Restore 的基本委托字段一致性：非正挂单价、非法方向不得变成永久无法撮合的隐形挂单。只做数据形状拒绝，不补未实测柜台拒因码，不改变既有已发生成交输入 ApplyTrade 的语义。
 
+该基础修复已独立验证并接线：TestAcceptedRequestDirection、TestRestoreRefusesInvalidOrderDirection 和 TestRestoreRefusesNonPositiveOrderPrice 均先在旧代码接受非法请求时失败，修复后通过。正对照的正常存档可以恢复；失败不留下冻结或新序号。只拒绝原本不合法的数据，未改变有效挂单语义和字段集，因此不抬当前格式5。F9c 的新口径字段仍等前置结果，尚未实施。
+
 ## 验证矩阵
 
 | 范围 | 正向与反向判据 |

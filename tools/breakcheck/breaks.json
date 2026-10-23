@@ -8045,5 +8045,35 @@
 	"test": "TestRestingTargetIsSimNowOnly",
 	"want": "错误柜台或非登记环境被放行",
 	"expect": "red"
+},
+{
+	"name": "818 接受挂单忽略非法方向",
+	"file": "place.go",
+	"old": "if req.Direction != types.Buy && req.Direction != types.Sell {",
+	"new": "if false && (req.Direction != types.Buy && req.Direction != types.Sell) {",
+	"pkg": ".",
+	"test": "TestAcceptedRequestDirection",
+	"want": "非法方向被接受",
+	"expect": "red"
+},
+{
+	"name": "819 恢复存档接受非正挂单价",
+	"file": "state.go",
+	"old": "if !o.Request.Price.IsPositive() {",
+	"new": "if false && !o.Request.Price.IsPositive() {",
+	"pkg": ".",
+	"test": "TestRestoreRefusesNonPositiveOrderPrice",
+	"want": "非正挂单价存档被接受",
+	"expect": "red"
+},
+{
+	"name": "820 恢复存档接受非法委托方向",
+	"file": "state.go",
+	"old": "if o.Request.Direction != types.Buy && o.Request.Direction != types.Sell {",
+	"new": "if false && (o.Request.Direction != types.Buy && o.Request.Direction != types.Sell) {",
+	"pkg": ".",
+	"test": "TestRestoreRefusesInvalidOrderDirection",
+	"want": "非法方向存档被接受",
+	"expect": "red"
 }
 ]
