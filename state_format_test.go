@@ -59,6 +59,7 @@ func stateFields() []string {
 // ⚠️ 旧的 impl-f10 分支（按「逐笔截断」写的，已被 F10 改写取代）曾在它自己的分支上把 2 用给了 SettleCommission —— 那一版不落地。
 // ⚠️ F5 到 b11c600 之间格式 1 的字段有没有变过而没抬号，本表回答不了 —— 这张表防的是今后。
 var stateFingerprints = map[int]string{
+	5: "13da5ac4b64bdbfabfbc15a151d54d88",
 	1: "a2b10ae2455cd8891e10313f00448bba",
 	2: "e2605fab03a8811d588cb672f88ffb6e",
 	3: "4a379c6808d44940cc3532d5753a94d8",
@@ -96,7 +97,7 @@ func TestRestoreRefusesOlderFormat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, old := range []int{1, 2, 3} {
+	for _, old := range []int{1, 2, 3, 4} {
 		st.Format = old
 		_, err = Restore(Config{Day: simDay, PreBalance: dec("100000"), Rules: simRules(t), Choices: ctpChoices()}, st)
 		if err == nil || !strings.Contains(err.Error(), "不迁移") {
