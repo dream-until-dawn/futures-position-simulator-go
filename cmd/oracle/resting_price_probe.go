@@ -29,6 +29,9 @@ type restingProbeClient interface {
 
 // restingProbeReport 是逐阶段追加的白名单证据，不包含账户身份或柜台自由文本。
 type restingProbeReport struct {
+	ObservedTradeRows                                                            int
+	MainTrades                                                                   []restingTradeEvidence
+	ControlPrice                                                                 string
 	BuildCommit                                                                  string
 	Format                                                                       int
 	PlanCommit, Symbol, TradingDay, StartedUTC, UpdatedUTC, Stage                string
@@ -211,8 +214,13 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	report.Tick = decimal.NewFromFloat(float64(spec.PriceTick)).String()
 	report.Multiplier = "10"
 	report.Stage = "control-before-insert"
+	report.ControlPrice = decimal.NewFromFloat(float64(md.LowerLimitPrice)).String()
 	// 对照意外成交即终止主实验；defer 负责只平本次一手。
 	if err = emit(); err != nil {
+		return report, err
+	}
+	// 同步落盘可能阻塞；报单前再次核对同一份行情，只能停止，不能悄悄追价。
+	if err = validateRestingQuote(md, spec, report.TradingDay, clock.Now()); err != nil {
 		return report, err
 	}
 	controlReq := ctp.OrderReq{Exchange: "SHFE", Instrument: "rb2701", Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open, Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}
@@ -224,7 +232,7 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	if err != nil {
 		return report, err
 	}
-	if report.Control.Filled != 0 || !report.Control.QueueObserved || report.Control.ErrorID != 0 {
+	if report.Control.Filled != 0 || !report.Control.QueueObserved || !report.Control.CancelAttempted || report.Control.ErrorID != 0 {
 		return report, fmt.Errorf("费用对照未形成未成交排队后撤单，不进入主探针")
 	}
 	fee, err = checkRestingEmpty(c, cfg.Timeout, false)
@@ -249,6 +257,9 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	if err = emit(); err != nil {
 		return report, err
 	}
+	if err = validateRestingQuote(md, spec, report.TradingDay, clock.Now()); err != nil {
+		return report, err
+	}
 	limit, _ := price.Float64()
 	mainReq := controlReq
 	mainReq.LimitPrice = limit
@@ -265,6 +276,13 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	}
 	trades, err := c.Trades(cfg.Timeout)
 	if err != nil {
+		return report, err
+	}
+	// 先把原始业务字段写下，再给出判定；不能只留下结论让后续无法重算。
+	report.ObservedTradeRows = len(trades)
+	report.MainTrades = copyOwnedTradeEvidence(trades, report.Main)
+	report.Stage = "main-trades-observed"
+	if err = emit(); err != nil {
 		return report, err
 	}
 	verdict, actual, err := restingPriceVerdict(trades, report.Main, price, report.TradingDay)

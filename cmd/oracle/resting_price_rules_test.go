@@ -13,7 +13,7 @@ func restingQuoteFixture() (*def.CThostFtdcDepthMarketDataField, *def.CThostFtdc
 	copy(md.InstrumentID[:], "rb2701")
 	copy(md.TradingDay[:], "20261023")
 	copy(md.UpdateTime[:], "13:35:00")
-	spec := &def.CThostFtdcInstrumentField{PriceTick: 1, IsTrading: 1}
+	spec := &def.CThostFtdcInstrumentField{PriceTick: 1, IsTrading: 1, VolumeMultiple: 10}
 	copy(spec.InstrumentID[:], "rb2701")
 	copy(spec.ExchangeID[:], "SHFE")
 	return md, spec, now
@@ -37,7 +37,7 @@ func TestPassivePriceInputs(t *testing.T) {
 
 // TestRestingEvidence 三种结论必须分开，错误引用和旧成交不能成为被动价证据。
 func TestRestingEvidence(t *testing.T) {
-	r := &def.CThostFtdcTradeField{Direction: def.THOST_FTDC_D_Buy, OffsetFlag: def.THOST_FTDC_OF_Open, Volume: 1, Price: 2997}
+	r := &def.CThostFtdcTradeField{Direction: def.THOST_FTDC_D_Buy, OffsetFlag: def.THOST_FTDC_OF_Open, HedgeFlag: def.THOST_FTDC_HF_Speculation, Volume: 1, Price: 2997}
 	copy(r.TradeID[:], "t")
 	copy(r.OrderRef[:], "own")
 	copy(r.OrderSysID[:], "sys")
@@ -45,7 +45,7 @@ func TestRestingEvidence(t *testing.T) {
 	copy(r.InstrumentID[:], "rb2701")
 	copy(r.TradingDay[:], "20261023")
 	copy(r.TradeTime[:], "13:36:00")
-	out := ownedOrderOutcome{Ref: "own", SysID: "sys", QueueObserved: true}
+	out := ownedOrderOutcome{Ref: "own", SysID: "sys", QueueObserved: true, LocalQueueMillis: 2000}
 	price := decimal.NewFromInt(2997)
 	verdict, _, err := restingPriceVerdict([]*def.CThostFtdcTradeField{r}, out, price, "20261023")
 	if err != nil || verdict != "supports-order-price" {
@@ -62,6 +62,12 @@ func TestRestingEvidence(t *testing.T) {
 		t.Fatal("即时成交被当成被动挂单证据")
 	}
 	out.QueueObserved = true
+	out.LocalQueueMillis = 1999
+	verdict, _, _ = restingPriceVerdict([]*def.CThostFtdcTradeField{r}, out, price, "20261023")
+	if verdict != "no-verdict" {
+		t.Fatal("短暂排队被当成充分观察")
+	}
+	out.LocalQueueMillis = 2000
 	copy(r.OrderRef[:], "old")
 	if _, _, err = restingPriceVerdict([]*def.CThostFtdcTradeField{r}, out, price, "20261023"); err == nil {
 		t.Fatal("误认旧引用成交")

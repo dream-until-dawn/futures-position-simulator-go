@@ -11,6 +11,9 @@ import (
 
 var probeShanghai = time.FixedZone("Asia/Shanghai", 8*60*60)
 
+// 本地短暂排队回报不能排除即时撮合与回调延迟；至少观察两秒才纳入本次样本判据。
+const minRestingQueueMillis int64 = 2000
+
 // validateRestingQuote 仅支持登记的日盘窗口，防旧行情和跨日数据被当成现场输入。
 func validateRestingQuote(md *def.CThostFtdcDepthMarketDataField, spec *def.CThostFtdcInstrumentField, day string, now time.Time) error {
 	local := now.In(probeShanghai)
@@ -18,7 +21,7 @@ func validateRestingQuote(md *def.CThostFtdcDepthMarketDataField, spec *def.CTho
 	if day != "20261023" || local.Format("20060102") != day || hm < 1330 || hm >= 1450 {
 		return fmt.Errorf("不在本次登记的日盘日期或收尾窗口")
 	}
-	if md == nil || spec == nil || ctp.Text(md.InstrumentID[:]) != "rb2701" || ctp.Text(spec.InstrumentID[:]) != "rb2701" || ctp.Text(spec.ExchangeID[:]) != "SHFE" || spec.IsTrading == 0 {
+	if md == nil || spec == nil || ctp.Text(md.InstrumentID[:]) != "rb2701" || ctp.Text(spec.InstrumentID[:]) != "rb2701" || ctp.Text(spec.ExchangeID[:]) != "SHFE" || spec.IsTrading == 0 || spec.PriceTick != 1 || spec.VolumeMultiple != 10 {
 		return fmt.Errorf("合约或可交易声明不匹配")
 	}
 	if ctp.Text(md.TradingDay[:]) != day {
@@ -60,14 +63,11 @@ func passiveProbePrice(md *def.CThostFtdcDepthMarketDataField, spec *def.CThostF
 
 // restingPriceVerdict 在空账户实验约束下只认唯一的一手买开，并要求曾观察到排队。
 func restingPriceVerdict(rows []*def.CThostFtdcTradeField, out ownedOrderOutcome, price decimal.Decimal, day string) (string, decimal.Decimal, error) {
-	if !out.QueueObserved || out.SubmissionUncertain {
-		return "no-verdict", decimal.Zero, nil
-	}
 	if len(rows) != 1 || rows[0] == nil {
 		return "no-verdict", decimal.Zero, fmt.Errorf("本次成交不能唯一归属")
 	}
 	r := rows[0]
-	if ctp.Text(r.TradeID[:]) == "" || ctp.Text(r.ExchangeID[:]) != "SHFE" || ctp.Text(r.InstrumentID[:]) != "rb2701" || ctp.Text(r.OrderRef[:]) != out.Ref || out.SysID == "" || ctp.Text(r.OrderSysID[:]) != out.SysID || r.Direction != def.THOST_FTDC_D_Buy || r.OffsetFlag != def.THOST_FTDC_OF_Open || int(r.Volume) != 1 || !finitePositive(float64(r.Price)) || ctp.Text(r.TradingDay[:]) != day {
+	if ctp.Text(r.TradeID[:]) == "" || ctp.Text(r.ExchangeID[:]) != "SHFE" || ctp.Text(r.InstrumentID[:]) != "rb2701" || ctp.Text(r.OrderRef[:]) != out.Ref || out.SysID == "" || ctp.Text(r.OrderSysID[:]) != out.SysID || r.Direction != def.THOST_FTDC_D_Buy || r.OffsetFlag != def.THOST_FTDC_OF_Open || r.HedgeFlag != def.THOST_FTDC_HF_Speculation || int(r.Volume) != 1 || !finitePositive(float64(r.Price)) || ctp.Text(r.TradingDay[:]) != day {
 		return "no-verdict", decimal.Zero, fmt.Errorf("成交身份、方向、手数或交易日不匹配")
 	}
 	at, err := time.Parse("15:04:05", ctp.Text(r.TradeTime[:]))
@@ -75,6 +75,9 @@ func restingPriceVerdict(rows []*def.CThostFtdcTradeField, out ownedOrderOutcome
 		return "no-verdict", decimal.Zero, fmt.Errorf("成交不在登记的连续竞价观察窗口")
 	}
 	actual := decimal.NewFromFloat(float64(r.Price))
+	if !out.QueueObserved || out.SubmissionUncertain || out.LocalQueueMillis < minRestingQueueMillis {
+		return "no-verdict", actual, nil
+	}
 	if actual.Equal(price) {
 		return "supports-order-price", actual, nil
 	}

@@ -7918,8 +7918,8 @@
 	"name": "806 即时成交误当被动价格证据",
 	"dir": "cmd/oracle",
 	"file": "cmd/oracle/resting_price_rules.go",
-	"old": "if !out.QueueObserved || out.SubmissionUncertain {",
-	"new": "if out.SubmissionUncertain {",
+	"old": "if !out.QueueObserved || out.SubmissionUncertain || out.LocalQueueMillis < minRestingQueueMillis {",
+	"new": "if out.SubmissionUncertain || out.LocalQueueMillis < minRestingQueueMillis {",
 	"pkg": ".",
 	"test": "TestRestingEvidence",
 	"want": "即时成交被当成被动挂单证据",
@@ -8074,6 +8074,83 @@
 	"pkg": ".",
 	"test": "TestRestoreRefusesInvalidOrderDirection",
 	"want": "非法方向存档被接受",
+	"expect": "red"
+},
+{
+	"name": "821 成交证据把原始价格改为零",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_trade_evidence.go",
+	"old": "Price: strconv.FormatFloat(float64(r.Price), 'g', -1, 64)",
+	"new": "Price: \"0\"",
+	"pkg": ".",
+	"test": "TestRestingEvidenceWhitelist",
+	"want": "原始成交证据缺失或价格被改写",
+	"expect": "red"
+},
+{
+	"name": "822 主挂单落盘后不拒绝旧行情",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if err = validateRestingQuote(md, spec, report.TradingDay, clock.Now()); err != nil {\n\t\treturn report, err\n\t}\n\tlimit, _ := price.Float64()",
+	"new": "if err = validateRestingQuote(md, spec, report.TradingDay, clock.Now()); false && err != nil {\n\t\treturn report, err\n\t}\n\tlimit, _ := price.Float64()",
+	"pkg": ".",
+	"test": "TestRestingPersistDelayStopsBeforeSend",
+	"want": "落盘后陈旧行情仍报单",
+	"expect": "red"
+},
+{
+	"name": "823 短暂排队样本直接给出价格结论",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_rules.go",
+	"old": "if !out.QueueObserved || out.SubmissionUncertain || out.LocalQueueMillis < minRestingQueueMillis {",
+	"new": "if !out.QueueObserved || out.SubmissionUncertain {",
+	"pkg": ".",
+	"test": "TestRestingEvidence",
+	"want": "短暂排队被当成充分观察",
+	"expect": "red"
+},
+{
+	"name": "824 离线核验忽略必要阶段",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_verify.go",
+	"old": "for _, stage := range []string{\"checking-empty-account\", \"control-before-insert\", \"control-after-order\", \"main-before-insert\", \"main-after-order\", \"finished\"} {",
+	"new": "for _, stage := range []string{} {",
+	"pkg": ".",
+	"test": "TestRestingOfflineRequiresAllPhases",
+	"want": "缺少必要阶段仍通过",
+	"expect": "red"
+},
+{
+	"name": "825 离线核验不比对原始成交与结论",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_trade_evidence.go",
+	"old": "if err != nil || verdict != report.Verdict || actual.String() != report.ActualPrice {",
+	"new": "if err != nil || (false && (verdict != report.Verdict || actual.String() != report.ActualPrice)) {",
+	"pkg": ".",
+	"test": "TestRestingOfflineRecomputes",
+	"want": "篡改报告仍离线通过",
+	"expect": "red"
+},
+{
+	"name": "826 非本次主动撤单也进入费用对照",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if report.Control.Filled != 0 || !report.Control.QueueObserved || !report.Control.CancelAttempted || report.Control.ErrorID != 0 {",
+	"new": "if report.Control.Filled != 0 || !report.Control.QueueObserved || report.Control.ErrorID != 0 {",
+	"pkg": ".",
+	"test": "TestRestingControlMustBeOwnCancel",
+	"want": "没有本次撤单仍进入主探针",
+	"expect": "red"
+},
+{
+	"name": "827 白名单业务字段误抄投资者身份",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_trade_evidence.go",
+	"old": "TradeID: ctp.Text(r.TradeID[:])",
+	"new": "TradeID: ctp.Text(r.InvestorID[:])",
+	"pkg": ".",
+	"test": "TestRestingEvidenceContainsNoIdentityValues",
+	"want": "成交证据泄漏身份字段",
 	"expect": "red"
 }
 ]

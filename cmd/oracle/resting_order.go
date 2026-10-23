@@ -27,6 +27,7 @@ func (wallProbeClock) Sleep(d time.Duration) { time.Sleep(d) }
 
 // ownedOrderOutcome 不含柜台自由文本，未知终态不能被编码成已撤。
 type ownedOrderOutcome struct {
+	LocalQueueMillis                                              int64
 	Ref, SysID                                                    string
 	Status                                                        byte
 	ErrorID, Filled                                               int
@@ -36,6 +37,7 @@ type ownedOrderOutcome struct {
 // waitOwnedOrder 最多一手，超时只撤本次引用；撤单途中成交仍须交给调用方按实际持仓收尾。
 func waitOwnedOrder(c ownedOrderClient, req ctp.OrderReq, wait, cancelWait, requestTimeout time.Duration, clock probeClock) (ownedOrderOutcome, error) {
 	var out ownedOrderOutcome
+	var firstQueued time.Time
 	if req.Volume != 1 || wait <= 0 || cancelWait <= 0 || requestTimeout <= 0 {
 		return out, fmt.Errorf("挂单探针必须一手且全部等待上限为正")
 	}
@@ -60,7 +62,13 @@ func waitOwnedOrder(c ownedOrderClient, req ctp.OrderReq, wait, cancelWait, requ
 			out.SysID = st.OrderSysID
 		}
 		if st.Alive() && st.VolumeTraded == 0 {
+			if !out.QueueObserved {
+				firstQueued = clock.Now()
+			}
 			out.QueueObserved = true
+		}
+		if st.VolumeTraded == 1 && out.QueueObserved {
+			out.LocalQueueMillis = clock.Now().Sub(firstQueued).Milliseconds()
 		}
 		out.Terminal = st.VolumeTraded == 1 || ownedTerminal(st.Status)
 		return nil

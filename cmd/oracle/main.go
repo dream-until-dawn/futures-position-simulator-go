@@ -62,6 +62,7 @@ func usage() {
   oracle ctp-inst -symbols SHFE.rb2701,GFEX.si2601   ⚠️ 只读：柜台声明的最小变动价位 / 乘数
   oracle ctp-rounding-preflight -symbol DCE.lh2701 [-env 路径]  只读：取整实验前置报告，不下单
   oracle ctp-resting-price -execute -plan <已推送40位提交号> -out <本机全新JSONL路径>  登记日盘一手挂单价探针
+  oracle resting-verify -file <本机JSONL报告>  离线重算挂单价判据，检查阶段与收尾
   oracle ctp-rates -symbols SHFE.rb2701,DCE.m2701
                                    ⚠️ **CTP/SimNow 侧**：查柜台**声明**的手续费率（三档各两项）。
                                    只读，不下单。⚠️ 声明与行为同源，对得上**不升证据等级**
@@ -226,6 +227,11 @@ func main() {
 		}
 	case "ctp-priority":
 		if err := runCTPPriority(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, "失败:", err)
+			os.Exit(1)
+		}
+	case "resting-verify":
+		if err := runRestingVerify(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, "失败:", err)
 			os.Exit(1)
 		}

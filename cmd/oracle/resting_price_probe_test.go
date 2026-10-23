@@ -14,6 +14,8 @@ import (
 )
 
 type fakeRestingProbe struct {
+	mainSentAt        time.Time
+	controlAutoCancel bool
 	*preflightFake
 	clock                                           *fakeProbeClock
 	states                                          map[string]ctp.OrderState
@@ -145,7 +147,7 @@ func (f *fakeRestingProbe) fill(ref string) {
 	if f.held > f.maxHeld {
 		f.maxHeld = f.held
 	}
-	tr := &def.CThostFtdcTradeField{Direction: r.Direction, OffsetFlag: r.Offset, Volume: 1, Price: def.TThostFtdcPriceType(r.LimitPrice)}
+	tr := &def.CThostFtdcTradeField{Direction: r.Direction, OffsetFlag: r.Offset, HedgeFlag: def.THOST_FTDC_HF_Speculation, Volume: 1, Price: def.TThostFtdcPriceType(r.LimitPrice)}
 	if ref == f.mainRef {
 		tr.Price += def.TThostFtdcPriceType(f.priceOffset)
 	}
@@ -168,6 +170,7 @@ func (f *fakeRestingProbe) Insert(r ctp.OrderReq, _ time.Duration) (ctp.OrderSta
 	f.states[ref] = ctp.OrderState{OrderRef: ref, OrderSysID: "sys" + ref, Status: def.THOST_FTDC_OST_NoTradeQueueing, VolumeTotal: 1}
 	if r.Direction == def.THOST_FTDC_D_Buy && r.LimitPrice != 2700 {
 		f.mainRef = ref
+		f.mainSentAt = f.clock.Now()
 	}
 	if r.Direction == def.THOST_FTDC_D_Sell || f.controlFill {
 		f.fill(ref)
@@ -175,7 +178,12 @@ func (f *fakeRestingProbe) Insert(r ctp.OrderReq, _ time.Duration) (ctp.OrderSta
 	return f.states[ref], nil
 }
 func (f *fakeRestingProbe) Order(ref string) (ctp.OrderState, bool) {
-	if ref == f.mainRef && f.fillMain {
+	if f.controlAutoCancel && ref != f.mainRef {
+		state := f.states[ref]
+		state.Status = def.THOST_FTDC_OST_Canceled
+		f.states[ref] = state
+	}
+	if ref == f.mainRef && f.fillMain && f.clock.Now().Sub(f.mainSentAt) >= 2*time.Second {
 		f.fill(ref)
 	}
 	s, ok := f.states[ref]
@@ -217,7 +225,7 @@ func TestRestingProbeWorkflow(t *testing.T) {
 			f.cancelRace = c.race
 			f.priceOffset = c.offset
 			var stages []string
-			report, err := executeRestingPrice(f, restingProbeConfig{PlanCommit: strings.Repeat("a", 40), Wait: time.Second, Timeout: time.Second}, f.clock, func(r *restingProbeReport) error { stages = append(stages, r.Stage); return nil })
+			report, err := executeRestingPrice(f, restingProbeConfig{PlanCommit: strings.Repeat("a", 40), Wait: 3 * time.Second, Timeout: time.Second}, f.clock, func(r *restingProbeReport) error { stages = append(stages, r.Stage); return nil })
 			if err != nil || report.Verdict != c.verdict || !report.FinalClean || f.held != 0 || f.sent != c.sent || f.maxHeld > 1 {
 				t.Fatalf("探针流程错误：%+v sent=%d held=%d max=%d err=%v", report, f.sent, f.held, f.maxHeld, err)
 			}
@@ -234,7 +242,7 @@ func TestRestingProbeFailuresStillClose(t *testing.T) {
 		f := newFakeRestingProbe()
 		f.controlFill = kind == "control-fill"
 		f.failEvidence = kind == "evidence-query"
-		report, err := executeRestingPrice(f, restingProbeConfig{Wait: time.Second, Timeout: time.Second}, f.clock, func(r *restingProbeReport) error {
+		report, err := executeRestingPrice(f, restingProbeConfig{Wait: 3 * time.Second, Timeout: time.Second}, f.clock, func(r *restingProbeReport) error {
 			if kind == "save-after-fill" && r.Stage == "main-after-order" {
 				return errors.New("写入失败")
 			}
