@@ -53,16 +53,11 @@ func (c *Client) Account(timeout time.Duration) (*def.CThostFtdcTradingAccountFi
 	f := def.CThostFtdcQryTradingAccountField{}
 	copy(f.BrokerID[:], c.cred.BrokerID)
 	copy(f.InvestorID[:], c.cred.UserID)
-	c.req("ReqQryTradingAccount", unsafe.Pointer(&f))
-	select {
-	case a := <-c.account:
-		if a == nil {
-			return nil, fmt.Errorf("查资金账户没有返回内容")
-		}
-		return a, nil
-	case <-time.After(timeout):
-		return nil, fmt.Errorf("%v 内没有等到资金账户的应答 —— ⚠️ **没有结论**，不是「查不到」", timeout)
+	rows, err := queryRows(c, &c.accountRows, "ReqQryTradingAccount", unsafe.Pointer(&f), timeout)
+	if err != nil {
+		return nil, err
 	}
+	return uniqueQueryRow(rows, nil)
 }
 
 // Positions 查持仓，键为合约 / 方向 / 今昨 / 投保，不合并不同属性。
@@ -150,8 +145,7 @@ func (c *Client) queryOrders(timeout time.Duration) ([]def.CThostFtdcOrderField,
 //
 //	⇒ 声明对得上行为时，它涨的是**这条公式的可读性**，不是证据等级。
 //	   对不上时才是新东西 —— 那说明我把某句声明读宽了。
-func (c *Client) CommissionRate(symbol string, timeout time.Duration) (
-	*def.CThostFtdcInstrumentCommissionRateField, error) {
+func (c *Client) CommissionRate(symbol string, timeout time.Duration) (*def.CThostFtdcInstrumentCommissionRateField, error) {
 	c.q.wait()
 	defer c.q.done()
 	ex, inst := SplitSymbol(symbol)
@@ -160,24 +154,14 @@ func (c *Client) CommissionRate(symbol string, timeout time.Duration) (
 	copy(f.InvestorID[:], c.cred.UserID)
 	copy(f.ExchangeID[:], ex)
 	copy(f.InstrumentID[:], inst)
-	// ⚠️ 排空上一次可能残留的应答：这个通道深度 1，
-	// 一条陈旧的费率与一条刚查到的**在类型上一模一样**。
-	select {
-	case <-c.comm:
-	default:
+	rows, err := queryRows(c, &c.commissionRows, "ReqQryInstrumentCommissionRate", unsafe.Pointer(&f), timeout)
+	if err != nil {
+		return nil, err
 	}
-	c.req("ReqQryInstrumentCommissionRate", unsafe.Pointer(&f))
-	select {
-	case r := <-c.comm:
-		if r == nil {
-			return nil, fmt.Errorf("查 %s 的手续费率：柜台回了空", symbol)
-		}
-		return r, nil
-	case <-time.After(timeout):
-		// ⚠️ 与查持仓同一条纪律：超时是**没有结论**，不是「这个合约没有费率」。
-		return nil, fmt.Errorf("%v 内没有等到 %s 的手续费率 —— "+
-			"⚠️ **没有结论**，不是「它不收费」", timeout, symbol)
-	}
+	// SimNow 本次只读实测的费率 ExchangeID 为空；合约仍须精确相等，非空交易所不能冲突。
+	return uniqueQueryRow(rows, func(r def.CThostFtdcInstrumentCommissionRateField) bool {
+		return text(r.InstrumentID[:]) == inst && (text(r.ExchangeID[:]) == "" || text(r.ExchangeID[:]) == ex)
+	})
 }
 
 // Trades 查**当日成交明细**。
@@ -268,72 +252,30 @@ func indexZero(b []byte) int {
 //
 // ⚠️ 郑商所 / 广期所此前拍不了拒因语料，理由写的是「仓库里没有它们最小变动价位的出处」。
 // 这个查询就是那个出处。
-func (c *Client) Instrument(symbol string, timeout time.Duration) (
-	*def.CThostFtdcInstrumentField, error) {
+func (c *Client) Instrument(symbol string, timeout time.Duration) (*def.CThostFtdcInstrumentField, error) {
 	c.q.wait()
 	defer c.q.done()
-	c.insMu.Lock()
-	c.ins = nil
-	c.insMu.Unlock()
-
 	ex, inst := SplitSymbol(symbol)
 	f := def.CThostFtdcQryInstrumentField{}
 	copy(f.ExchangeID[:], ex)
 	copy(f.InstrumentID[:], inst)
-	c.req("ReqQryInstrument", unsafe.Pointer(&f))
-	select {
-	case <-c.insDone:
-		c.insMu.Lock()
-		defer c.insMu.Unlock()
-		for _, r := range c.ins {
-			// ⚠️ 逐条核对合约代码：查询字段填得不够窄时会回一整批，
-			// 而「拿第一条」在那种情形下是**静默地**拿了别的合约的 tick。
-			if text(r.InstrumentID[:]) == inst {
-				return r, nil
-			}
-		}
-		return nil, fmt.Errorf("柜台回完了 %d 条合约，里面没有 %s —— "+
-			"⚠️ 这是**查到了但没有它**，与超时（没有结论）不是一回事", len(c.ins), symbol)
-	case <-time.After(timeout):
-		// ⚠️ 与其余各查同一条纪律：超时是**没有结论**，不是「没有这个合约」。
-		return nil, fmt.Errorf("%v 内没有等到 %s 的合约查询最后一条 —— "+
-			"⚠️ **没有结论**，不是「柜台没有这个合约」", timeout, symbol)
+	rows, err := queryRows(c, &c.instrumentRows, "ReqQryInstrument", unsafe.Pointer(&f), timeout)
+	if err != nil {
+		return nil, err
 	}
+	// 前缀匹配可能带回期权或相似合约，完整结束后才挑唯一精确匹配。
+	return uniqueQueryRow(rows, func(r def.CThostFtdcInstrumentField) bool {
+		return text(r.InstrumentID[:]) == inst && text(r.ExchangeID[:]) == ex
+	})
 }
 
 func (c *Client) registerQueryCallbacks() {
-	c.on("SetOnRspQryInstrument", func(r *def.CThostFtdcInstrumentField,
-		info *def.CThostFtdcRspInfoField, _ int, isLast bool) uintptr {
-		if err := errOf(info); err != nil {
-			c.logf("[ctp] ⚠️ 查合约失败 %v", err)
-		}
-		if r != nil && text(r.InstrumentID[:]) != "" {
-			cp := *r
-			c.insMu.Lock()
-			c.ins = append(c.ins, &cp)
-			c.insMu.Unlock()
-		}
-		if isLast {
-			select {
-			case c.insDone <- struct{}{}:
-			default:
-			}
-		}
+	c.on("SetOnRspQryInstrument", func(row *def.CThostFtdcInstrumentField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
+		c.instrumentRows.receive(id, row, errOf(info), last)
 		return 0
 	})
-	c.on("SetOnRspQryInstrumentCommissionRate", func(r *def.CThostFtdcInstrumentCommissionRateField,
-		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
-		if err := errOf(info); err != nil {
-			c.logf("[ctp] ⚠️ 查手续费率失败 %v", err)
-			c.comm <- nil
-			return 0
-		}
-		if r == nil {
-			c.comm <- nil
-			return 0
-		}
-		cp := *r
-		c.comm <- &cp
+	c.on("SetOnRspQryInstrumentCommissionRate", func(row *def.CThostFtdcInstrumentCommissionRateField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
+		c.commissionRows.receive(id, row, errOf(info), last)
 		return 0
 	})
 	c.on("SetOnRspQrySettlementInfo", func(row *def.CThostFtdcSettlementInfoField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
@@ -344,19 +286,8 @@ func (c *Client) registerQueryCallbacks() {
 		c.tradeRows.receive(id, row, errOf(info), last)
 		return 0
 	})
-	c.on("SetOnRspQryTradingAccount", func(a *def.CThostFtdcTradingAccountField,
-		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
-		if err := errOf(info); err != nil {
-			c.logf("[ctp] ⚠️ 查资金账户失败 %v", err)
-			c.account <- nil
-			return 0
-		}
-		if a == nil {
-			c.account <- nil
-			return 0
-		}
-		cp := *a
-		c.account <- &cp
+	c.on("SetOnRspQryTradingAccount", func(row *def.CThostFtdcTradingAccountField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
+		c.accountRows.receive(id, row, errOf(info), last)
 		return 0
 	})
 	c.on("SetOnRspQryOrder", func(row *def.CThostFtdcOrderField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
@@ -367,17 +298,22 @@ func (c *Client) registerQueryCallbacks() {
 		c.positionRows.receive(id, row, errOf(info), last)
 		return 0
 	})
+	c.on("SetOnRspQryBrokerTradingParams", func(row *def.CThostFtdcBrokerTradingParamsField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
+		c.brokerRows.receive(id, row, errOf(info), last)
+		return 0
+	})
 }
 
 // queryRows 在回调之前绑定请求编号，并将即时拒绝与分批回报错误统一交给收集器。
 func queryRows[T any](c *Client, b *queryBatch[T], name string, p unsafe.Pointer, timeout time.Duration) ([]T, error) {
 	id := c.nextRequestID()
-	b.begin(id)
-	result, _, _ := c.h.MustFindProc(name).Call(c.api, uintptr(p), uintptr(id))
-	if code := int32(result); code != 0 {
-		b.receive(id, nil, fmt.Errorf("%s 请求被立即拒绝：返回码 %d", name, code), true)
-	}
-	rows, err := b.wait(id, timeout)
+	rows, err := runQuery(b, id, timeout, func(requestID int) int32 {
+		if c.querySend != nil {
+			return c.querySend(name, p, requestID)
+		}
+		result, _, _ := c.h.MustFindProc(name).Call(c.api, uintptr(p), uintptr(requestID))
+		return int32(result)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("%s 没有完整成功：%w", name, err)
 	}

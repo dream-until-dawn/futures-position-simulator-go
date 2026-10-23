@@ -27,9 +27,8 @@ type Credentials struct {
 
 // Client 是一条 CTP 交易连接。
 //
-// ⚠️ **它只做只读取证**：连接、认证、登录、确认结算单、查询。
-// 报单要等 docs/ctp-oracle.md 的 P3，而 P3 之前 safety 那道闸必须先接上 ——
-// 顺序是设计的一部分：**先有报单、后补安全阀，中间那段时间它就是没有闸的。**
+// 支持连接、认证、登录、确认结算单及查询；报单只经 Insert 的安全阀路径。
+// 只读查询具有独立传输边界，不能借查询测试接口绕过报单安全阀。
 type Client struct {
 	cred Credentials
 	// Valve 是下单安全阀。⚠️ 它是 Client 的字段而不是 Insert 的参数：
@@ -49,38 +48,31 @@ type Client struct {
 	// 第一次被调用之前就被回收 —— 那种崩溃看起来像 DLL 的问题。
 	keep []any
 
-	tradingDay     string
-	loggedIn       chan error
-	q              queryer
+	tradingDay string
+	loggedIn   chan error
+	q          queryer
+	// querySend 是只读查询的传输边界；nil 时使用 DLL，测试可注入确定性的回调。
+	// 报单不经过此字段，也不能借此绕过 Insert 的安全阀。
+	querySend      func(string, unsafe.Pointer, int) int32
 	positionRows   queryBatch[def.CThostFtdcInvestorPositionField]
 	orderRows      queryBatch[def.CThostFtdcOrderField]
 	tradeRows      queryBatch[def.CThostFtdcTradeField]
 	settlementRows queryBatch[def.CThostFtdcSettlementInfoField]
-	account        chan *def.CThostFtdcTradingAccountField
+	accountRows    queryBatch[def.CThostFtdcTradingAccountField]
+	commissionRows queryBatch[def.CThostFtdcInstrumentCommissionRateField]
+	instrumentRows queryBatch[def.CThostFtdcInstrumentField]
+	marketRows     queryBatch[def.CThostFtdcDepthMarketDataField]
+	brokerRows     queryBatch[def.CThostFtdcBrokerTradingParamsField]
 	book           orderBook
 	// orderSeq 是本次会话的委托序号，**单调递增**。⚠️ 见 send 里的理由：
 	// 不递增的 OrderRef 会被 CTP 拒（ErrorID=22），而它只在第二笔单上暴露。
 	orderSeq int64
-	md       chan *def.CThostFtdcDepthMarketDataField
-	// wantInst 是**当前这次**行情查询要的合约。⚠️ 行情查询是前缀匹配，
-	// 不记下要的是哪个就会把别的合约当成答案。
-	wantInst string
 	// frontID / sessionID 来自登录应答，**撤单必须带**：
 	// CTP 用 (FrontID, SessionID, OrderRef) 三元组定位一笔委托。
 	// ⚠️ 少带一个不会报「参数缺失」，会报「找不到委托」——
 	// 而那与「这笔单已经不在了」长得一模一样。
 	frontID   int
 	sessionID int
-	params    chan *def.CThostFtdcBrokerTradingParamsField
-	// comm 是手续费率查询的应答。⚠️ 深度 1 且**只收一条** ——
-	// 这个查询按合约问、按合约答，不像持仓那样一问多条。
-	comm chan *def.CThostFtdcInstrumentCommissionRateField
-
-	// ins 是合约查询的应答累积。⚠️ 按 isLast 收尾而不是「收到一条就算完」：
-	// 查询字段填得不够窄时柜台会回一整批，那时「第一条」不一定是要的那个合约。
-	insMu   sync.Mutex
-	ins     []*def.CThostFtdcInstrumentField
-	insDone chan struct{}
 }
 
 // New 建一个尚未连接的客户端。
@@ -90,11 +82,6 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 	}
 	return &Client{cred: cred, logf: logf,
 		loggedIn: make(chan error, 1),
-		params:   make(chan *def.CThostFtdcBrokerTradingParamsField, 1),
-		account:  make(chan *def.CThostFtdcTradingAccountField, 1),
-		md:       make(chan *def.CThostFtdcDepthMarketDataField, 1),
-		comm:     make(chan *def.CThostFtdcInstrumentCommissionRateField, 1),
-		insDone:  make(chan struct{}, 1),
 	}
 }
 
@@ -243,22 +230,12 @@ func (c *Client) Connect(timeout time.Duration) error {
 			c.orderRows.receive(id, nil, err, true)
 			c.tradeRows.receive(id, nil, err, true)
 			c.settlementRows.receive(id, nil, err, true)
+			c.accountRows.receive(id, nil, err, true)
+			c.commissionRows.receive(id, nil, err, true)
+			c.instrumentRows.receive(id, nil, err, true)
+			c.marketRows.receive(id, nil, err, true)
+			c.brokerRows.receive(id, nil, err, true)
 		}
-		return 0
-	})
-	c.on("SetOnRspQryBrokerTradingParams", func(p *def.CThostFtdcBrokerTradingParamsField,
-		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
-		if err := errOf(info); err != nil {
-			c.logf("[ctp] ⚠️ 查询经纪商参数失败 %v", err)
-			c.params <- nil
-			return 0
-		}
-		if p == nil {
-			c.params <- nil
-			return 0
-		}
-		cp := *p
-		c.params <- &cp
 		return 0
 	})
 
@@ -298,21 +275,16 @@ func (c *Client) finishLogin(err error) {
 // ⚠️ 它返回的是**声明**，不是行为：查到的是柜台配置成什么，
 // 而「它是否真按这个算」要有持仓才验得了。见 docs/ctp-oracle.md 第 3 节。
 func (c *Client) BrokerParams(timeout time.Duration) (*def.CThostFtdcBrokerTradingParamsField, error) {
+	c.q.wait()
+	defer c.q.done()
 	f := def.CThostFtdcQryBrokerTradingParamsField{}
 	copy(f.BrokerID[:], c.cred.BrokerID)
 	copy(f.InvestorID[:], c.cred.UserID)
-	c.req("ReqQryBrokerTradingParams", unsafe.Pointer(&f))
-	select {
-	case p := <-c.params:
-		if p == nil {
-			return nil, fmt.Errorf("查询经纪商参数没有返回内容")
-		}
-		return p, nil
-	case <-time.After(timeout):
-		return nil, fmt.Errorf("%v 内没有等到经纪商参数的应答 —— "+
-			"⚠️ **没有结论**，不是「查不到」。"+
-			"20260909 见过一次同一个二进制第一次超时、第二次成功，原因未知", timeout)
+	rows, err := queryRows(c, &c.brokerRows, "ReqQryBrokerTradingParams", unsafe.Pointer(&f), timeout)
+	if err != nil {
+		return nil, err
 	}
+	return uniqueQueryRow(rows, nil)
 }
 
 // Close 释放连接。

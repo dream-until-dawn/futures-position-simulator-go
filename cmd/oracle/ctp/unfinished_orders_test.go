@@ -18,3 +18,14 @@ func TestUnfinishedOrdersKeepUnknown(t *testing.T) {
 		}
 	}
 }
+
+// TestUnfinishedOrdersSeparateEmptyPlaceholder 全零结束占位不代表挂单，零状态的非空记录仍须保留。
+func TestUnfinishedOrdersSeparateEmptyPlaceholder(t *testing.T) {
+	unknown := def.CThostFtdcOrderField{VolumeTotalOriginal: 1}
+	copy(unknown.InstrumentID[:], "rb2701")
+	copy(unknown.OrderRef[:], "own")
+	got := unfinishedOrderRows([]def.CThostFtdcOrderField{{}, unknown})
+	if len(got) != 1 || got[0].VolumeTotalOriginal != 1 || text(got[0].OrderRef[:]) != "own" {
+		t.Fatalf("全零占位与真实未知委托混淆：%d", len(got))
+	}
+}

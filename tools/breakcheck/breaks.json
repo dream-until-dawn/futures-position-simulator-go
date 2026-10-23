@@ -8152,5 +8152,104 @@
 	"test": "TestRestingEvidenceContainsNoIdentityValues",
 	"want": "成交证据泄漏身份字段",
 	"expect": "red"
-}
+},
+	{
+		"name": "828 只读结果忽略精确筛选",
+		"file": "cmd/oracle/ctp/query_result.go",
+		"old": "if match != nil && !match(rows[i]) {",
+		"new": "if false && match != nil && !match(rows[i]) {",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestUniqueQueryRow",
+		"expect": "red",
+		"want": "精确匹配失败"
+	},
+	{
+		"name": "829 只读结果重复匹配也挑最后一条",
+		"file": "cmd/oracle/ctp/query_result.go",
+		"old": "if found != nil {",
+		"new": "if false && found != nil {",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestUniqueQueryRow",
+		"expect": "red",
+		"want": "零条或不唯一结果仍通过"
+	},
+	{
+		"name": "830 只读发送拒绝码不传播",
+		"file": "cmd/oracle/ctp/query_result.go",
+		"old": "if code := send(id); code != 0 {",
+		"new": "if code := send(id); false && code != 0 {",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestQueryTransportBoundary",
+		"expect": "red",
+		"want": "即时拒绝没有传播"
+	},
+	{
+		"name": "831 资金回调丢掉请求编号",
+		"file": "cmd/oracle/ctp/query_windows.go",
+		"old": "c.accountRows.receive(id, row, errOf(info), last)",
+		"new": "c.accountRows.receive(0, row, errOf(info), last)",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestQueryCallbacksKeepRequestIdentity",
+		"expect": "red",
+		"want": "查询回调丢失编号、错误或批次接线"
+	},
+	{
+		"name": "832 通用错误遗漏行情请求编号",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "c.marketRows.receive(id, nil, err, true)",
+		"new": "c.marketRows.receive(0, nil, err, true)",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestQueryCallbacksKeepRequestIdentity",
+		"expect": "red",
+		"want": "通用错误遗漏查询批次"
+	},
+	{
+		"name": "833 行情精确匹配退化为任意非空合约",
+		"file": "cmd/oracle/ctp/marketdata_windows.go",
+		"old": "return text(r.InstrumentID[:]) == inst && text(r.ExchangeID[:]) == ex",
+		"new": "return len(inst) > 0 && len(ex) > 0",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestSingleQueriesUseIsolatedBatches",
+		"expect": "red",
+		"want": "非法查询结果仍成功"
+	},
+	{
+		"name": "834 费率精确匹配退化为任意非空合约",
+		"file": "cmd/oracle/ctp/query_windows.go",
+		"old": "return uniqueQueryRow(rows, func(r def.CThostFtdcInstrumentCommissionRateField) bool {\n\t\treturn text(r.InstrumentID[:]) == inst && (text(r.ExchangeID[:]) == \"\" || text(r.ExchangeID[:]) == ex)\n\t})",
+		"new": "return uniqueQueryRow(rows, func(r def.CThostFtdcInstrumentCommissionRateField) bool {\n\t\treturn len(inst) > 0 && len(ex) > 0\n\t})",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestSingleQueriesUseIsolatedBatches",
+		"expect": "red",
+		"want": "非法查询结果仍成功"
+	},
+	{
+		"name": "835 合约精确匹配退化为任意非空合约",
+		"file": "cmd/oracle/ctp/query_windows.go",
+		"old": "return uniqueQueryRow(rows, func(r def.CThostFtdcInstrumentField) bool {\n\t\treturn text(r.InstrumentID[:]) == inst && text(r.ExchangeID[:]) == ex\n\t})",
+		"new": "return uniqueQueryRow(rows, func(r def.CThostFtdcInstrumentField) bool {\n\t\treturn len(inst) > 0 && len(ex) > 0\n\t})",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"test": "TestSingleQueriesUseIsolatedBatches",
+		"expect": "red",
+		"want": "非法查询结果仍成功"
+	},
+	{
+		"name": "836 未终结委托把全零结束占位当作挂单",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/unfinished_orders.go",
+		"old": "if rows[i] == (def.CThostFtdcOrderField{}) {",
+		"new": "if false && rows[i] == (def.CThostFtdcOrderField{}) {",
+		"pkg": "./ctp",
+		"test": "TestUnfinishedOrdersSeparateEmptyPlaceholder",
+		"want": "全零占位与真实未知委托混淆",
+		"expect": "red"
+	}
 ]
