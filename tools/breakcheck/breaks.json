@@ -7847,5 +7847,49 @@
 	"test": "TestPositionRowsKeepAllDimensions",
 	"want": "持仓维度被覆盖",
 	"expect": "red"
+},
+{
+	"name": "800 前置检查忽略持仓查询失败",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/rounding_preflight.go",
+	"old": "positions, err := c.Positions(timeout)\n\tif err != nil {",
+	"new": "positions, err := c.Positions(timeout)\n\tif false && err != nil {",
+	"pkg": ".",
+	"test": "TestRoundingPreflightFailureAndRedaction",
+	"want": "查询失败被报告为成功",
+	"expect": "red"
+},
+{
+	"name": "801 前置检查有排队委托仍放行",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/rounding_preflight.go",
+	"old": "if len(orders) > 0 {",
+	"new": "if false && len(orders) > 0 {",
+	"pkg": ".",
+	"test": "TestRoundingPreflightFailureAndRedaction",
+	"want": "有委托未阻断",
+	"expect": "red"
+},
+{
+	"name": "802 前置检查把开平完毕误判为未开过",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/rounding_preflight.go",
+	"old": "case l.Today == 0 && l.Yd == 0 && l.OpenedToday == 0:",
+	"new": "case l.Today == 0 && l.Yd == 0:",
+	"pkg": ".",
+	"test": "TestRoundingPreflightStages",
+	"want": "阶段判错",
+	"expect": "red"
+},
+{
+	"name": "803 前置报告混入原始身份字段",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/rounding_preflight.go",
+	"old": "report.FeeScope = investorRange(rates)",
+	"new": "report.FeeScope = string(rates.InvestorID[:])",
+	"pkg": ".",
+	"test": "TestRoundingPreflightFailureAndRedaction",
+	"want": "前置报告泄漏原始身份字段",
+	"expect": "red"
 }
 ]
