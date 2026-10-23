@@ -157,12 +157,14 @@ func FreezeOf(req Request, in FreezeInput) (Frozen, error) {
 // 而那个错的方向是「看起来钱更少」—— 不会爆仓，只会少开仓，
 // 于是回测结果偏保守而**没有任何报错**。
 type Book struct {
-	live map[string]entry
+	live         map[string]entry
+	lastSequence uint64
 }
 
 type entry struct {
-	req    Request
-	frozen Frozen
+	sequence uint64
+	req      Request
+	frozen   Frozen
 }
 
 // NewBook 建一个空委托簿。
@@ -173,6 +175,18 @@ func NewBook() *Book { return &Book{live: map[string]entry{}} }
 // ⚠️ 同一个 id 插两次**报错**，不覆盖：覆盖会让前一笔的冻结凭空消失，
 // 而账面上只表现为「可用资金多了一点」。
 func (b *Book) Insert(id string, req Request, in FreezeInput) error {
+	seq, err := b.nextSequence()
+	if err != nil {
+		return err
+	}
+	if err = b.insertAt(id, req, in, seq); err != nil {
+		return err
+	}
+	b.lastSequence = seq
+	return nil
+}
+
+func (b *Book) insertAt(id string, req Request, in FreezeInput, sequence uint64) error {
 	if id == "" {
 		return fmt.Errorf("委托编号不能为空 —— 空 id 会让两笔单互相覆盖")
 	}
@@ -184,7 +198,7 @@ func (b *Book) Insert(id string, req Request, in FreezeInput) error {
 	if err != nil {
 		return fmt.Errorf("委托 %s：%w", id, err)
 	}
-	b.live[id] = entry{req, f}
+	b.live[id] = entry{sequence: sequence, req: req, frozen: f}
 	return nil
 }
 

@@ -117,6 +117,7 @@ func (s *Simulator) Fill(day types.TradingDay, id string) (match.Trade, error) {
 	if err := s.usable(day); err != nil {
 		return match.Trade{}, err
 	}
+	sequence, _ := s.book.Sequence(id)
 	req, fr, ok := s.book.Get(id)
 	if !ok {
 		return match.Trade{}, fmt.Errorf("委托 %s 不在簿上", id)
@@ -128,7 +129,7 @@ func (s *Simulator) Fill(day types.TradingDay, id string) (match.Trade, error) {
 		return match.Trade{}, err
 	}
 	if err := s.acc.Unfreeze(day, fr.Margin, fr.Commission); err != nil {
-		if ierr := s.book.Insert(id, req, freezeInputOf(fr)); ierr != nil {
+		if ierr := s.book.Reinsert(id, req, freezeInputOf(fr), sequence); ierr != nil {
 			s.broken = ierr
 		}
 		return match.Trade{}, err
@@ -137,7 +138,7 @@ func (s *Simulator) Fill(day types.TradingDay, id string) (match.Trade, error) {
 		// 放回：解冻与删簿的逆操作；放不回则失效
 		if ferr := s.acc.Freeze(day, fr.Margin, fr.Commission); ferr != nil {
 			s.broken = ferr
-		} else if ierr := s.book.Insert(id, req, freezeInputOf(fr)); ierr != nil {
+		} else if ierr := s.book.Reinsert(id, req, freezeInputOf(fr), sequence); ierr != nil {
 			s.broken = ierr
 		}
 		return match.Trade{}, err

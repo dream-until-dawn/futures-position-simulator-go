@@ -438,7 +438,7 @@ func runCTPQuotaExt(args []string) error {
 			return fmt.Errorf("⚠️ **不跑**：%s 平今 / 平昨声明同为 %s —— 没有判别力", *symbol, rateToday)
 		}
 	}
-	// 收尾：注册在第一笔委托之前。只平今仓（多头与空头），昨仓（种子）不碰。
+	// 收尾：注册在第一笔委托之前。按当前持仓尝试收尾；平今可能消耗昨仓，closeTodayStep 事后检测并停手，不能保证保留种子。
 	defer func() {
 		// ⚠️ 先撤挂单、再平仓（评审 20260922）：挂着的平仓单冻住可平量，先平的话平今单会因可平量不足被拒、今仓留在账上。
 		if err := sweepLive(c, inst, *timeout, logf); err != nil {
@@ -617,7 +617,6 @@ func runCTPQuotaExt(args []string) error {
 		if err != nil {
 			return fmt.Errorf("⚠️ ③ 之前查不到成交记录（没有结论）—— 不往下平：%w", err)
 		}
-		n0, lots0 := closeRecordsOn(tr0, inst)
 		d3, l3, _, err := step(3, func(md *def.CThostFtdcDepthMarketDataField) ctp.OrderReq {
 			return multiCloseReq(ex, inst, float64(md.LowerLimitPrice))
 		})
@@ -631,22 +630,13 @@ func runCTPQuotaExt(args []string) error {
 		if err != nil {
 			return fmt.Errorf("⚠️ **不判**：③ 之后查不到成交记录（盘中增量 %s 照记）：%w", d3, err)
 		}
-		n1, lots1 := closeRecordsOn(tr1, inst)
-		if verr := multiRecordVerdict(n0, lots0, n1, lots1); verr != nil {
-			return fmt.Errorf("%w（盘中增量 %s 照记）", verr, d3)
+		added, err := uniqueRoundingTrade(tr0, tr1, inst)
+		if err != nil {
+			return err
 		}
-		var fill decimal.Decimal
-		var tradeID string
-		for _, t3 := range tr1 {
-			if t3 != nil && ctp.Text(t3.InstrumentID[:]) == inst && t3.Direction == def.THOST_FTDC_D_Sell &&
-				t3.OffsetFlag != def.THOST_FTDC_OF_Open && int(t3.Volume) == 2 {
-				fill = decimal.NewFromFloat(float64(t3.Price))
-				tradeID = ctp.Text(t3.TradeID[:])
-			}
-		}
-		if fill.IsZero() {
-			return fmt.Errorf("⚠️ **不判**：③ 那条 2 手记录的成交价读不到（盘中增量 %s 照记）", d3)
-		}
+		fill := decimal.NewFromFloat(float64(added.Price))
+		tradeID := ctp.Text(added.TradeID[:])
+
 		whole, segment, disc := roundingCandidates(fill, mult, rToday, rYd, 1, 1)
 		logf("")
 		logf("[qx] ③ 一条 2 手记录成交在 %s（TradeID=%s）；盘中手续费增量 %s（盘中不取整，不判本题）", fill, tradeID, d3)
@@ -759,4 +749,58 @@ func runCTPQuotaExt(args []string) error {
 		logf("[qx] ⚠️ **谁都没预言到** —— 先别改本库，把截面拿去重看")
 	}
 	return nil
+}
+
+// uniqueRoundingTrade 只接受本次新增的一笔两手卖平成交，拒绝缺失或重复身份及拆单。
+func uniqueRoundingTrade(before, after []*def.CThostFtdcTradeField, inst string) (*def.CThostFtdcTradeField, error) {
+	index := func(rows []*def.CThostFtdcTradeField) (map[string]*def.CThostFtdcTradeField, error) {
+		out := map[string]*def.CThostFtdcTradeField{}
+		for _, r := range rows {
+			if r == nil {
+				return nil, fmt.Errorf("成交身份缺失")
+			}
+			id := ctp.Text(r.TradeID[:])
+			ex := ctp.Text(r.ExchangeID[:])
+			if id == "" || ex == "" {
+				return nil, fmt.Errorf("成交身份缺失")
+			}
+			key := ex + "/" + id
+			if _, ok := out[key]; ok {
+				return nil, fmt.Errorf("成交身份重复")
+			}
+			out[key] = r
+		}
+		return out, nil
+	}
+	old, err := index(before)
+	if err != nil {
+		return nil, err
+	}
+	now, err := index(after)
+	if err != nil {
+		return nil, err
+	}
+	for key, r := range old {
+		n, ok := now[key]
+		if !ok || *n != *r {
+			return nil, fmt.Errorf("原成交记录缺失或变化，不判")
+		}
+	}
+	var added *def.CThostFtdcTradeField
+	for key, r := range now {
+		if _, ok := old[key]; ok {
+			continue
+		}
+		if ctp.Text(r.InstrumentID[:]) != inst {
+			continue
+		}
+		if added != nil || r.Direction != def.THOST_FTDC_D_Sell || r.OffsetFlag != def.THOST_FTDC_OF_Close || int(r.Volume) != 2 || r.Price <= 0 {
+			return nil, fmt.Errorf("不是唯一新增两手卖平成交，不判")
+		}
+		added = r
+	}
+	if added == nil {
+		return nil, fmt.Errorf("没有新增两手卖平成交，不判")
+	}
+	return added, nil
 }

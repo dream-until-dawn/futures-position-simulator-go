@@ -65,7 +65,7 @@
 	{
 		"name": "788 字段未变就错误沿用旧委托语义格式3",
 		"dir": "", "file": "state.go",
-		"old": "const StateFormat = 4", "new": "const StateFormat = 3",
+		"old": "const StateFormat = 5", "new": "const StateFormat = 3",
 		"pkg": "./", "test": "TestRewriteRestoreRefusesLegacySemantics", "want": "旧语义格式 3 必须拒绝", "expect": "red"
 	},
 	{
@@ -6998,7 +6998,7 @@
 		"name": "711 存档新增结算字段却退回格式2（20260927 重锚：4 → 2；委托语义退回格式3由788守）",
 		"dir": "",
 		"file": "state.go",
-		"old": "const StateFormat = 4",
+		"old": "const StateFormat = 5",
 		"new": "const StateFormat = 2",
 		"pkg": "./",
 		"test": "TestStateFormatPinsFieldSet",
@@ -7742,5 +7742,46 @@
 		"test": "TestMoneyRatesRefusesMixed",
 		"want": "每手固定额",
 		"expect": "red"
-	}
+	},
+{
+	"name": "790 挂单按ID而非接收顺序返回",
+	"file": "order/sequence.go",
+	"old": "return b.live[ids[i]].sequence < b.live[ids[j]].sequence",
+	"new": "return ids[i] < ids[j]",
+	"pkg": "./order",
+	"test": "TestSequenceLifecycle",
+	"want": "挂单顺序错误",
+	"expect": "red"
+},
+{
+	"name": "791 F9a 回滚丢失接收顺序",
+	"file": "order/sequence.go",
+	"old": "return b.insertAt(id, req, in, sequence)",
+	"new": "return b.Insert(id, req, in)",
+	"pkg": "./order",
+	"test": "TestSequenceLifecycle",
+	"want": "回滚改变顺序",
+	"expect": "red"
+},
+{
+	"name": "792 F9a 恢复丢高水位",
+	"file": "order/sequence.go",
+	"old": "b.lastSequence = lastSequence",
+	"new": "b.lastSequence = 0",
+	"pkg": "./order",
+	"test": "TestSequenceRestoreRejects",
+	"want": "序号回绕",
+	"expect": "red"
+},
+{
+	"name": "793 lh 错把旧成交当本次成交",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/closefee_quotaext.go",
+	"old": "return added, nil",
+	"new": "return before[0], nil",
+	"pkg": ".",
+	"test": "TestUniqueRoundingTrade",
+	"want": "误取旧成交",
+	"expect": "red"
+}
 ]

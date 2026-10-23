@@ -22,16 +22,19 @@ import (
 //	2  State 加 Quotas（F11，裸平按当日开仓额度收档；使用者 20260918 确认抬一格）
 //	3  account.State 加 SettleCommission / CommissionTrades（F10，结算时按笔重算手续费；使用者确认「抬一格」）
 //	4  委托侧平今改写：Orders.Request 保存有效标志，字段不变但旧语义不能沿用。
-const StateFormat = 4
+//	5  F9a 挂单接收序号与高水位。
+const StateFormat = 5
 
 // State 是模拟器的全部状态，全是数据。小数在 JSON 里是字符串（decimal.Decimal 的默认）。
 //
 // ⚠️ 限仓、取整方向、日历、规则数据不在里面：它们是规则输入，由 Restore 的 Config 再给一次。
 type State struct {
-	Format       int
-	Day          types.TradingDay
-	RulesVersion int64
-	Choices      Choices
+	// LastOrderSequence 保存空簿也不能丢失的序号高水位。
+	LastOrderSequence uint64
+	Format            int
+	Day               types.TradingDay
+	RulesVersion      int64
+	Choices           Choices
 
 	Account   account.State
 	Positions []PositionState
@@ -72,9 +75,10 @@ type PriceState struct {
 
 // OrderState 是一笔挂单。Request 保存规则 #25 改写后的有效请求，原始发单请求由调用方留存。
 type OrderState struct {
-	ID      string
-	Request order.Request
-	Frozen  order.Frozen
+	Sequence uint64
+	ID       string
+	Request  order.Request
+	Frozen   order.Frozen
 }
 
 // State 导出模拟器的全部状态。失效态报错：半截状态存下来再恢复，等于把失效洗掉了。
@@ -82,7 +86,7 @@ func (s *Simulator) State() (State, error) {
 	if s.broken != nil {
 		return State{}, fmt.Errorf("模拟器已失效，不许导出：%w", s.broken)
 	}
-	st := State{Format: StateFormat, Day: s.acc.Day, RulesVersion: s.rules.Version(), Choices: s.choices, Account: s.acc.State()}
+	st := State{LastOrderSequence: s.book.LastSequence(), Format: StateFormat, Day: s.acc.Day, RulesVersion: s.rules.Version(), Choices: s.choices, Account: s.acc.State()}
 	for _, k := range sortedKeys(s.positions) {
 		p := s.positions[k]
 		long, _ := p.Side(types.Buy)
@@ -100,7 +104,8 @@ func (s *Simulator) State() (State, error) {
 	}
 	for _, id := range s.book.Live() {
 		req, fr, _ := s.book.Get(id)
-		st.Orders = append(st.Orders, OrderState{ID: id, Request: req, Frozen: fr})
+		seq, _ := s.book.Sequence(id)
+		st.Orders = append(st.Orders, OrderState{Sequence: seq, ID: id, Request: req, Frozen: fr})
 	}
 	for k, q := range s.quotas {
 		if q == (quotaCount{}) {
@@ -218,6 +223,14 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 		s.prices[px.Instrument] = priceState{last: px.Last, hasLast: px.HasLast, pre: px.PreSettlement, hasPre: px.HasPreSettlement}
 	}
 
+	entries := make([]order.BookEntry, 0, len(st.Orders))
+	for _, o := range st.Orders {
+		entries = append(entries, order.BookEntry{ID: o.ID, Request: o.Request, Frozen: o.Frozen, Sequence: o.Sequence})
+	}
+	s.book, err = order.RestoreBook(st.LastOrderSequence, entries)
+	if err != nil {
+		return nil, err
+	}
 	for _, o := range st.Orders {
 		inst, err := cfg.Rules.Instrument(o.Request.Instrument)
 		if err != nil {
@@ -226,9 +239,7 @@ func Restore(cfg Config, st State) (*Simulator, error) {
 		if _, rewritten := rewriteCloseToday(inst, o.Request); rewritten {
 			return nil, fmt.Errorf("存档里挂单 %s 是未转换的显式平今 —— 新格式必须保存有效请求，不自动迁移", o.ID)
 		}
-		if err := s.book.Insert(o.ID, o.Request, freezeInputOf(o.Frozen)); err != nil {
-			return nil, fmt.Errorf("存档里的挂单：%w", err)
-		}
+
 		if _, got, _ := s.book.Get(o.ID); fmt.Sprintf("%+v", got) != fmt.Sprintf("%+v", o.Frozen) {
 			return nil, fmt.Errorf("存档里挂单 %s 的冻结手数 %+v 与按开平标志重算的 %+v 不同", o.ID, o.Frozen, got)
 		}
