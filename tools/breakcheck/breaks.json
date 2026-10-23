@@ -7801,7 +7801,7 @@
 	"new": "\"-v\"",
 	"pkg": "./tools/breakcheck",
 	"test": "TestSkippedBreakEndToEnd",
-	"want": "未真实执行两次",
-	"expect": "red"
+	"why": "端到端计数文件可能使Go测试缓存自身失效；删掉-count=1仍可真实执行两次，所以它不能证明所有运行都禁用了缓存。生产命令显式禁用缓存，但此测试只证明本次执行次数。",
+	"expect": "green"
 }
 ]
