@@ -7891,5 +7891,159 @@
 	"test": "TestRoundingPreflightFailureAndRedaction",
 	"want": "前置报告泄漏原始身份字段",
 	"expect": "red"
+},
+{
+	"name": "804 未终结委托查询漏掉过渡态",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/ctp/unfinished_orders.go",
+	"old": "switch rows[i].OrderStatus {",
+	"new": "switch rows[i].OrderStatus { case def.THOST_FTDC_OST_Unknown, 'z': continue",
+	"pkg": "./ctp",
+	"test": "TestUnfinishedOrdersKeepUnknown",
+	"want": "未终结委托被漏掉",
+	"expect": "red"
+},
+{
+	"name": "805 挂单超时不撤自己的委托",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_order.go",
+	"old": "cancelErr := c.Cancel(out.Ref, req)",
+	"new": "cancelErr := error(nil)",
+	"pkg": ".",
+	"test": "TestOwnedOrderBoundedWait",
+	"want": "挂单生命周期错误",
+	"expect": "red"
+},
+{
+	"name": "806 即时成交误当被动价格证据",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_rules.go",
+	"old": "if !out.QueueObserved || out.SubmissionUncertain {",
+	"new": "if out.SubmissionUncertain {",
+	"pkg": ".",
+	"test": "TestRestingEvidence",
+	"want": "即时成交被当成被动挂单证据",
+	"expect": "red"
+},
+{
+	"name": "807 挂单探针忽略旧行情",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_rules.go",
+	"old": "if age := now.Sub(quoted); age < 0 || age > 5*time.Second {",
+	"new": "if age := now.Sub(quoted); age < 0 {",
+	"pkg": ".",
+	"test": "TestPassivePriceInputs",
+	"want": "无效行情放行",
+	"expect": "red"
+},
+{
+	"name": "808 挂单探针返回前不收尾一手敞口",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "runErr = errors.Join(runErr, finishRestingExposure(c, report, cfg.Timeout, clock, emit))",
+	"new": "runErr = errors.Join(runErr)",
+	"pkg": ".",
+	"test": "TestRestingProbeWorkflow",
+	"want": "探针流程错误",
+	"expect": "red"
+},
+{
+	"name": "809 挂单价证据不匹配本次引用",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_rules.go",
+	"old": "ctp.Text(r.OrderRef[:]) != out.Ref ||",
+	"new": "false ||",
+	"pkg": ".",
+	"test": "TestRestingEvidence",
+	"want": "误认旧引用成交",
+	"expect": "red"
+},
+{
+	"name": "810 未知开仓终态被洗成已收尾",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if !owner.Terminal {",
+	"new": "if false && !owner.Terminal {",
+	"pkg": ".",
+	"test": "TestFinishRefusesUnknownOrder",
+	"want": "未知开仓终态被宣布收尾完成",
+	"expect": "red"
+},
+{
+	"name": "811 挂单探针接受两手请求",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_order.go",
+	"old": "if req.Volume != 1 ||",
+	"new": "if req.Volume < 1 ||",
+	"pkg": ".",
+	"test": "TestOwnedOrderRefusesUnknown",
+	"want": "两手请求越过探针上限",
+	"expect": "red"
+},
+{
+	"name": "812 实际成交价不同仍声称支持挂单价",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_rules.go",
+	"old": "if actual.Equal(price) {",
+	"new": "if true {",
+	"pkg": ".",
+	"test": "TestRestingEvidence",
+	"want": "价格反例被忽略",
+	"expect": "red"
+},
+{
+	"name": "813 额外持仓时自行平仓",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if held != 1 || owner.Filled != 1 {",
+	"new": "if held < 1 || owner.Filled != 1 {",
+	"pkg": ".",
+	"test": "TestFinishRefusesExtraExposure",
+	"want": "额外持仓触发不受允许的平仓",
+	"expect": "red"
+},
+{
+	"name": "814 未显式执行也进入挂单入口",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if !*execute || *out == \"\"",
+	"new": "if (false && !*execute) || *out == \"\"",
+	"pkg": ".",
+	"test": "TestRestingCLIRequiresExplicitRun",
+	"want": "默认调用未明确拒绝执行",
+	"expect": "red"
+},
+{
+	"name": "815 允许脏构建执行探针",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if revision != plan || modified != \"false\" {",
+	"new": "if revision != plan || (false && modified != \"false\") {",
+	"pkg": ".",
+	"test": "TestRestingBuildMatchesPlan",
+	"want": "未登记或脏构建被接受",
+	"expect": "red"
+},
+{
+	"name": "816 允许非登记提交执行探针",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if revision != plan || modified != \"false\" {",
+	"new": "if modified != \"false\" {",
+	"pkg": ".",
+	"test": "TestRestingBuildMatchesPlan",
+	"want": "未登记或脏构建被接受",
+	"expect": "red"
+},
+{
+	"name": "817 挂单探针放行错误柜台",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/resting_price_probe.go",
+	"old": "if broker != \"9999\" || front != \"tcp://182.254.243.31:30001\" {",
+	"new": "if false && (broker != \"9999\" || front != \"tcp://182.254.243.31:30001\") {",
+	"pkg": ".",
+	"test": "TestRestingTargetIsSimNowOnly",
+	"want": "错误柜台或非登记环境被放行",
+	"expect": "red"
 }
 ]

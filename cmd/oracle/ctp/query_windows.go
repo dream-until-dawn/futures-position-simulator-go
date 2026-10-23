@@ -98,12 +98,7 @@ func (c *Client) Positions(timeout time.Duration) (map[string]*def.CThostFtdcInv
 // ⚠️ 返回的是**当前还活着**的那些（`OST_NoTradeQueueing` / `PartTradedQueueing`），
 // 不是全部委托：已成交与已撤的没有可撤性，混在一起只会让调用方再筛一次。
 func (c *Client) LiveOrders(timeout time.Duration) ([]*def.CThostFtdcOrderField, error) {
-	c.q.wait()
-	defer c.q.done()
-	f := def.CThostFtdcQryOrderField{}
-	copy(f.BrokerID[:], c.cred.BrokerID)
-	copy(f.InvestorID[:], c.cred.UserID)
-	rows, err := queryRows(c, &c.orderRows, "ReqQryOrder", unsafe.Pointer(&f), timeout)
+	rows, err := c.queryOrders(timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +109,28 @@ func (c *Client) LiveOrders(timeout time.Duration) ([]*def.CThostFtdcOrderField,
 		}
 	}
 	return out, nil
+}
+
+// UnfinishedOrders 包括未知及过渡态；用于前置检查，不把“还未确认排队”当作没有委托。
+func (c *Client) UnfinishedOrders(timeout time.Duration) ([]*def.CThostFtdcOrderField, error) {
+	rows, err := c.queryOrders(timeout)
+	if err != nil {
+		return nil, err
+	}
+	return unfinishedOrderRows(rows), nil
+}
+
+func (c *Client) queryOrders(timeout time.Duration) ([]def.CThostFtdcOrderField, error) {
+	c.q.wait()
+	defer c.q.done()
+	f := def.CThostFtdcQryOrderField{}
+	copy(f.BrokerID[:], c.cred.BrokerID)
+	copy(f.InvestorID[:], c.cred.UserID)
+	rows, err := queryRows(c, &c.orderRows, "ReqQryOrder", unsafe.Pointer(&f), timeout)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // CommissionRate 查柜台**声明**的手续费率。

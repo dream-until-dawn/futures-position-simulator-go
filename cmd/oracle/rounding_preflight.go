@@ -21,7 +21,7 @@ type roundingReader interface {
 	Instrument(string, time.Duration) (*def.CThostFtdcInstrumentField, error)
 	CommissionRate(string, time.Duration) (*def.CThostFtdcInstrumentCommissionRateField, error)
 	Positions(time.Duration) (map[string]*def.CThostFtdcInvestorPositionField, error)
-	LiveOrders(time.Duration) ([]*def.CThostFtdcOrderField, error)
+	UnfinishedOrders(time.Duration) ([]*def.CThostFtdcOrderField, error)
 	Account(time.Duration) (*def.CThostFtdcTradingAccountField, error)
 }
 
@@ -36,7 +36,7 @@ type roundingPreflightReport struct {
 	FeeScope                             string
 	DeclaredTrading                      bool
 	Long, Short                          longSides
-	QueuedOrders                         int
+	UnfinishedOrders                     int
 	Available, Commission                string
 	Stage                                string
 	Blockers                             []string
@@ -56,7 +56,7 @@ func collectRoundingPreflight(c roundingReader, symbol string, timeout time.Dura
 	if _, err := time.Parse("20060102", day); err != nil {
 		return nil, fmt.Errorf("柜台交易日无效")
 	}
-	report := &roundingPreflightReport{Format: 1, Symbol: symbol, TradingDay: day, StartedUTC: time.Now().UTC().Format(time.RFC3339Nano), Requires: []string{"核验实际交易日历和日盘窗口", "核验报价新鲜度、流动性和资金上限", "确认单独的种子及跨结算持仓范围", "新一笔两手及临时阀门调整需明确授权", "候选和判据正式登记推送后才执行", "本报告是顺序只读查询，不是原子快照或下单许可；排队委托计数不覆盖未确认过渡态"}}
+	report := &roundingPreflightReport{Format: 1, Symbol: symbol, TradingDay: day, StartedUTC: time.Now().UTC().Format(time.RFC3339Nano), Requires: []string{"核验实际交易日历和日盘窗口", "核验报价新鲜度、流动性和资金上限", "确认单独的种子及跨结算持仓范围", "新一笔两手及临时阀门调整需明确授权", "候选和判据正式登记推送后才执行", "本报告是顺序只读查询，不是原子快照或下单许可；未终结委托计数包含过渡态；仍需避免其他操作者并发使用账户"}}
 	spec, err := c.Instrument(symbol, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("合约查询：%w", err)
@@ -123,7 +123,7 @@ func collectRoundingPreflight(c roundingReader, symbol string, timeout time.Dura
 	}
 	report.Long = longSidesOf(positions, inst)
 	report.Short = shortSidesOf(positions, inst)
-	orders, err := c.LiveOrders(timeout)
+	orders, err := c.UnfinishedOrders(timeout)
 	if err != nil {
 		return nil, fmt.Errorf("委托查询：%w", err)
 	}
@@ -132,9 +132,9 @@ func collectRoundingPreflight(c roundingReader, symbol string, timeout time.Dura
 			return nil, fmt.Errorf("委托含空记录")
 		}
 	}
-	report.QueuedOrders = len(orders)
+	report.UnfinishedOrders = len(orders)
 	if len(orders) > 0 {
-		report.Blockers = append(report.Blockers, "账户有排队委托，先核对归属与干扰")
+		report.Blockers = append(report.Blockers, "账户有未终结委托，先核对归属与干扰")
 	}
 	account, err := c.Account(timeout)
 	if err != nil {

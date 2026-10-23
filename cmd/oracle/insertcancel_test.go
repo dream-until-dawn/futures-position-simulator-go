@@ -148,6 +148,7 @@ func TestImmediateFillPathsCancelOnMiss(t *testing.T) {
 // ⚠️ 这张表以外的函数一律走 insertOrCancel —— 要求立刻成交的委托没成交就撤、撤干净再返回（评审 20260922）。
 // 新写一个工具直接调 Insert，本条会红：那时要么改走 insertOrCancel，要么把它加进来并写清它自己怎么撤。
 var directInsertAllowed = map[string]string{
+	"waitOwnedOrder":      "P-resting-price 有意挂单：有上限等待，超时与发单不明按本次ref撤并确认终态；绝不扫其他委托。TestOwnedOrderBoundedWait / RefusesUnknown 覆盖超时及撤单途中成交",
 	"insertOrCancel":      "它就是那道撤单（cancelAndConfirm）",
 	"runControlDeclaring": "controlVerdict 判出要撤时按 ref 撤；报错提前返回的路径由调用方（runCTPPairs / runCTPReject / runCTPPriority）的收尾 sweepLive 兜底",
 	"runCTPDup":           "重复报单：格子挂着是判据，正常路径逐格按 ref 撤；中途报错由收尾 defer sweepLive 兜底",

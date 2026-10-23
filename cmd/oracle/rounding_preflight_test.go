@@ -37,7 +37,7 @@ func (f *preflightFake) CommissionRate(string, time.Duration) (*def.CThostFtdcIn
 func (f *preflightFake) Positions(time.Duration) (map[string]*def.CThostFtdcInvestorPositionField, error) {
 	return f.positions, f.failure("positions")
 }
-func (f *preflightFake) LiveOrders(time.Duration) ([]*def.CThostFtdcOrderField, error) {
+func (f *preflightFake) UnfinishedOrders(time.Duration) ([]*def.CThostFtdcOrderField, error) {
 	return f.orders, f.failure("orders")
 }
 func (f *preflightFake) Account(time.Duration) (*def.CThostFtdcTradingAccountField, error) {

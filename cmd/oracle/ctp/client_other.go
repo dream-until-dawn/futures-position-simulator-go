@@ -91,6 +91,11 @@ func (c *Client) LiveOrders(time.Duration) ([]*def.CThostFtdcOrderField, error) 
 	return nil, errPlatform
 }
 
+// UnfinishedOrders 在非Windows平台明确返回未实现。
+func (c *Client) UnfinishedOrders(time.Duration) ([]*def.CThostFtdcOrderField, error) {
+	return nil, errPlatform
+}
+
 // CancelByOrder 在非 Windows 上不可用。
 func (c *Client) CommissionRate(string, time.Duration) (
 	*def.CThostFtdcInstrumentCommissionRateField, error) {
