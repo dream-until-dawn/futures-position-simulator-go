@@ -7790,7 +7790,7 @@
 	"old": "if skipResultRe.MatchString(text) {",
 	"new": "if false && skipResultRe.MatchString(text) {",
 	"pkg": "./tools/breakcheck",
-	"test": "TestSkippedCannotValidateBreak",
+	"test": "TestSkippedCannotValidateBreak|TestSkippedBreakEndToEnd",
 	"want": "跳过却被接受",
 	"expect": "red"
 },
