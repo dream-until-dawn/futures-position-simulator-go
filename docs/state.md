@@ -2521,6 +2521,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/f9a-design.md` | 5 |
 | `docs/lh-rounding-plan.md` | 4 |
 | `docs/resting-price-plan.md` | 4 |
+| `docs/f9c-design.md` | 5 |
 
 ⚠️ **增删小节时要同步改这里**，这是刻意的摩擦：一次有意的增删是一行改动，
 一次意外的删除则会红。守卫是 `TestDocSectionCountsMatch`。
