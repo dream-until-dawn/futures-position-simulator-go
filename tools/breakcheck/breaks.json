@@ -7803,5 +7803,16 @@
 	"test": "TestSkippedBreakEndToEnd",
 	"why": "端到端计数文件可能使Go测试缓存自身失效；删掉-count=1仍可真实执行两次，所以它不能证明所有运行都禁用了缓存。生产命令显式禁用缓存，但此测试只证明本次执行次数。",
 	"expect": "green"
+},
+{
+	"name": "796 空仓记录丢弃当日累计开仓",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/closeorder.go",
+	"old": "s.OpenedToday += int(p.OpenVolume)",
+	"new": "if int(p.Position) != 0 { s.OpenedToday += int(p.OpenVolume) }",
+	"pkg": ".",
+	"test": "TestFlatPositionKeepsOpenedToday",
+	"want": "空仓丢失当日开仓累计",
+	"expect": "red"
 }
 ]
