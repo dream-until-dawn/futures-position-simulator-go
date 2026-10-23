@@ -7783,5 +7783,25 @@
 	"test": "TestUniqueRoundingTrade",
 	"want": "误取旧成交",
 	"expect": "red"
+},
+{
+	"name": "794 跳过测试仍被当作有效破坏验证",
+	"file": "tools/breakcheck/breakcheck.go",
+	"old": "if skipResultRe.MatchString(text) {",
+	"new": "if false && skipResultRe.MatchString(text) {",
+	"pkg": "./tools/breakcheck",
+	"test": "TestSkippedCannotValidateBreak",
+	"want": "跳过却被接受",
+	"expect": "red"
+},
+{
+	"name": "795 破坏运行复用测试缓存",
+	"file": "tools/breakcheck/breakcheck.go",
+	"old": "\"-v\", \"-count=1\"",
+	"new": "\"-v\"",
+	"pkg": "./tools/breakcheck",
+	"test": "TestSkippedBreakEndToEnd",
+	"why": "端到端计数文件可能使Go测试缓存自身失效；删掉-count=1仍可真实执行两次，所以它不能证明所有运行都禁用了缓存。生产命令显式禁用缓存，但此测试只证明本次执行次数。",
+	"expect": "green"
 }
 ]
