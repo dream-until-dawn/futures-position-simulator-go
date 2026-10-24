@@ -62,6 +62,13 @@ func TestBundleBindingAndStrictJSON(t *testing.T) {
 			t.Fatal("金额类型或指数绕过规范指纹")
 		}
 	}
+	if !bytes.Contains(raw, []byte(`"UndatedCloseOnUseHistory": 0`)) {
+		t.Fatal("非空零值反例前提缺失")
+	}
+	nullConfig := bytes.Replace(raw, []byte(`"UndatedCloseOnUseHistory": 0`), []byte(`"UndatedCloseOnUseHistory": null`), 1)
+	if _, err := Decode(bytes.NewReader(nullConfig)); err == nil {
+		t.Fatal("非空字段null被解释成零")
+	}
 	for i, bad := range cases {
 		if _, err := Decode(bytes.NewReader(bad)); err == nil {
 			t.Fatalf("严格解码未拒绝坏输入%d", i)

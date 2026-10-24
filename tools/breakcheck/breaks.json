@@ -8740,5 +8740,16 @@
 		"test": "TestReplayLedger",
 		"want": "回放擅自提升证据等级",
 		"expect": "red"
+	},
+	{
+		"name": "882 非空字段null被悄悄当成零",
+		"dir": "",
+		"file": "replay/codec.go",
+		"old": "if value == nil && t.Kind() != reflect.Slice {",
+		"new": "if value == nil && t.Kind() != reflect.Slice && false {",
+		"pkg": "./replay",
+		"test": "TestBundleBindingAndStrictJSON",
+		"want": "非空字段null被解释成零",
+		"expect": "red"
 	}
 ]

@@ -115,6 +115,10 @@ func checkShape(value any, t reflect.Type, wide bool) error {
 		}
 		return nil
 	}
+	// encoding/json会把null解到整数/布尔/字符串的零值，不能把未知洗成显式配置。
+	if value == nil && t.Kind() != reflect.Slice {
+		return fmt.Errorf("非可空字段收到null")
+	}
 	switch t.Kind() {
 	case reflect.Struct:
 		m, ok := value.(map[string]any)
