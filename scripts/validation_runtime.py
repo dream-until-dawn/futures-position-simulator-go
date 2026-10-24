@@ -120,5 +120,9 @@ def bounded_process(command, cwd, timeout):
         timer.join()
         if getattr(process, "validation_job", None) is not None:
             process.validation_job.close()
+        elif os.name != "nt":
+            stop_tree(process)
+        if process.stdin is not None and not process.stdin.closed:
+            process.stdin.close()
         process.stdout.close()
         process.wait(timeout=20)

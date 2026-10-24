@@ -70,6 +70,16 @@ class RuntimeTests(unittest.TestCase):
             time.sleep(3)
             self.assertFalse(marker.exists(), "orphan survived after root exited")
 
+    def test_success_also_reaps_detached_output_descendant(self):
+        with tempfile.TemporaryDirectory() as folder:
+            marker = Path(folder) / "background-survived"
+            child = "import time,pathlib;time.sleep(2);pathlib.Path(" + repr(str(marker)) + ").write_text('bad')"
+            parent = "import subprocess,sys;subprocess.Popen([sys.executable,'-c'," + repr(child) + "],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)"
+            result = run_checked([sys.executable, "-c", parent], folder, Path(folder) / "success.log", timeout=5)
+            self.assertEqual(result["exit_code"], 0)
+            time.sleep(2.5)
+            self.assertFalse(marker.exists(), "background descendant survived normal completion")
+
 
 if __name__ == "__main__":
     unittest.main()

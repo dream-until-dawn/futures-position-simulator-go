@@ -8476,5 +8476,16 @@
 		"test": "TestOwnedOrderReplay",
 		"want": "回放未拒绝一手部分成交矛盾",
 		"expect": "red"
+	},
+	{
+		"name": "858 Windows正常结束漏清理后台后代",
+		"dir": "",
+		"file": "scripts/validation_runtime.py",
+		"old": "process.validation_job.close()",
+		"new": "pass # deliberately retain job and descendants",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonRuntimeBoundary",
+		"want": "background descendant survived normal completion",
+		"expect": "red"
 	}
 ]
