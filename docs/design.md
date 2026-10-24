@@ -144,9 +144,13 @@ CTP 的平仓标志里同时有「交易所强平」「强减」「本地强平�
 
   view/                 与 CTP 结构体、DIFF 业务截面字段级同构的视图
 
+  replay/               纯离线事件重放、配置绑定、计算账单与差异定位；依赖门面，不反向注入内核
+
   internal/decimalx/    取整与舍入口径（金额、价格、手续费）
 
   cmd/refdata-sync/     生成内置快照（只用 stdlib + 本库，留在主模块）
+
+  cmd/replay/           自包含合成演示包、显式事件重放与报告首差异；不连接柜台
 
   cmd/oracle/           ← 独立嵌套模块（自带 go.mod）：一切需要连柜台的工具
                         oracle = test oracle，**判定真值的那一方**，不是数据库

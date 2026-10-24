@@ -3,6 +3,8 @@
 范围与决策依据见 [design.md](./design.md)，规则依据见 [cn-futures-rules.md](./cn-futures-rules.md)，
 可行性依据见 [probes.md](./probes.md)。
 
+2026-10-24 离线交付分期：新增 `replay` 包及 `cmd/replay`，复用现有规则快照与内核State/Restore；包依赖方向为replay → futsim/refdata，不改变内核存档格式。按业务重放、自包含包、首差异与账单、长周期/耐久、独立模块接入推进，设计与验收见 [离线重放](./offline-replay.md)。F9c仍保留实测前置。
+
 ## 分支与发布约定
 
 **2026-10-23 最新约定**：使用者取消单独评审环节，授权实现方在北京时间今日 17:00 前持续推进。设计、实现、合并自行验证后执行；本段覆盖下方历史评审门禁。质量要求和具体交易手数授权继续有效，当前执行状态以 state.md 为准。
