@@ -6345,17 +6345,7 @@
 		"want": "过期陈述",
 		"expect": "red"
 	},
-	{
-		"name": "637 把 635 的 test 改指同包别的测试（393 就此变回孤儿——本守卫自己的红搭档）",
-		"dir": "",
-		"file": "tools/breakcheck/breaks.json",
-		"old": "\t\t\"test\": \"TestSlicePreconditionCheckedBeforeAnyOrder\",\n\t\t\"want\": \"本条守卫在空转\",",
-		"new": "\t\t\"test\": \"TestCheckCTPDumpDir\",\n\t\t\"want\": \"本条守卫在空转\",",
-		"pkg": "./tools/breakcheck/",
-		"test": "TestEveryGreenBreakHasARedPartner",
-		"want": "没有红搭档的 expect=green",
-		"expect": "red"
-	},
+	
 	{
 		"name": "638 门面的「下一交易日不晚于当前」去掉——空仓那一档会走到更深处才失败，把模拟器弄失效",
 		"dir": "",
@@ -8296,5 +8286,17 @@
 	"want": "未知冻结状态被当成可下结论",
 	"expect": "red",
 	"why": "字段缺失、无值不等于零或真实变化；缺截面必须停止而不能记为冻结变化。"
+},
+{
+	"name": "841 红绿搭档的测试名交集判定取反",
+	"dir": "",
+	"file": "tools/breakcheck/partners_test.go",
+	"old": "\t\tif g[n] {",
+	"new": "\t\tif !g[n] {",
+	"pkg": "./tools/breakcheck/",
+	"test": "TestEveryGreenBreakHasARedPartner",
+	"want": "同包同测试名 ⇒ 成对：孤儿数",
+	"expect": "red",
+	"why": "637依赖393仍为预期绿的历史前提，393离线关闭后该实例失去判别力，按编号规则退休。新编号检验通用测试名交集机制，使用已有的同名成对/异名孤儿等独立正反例，不再依赖真实清单当前哪项是绿。"
 }
 ]
