@@ -28,7 +28,8 @@
 >	               2026-09-14 评审「有条件同意」后合入（夜盘实测属交易日 20260915）
 >	               `ctperr`（报单拒绝码：交易所 × 拒因 → 码，带码空间）—— 2026-09-15 评审「有条件同意」后合入；
 >	               表只收探针语料，来源只有 SimNow 一个柜台的单日语料
->	dev 与 main    **当前一致**
+>	**只在 `dev` 上** `replay`、`cmd/replay`、`examples/offline-replay`。
+>	               此处dev指开发版本HEAD；本批位于codex/offline-replay，尚未合入main。
 >
 > ⚠️ **但仍然没有任何 semver tag。** 没有 tag 时 `go get` 拿的是 `main` 的最新提交，
 > 所以上面这些现在**取得到** —— 而取得到不等于**做了承诺**。
