@@ -2,6 +2,7 @@
 import argparse
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -69,7 +70,7 @@ def main():
             raise RuntimeError("破坏验证要求已跟踪文件干净；请先提交工作")
         commands.append(("mutation", ["go", "run", "./tools/breakcheck", "-out", str(out / "mutations.json")], ROOT, False))
     else:
-        commands.append(("bench", ["go", "test", ".", "-run=^$", "-bench=^BenchmarkOffline", "-benchmem", "-count=3", "-benchtime=100ms"], ROOT, False))
+        commands.append(("bench", ["go", "test", ".", "-run=^$", "-bench=^BenchmarkOffline", "-benchmem", "-count=3", "-benchtime=3x"], ROOT, False))
     results = []
     status, failure = "failed", None
     try:
@@ -87,4 +88,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # Windows托管运行器可能使用cp1252；中文诊断统一用UTF-8。
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     main()

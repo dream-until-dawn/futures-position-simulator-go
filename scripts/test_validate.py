@@ -1,4 +1,7 @@
 """验证实际Go输出的跳过与零测试判定，不用伪造PASS字符串作正对照。"""
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,6 +9,13 @@ from validate import run_checked
 
 
 class ValidationEvidenceTests(unittest.TestCase):
+    def test_cli_accepts_non_utf8_host_console(self):
+        env = dict(os.environ, PYTHONIOENCODING="cp1252")
+        command = [sys.executable, str(Path(__file__).with_name("validate.py")), "--help"]
+        result = subprocess.run(command, env=env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("跨平台离线验证", result.stdout.decode("utf-8"))
+
     def test_real_go_pass_skip_and_zero_tests(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

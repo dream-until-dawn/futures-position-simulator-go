@@ -8261,5 +8261,16 @@
 		"test": "TestStateSequenceProperties",
 		"want": "独立序号/挂单账不符",
 		"expect": "red"
+	},
+	{
+		"name": "838 最终证据落盘失败却报告成功",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/resting_price_probe.go",
+		"old": "// 最后一条落盘本身也可能失败；返回给调用方的报告不能仍声称成功。\n\t\treport.Failed = runErr != nil",
+		"new": "// 最后一条落盘本身也可能失败；返回给调用方的报告不能仍声称成功。\n\t\t_ = runErr",
+		"pkg": ".",
+		"test": "TestRestingSaveFailureAtEveryStage",
+		"want": "阶段落盘失败未标记或实验继续",
+		"expect": "red"
 	}
 ]
