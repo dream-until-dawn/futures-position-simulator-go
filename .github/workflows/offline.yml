@@ -1,0 +1,69 @@
+name: Offline validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_mutation:
+        description: Run the complete mutation registry
+        type: boolean
+        default: false
+
+env:
+  PYTHONUTF8: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.1'
+          cache-dependency-path: |
+            go.sum
+            cmd/oracle/go.sum
+      - name: Validate the validator
+        run: python -m unittest discover -s scripts -p test_validate.py
+      - name: Both Go modules (no skipped tests)
+        run: python scripts/validate.py --suite regression --out offline-results/regression
+      - name: Race detector on both platforms
+        run: python scripts/validate.py --suite race --out offline-results/race
+      - name: Bounded fuzzing
+        run: python scripts/validate.py --suite fuzz --fuzz-time 20s --out offline-results/fuzz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offline-${{ matrix.os }}
+          path: offline-results
+
+  mutation:
+    if: github.event_name == 'workflow_dispatch' && inputs.full_mutation
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.1'
+      - run: python scripts/validate.py --suite mutation --out offline-results/mutation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-mutation
+          path: offline-results

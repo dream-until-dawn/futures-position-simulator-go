@@ -1,0 +1,264 @@
+{
+  "source_parent_commit": "10da937f789f86bd085072faf166b4805850bc33",
+  "benchmark_source_sha256": "0ee204d4dd92c8ef85f53a4dfb8392bb0aa7a5b1fe34aac754ec43001f3522d4",
+  "fixture_source_sha256": "4bbca22fdbbeb742a5e3246bebbdf09c4d94bc8d4d3a62131bab9736ad774a17",
+  "go_version": "go version go1.26.1 windows/amd64",
+  "os": "Windows-11-10.0.26200-SP0",
+  "cpu": "AMD Ryzen 7 5700X 8-Core Processor",
+  "command": "go test . -run=^$ -bench=^BenchmarkOffline -benchmem -count=3 -benchtime=3x",
+  "fixture": "纯合成，同一合约N笔开仓；State/Restore/Fill另有N笔挂单；Settle无挂单。Fill/Settle恢复起点不计时。",
+  "limitations": "每项3次独立样本，每样本3次操作，噪声较大；单机观察基线，不是跨机器性能门槛或撮合吞吐承诺。",
+  "raw_samples": [
+    {
+      "operation": "State",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 15667.0,
+      "bytes_per_op": 51576,
+      "allocs_per_op": 19
+    },
+    {
+      "operation": "State",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 22167.0,
+      "bytes_per_op": 51576,
+      "allocs_per_op": 19
+    },
+    {
+      "operation": "State",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 42033.0,
+      "bytes_per_op": 51576,
+      "allocs_per_op": 19
+    },
+    {
+      "operation": "State",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 215667.0,
+      "bytes_per_op": 420472,
+      "allocs_per_op": 22
+    },
+    {
+      "operation": "State",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 364567.0,
+      "bytes_per_op": 420472,
+      "allocs_per_op": 22
+    },
+    {
+      "operation": "State",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 364067.0,
+      "bytes_per_op": 420472,
+      "allocs_per_op": 22
+    },
+    {
+      "operation": "Restore",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 866700.0,
+      "bytes_per_op": 682898,
+      "allocs_per_op": 19694
+    },
+    {
+      "operation": "Restore",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 849000.0,
+      "bytes_per_op": 682802,
+      "allocs_per_op": 19694
+    },
+    {
+      "operation": "Restore",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 852267.0,
+      "bytes_per_op": 682872,
+      "allocs_per_op": 19694
+    },
+    {
+      "operation": "Restore",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 15146433.0,
+      "bytes_per_op": 6883021,
+      "allocs_per_op": 195913
+    },
+    {
+      "operation": "Restore",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 16068733.0,
+      "bytes_per_op": 6885285,
+      "allocs_per_op": 195916
+    },
+    {
+      "operation": "Restore",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 15960400.0,
+      "bytes_per_op": 6883965,
+      "allocs_per_op": 195919
+    },
+    {
+      "operation": "Fill",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 120967.0,
+      "bytes_per_op": 247504,
+      "allocs_per_op": 4252
+    },
+    {
+      "operation": "Fill",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 263600.0,
+      "bytes_per_op": 246730,
+      "allocs_per_op": 4252
+    },
+    {
+      "operation": "Fill",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 252367.0,
+      "bytes_per_op": 246730,
+      "allocs_per_op": 4252
+    },
+    {
+      "operation": "Fill",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 1883367.0,
+      "bytes_per_op": 2463837,
+      "allocs_per_op": 40198
+    },
+    {
+      "operation": "Fill",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 2085667.0,
+      "bytes_per_op": 2463826,
+      "allocs_per_op": 40197
+    },
+    {
+      "operation": "Fill",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 2103533.0,
+      "bytes_per_op": 2463920,
+      "allocs_per_op": 40199
+    },
+    {
+      "operation": "Settle",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 235500.0,
+      "bytes_per_op": 450264,
+      "allocs_per_op": 8157
+    },
+    {
+      "operation": "Settle",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 320200.0,
+      "bytes_per_op": 450264,
+      "allocs_per_op": 8157
+    },
+    {
+      "operation": "Settle",
+      "size": 100,
+      "iterations": 3,
+      "ns_per_op": 306633.0,
+      "bytes_per_op": 448712,
+      "allocs_per_op": 8156
+    },
+    {
+      "operation": "Settle",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 3405200.0,
+      "bytes_per_op": 4608914,
+      "allocs_per_op": 78312
+    },
+    {
+      "operation": "Settle",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 3022667.0,
+      "bytes_per_op": 4608864,
+      "allocs_per_op": 78312
+    },
+    {
+      "operation": "Settle",
+      "size": 1000,
+      "iterations": 3,
+      "ns_per_op": 3216167.0,
+      "bytes_per_op": 4608986,
+      "allocs_per_op": 78314
+    }
+  ],
+  "medians": [
+    {
+      "operation": "State",
+      "size": 100,
+      "ns_per_op": 22167.0,
+      "bytes_per_op": 51576,
+      "allocs_per_op": 19
+    },
+    {
+      "operation": "State",
+      "size": 1000,
+      "ns_per_op": 364067.0,
+      "bytes_per_op": 420472,
+      "allocs_per_op": 22
+    },
+    {
+      "operation": "Restore",
+      "size": 100,
+      "ns_per_op": 852267.0,
+      "bytes_per_op": 682872,
+      "allocs_per_op": 19694
+    },
+    {
+      "operation": "Restore",
+      "size": 1000,
+      "ns_per_op": 15960400.0,
+      "bytes_per_op": 6883965,
+      "allocs_per_op": 195916
+    },
+    {
+      "operation": "Fill",
+      "size": 100,
+      "ns_per_op": 252367.0,
+      "bytes_per_op": 246730,
+      "allocs_per_op": 4252
+    },
+    {
+      "operation": "Fill",
+      "size": 1000,
+      "ns_per_op": 2085667.0,
+      "bytes_per_op": 2463837,
+      "allocs_per_op": 40198
+    },
+    {
+      "operation": "Settle",
+      "size": 100,
+      "ns_per_op": 306633.0,
+      "bytes_per_op": 450264,
+      "allocs_per_op": 8157
+    },
+    {
+      "operation": "Settle",
+      "size": 1000,
+      "ns_per_op": 3216167.0,
+      "bytes_per_op": 4608914,
+      "allocs_per_op": 78312
+    }
+  ],
+  "provenance": "归档时父提交；benchmark和fixture按记录中的SHA256绑定。测量前后核心生产源码未变，新增benchmark文件随后随本批提交。"
+}

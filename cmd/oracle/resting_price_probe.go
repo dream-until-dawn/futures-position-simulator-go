@@ -180,6 +180,8 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 		report.Stage = "finished"
 		report.Failed = runErr != nil
 		runErr = errors.Join(runErr, emit())
+		// 最后一条落盘本身也可能失败；返回给调用方的报告不能仍声称成功。
+		report.Failed = runErr != nil
 	}()
 	local := clock.Now().In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()

@@ -1,0 +1,267 @@
+{
+  "validated_source_commit": "f70670b86ee0c120c5a6580511cce9cd387603c3",
+  "mode": "independent complete clean worktree run; no per-case retries or result merging",
+  "registered": 753,
+  "executed": 753,
+  "expected_red": 717,
+  "expected_green": 36,
+  "unexpected": 0,
+  "exit_code": 0,
+  "coverage_audit": "Every report entry matches registry name/pkg/test/expect/want in order; 753 unique names; all verdicts match declared expectations.",
+  "registry_git_blob_sha256": "a8b7d21a78f194b4a6fe99495ab2055caf66435ed6f3cb345ad11f6f0776b69a",
+  "report": {
+    "path": "C:\\Temp\\offline-full-f70670b\\mutations.json",
+    "sha256": "1bd8b29ac4e7f4f91812b4d17fd60a93c54e6647b4b6ed992da9b4a045afedcd"
+  },
+  "log": {
+    "path": "C:\\Temp\\offline-full-f70670b\\mutation.log",
+    "sha256": "3782a77997c5ed7d9e0682e72594558be264a5d778b89f8e40c08df023dc7033"
+  },
+  "runner_summary": {
+    "path": "C:\\Temp\\offline-full-f70670b\\summary.json",
+    "sha256": "6358b342ccc15ace4b6f4aa2de2352a896339c1a1e11fe682fbd5c557c4eea45"
+  },
+  "restoration": "Runner byte restoration and post-run source-tree checks passed; independently verified detached HEAD at validated source and empty porcelain.",
+  "ci": {
+    "run_id": 40054583983,
+    "source_commit": "f70670b86ee0c120c5a6580511cce9cd387603c3",
+    "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40054583983",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 120754609605,
+        "name": "offline (windows-2022)",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T02:32:24Z",
+            "completed_at": "2026-10-24T02:32:25Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T02:32:25Z",
+            "completed_at": "2026-10-24T02:32:33Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T02:32:33Z",
+            "completed_at": "2026-10-24T02:32:53Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T02:32:53Z",
+            "completed_at": "2026-10-24T02:33:08Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T02:33:08Z",
+            "completed_at": "2026-10-24T02:34:16Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T02:34:16Z",
+            "completed_at": "2026-10-24T02:35:35Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T02:35:35Z",
+            "completed_at": "2026-10-24T02:36:53Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T02:36:53Z",
+            "completed_at": "2026-10-24T02:36:55Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T02:36:55Z",
+            "completed_at": "2026-10-24T02:37:09Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T02:37:09Z",
+            "completed_at": "2026-10-24T02:37:11Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T02:37:11Z",
+            "completed_at": "2026-10-24T02:37:11Z"
+          }
+        ]
+      },
+      {
+        "id": 120754610016,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T02:32:24Z",
+            "completed_at": "2026-10-24T02:32:25Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T02:32:25Z",
+            "completed_at": "2026-10-24T02:32:27Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T02:32:27Z",
+            "completed_at": "2026-10-24T02:32:40Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T02:32:40Z",
+            "completed_at": "2026-10-24T02:32:41Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T02:32:41Z",
+            "completed_at": "2026-10-24T02:32:51Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T02:32:51Z",
+            "completed_at": "2026-10-24T02:33:25Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T02:33:25Z",
+            "completed_at": "2026-10-24T02:34:11Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T02:34:11Z",
+            "completed_at": "2026-10-24T02:34:12Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T02:34:12Z",
+            "completed_at": "2026-10-24T02:34:13Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T02:34:13Z",
+            "completed_at": "2026-10-24T02:34:13Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T02:34:13Z",
+            "completed_at": "2026-10-24T02:34:13Z"
+          }
+        ]
+      },
+      {
+        "id": 120754610601,
+        "name": "mutation",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
+  "windows_ci_repairs": {
+    "initial_console_failure": "cp1252 cannot print Chinese; explicit UTF-8 CLI output and regression test",
+    "race_failure_run": 40053928767,
+    "race_failure_test": "TestNoFileUsesCRLF",
+    "race_failure_cause": "Windows default CRLF in offline-results/regression/summary.json generated by the preceding regression step.",
+    "fix": "Explicit LF for summary JSON; print bounded command failure context to CI console.",
+    "negative_proof": {
+      "path": "C:\\Temp\\offline-ci-lf-negative-20261024.json",
+      "sha256": "83c1b874ec2357bea5940e93fcb08d400e90df56b13859eee6c5d48b12ec0939"
+    },
+    "negative_result": "Removing the LF fix in an isolated Windows copy fails both passed and failed summary paths."
+  },
+  "local_checks": {
+    "validator": "4 Python tests passed, including actual Go pass/skip/zero-test outcomes and process diagnostics",
+    "regression_then_race": "Both modules passed in order with reports inside the Windows repository, reproducing the CI layout; no skipped Go tests.",
+    "regression_summary": {
+      "path": "offline-results\\regression\\summary.json",
+      "sha256": "f3e41882dc290cf8e0175422799d57403e55e2bd70e28e29404cd9f867b1d4ff"
+    },
+    "race_summary": {
+      "path": "offline-results\\race\\summary.json",
+      "sha256": "c1d91922b88c314283d6004dff9b691759382b4cefa217aba54143f0b242b7a1"
+    },
+    "fuzz": "Both state and report fuzz targets passed bounded 20s runs on both hosted platforms.",
+    "benchmarks": "24 raw samples and 8 medians with source hashes in performance-20261024.json"
+  },
+  "new_faults": {
+    "403 认不得的盈亏算法悄悄回落到 0——那等于假设「全部计算」，而那个模型已被推翻": "algorithm_negative_test.go:9: 未知算法未拒绝：\"\"",
+    "426 阶段枚举里 ② 的注记文本写成 ③ 的——守卫查标识符，不查枚举到文本的映射": "slice_notes_test.go:20: 阶段注记语义错误：2 ctp-slices ③：已平一手、尚余一片（判别性平仓之**后**）",
+    "837 独立状态账本检出接收序号多增": "state_properties_test.go:153: 独立序号/挂单账不符 step=0 high=1 state=2",
+    "838 最终证据落盘失败却报告成功": "resting_fault_matrix_test.go:91: 阶段落盘失败未标记或实验继续：finished hit=true report=&{ObservedTradeRows:1 MainTrades:[{TradeID:trade2 OrderRef:2 OrderSysID:sys2 Exchange:SHFE Instrument:rb2701 TradingDay:20261023 TradeDate: TradeTime:13:35:03 Price:2997 DirectionByte:48 OffsetByte:48 HedgeByte:49 Volume:1}] ControlPrice:2700 BuildCommit: Format:1 PlanCommit: Symbol:SHFE.rb2701 TradingDay:20261023 StartedUTC:2026-10-23T05:35:01Z UpdatedUTC:2026-10-23T05:35:03.5Z Stage:finished Tick:1 Multiplier:10 OrderPrice:2997 ActualPrice:2997 ControlFeeBefore:0 ControlFeeAfter:0 Control:{LocalQueueMillis:0 Ref:1 SysID:sys1 Status:53 ErrorID:0 Filled:0 QueueObserved:true CancelAttempted:true Terminal:true SubmissionUncertain:false} Main:{LocalQueueMillis:2000 Ref:2 SysID:sys2 Status:48 ErrorID:0 Filled:1 QueueObserved:true CancelAttempted:false Terminal:true SubmissionUncertain:false} Close:{LocalQueueMillis:0 Ref:3 SysID:sys3 Status:48 ErrorID:0 Filled:1 QueueObserved:false CancelAttempted:false Terminal:true SubmissionUncertain:false} Verdict:supports-order-price FinalClean:true Failed:false} err=injected persist failure sent=3 held=0"
+  },
+  "limitations": [
+    "Original 38 expected-green cases audited: 2 closed, 36 retained with reasons and actions; not a claim that all gaps are closed.",
+    "Synthetic tests establish software behavior, not observed trading rules.",
+    "No CTP trades, no expired probe window change, no F9c matching implementation.",
+    "Hosted mutation job intentionally not requested; full 753 run executed locally in an isolated Windows worktree."
+  ]
+}

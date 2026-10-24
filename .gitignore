@@ -59,3 +59,7 @@ testdata/probes/local/
 # 于是一个真正的改动被埋在一堆 6 字节的二进制 diff 里 —— 而那正是
 # 20260910「顺手提交了一条 breakcheck 破坏」那次的形状。
 cmd/oracle/log/
+
+# 离线验证输出与Python缓存
+__pycache__/
+offline-results/

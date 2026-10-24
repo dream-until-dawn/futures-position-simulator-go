@@ -40,7 +40,7 @@ func excludedUnrealized(algorithm string, positionProfit float64) (float64, erro
 	//	一个 `case` 加一行 `return`，看不出哪条有证据。
 	//
 	// ⇒ 所以这段注释必须存在：它是这四支之间**唯一**的证据等级标记。
-	// 破坏 403 登记了配套的盲区（认不得的取值回落到 0 ⇒ 如预期仍然绿）。
+	// 破坏 403 原先仅选真实夹具时为预期绿；现增加未知值单测并检出错误，真实配置的行为证据范围不变。
 	// 要把 1/3/4 升成实测，需要一个 `Algorithm` 配成别的值的账户。
 	switch algorithm {
 	case "2": // THOST_FTDC_AG_OnlyLost 只计浮动亏损 ⇒ 浮盈被排除

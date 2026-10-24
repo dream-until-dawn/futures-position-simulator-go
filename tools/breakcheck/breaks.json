@@ -3788,10 +3788,10 @@
 		"old": "\treturn 0, fmt.Errorf(\"认不得的盈亏算法 %q —— CTP 只定义了 1/2/3/4\", algorithm)",
 		"new": "\t_ = fmt.Errorf(\"认不得的盈亏算法 %q\", algorithm)\n\treturn 0, nil",
 		"pkg": "./conformance/ctpfixture/",
-		"test": "TestIdentityAgreesWithDeclaredAlgorithm",
-		"want": "没有一份夹具声明 Algorithm",
-		"expect": "green",
-		"why": "⚠️ **这一条如预期仍然绿，而它记的正是本守卫的半格盲区**：当前全部夹具的 Algorithm 都是 \"2\"，认不得的那一支**一次都没被走到** ⇒ 回落到 0 与报错在这批语料上给出同一个结果。⇒ 真要让它红，需要一份 Algorithm 取值在 1/2/3/4 之外的夹具，而那要换一个柜台。**在那之前「认不得就报错」这条只由代码保证，不由测试保证。**⚠️ 第一版的 `new` 直接删掉了 `fmt.Errorf`，于是 `fmt` 变成未使用、**红在编译上** —— 而按分层判定那不算一次破坏（零层都没成立）。现在的写法保留调用、只丢掉错误值。"
+		"test": "TestIdentityAgreesWithDeclaredAlgorithm|TestExcludedUnrealizedRefusesUnknown",
+		"want": "未知算法未拒绝",
+		"expect": "red",
+		"why": "⚠️ **这一条如预期仍然绿，而它记的正是本守卫的半格盲区**：当前全部夹具的 Algorithm 都是 \"2\"，认不得的那一支**一次都没被走到** ⇒ 回落到 0 与报错在这批语料上给出同一个结果。⇒ 真要让它红，需要一份 Algorithm 取值在 1/2/3/4 之外的夹具，而那要换一个柜台。**在那之前「认不得就报错」这条只由代码保证，不由测试保证。**⚠️ 第一版的 `new` 直接删掉了 `fmt.Errorf`，于是 `fmt` 变成未使用、**红在编译上** —— 而按分层判定那不算一次破坏（零层都没成立）。现在的写法保留调用、只丢掉错误值。 2026-10-24补充离线负向输入并验证该破坏红在目标断言；不提升真实柜台证据等级。"
 	},
 	{
 		"name": "404 适用范围认不得的取值悄悄归到「所有」——一个没见过的取值会伪装成三档之一",
@@ -4033,10 +4033,10 @@
 		"old": "\t\treturn \"ctp-slices ②：两片俱在、尚未平仓（判别性平仓之**前**）\"",
 		"new": "\t\treturn \"ctp-slices ③：已平一手、尚余一片（判别性平仓之**后**）\"",
 		"pkg": ".",
-		"test": "TestSliceDumpsPinDownBothOrderAndConsumption",
-		"want": "位置对了而阶段标错了",
-		"expect": "green",
-		"why": "⚠️ **如预期仍然绿，登记的是换成枚举之后剩下的那一格**：守卫读的是调用点的**标识符**，不读 `sliceStage.note()` 里枚举到中文的映射。⇒ 把 ② 的文本写成 ③ 的，守卫不响。⚠️ 而这一格比 406 原先那处**窄得多**：映射只写在一个 switch 里、三行、一眼可核；原先是三个分散的调用点各写一句中文。**把错误的藏身处从三处收成一处，是这次改动的实际收益**，而不是「彻底消灭」。⚠️ 另：读夹具的代码按约束**不读 note**（TestNobodyParsesFixtureNotes），阶段从 Position/OpenVolume/CloseVolume 判 —— 所以这一格错了，坏的是给人看的注释，不是判定。"
+		"test": "TestSliceDumpsPinDownBothOrderAndConsumption|TestSliceStageNotes",
+		"want": "阶段注记语义错误",
+		"expect": "red",
+		"why": "⚠️ **如预期仍然绿，登记的是换成枚举之后剩下的那一格**：守卫读的是调用点的**标识符**，不读 `sliceStage.note()` 里枚举到中文的映射。⇒ 把 ② 的文本写成 ③ 的，守卫不响。⚠️ 而这一格比 406 原先那处**窄得多**：映射只写在一个 switch 里、三行、一眼可核；原先是三个分散的调用点各写一句中文。**把错误的藏身处从三处收成一处，是这次改动的实际收益**，而不是「彻底消灭」。⚠️ 另：读夹具的代码按约束**不读 note**（TestNobodyParsesFixtureNotes），阶段从 Position/OpenVolume/CloseVolume 判 —— 所以这一格错了，坏的是给人看的注释，不是判定。 2026-10-24补充离线负向输入并验证该破坏红在目标断言；不提升真实柜台证据等级。"
 	},
 	{
 		"name": "427 #4 的判别性委托改用「平今」——替柜台指定了答案，整轮实验无效而输出完全正常",
@@ -8250,6 +8250,27 @@
 		"pkg": "./ctp",
 		"test": "TestUnfinishedOrdersSeparateEmptyPlaceholder",
 		"want": "全零占位与真实未知委托混淆",
+		"expect": "red"
+	},
+	{
+		"name": "837 独立状态账本检出接收序号多增",
+		"file": "order/freeze.go",
+		"old": "b.lastSequence = seq\n",
+		"new": "b.lastSequence = seq + 1\n",
+		"pkg": ".",
+		"test": "TestStateSequenceProperties",
+		"want": "独立序号/挂单账不符",
+		"expect": "red"
+	},
+	{
+		"name": "838 最终证据落盘失败却报告成功",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/resting_price_probe.go",
+		"old": "// 最后一条落盘本身也可能失败；返回给调用方的报告不能仍声称成功。\n\t\treport.Failed = runErr != nil",
+		"new": "// 最后一条落盘本身也可能失败；返回给调用方的报告不能仍声称成功。\n\t\t_ = runErr",
+		"pkg": ".",
+		"test": "TestRestingSaveFailureAtEveryStage",
+		"want": "阶段落盘失败未标记或实验继续",
 		"expect": "red"
 	}
 ]

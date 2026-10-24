@@ -131,6 +131,8 @@
 
 ## 开发
 
+日常操作从 [当前开发与离线验证手册](docs/development.md) 开始；当前进度只看 [state.md](docs/state.md) 顶部最新批次，历史日期段不代表现在仍待实施。
+
 挂单序号与存档示例见 [sequence_example_test.go](order/sequence_example_test.go)，可运行 `go test ./order -run Example -count=1`。`Live` 按 ID 排序；`OrderedIDs` 表示本地成功接收顺序。低层 Book 不执行完整报单校验；一般业务应通过 Simulator 的 Place / PlaceAccepted 接入，并用 State / Restore 保存完整账户。当前 StateFormat 为 5，旧格式明确拒绝且不自动迁移。K线撮合 F9c 仍待真实探针证据，当前 Advance 只守卫并计价。
 
 ```bash
