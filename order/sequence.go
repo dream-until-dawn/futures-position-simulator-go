@@ -44,9 +44,19 @@ func (b *Book) Reinsert(id string, req Request, in FreezeInput, sequence uint64)
 func RestoreBook(lastSequence uint64, entries []BookEntry) (*Book, error) {
 	b := NewBook()
 	b.lastSequence = lastSequence
+	// 批量恢复用集合核重，避免逐笔 Reinsert 扫描此前全部挂单造成平方成本。
+	// 集合仅活在本次恢复中；普通回滚仍走 Reinsert 的独立检查。
+	seen := make(map[uint64]bool, len(entries))
 	for _, e := range entries {
+		if e.Sequence == 0 || e.Sequence > lastSequence {
+			return nil, fmt.Errorf("回滚序号 %d 超出高水位 %d", e.Sequence, lastSequence)
+		}
+		if seen[e.Sequence] {
+			return nil, fmt.Errorf("重复挂单序号 %d", e.Sequence)
+		}
+		seen[e.Sequence] = true
 		in := FreezeInput{Margin: e.Frozen.Margin, Commission: e.Frozen.Commission, UndatedToday: e.Frozen.VolumeToday, UndatedHistory: e.Frozen.VolumeHistory}
-		if err := b.Reinsert(e.ID, e.Request, in, e.Sequence); err != nil {
+		if err := b.insertAt(e.ID, e.Request, in, e.Sequence); err != nil {
 			return nil, err
 		}
 		_, got, _ := b.Get(e.ID)

@@ -2550,6 +2550,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/f9c-design.md` | 5 |
 | `docs/offline-work.md` | 5 |
 | `docs/offline-gaps.md` | 4 |
+| `docs/offline-resilience.md` | 6 |
 | `docs/development.md` | 5 |
 
 ⚠️ **增删小节时要同步改这里**，这是刻意的摩擦：一次有意的增删是一行改动，

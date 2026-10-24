@@ -36,7 +36,7 @@ jobs:
             go.sum
             cmd/oracle/go.sum
       - name: Validate the validator
-        run: python -m unittest discover -s scripts -p test_validate.py
+        run: python -m unittest discover -s scripts -p "test_*.py"
       - name: Both Go modules (no skipped tests)
         run: python scripts/validate.py --suite regression --out offline-results/regression
       - name: Race detector on both platforms
