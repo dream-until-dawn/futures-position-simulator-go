@@ -48,6 +48,7 @@ func TestBundleBindingAndStrictJSON(t *testing.T) {
 		bytes.Replace(raw, []byte(`"format": 1`), []byte(`"format": 2`), 1),
 		bytes.Replace(raw, []byte(`"format": 1`), []byte(`"format": 1,"format": 1`), 1),
 		bytes.Replace(raw, []byte(`"format": 1`), []byte(`"Format": 1`), 1),
+		bytes.Replace(raw, []byte(`"format": 1`), []byte(`"format": 1,"Format": 1`), 1),
 		append(append([]byte(nil), raw...), []byte(` {}`)...),
 		[]byte(`{"format":1,"format":1,"sha256":"x","payload":{}}`),
 		[]byte(`{"format":1,"Format":1,"sha256":"x","payload":{}}`),

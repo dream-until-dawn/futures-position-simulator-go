@@ -8647,7 +8647,7 @@
 		"dir": "",
 		"file": "replay/engine.go",
 		"old": "return s.ApplyTrade(e.Day, *e.Trade)",
-		"new": "if err:=s.ApplyTrade(e.Day,*e.Trade);err!=nil{return err};return s.ApplyTrade(e.Day,*e.Trade)",
+		"new": "if e.Day==cfg.Day {if err:=s.ApplyTrade(e.Day,*e.Trade);err!=nil{return err}};return s.ApplyTrade(e.Day,*e.Trade)",
 		"pkg": "./replay",
 		"test": "TestLongCycleIndependentLedger",
 		"want": "长周期独立账本不符",
