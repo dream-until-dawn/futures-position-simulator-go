@@ -125,18 +125,7 @@ func TestCounterHalfTickBoundaryHoldsInSession(t *testing.T) {
 
 			off := offTickAgrees(pxF, tickF)
 			checked++
-			switch {
-			case msg == tickMsg && !off:
-				t.Errorf("⚠️ %s %s @%s（零头 %.4f，%s）柜台回「不是整数倍」，"+
-					"而本库的 offTick 说它**是**整数倍 —— 两份判据分岔了。"+
-					"⚠️ 别急着改 offTick：先确认这一笔的 tick 取对了",
-					f.Path, sym, px, frac, at.Format("15:04"))
-			case msg == limitMsg && off:
-				t.Errorf("⚠️ %s %s @%s（零头 %.4f，%s）柜台回「涨停板」——"+
-					"说明整数倍那一项**没拦住它**（kq_facts 44：先查整数倍），"+
-					"而本库的 offTick 说它偏离整数倍。两份判据分岔了",
-					f.Path, sym, px, frac, at.Format("15:04"))
-			}
+			checkTickOutcome(t, msg, off, f.Path+" "+sym+" @"+px.String())
 			if frac >= 0.44 && frac < 0.5 {
 				nearBelow++
 			}
@@ -179,4 +168,14 @@ func offTickAgrees(price, tick float64) bool {
 	}
 	frac := price/tick - math.Floor(price/tick)
 	return frac > 1e-3 && frac < 0.5
+}
+
+// checkTickOutcome 同时检查两个方向；合成冲突只用于验证判据，不写入观测语料。
+func checkTickOutcome(t evidenceReporter, msg string, off bool, location string) {
+	switch {
+	case msg == tickMsg && !off:
+		t.Errorf("整数倍拒因与程序判据冲突，两份判据分岔了：%s", location)
+	case msg == limitMsg && off:
+		t.Errorf("涨停拒因与程序判据冲突，两份判据分岔了：%s", location)
+	}
 }

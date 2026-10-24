@@ -310,11 +310,7 @@ func TestFrozenAgainstOracle(t *testing.T) {
 	}
 	// ⚠️ 判别力：必须有**非零**的比对。全是 0 的话，
 	// 「本库算出 0、柜台报 0」什么都不说明 —— 把整块逻辑删掉它照样一致。
-	if nonZero == 0 {
-		t.Errorf("⚠️ 比了 %d 个字段，**没有一个是非零的** —— "+
-			"全零的一致什么都不说明：把整块冻结逻辑删掉，它照样一致。"+
-			"要一份**挂着单**时拍的夹具（position-frozen 实验的 -held 那几份）", compared)
-	}
+	checkFrozenDiscrimination(t, compared, nonZero)
 	t.Logf("冻结对拍：比了 %d 个字段，其中非零的 %d 个", compared, nonZero)
 }
 
@@ -352,5 +348,14 @@ func TestLoadDistinguishesEmptyOrdersFromNoOrders(t *testing.T) {
 				"两种情形下委托数都是 0，而只有前者能拿去对拍冻结。"+
 				"用 len() > 0 判会把它们混成一个", c.name, f.HasOrders, c.want)
 		}
+	}
+}
+
+// checkFrozenDiscrimination 保留原判据，允许独立构造边界输入。
+func checkFrozenDiscrimination(t evidenceReporter, compared, nonZero int) {
+	if nonZero == 0 {
+		t.Errorf("⚠️ 比了 %d 个字段，**没有一个是非零的** —— "+
+			"全零的一致什么都不说明：把整块冻结逻辑删掉，它照样一致。"+
+			"要一份**挂着单**时拍的夹具（position-frozen 实验的 -held 那几份）", compared)
 	}
 }

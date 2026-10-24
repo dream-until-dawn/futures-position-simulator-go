@@ -28,7 +28,11 @@ import (
 // 在前一交易日的夹具里），与本条的结构性理由无关。
 // 拿它来加强本条，等于把一个「样本缺失」读成「性质如此」。
 func TestCloseOrderIsStructurallyUnmeasurable(t *testing.T) {
-	all := loadAll(t)
+	checkCloseOrderEvidence(t, loadAll(t))
+}
+
+// checkCloseOrderEvidence 共用真实语料与合成反例的同一条判据。
+func checkCloseOrderEvidence(t evidenceReporter, all []*Fixture) {
 	sections, dceSections, dceWithHistory := 0, 0, 0
 	var offenders []string
 

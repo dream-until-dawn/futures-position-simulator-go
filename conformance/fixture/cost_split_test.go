@@ -92,11 +92,7 @@ func TestCostSplitAbsentSideFollowsPositionDateType(t *testing.T) {
 				// rb2701 结算后 volume_long=3 全是昨仓，它的 _today 格给 "-"
 				// 是「今仓侧确实没量」，**判别不出任何东西**，而按总手数
 				// 它会被记成一条判别样本（实测 24 → 118，四倍多）。
-				for i := range absentNames(todayAbsent) {
-					if volumeOnSide(p, i, todayAbsent) > 0 {
-						discriminating++
-					}
-				}
+				discriminating += countCostDiscrimination(p, todayAbsent)
 
 			default:
 				t.Errorf("⚠️ %s %s：今昨两侧**同时**给 \"-\" —— "+
@@ -170,3 +166,14 @@ func volumeOnSide(p map[string]Value, i int, todaySide bool) int64 {
 //
 // ⚠️ 删而不是加例外，是它自己的失败信息要求的：
 // 加例外会把「第一次量到」变成一次静默的常量修改。
+
+// countCostDiscrimination 按今昨侧和两个方向统计判别格，不使用总持仓代替。
+func countCostDiscrimination(p map[string]Value, todayAbsent bool) int {
+	discriminating := 0
+	for i := range absentNames(todayAbsent) {
+		if volumeOnSide(p, i, todayAbsent) > 0 {
+			discriminating++
+		}
+	}
+	return discriminating
+}

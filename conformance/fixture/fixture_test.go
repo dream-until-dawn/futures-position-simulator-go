@@ -209,10 +209,7 @@ func TestReplayMatchesOracleVolumeAndPrice(t *testing.T) {
 	t.Logf("有持仓的方向 %d 个，其中多笔不同价的 %d 个；昨结算价借自同日兄弟夹具的合约样本 %d 个", withPosition, multiPrice, borrowedPre)
 	// ⚠️ 取不到门面前提就跳过 —— 迁移时是 0 个。非零时不许安静（评审 20260915）：
 	// 以后出现别的交易日的昨仓样本（交易所结算价只有 20260908 一份）会走到这里，一个只打日志的跳过数会让覆盖悄悄变小
-	if len(noPre) > 0 {
-		t.Errorf("⚠️ 取不到门面前提（没有昨结算价且同日无唯一值 / 带昨仓而结转不了）而跳过的合约样本 %d 个：%v —— "+
-			"迁移时是 0 个；补结转来源（交易所结算价、上一日夹具）或登记跳过的理由", len(noPre), noPre)
-	}
+	checkReplayPrerequisites(t, noPre)
 	t.Logf("ⓘ 带昨仓的方向 %d 个（F7c 起走结转照比；平过仓那一侧的 open_price 按已知口子 simnow_pending#10 归类）", historySides)
 	r := conformance.Classify("全部带成交的夹具", fields, decimal.RequireFromString("0.0000001"))
 	t.Logf("比对 %d 个方向、%d 个字段", checked, len(fields))
@@ -460,9 +457,7 @@ func TestPositionViewAcrossAllFixtures(t *testing.T) {
 				src, ok, why := carryStartFor(t, all, f, sym)
 				if !ok {
 					skippedHistory++
-					if len(f.Orders) > 0 {
-						skippedWithOrders++
-					}
+					noteSkippedOrders(f, &skippedWithOrders)
 					skipWhy[why]++
 					continue
 				}
@@ -872,4 +867,19 @@ func anyFixtureHasOrders(all []*Fixture) bool {
 		}
 	}
 	return false
+}
+
+// checkReplayPrerequisites 保留原判据，允许独立构造边界输入。
+func checkReplayPrerequisites(t evidenceReporter, noPre []string) {
+	if len(noPre) > 0 {
+		t.Errorf("⚠️ 取不到门面前提（没有昨结算价且同日无唯一值 / 带昨仓而结转不了）而跳过的合约样本 %d 个：%v —— "+
+			"迁移时是 0 个；补结转来源（交易所结算价、上一日夹具）或登记跳过的理由", len(noPre), noPre)
+	}
+}
+
+// noteSkippedOrders 只给确实有委托的被跳样本记账。
+func noteSkippedOrders(f *Fixture, skippedWithOrders *int) {
+	if len(f.Orders) > 0 {
+		*skippedWithOrders++
+	}
 }

@@ -1,0 +1,367 @@
+{
+  "validated_source_commit": "36ed1d09cd045adad399e4233cf048239f04642b",
+  "baseline_main": "8bbc73339e3fcfaff2e9369d34d7b8d2db86c008",
+  "closed_original_gaps": [
+    70,
+    85,
+    95,
+    96,
+    105,
+    109,
+    135,
+    152,
+    181,
+    182,
+    193,
+    209,
+    210,
+    214,
+    224,
+    243,
+    265,
+    359,
+    360,
+    373,
+    374,
+    393,
+    409,
+    574,
+    589,
+    620,
+    622
+  ],
+  "closed_count": 27,
+  "retained_original_gaps": [
+    173,
+    175,
+    313,
+    407,
+    433,
+    441,
+    457,
+    732,
+    795
+  ],
+  "remaining_green_count": 9,
+  "registered": 757,
+  "executed": 757,
+  "expected_red": 748,
+  "expected_green": 9,
+  "unexpected": 0,
+  "exit_code": 0,
+  "mode": "independent complete clean worktree run; no per-case retries or result merging",
+  "coverage": "All 757 unique entries match registry name/pkg/test/expect/want in order and all verdicts match expectations.",
+  "restoration": "Runner verified original bytes and unchanged tree; independently verified detached source HEAD, empty porcelain, and empty diff to source.",
+  "registry_git_blob_sha256": "ee2d2e9e13aa70bc6ee091648d7ef3d674d02b62ba97be926a1149fd59d72782",
+  "full_report": {
+    "path": "C:\\Temp\\gap-full-36ed1d0\\mutations.json",
+    "sha256": "63ba27ba9533524c17f60b684c416b118feed324530175619f65290e912a6f26"
+  },
+  "full_log": {
+    "path": "C:\\Temp\\gap-full-36ed1d0\\mutation.log",
+    "sha256": "44b4758de1914e454aaaaa8570439fead4cf96c66ae4ef4ec17a506eaff1a312"
+  },
+  "full_runner_summary": {
+    "path": "C:\\Temp\\gap-full-36ed1d0\\summary.json",
+    "sha256": "645df9f8cd42e1f8ca6da8bbc1c4a8bfb8d12bf1b8cd2c9a71eea34622a50f14"
+  },
+  "ci": {
+    "run_id": 40060826408,
+    "source_commit": "36ed1d09cd045adad399e4233cf048239f04642b",
+    "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40060826408",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 120773735426,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T04:03:36Z",
+            "completed_at": "2026-10-24T04:03:37Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T04:03:37Z",
+            "completed_at": "2026-10-24T04:03:38Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T04:03:38Z",
+            "completed_at": "2026-10-24T04:03:48Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T04:03:48Z",
+            "completed_at": "2026-10-24T04:03:49Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T04:03:49Z",
+            "completed_at": "2026-10-24T04:04:01Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T04:04:01Z",
+            "completed_at": "2026-10-24T04:04:37Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T04:04:37Z",
+            "completed_at": "2026-10-24T04:05:25Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T04:05:25Z",
+            "completed_at": "2026-10-24T04:05:26Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T04:05:26Z",
+            "completed_at": "2026-10-24T04:05:26Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T04:05:26Z",
+            "completed_at": "2026-10-24T04:05:26Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T04:05:26Z",
+            "completed_at": "2026-10-24T04:05:26Z"
+          }
+        ]
+      },
+      {
+        "id": 120773735647,
+        "name": "offline (windows-2022)",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T04:03:37Z",
+            "completed_at": "2026-10-24T04:03:38Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T04:03:38Z",
+            "completed_at": "2026-10-24T04:03:46Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T04:03:46Z",
+            "completed_at": "2026-10-24T04:04:20Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T04:04:20Z",
+            "completed_at": "2026-10-24T04:04:25Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T04:04:25Z",
+            "completed_at": "2026-10-24T04:04:53Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T04:04:53Z",
+            "completed_at": "2026-10-24T04:05:46Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T04:05:46Z",
+            "completed_at": "2026-10-24T04:06:37Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T04:06:37Z",
+            "completed_at": "2026-10-24T04:06:38Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T04:06:38Z",
+            "completed_at": "2026-10-24T04:06:38Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T04:06:38Z",
+            "completed_at": "2026-10-24T04:06:40Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T04:06:40Z",
+            "completed_at": "2026-10-24T04:06:40Z"
+          }
+        ]
+      },
+      {
+        "id": 120773736229,
+        "name": "mutation",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
+  "strict_local_regression": {
+    "path": "C:\\Temp\\gap-regression-36ed1d0\\summary.json",
+    "sha256": "321bec648e739b16d7d740dcd3f2d0561892b9cb6976a07a978e1459f853b016"
+  },
+  "targeted_preflight": {
+    "original27": {
+      "path": "C:\\Temp\\gap-targeted-20261024\\summary.json",
+      "sha256": "e71e8c0a486180c7765b2285f28fef06b44d5bc30924402f4abef36458289f99"
+    },
+    "latest_full_run_supersedes_preflight": true
+  },
+  "first_red_proofs": {
+    "unknown_frozen_state": {
+      "path": "C:\\Temp\\gap-frozen-unknown-before.log",
+      "sha256": "6742dc4c56cc88be3c1e85ff6eb5900450d3180c05ed5e81fa11b301fd647a59"
+    },
+    "apply_write_and_readback": {
+      "path": "C:\\Temp\\gap-apply-before.log",
+      "sha256": "3e19ab1d16bca3bb267dbaa6da23b3b469f7653fd5710533cbc5e374da4a9bd8"
+    }
+  },
+  "new_regressions": {
+    "839": "frozen_wait_offline_test.go:81: 未知冻结状态被当成可下结论：missing=false why=0",
+    "840": "frozen_wait_offline_test.go:81: 未知冻结状态被当成可下结论：missing=true why=1",
+    "841": "partners_test.go:122: ⚠️ 同包同测试名 ⇒ 成对：孤儿数 1，应为 0",
+    "842": "apply_retry_windows_test.go:52: 施加重试边界错误：calls=1 bodies=0 verdict=零层未成立 restored=\"original\" err=<nil>",
+    "843": "apply_readback_test.go:30: 未确认破坏字节就执行测试：bodies=1 verdict=红对了 detail="
+  },
+  "superseded_attempts": {
+    "2cabd73": {
+      "source": "2cabd736c4633566b02aa5b9da9756ebca446e93",
+      "executed": 52,
+      "complete": false,
+      "reason": "Stopped before completion to preserve the existing 211 diagnostic contract after predicate extraction; all results excluded from final full-run evidence.",
+      "residual_verified_and_restored": "365 平仓盈亏的方向搞反; original source with exactly that registered replacement matched residual bytes; restored source bytes and verified empty porcelain before switching to 507f303.",
+      "report_sha256": "eb75e46e449eb799fbf0f610c4969200e8bf1a664f41c77360c841120d9acfa0"
+    },
+    "507f303": {
+      "source_commit": "507f303b9fde10f6f0d6425a217943f9337d5b0b",
+      "executed": 755,
+      "expected_red_detected": 745,
+      "expected_green": 9,
+      "unexpected": 1,
+      "exit_code": 1,
+      "failure": {
+        "name": "637 把 635 的 test 改指同包别的测试（393 就此变回孤儿——本守卫自己的红搭档）",
+        "pkg": "./tools/breakcheck/",
+        "test": "TestEveryGreenBreakHasARedPartner",
+        "expect": "red",
+        "want": "没有红搭档的 expect=green",
+        "verdict": "仍然绿",
+        "detail": "破坏后照样通过 —— 这条测试没在测它声称测的东西"
+      },
+      "restored_clean": true,
+      "resolution": "Retire 637 with obsolete 393-green premise; new 841 tests the generic partner-name intersection using stable positive/negative cases. A new complete source-bound run is required; no per-case result merging.",
+      "report_sha256": "76aa451e8a5f22c9fe90fd667c9729dfdb5a8c2686f394f6f5765157c7525aac"
+    },
+    "8234084": {
+      "source": "8234084b35ddbab2b0dd22921fa4f93d7dd05127",
+      "executed": 518,
+      "complete": false,
+      "unexpected": [
+        {
+          "name": "412 腿1 与腿2 之间那一份落盘被拿掉——次序就只能从运行开关推，而 #13 正栽在那",
+          "pkg": ".",
+          "test": "TestSliceDumpsPinDownBothOrderAndConsumption",
+          "expect": "red",
+          "want": "要恰好 3 次",
+          "verdict": "零层未成立",
+          "detail": "open cmd/oracle/slice.go: The requested operation cannot be performed on a file with a user-mapped section open."
+        }
+      ],
+      "restored_only_confirmed_residual": [
+        "578 PlaceAccepted 不守可平量（冻住的手数超过持仓也记进簿）"
+      ],
+      "restored_clean": true,
+      "accepted_as_full_proof": false,
+      "resolution": "Bounded same-plan writes and readback; requires new independent complete run."
+    }
+  },
+  "new_behavior": {
+    "probe": "Unseen/unknown orders and missing/invalid frozen fields cannot become a negative observation; stop later trial orders and reread state on the deadline wakeup.",
+    "executor": "Same planned bytes may retry Windows errors 32/33/1224 at most 6 writes / total 1.55s wait; do not rerun test bodies; readback must match broken plan before body. Restoration failure still stops subsequent mutations."
+  },
+  "registry_evolution": {
+    "retired_637": "The old scenario depended on 393 remaining green; 393 closure removed that premise.",
+    "new_841": "Generic test-name intersection validated by stable same-name/different-name positive/negative table cases.",
+    "historic_names": "Original case names and reasons retained; current expect/want and report verdict define current status."
+  },
+  "limitations": [
+    "Synthetic tests establish software behavior, not new market-rule observations; original market evidence gaps remain declared.",
+    "Retained 9 expected-green entries: 8 intentional boundary demonstrations and 441 requiring independent actual seed-direction verification.",
+    "No broker connection, order/cancel execution, expired probe-window change, F9c matching, or release tag.",
+    "Full registry scan is verified on Windows; hosted Linux runs root/oracle regression, race and fuzz with its explicit CTP stub boundary."
+  ]
+}

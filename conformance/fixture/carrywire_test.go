@@ -59,6 +59,29 @@ func specForSymbol(t *testing.T, f *Fixture, sym string) (Spec, bool) {
 // 而前提不成立时 ② 挑出来的那份是错的。
 func carryStartFor(t *testing.T, all []*Fixture, f *Fixture, sym string) (*carrySource, bool, string) {
 	t.Helper()
+	pick, ok, why := selectCarryFixture(t, all, f, sym)
+	if !ok {
+		return nil, false, why
+	}
+
+	settle, ok := settlementOf(t, sym)
+	if !ok {
+		// ⚠️ 缺席就缺席，**不拿柜台的 quotes.settlement 顶替** ——
+		// 那会把独立来源悄悄换成同源，而同源核对是同义反复。
+		return nil, false, "交易所日行情里没有该合约的结算价（大商所 412 未打通）"
+	}
+	spec, ok := specForSymbol(t, pick, sym)
+	if !ok {
+		return nil, false, "该合约没有登记规格（乘数 / 手续费率 / 保证金率）"
+	}
+	if _, err := ReconstructOnFacade(pick, nil, sym, spec, positionDateOf(t, sym), settle, f.TradingDay); err != nil {
+		return nil, false, "结转失败：" + err.Error()
+	}
+	return &carrySource{prev: pick, spec: spec, settle: settle}, true, ""
+}
+
+// selectCarryFixture 独立检验上一日有成交且最晚快照覆盖最大成交数的选择规则。
+func selectCarryFixture(t evidenceReporter, all []*Fixture, f *Fixture, sym string) (*Fixture, bool, string) {
 	today := f.TradingDay.String()
 
 	type cand struct {
@@ -109,18 +132,5 @@ func carryStartFor(t *testing.T, all []*Fixture, f *Fixture, sym string) (*carry
 			prevDay, pick.f.Path, pick.f.CapturedAt, pick.trades, sym, maxTrades)
 	}
 
-	settle, ok := settlementOf(t, sym)
-	if !ok {
-		// ⚠️ 缺席就缺席，**不拿柜台的 quotes.settlement 顶替** ——
-		// 那会把独立来源悄悄换成同源，而同源核对是同义反复。
-		return nil, false, "交易所日行情里没有该合约的结算价（大商所 412 未打通）"
-	}
-	spec, ok := specForSymbol(t, pick.f, sym)
-	if !ok {
-		return nil, false, "该合约没有登记规格（乘数 / 手续费率 / 保证金率）"
-	}
-	if _, err := ReconstructOnFacade(pick.f, nil, sym, spec, positionDateOf(t, sym), settle, f.TradingDay); err != nil {
-		return nil, false, "结转失败：" + err.Error()
-	}
-	return &carrySource{prev: pick.f, spec: spec, settle: settle}, true, ""
+	return pick.f, true, ""
 }

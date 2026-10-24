@@ -477,8 +477,12 @@ func withBreakFiles(b Break, body func() (string, string), files breakFileIO) (v
 		}
 	}()
 	for _, s := range plan {
-		if err := files.write(s.file, s.broken, 0o644); err != nil {
+		if err := writePlannedBytes(files, s.file, s.broken); err != nil {
 			return "零层未成立", err.Error()
+		}
+		written, rerr := files.read(s.file)
+		if rerr != nil || string(written) != string(s.broken) {
+			return "零层未成立", fmt.Sprintf("%s 破坏写入后字节不符：%v", s.file, rerr)
 		}
 	}
 	return body()

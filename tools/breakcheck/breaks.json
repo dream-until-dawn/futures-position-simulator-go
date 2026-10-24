@@ -455,10 +455,10 @@
 		"old": "\tcase types.CloseToday:\n\t\treturn r.CloseTodayByMoney, r.CloseTodayByVolume, nil",
 		"new": "\tcase types.CloseToday:\n\t\treturn r.OpenByMoney, r.OpenByVolume, nil",
 		"pkg": "./conformance/fixture/",
-		"test": "TestFeeAgainstEveryTrade",
-		"want": "",
-		"expect": "green",
-		"why": "平今与开仓在快期模拟上同费率（kq_facts 18），所以「开平标志选错档」这个错在本口子上查不出来。真实 CTP 上平今常另有费率。"
+		"test": "TestFeeAgainstEveryTrade|TestOfflineFeeTiersAreDistinct",
+		"want": "合成手续费档位混用",
+		"expect": "red",
+		"why": "平今与开仓在快期模拟上同费率（kq_facts 18），所以「开平标志选错档」这个错在本口子上查不出来。真实 CTP 上平今常另有费率。\n\n20261024 离线补齐：TestOfflineFeeTiersAreDistinct 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "360 公司口径换交易所口径（期望**仍然绿**）（F8 改指：翻译收进门面，这里取的是 MarginGroups 的哪一档）",
@@ -467,10 +467,10 @@
 		"old": "\t\tout.MarginLong, out.MarginShort, out.HasMargin = g.LongExchange, g.ShortExchange, true",
 		"new": "\t\tout.MarginLong, out.MarginShort, out.HasMargin = g.LongCompany, g.ShortCompany, true",
 		"pkg": "./conformance/fixture/",
-		"test": "TestMarginAgainstFixturePositions",
-		"want": "",
-		"expect": "green",
-		"why": "实测费率里公司加收为零，交易所口径与公司口径恒等，本口子上分不开（待实测第 14 条）。⚠️ 风险度用的是公司口径，两层混用时错的方向是「看起来更安全」。"
+		"test": "TestMarginAgainstFixturePositions|TestOfflineExchangeMarginExcludesCompanyAddon",
+		"want": "公司加收污染交易所占用",
+		"expect": "red",
+		"why": "实测费率里公司加收为零，交易所口径与公司口径恒等，本口子上分不开（待实测第 14 条）。⚠️ 风险度用的是公司口径，两层混用时错的方向是「看起来更安全」。\n\n20261024 离线补齐：TestOfflineExchangeMarginExcludesCompanyAddon 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "361 逐笔翻译改成按方向合并手数（F8 改指：逐笔翻译只剩门面 value() 一份）",
@@ -599,11 +599,11 @@
 		"file": "trade.go",
 		"old": "closeProfit = cp.ByDate",
 		"new": "closeProfit = cp.ByTrade",
-		"pkg": "./conformance/fixture/",
-		"test": "TestRebuildAccountFieldByField",
-		"want": "",
-		"expect": "green",
-		"why": "同上：今仓下两套口径同值。⚠️ 中国期货的资金结算走逐日盯市，这一条在有昨仓之后必须变红。"
+		"pkg": ".",
+		"test": "TestOfflineCloseUsesByDate",
+		"want": "跨日平仓混用逐笔盈亏",
+		"expect": "red",
+		"why": "同上：今仓下两套口径同值。⚠️ 中国期货的资金结算走逐日盯市，这一条在有昨仓之后必须变红。\n\n20261024 离线补齐：TestOfflineCloseUsesByDate 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "374 内部不变式自查被绕过（20260915 重锚：Rebuild 改调门面，记账链条搬进 trade.go）",
@@ -611,11 +611,11 @@
 		"file": "trade.go",
 		"old": "\t\ts.acc.Check,\n",
 		"new": "\t\tfunc() error { return nil },\n",
-		"pkg": "./conformance/fixture/",
-		"test": "TestRebuildAccountFieldByField",
-		"want": "",
-		"expect": "green",
-		"why": "acc.Check() 抓的是「忘了把冻结算进可用」，而本批样本里冻结全为零，那条不变式无从被违反。报单冻结要到 v0.4.0。"
+		"pkg": ".",
+		"test": "TestOfflineCommitChecksAccount",
+		"want": "账户末端自查未阻断",
+		"expect": "red",
+		"why": "acc.Check() 抓的是「忘了把冻结算进可用」，而本批样本里冻结全为零，那条不变式无从被违反。报单冻结要到 v0.4.0。\n\n20261024 离线补齐：TestOfflineCommitChecksAccount 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "375 版本推到 v1.0.0（欠账应当当场到期）",
@@ -775,13 +775,13 @@
 		"name": "70 【期望仍绿】waitFrozen 不再识别拒单",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_position_frozen.go",
-		"old": "\t\tif st, found := cli.OrderOf(orderID); found &&\n\t\t\tstrings.EqualFold(st.Status, \"FINISHED\") {\n\t\t\treturn cur, orderFinished\n\t\t}",
+		"old": "\t\tif found && strings.EqualFold(st.Status, \"FINISHED\") {\n\t\t\treturn cur, orderFinished\n\t\t}",
 		"new": "",
 		"pkg": "./probe/",
-		"test": "TestPositionFrozenUsesTheGuards|TestPositionFrozenDumpsWhileHeld|TestPositionFrozenStopsOnFill|TestPositionFrozenLimitPriceIsFar",
-		"want": "",
-		"expect": "green",
-		"why": "删掉这一段之后，柜台拒单会走到 timedOut，于是被记成「该柜台不在持仓侧记冻结手数」——一条关于柜台的**错误结论**，而它看起来与真结论一模一样。全套单测照样绿。⚠️ 这是本实验声明的盲区：waitFrozen 的三态只有连着真柜台才验得了，单测这一层覆盖不到它。跑 position-frozen 时必须**亲眼看那三行日志分支**，不能只看它没报错。\n\n⚠️ 20260910 更正：这一条此前的 test 字段写的是 `TestPositionFrozen`，而 breakcheck 是**锚定**跑 `-run '^…$'` 的，那个名字在 probe 包里并不存在（真实名字是四个更长的）。于是它一条测试也没选中，go test 打印 \"no tests to run\"、PASS、退出 0，**每一次全量运行都把它报成「如预期仍然绿」**。它跑了零条测试，却一直在替我背书这个盲区。现在写全那四个名字。"
+		"test": "TestPositionFrozenUsesTheGuards|TestPositionFrozenDumpsWhileHeld|TestPositionFrozenStopsOnFill|TestPositionFrozenLimitPriceIsFar|TestOfflineFrozenWaitReasons",
+		"want": "冻结等待三态错误",
+		"expect": "red",
+		"why": "删掉这一段之后，柜台拒单会走到 timedOut，于是被记成「该柜台不在持仓侧记冻结手数」——一条关于柜台的**错误结论**，而它看起来与真结论一模一样。全套单测照样绿。⚠️ 这是本实验声明的盲区：waitFrozen 的三态只有连着真柜台才验得了，单测这一层覆盖不到它。跑 position-frozen 时必须**亲眼看那三行日志分支**，不能只看它没报错。\n\n⚠️ 20260910 更正：这一条此前的 test 字段写的是 `TestPositionFrozen`，而 breakcheck 是**锚定**跑 `-run '^…$'` 的，那个名字在 probe 包里并不存在（真实名字是四个更长的）。于是它一条测试也没选中，go test 打印 \"no tests to run\"、PASS、退出 0，**每一次全量运行都把它报成「如预期仍然绿」**。它跑了零条测试，却一直在替我背书这个盲区。现在写全那四个名字。\n\n20261024 离线补齐：TestOfflineFrozenWaitReasons 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "71 下单限价换成对手价（是个调用，但不是 FarPrice）",
@@ -932,11 +932,11 @@
 		"file": "refdata/exchange/shfe.go",
 		"old": "\t\tif c, ok := numText(row.Close); ok {\n\t\t\tif p, err := decimal.NewFromString(c); err == nil && p.IsPositive() {\n\t\t\t\trec.Close, rec.HasClose = p, true\n\t\t\t}\n\t\t}",
 		"new": "\t\tc, ok := numText(row.Close)\n\t\tif !ok {\n\t\t\trep.drop(dropEmptyPrice, label)\n\t\t\tcontinue\n\t\t}\n\t\tif p, err := decimal.NewFromString(c); err == nil && p.IsPositive() {\n\t\t\trec.Close, rec.HasClose = p, true\n\t\t}",
-		"pkg": "./conformance/fixture/",
-		"test": "TestPositionPriceIsExchangeClose",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 收盘价是**旁证**，不是结算链条的输入 —— 让它把整行否掉，会在上游哪天不发这个字段时把结算价一起弄没。而本条测的是「柜台用收盘价」，它读的是**已落盘的夹具**，不是现场解析，所以照样绿。声明的盲区：解析器丢行这件事只有 refdata/exchange 自己的测试盯得住，跨模块的对拍盯不住它。"
+		"pkg": "./refdata/exchange",
+		"test": "TestOfflineSHFECloseIsOptional",
+		"want": "缺收盘价丢失结算行",
+		"expect": "red",
+		"why": "⚠️ 收盘价是**旁证**，不是结算链条的输入 —— 让它把整行否掉，会在上游哪天不发这个字段时把结算价一起弄没。而本条测的是「柜台用收盘价」，它读的是**已落盘的夹具**，不是现场解析，所以照样绿。声明的盲区：解析器丢行这件事只有 refdata/exchange 自己的测试盯得住，跨模块的对拍盯不住它。\n\n20261024 离线补齐：TestOfflineSHFECloseIsOptional 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "86 跨来源核对改回拿柜台自己的结算价",
@@ -1044,10 +1044,10 @@
 		"old": "\tif dceSections < 50 {",
 		"new": "\tif dceSections < 0 {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCloseOrderIsStructurallyUnmeasurable",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 下界卡的是「大商所样本够不够多」，而现有样本 190 个远超 50 —— 去掉它当然还是绿。声明的盲区：这条下界只在**样本变少**时起作用（夹具被删、过滤条件写错），而那种情形今天不存在，所以破坏验证在这一条上**什么都证明不了**。它的价值是将来的，不是现在的。"
+		"test": "TestCloseOrderIsStructurallyUnmeasurable|TestOfflineCloseOrderEvidenceBoundaries",
+		"want": "离线守卫反例未检出或正例误拒：49条不足",
+		"expect": "red",
+		"why": "⚠️ 下界卡的是「大商所样本够不够多」，而现有样本 190 个远超 50 —— 去掉它当然还是绿。声明的盲区：这条下界只在**样本变少**时起作用（夹具被删、过滤条件写错），而那种情形今天不存在，所以破坏验证在这一条上**什么都证明不了**。它的价值是将来的，不是现在的。\n\n20261024 离线补齐：TestOfflineCloseOrderEvidenceBoundaries 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "96 消耗顺序守卫把「大商所有昨仓」当成正常",
@@ -1056,10 +1056,10 @@
 		"old": "\t\t\t\tif h.IsPositive() {\n\t\t\t\t\tdceWithHistory++",
 		"new": "\t\t\t\tif h.IsNegative() {\n\t\t\t\t\tdceWithHistory++",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCloseOrderIsStructurallyUnmeasurable",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 手数不可能为负，所以把判据从「>0」改成「<0」之后计数照样是 0，本条照样绿。**声明的盲区**：这条测试断言的是「没有反例」，而一个恒假的判据与一个真的没有反例**长得一模一样**。真正能守住它的只有「大商所哪天出现昨仓」——那时正确的判据会红，而这个改坏的不会。破坏验证在这里只能演示盲区，不能消除它。"
+		"test": "TestCloseOrderIsStructurallyUnmeasurable|TestOfflineCloseOrderEvidenceBoundaries",
+		"want": "离线守卫反例未检出或正例误拒：long昨仓反例",
+		"expect": "red",
+		"why": "⚠️ 手数不可能为负，所以把判据从「>0」改成「<0」之后计数照样是 0，本条照样绿。**声明的盲区**：这条测试断言的是「没有反例」，而一个恒假的判据与一个真的没有反例**长得一模一样**。真正能守住它的只有「大商所哪天出现昨仓」——那时正确的判据会红，而这个改坏的不会。破坏验证在这里只能演示盲区，不能消除它。\n\n20261024 离线补齐：TestOfflineCloseOrderEvidenceBoundaries 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "98 结转+重放的「今昨并存」判别力要求去掉",
@@ -1134,10 +1134,10 @@
 		"old": "\tif skippedStalePre >= reconstructed && reconstructed > 0 {",
 		"new": "\tif false {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReconstructCoversCarriedSides",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 这条守卫防的是「每一个截面的保证金都被跳过」，而当前 30 个里跳了 20 个、还剩 10 个在比 —— 前提不成立，去掉它当然还是绿。声明的盲区：它只在**样本全部落进跳过条件**时起作用（例如哪天全部夹具都拍在行情滚动之前），而那种情形今天不存在。它的价值是将来的。"
+		"test": "TestReconstructCoversCarriedSides|TestOfflineComparisonCoverageBoundaries",
+		"want": "离线守卫反例未检出或正例误拒：全部跳过",
+		"expect": "red",
+		"why": "⚠️ 这条守卫防的是「每一个截面的保证金都被跳过」，而当前 30 个里跳了 20 个、还剩 10 个在比 —— 前提不成立，去掉它当然还是绿。声明的盲区：它只在**样本全部落进跳过条件**时起作用（例如哪天全部夹具都拍在行情滚动之前），而那种情形今天不存在。它的价值是将来的。\n\n20261024 离线补齐：TestOfflineComparisonCoverageBoundaries 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "106 New 不再拦零值 PositionDateType（回到假取舍那一版）",
@@ -1179,10 +1179,10 @@
 		"old": "\t\tif !neverNonZero[name] || strings.HasSuffix(class, \"-?\") {",
 		"new": "\t\tif !neverNonZero[name] || strings.HasSuffix(class, \"\") {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCrossDayConformance",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 去掉这条断言之后测试仍绿 —— 因为我已经按它的指引把 6 个字段改成了「跨日-?」，此刻**没有反例**。声明的盲区：一条断言「没有反例」的守卫，破坏验证只能证明它现在没被违反，不能证明它将来会拦住。真正的证据是它**加进来的那一刻**当场抓到了 3 个我手工分类漏掉的（open_cost_long_his/_today、volume_short_his），而评审只点名了空头那三个。⚠️ 顺带一条教训：这条破坏的前两版都因为「声明未使用 / 未用导入」而编译失败，被第二层拦下 —— **改坏一处代码时，别顺手把一个变量或导入也改没了**，那时红的是编译器，不是断言。"
+		"test": "TestCrossDayConformance|TestOfflineObservedClassBoundaries",
+		"want": "离线守卫反例未检出或正例误拒：零观测冒认机制",
+		"expect": "red",
+		"why": "⚠️ 去掉这条断言之后测试仍绿 —— 因为我已经按它的指引把 6 个字段改成了「跨日-?」，此刻**没有反例**。声明的盲区：一条断言「没有反例」的守卫，破坏验证只能证明它现在没被违反，不能证明它将来会拦住。真正的证据是它**加进来的那一刻**当场抓到了 3 个我手工分类漏掉的（open_cost_long_his/_today、volume_short_his），而评审只点名了空头那三个。⚠️ 顺带一条教训：这条破坏的前两版都因为「声明未使用 / 未用导入」而编译失败，被第二层拦下 —— **改坏一处代码时，别顺手把一个变量或导入也改没了**，那时红的是编译器，不是断言。\n\n20261024 离线补齐：TestOfflineObservedClassBoundaries 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "110 包树守卫按叶子名比对（回到解析错的那一版）",
@@ -1478,10 +1478,10 @@
 		"old": "\tif nonZero == 0 {",
 		"new": "\tif false {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestFrozenAgainstOracle",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 现有样本里非零的有 6 个，前提不成立，去掉当然还是绿。声明的盲区：这条只在**全是零**时起作用（例如哪天只留下没挂单时拍的夹具），而那种情形今天不存在。它的价值是将来的 —— 而它此刻的价值是**已经兑现过一次**：加它之前，冻结那一块比的全是 0。"
+		"test": "TestFrozenAgainstOracle|TestOfflineComparisonCoverageBoundaries",
+		"want": "离线守卫反例未检出或正例误拒：全零不能证明冻结",
+		"expect": "red",
+		"why": "⚠️ 现有样本里非零的有 6 个，前提不成立，去掉当然还是绿。声明的盲区：这条只在**全是零**时起作用（例如哪天只留下没挂单时拍的夹具），而那种情形今天不存在。它的价值是将来的 —— 而它此刻的价值是**已经兑现过一次**：加它之前，冻结那一块比的全是 0。\n\n20261024 离线补齐：TestOfflineComparisonCoverageBoundaries 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "136 委托白名单漏掉 volume_left（冻结量按它算）",
@@ -1665,11 +1665,11 @@
 		"file": "submit.go",
 		"old": "\t\tleg := margin.Leg{Instrument: req.Instrument, Direction: req.Direction, Volume: req.Volume,",
 		"new": "\t\tleg := margin.Leg{Instrument: req.Instrument, Direction: req.Direction, Volume: req.Volume, IsHistory: true,",
-		"pkg": "./conformance/fixture/",
-		"test": "TestFrozenTotals|TestFrozenAccountAgainstOracle",
-		"want": "",
-		"expect": "green",
-		"why": "快期模拟上四档保证金率同值（今仓/昨仓 × 多/空），probes.md §7.2 实测；而快期口径的冻结按昨结算价（PreSettleAll），今昨档对它本来就不起作用 —— 「挂单按今仓档还是昨仓档算」在快期夹具上**分不开**，选错了也不会红。⚠️ CTP 口径（按挂单价，今仓腿）下这条会变成实错：那一侧由根包 TestSubmitFundsCheckFollowsFreezeBasis 与 ctpfixture 的 rb2701 冻结对拍守，不在本条的测试选择里。F6b 改指之前它锚在 conformance/fixture 自己的 openFrozenMargin 上"
+		"pkg": ".",
+		"test": "TestOfflineFreezeUsesTodayLeg",
+		"want": "挂单冻结错误使用昨仓腿",
+		"expect": "red",
+		"why": "快期模拟上四档保证金率同值（今仓/昨仓 × 多/空），probes.md §7.2 实测；而快期口径的冻结按昨结算价（PreSettleAll），今昨档对它本来就不起作用 —— 「挂单按今仓档还是昨仓档算」在快期夹具上**分不开**，选错了也不会红。⚠️ CTP 口径（按挂单价，今仓腿）下这条会变成实错：那一侧由根包 TestSubmitFundsCheckFollowsFreezeBasis 与 ctpfixture 的 rb2701 冻结对拍守，不在本条的测试选择里。F6b 改指之前它锚在 conformance/fixture 自己的 openFrozenMargin 上\n\n20261024 离线补齐：TestOfflineFreezeUsesTodayLeg 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "153 通知不再进夹具",
@@ -1988,22 +1988,22 @@
 		"old": "\tif todaySide {\n\t\tname += \"_today\"\n\t} else {\n\t\tname += \"_his\"\n\t}\n",
 		"new": "\t_ = todaySide\n",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCostSplitAbsentSideFollowsPositionDateType",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：判别样本数是个**下界**，守卫只查它 >0，不查它准不准。拿总手数比会把 rb2701 结算后「多头全是昨仓、_today 格给 \"-\"」也记成判别样本 —— 那一格今仓侧本来就没量，判别不出任何东西。实测 48 格虚高到 118 格，而测试全绿。堵不上是因为「对的数是多少」得先有一份独立算法，那就是把被测逻辑抄第二遍。"
+		"test": "TestCostSplitAbsentSideFollowsPositionDateType|TestOfflineCostSideAndDirectionCounts",
+		"want": "成本判别侧别错误",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：判别样本数是个**下界**，守卫只查它 >0，不查它准不准。拿总手数比会把 rb2701 结算后「多头全是昨仓、_today 格给 \"-\"」也记成判别样本 —— 那一格今仓侧本来就没量，判别不出任何东西。实测 48 格虚高到 118 格，而测试全绿。堵不上是因为「对的数是多少」得先有一份独立算法，那就是把被测逻辑抄第二遍。\n\n20261024 离线补齐：TestOfflineCostSideAndDirectionCounts 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "182 判别样本不再逐方向数：空头侧那个新样本（kq_facts 52）就白拿了",
 		"dir": "",
 		"file": "conformance/fixture/cost_split_test.go",
-		"old": "\t\t\t\tfor i := range absentNames(todayAbsent) {",
-		"new": "\t\t\t\tfor i := 0; i < 1; i++ {",
+		"old": "\tfor i := range absentNames(todayAbsent) {",
+		"new": "\tfor i := 0; i < 1; i++ {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCostSplitAbsentSideFollowsPositionDateType",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：判别样本数只查 >0，不查它**覆盖了哪些方向**。只数多头侧仍然 >0，于是空头侧那个 20260909 结算后才拿到的新样本（kq_facts 52 的判别依据）**白拿了**，而测试照样绿。堵它要按方向分开卡下界，而那要先说清「每个方向至少要几个」——现在空头侧只有 1 个，卡下界等于把当前状态固化。写在这里，别当它已经被覆盖。"
+		"test": "TestCostSplitAbsentSideFollowsPositionDateType|TestOfflineCostSideAndDirectionCounts",
+		"want": "成本判别方向丢失",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：判别样本数只查 >0，不查它**覆盖了哪些方向**。只数多头侧仍然 >0，于是空头侧那个 20260909 结算后才拿到的新样本（kq_facts 52 的判别依据）**白拿了**，而测试照样绿。堵它要按方向分开卡下界，而那要先说清「每个方向至少要几个」——现在空头侧只有 1 个，卡下界等于把当前状态固化。写在这里，别当它已经被覆盖。\n\n20261024 离线补齐：TestOfflineCostSideAndDirectionCounts 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "183 sideAbsent 一律说「不是 \"-\"」：拆分记录全被当成未结算态",
@@ -2119,13 +2119,13 @@
 		"name": "193 「涨停板」那一侧不再核：双向断言塌成单向",
 		"dir": "",
 		"file": "conformance/fixture/tick_session_test.go",
-		"old": "\t\t\tcase msg == limitMsg && off:",
-		"new": "\t\t\tcase msg == limitMsg && off && false:",
+		"old": "\tcase msg == limitMsg && off:",
+		"new": "\tcase msg == limitMsg && off && false:",
 		"pkg": "./conformance/fixture/",
-		"test": "TestCounterHalfTickBoundaryHoldsInSession",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：把「涨停板 ⟺ 不偏离整数倍」那一半删掉，测试**照样全绿** —— 因为现有语料里没有一笔「柜台回涨停板、而 offTick 说它偏离」的反例，那一半在当前样本上**永远不触发**。也就是说双向断言里只有一个方向真的被考验过。⚠️ 要考验另一个方向，需要一笔柜台回涨停板、零头又落在 (0, 0.5) 的委托 —— 而按 kq_facts 44（先查整数倍）那种委托**不该存在**。于是这一半是「防将来」的，不是「验现在」的：写出来，别当它已经被验过。"
+		"test": "TestCounterHalfTickBoundaryHoldsInSession|TestOfflineTickOutcomeBothDirections",
+		"want": "离线守卫反例未检出或正例误拒：已撤单报单被拒绝价格超出涨停板",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：把「涨停板 ⟺ 不偏离整数倍」那一半删掉，测试**照样全绿** —— 因为现有语料里没有一笔「柜台回涨停板、而 offTick 说它偏离」的反例，那一半在当前样本上**永远不触发**。也就是说双向断言里只有一个方向真的被考验过。⚠️ 要考验另一个方向，需要一笔柜台回涨停板、零头又落在 (0, 0.5) 的委托 —— 而按 kq_facts 44（先查整数倍）那种委托**不该存在**。于是这一半是「防将来」的，不是「验现在」的：写出来，别当它已经被验过。\n\n20261024 离线补齐：TestOfflineTickOutcomeBothDirections 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "194 tick 未知时 tickFrac 返回 0（读起来就是「整数倍」）",
@@ -2296,13 +2296,13 @@
 		"name": "209 「因昨仓被跳过」不再计数：那一支**现在够不到了**（冻结已接上 19 个）",
 		"dir": "",
 		"file": "conformance/fixture/fixture_test.go",
-		"old": "\t\t\t\t\tif len(f.Orders) > 0 {\n\t\t\t\t\t\tskippedWithOrders++\n\t\t\t\t\t}",
-		"new": "\t\t\t\t\tif len(f.Orders) < 0 {\n\t\t\t\t\t\tskippedWithOrders++\n\t\t\t\t\t}",
+		"old": "\tif len(f.Orders) > 0 {\n\t\t*skippedWithOrders++\n\t}",
+		"new": "\tif len(f.Orders) < 0 {\n\t\t*skippedWithOrders++\n\t}",
 		"pkg": "./conformance/fixture/",
-		"test": "TestPositionViewAcrossAllFixtures",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：这条破坏钉的断言在 `withFrozen == 0` 那一支里，而 20260909 全量对拍接上结转路径之后 withFrozen = 19 —— **那一整支不再执行**，里面的断言（含它的「真异常」分支）因此**一条都没被跑过**。⚠️ 分支留着是对的：语料再变时它还要说话。但要认清它现在的状态是**未被验证的备用路径**，不是**已验证的守卫** —— 两者在测试报告里长得一样，都是绿的。这一条把那个区别写出来。"
+		"test": "TestPositionViewAcrossAllFixtures|TestOfflineSkippedOrdersAndAnyOrders",
+		"want": "跳过委托计数遗漏",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：这条破坏钉的断言在 `withFrozen == 0` 那一支里，而 20260909 全量对拍接上结转路径之后 withFrozen = 19 —— **那一整支不再执行**，里面的断言（含它的「真异常」分支）因此**一条都没被跑过**。⚠️ 分支留着是对的：语料再变时它还要说话。但要认清它现在的状态是**未被验证的备用路径**，不是**已验证的守卫** —— 两者在测试报告里长得一样，都是绿的。这一条把那个区别写出来。\n\n20261024 离线补齐：TestOfflineSkippedOrdersAndAnyOrders 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "210 anyFixtureHasOrders 恒假：真异常那一支被绕过去（该红没红）",
@@ -2311,10 +2311,10 @@
 		"old": "\t\tif len(f.Orders) > 0 {\n\t\t\treturn true\n\t\t}",
 		"new": "\t\tif len(f.Orders) < 0 {\n\t\t\treturn true\n\t\t}",
 		"pkg": "./conformance/fixture/",
-		"test": "TestPositionViewAcrossAllFixtures",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：这两条破坏**只有一起打**才暴露问题。单独把 anyFixtureHasOrders 弄成恒假时，skippedWithOrders 仍然 > 0，于是走的是第一支（耦合解释），根本到不了真异常那一支 —— 测试照样绿。也就是说这条守卫对「判据里的兜底条件失效」是**单点不敏感**的。堵它要么给 anyFixtureHasOrders 单独配断言（它是三行，值不值另说），要么承认这是分支覆盖的固有形状：一个 switch 的后面几支，在前面的支恒成立时永远测不到。"
+		"test": "TestPositionViewAcrossAllFixtures|TestOfflineSkippedOrdersAndAnyOrders",
+		"want": "有委托的夹具被判为空",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：这两条破坏**只有一起打**才暴露问题。单独把 anyFixtureHasOrders 弄成恒假时，skippedWithOrders 仍然 > 0，于是走的是第一支（耦合解释），根本到不了真异常那一支 —— 测试照样绿。也就是说这条守卫对「判据里的兜底条件失效」是**单点不敏感**的。堵它要么给 anyFixtureHasOrders 单独配断言（它是三行，值不值另说），要么承认这是分支覆盖的固有形状：一个 switch 的后面几支，在前面的支恒成立时永远测不到。\n\n20261024 离线补齐：TestOfflineSkippedOrdersAndAnyOrders 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "211 半 tick 边界挪到 0.4：0.45 那笔盘中样本当场对不上柜台",
@@ -2356,10 +2356,10 @@
 		"old": "\t404: \"20260909 09:02 首见（日盘 reject-tick-vs-limit，WARNING）。\" +",
 		"new": "\t412: \"冒充欠账\",\n\t404: \"20260909 09:02 首见（日盘 reject-tick-vs-limit，WARNING）。\" +",
 		"pkg": "./conformance/fixture/",
-		"test": "TestNotifyCodesAreKnown",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：notifyCodesPendingID 与 notifyCodes **重了也没人管** —— 已认出的码被同时塞进欠账表时，守卫先查 notifyCodes 命中就 continue 了，欠账那一条永远不会被读到，计数也不涨。也就是说这张欠账表**只防漏、不防冗**。堵它要加一条「两张表不许相交」的断言（三行），值不值得看它会不会真的发生 —— 写在这里，比装作没有强。"
+		"test": "TestNotifyCodesAreKnown|TestOfflineNotifyTableDisjoint",
+		"want": "通知已知与待认领表相交",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：notifyCodesPendingID 与 notifyCodes **重了也没人管** —— 已认出的码被同时塞进欠账表时，守卫先查 notifyCodes 命中就 continue 了，欠账那一条永远不会被读到，计数也不涨。也就是说这张欠账表**只防漏、不防冗**。堵它要加一条「两张表不许相交」的断言（三行），值不值得看它会不会真的发生 —— 写在这里，比装作没有强。\n\n20261024 离线补齐：TestOfflineNotifyTableDisjoint 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "215 .gitignore 里那条挡本地证据的规则被删掉",
@@ -2467,10 +2467,10 @@
 		"old": "\t\tif n := len(o.TradesOf(sym)); n > 0 {\n\t\t\tsameDay = append(sameDay, cand{o, n})\n\t\t}",
 		"new": "\t\tsameDay = append(sameDay, cand{o, len(o.TradesOf(sym))})",
 		"pkg": "./conformance/fixture/",
-		"test": "TestPositionViewAcrossAllFixtures",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：「必须有该合约成交」这条过滤在**当前语料上不承重**。20260908 采集最晚的那份（15:54）恰好有成交，于是去掉过滤之后挑中的还是它，成交笔数仍是当天最大值，max 核对不触发，测试照样绿。⚠️ 它防的是**语料变化之后**的那一天：当天最后一份没有成交时，去掉过滤会挑中一份零成交的夹具，而 Carry 靠重放成交重建持仓 —— 结转出来的是一个**空仓**，下游会比出一堆看起来像真差异的差异。也就是说这条过滤是**防将来**的，不是**验现在**的：写出来，别当它已经被验过。"
+		"test": "TestPositionViewAcrossAllFixtures|TestOfflineCarrySourceSelection",
+		"want": "离线守卫反例未检出或正例误拒：最晚零成交不能挤掉来源",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：「必须有该合约成交」这条过滤在**当前语料上不承重**。20260908 采集最晚的那份（15:54）恰好有成交，于是去掉过滤之后挑中的还是它，成交笔数仍是当天最大值，max 核对不触发，测试照样绿。⚠️ 它防的是**语料变化之后**的那一天：当天最后一份没有成交时，去掉过滤会挑中一份零成交的夹具，而 Carry 靠重放成交重建持仓 —— 结转出来的是一个**空仓**，下游会比出一堆看起来像真差异的差异。也就是说这条过滤是**防将来**的，不是**验现在**的：写出来，别当它已经被验过。\n\n20261024 离线补齐：TestOfflineCarrySourceSelection 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "225 结转路径整个不接：26 份带昨仓的截面重新被跳过",
@@ -2677,10 +2677,10 @@
 		"old": "\tif okPairs < 20 {",
 		"new": "\tif okPairs < 0 {",
 		"pkg": "./",
-		"test": "TestDateRoleMatchesFormat",
-		"want": "",
-		"expect": "green",
-		"why": "⚠️ 演示的盲区：下界只防「一处都没有」，防不了「少了一大半」。现状 54 处，掉到 21 处它照样绿——而掉一半通常意味着约定的写法被改过，那时这条守卫查的已经不是原来那件事了。堵它要钉住确切条数，而那个数会随文档增删天天变（方法论 65：数与判据一体，这里判据就是那个正则）。写在这里，别当它已经被覆盖。"
+		"test": "TestDateRoleMatchesFormat|TestOfflineDateRoleLowerBound",
+		"want": "日期角色下界未阻断",
+		"expect": "red",
+		"why": "⚠️ 演示的盲区：下界只防「一处都没有」，防不了「少了一大半」。现状 54 处，掉到 21 处它照样绿——而掉一半通常意味着约定的写法被改过，那时这条守卫查的已经不是原来那件事了。堵它要钉住确切条数，而那个数会随文档增删天天变（方法论 65：数与判据一体，这里判据就是那个正则）。写在这里，别当它已经被覆盖。\n\n20261024 离线补齐：TestOfflineDateRoleLowerBound 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "244 横幅**低报**：说没有东西只在 dev 上，而实际上有（要两处一起改才是真场景）",
@@ -2927,10 +2927,10 @@
 		"old": "\texchange = notional.Mul(byMoney).Add(v.Mul(byVolume))",
 		"new": "\texchange = notional.Mul(byMoney)",
 		"pkg": "./conformance/ctpfixture/",
-		"test": "TestMarginAgainstCTP",
-		"want": "",
-		"expect": "green",
-		"why": "CTP 这批夹具里 `MarginRateByVolume` **全是 0**，于是 `exchange = notional×byMoney + volume×byVolume` 的第二项**永远不参与** —— 去掉它，本条照样全绿。⚠️ 与手续费那次同形（一个恒为零的项让「相加」与「二选一」无从区分），而这里更进一步：**它让那一项连「有没有被算」都测不出来**。⇒ 要它开口，需要一个 ByVolume 非零的品种，本口子上暂时没有。"
+		"test": "TestMarginAgainstCTP|TestOfflineMarginIncludesPerLot",
+		"want": "按手保证金加项丢失",
+		"expect": "red",
+		"why": "CTP 这批夹具里 `MarginRateByVolume` **全是 0**，于是 `exchange = notional×byMoney + volume×byVolume` 的第二项**永远不参与** —— 去掉它，本条照样全绿。⚠️ 与手续费那次同形（一个恒为零的项让「相加」与「二选一」无从区分），而这里更进一步：**它让那一项连「有没有被算」都测不出来**。⇒ 要它开口，需要一个 ByVolume 非零的品种，本口子上暂时没有。\n\n20261024 离线补齐：TestOfflineMarginIncludesPerLot 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "266 保证金去掉「按金额」那一项 —— CTP 对拍必须红。",
@@ -3677,10 +3677,10 @@
 		"old": "\tif p := longToday(pos0, inst); p != nil && int(p.Position) != 0 {",
 		"new": "\tif p := longToday(pos0, inst); false && p != nil && int(p.Position) != 0 {",
 		"pkg": ".",
-		"test": "TestSlicePreconditionCheckedBeforeAnyOrder",
-		"want": "前提检查要排在第一笔委托之前",
-		"expect": "green",
-		"why": "这一改让检查**永不触发**，而它在源码里的位置没动 —— 守卫是按 AST 位置判先后的，位置没变就该照常绿。⚠️ 它记在这里正是要把这半个盲区写明：**「排在前面」与「真的会拦住」是两件事**，本条守卫只管前者。后者靠 ctp-slices 跑在脏账户上才看得见。"
+		"test": "TestSlicePreconditionCheckedBeforeAnyOrder|TestOfflineSlicePrecondition",
+		"want": "脏账户前提未阻断或误拦截",
+		"expect": "red",
+		"why": "这一改让检查**永不触发**，而它在源码里的位置没动 —— 守卫是按 AST 位置判先后的，位置没变就该照常绿。⚠️ 它记在这里正是要把这半个盲区写明：**「排在前面」与「真的会拦住」是两件事**，本条守卫只管前者。后者靠 ctp-slices 跑在脏账户上才看得见。\n\n20261024 离线补齐：TestOfflineSlicePrecondition 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "394 holdVerdict 的「账上不止一条腿」那一支形同虚设——20260911 那次假结论会重现",
@@ -3856,10 +3856,10 @@
 		"old": "Outcome: outcome, Source: \"probe\",",
 		"new": "Outcome: outcome, Source: \"transcribed\",",
 		"pkg": ".",
-		"test": "TestRejectCorpusIsProbeWrittenOnly",
-		"want": "语料尚未拍",
-		"expect": "green",
-		"why": "⚠️ **如预期仍然绿，而它记的是一个此刻无法被验证的性质**：语料文件还没拍（`testdata/refdata/ctp-reject-codes.json` 不存在），于是守卫走的是「核对 §13 的声明」那一支，**根本读不到 source**。⇒ 等 20260915 拍出语料之后，本条才会真的红。**在那之前『只许 probe』这条只由代码保证，不由测试保证** —— 同 403 那一格。"
+		"test": "TestRejectCorpusIsProbeWrittenOnly|TestOfflineObservationSourceRoundTrip",
+		"want": "观测来源标签错误",
+		"expect": "red",
+		"why": "⚠️ **如预期仍然绿，而它记的是一个此刻无法被验证的性质**：语料文件还没拍（`testdata/refdata/ctp-reject-codes.json` 不存在），于是守卫走的是「核对 §13 的声明」那一支，**根本读不到 source**。⇒ 等 20260915 拍出语料之后，本条才会真的红。**在那之前『只许 probe』这条只由代码保证，不由测试保证** —— 同 403 那一格。\n\n20261024 离线补齐：TestOfflineObservationSourceRoundTrip 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "410 收尾平仓的 defer 挪回开腿之后——成交后才失败的那条路会留仓",
@@ -5655,10 +5655,10 @@
 		"old": "if off == types.Close && dt == refdata.UseHistory && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {",
 		"new": "if off.IsClose() && !off.SpecifiesPositionDate() && dt == refdata.UseHistory && s.choices.UndatedCloseOnUseHistory == UndatedCloseAsYesterday {",
 		"pkg": "./",
-		"test": "TestUndatedCloseAsYesterdayOnUseHistory|TestUndatedCloseChoiceZeroValue",
-		"want": "",
-		"expect": "green",
-		"why": "强平标志在 UseHistory 上的语义没有任何观测，也没有测试把强平标志喂进记账路径 —— 盲区如实登记，不为它造一个没有出处的期望值"
+		"test": "TestUndatedCloseAsYesterdayOnUseHistory|TestUndatedCloseChoiceZeroValue|TestOfflineForceOffsetsRemainUnmeasured",
+		"want": "未观测强平标志被猜改写",
+		"expect": "red",
+		"why": "强平标志在 UseHistory 上的语义没有任何观测，也没有测试把强平标志喂进记账路径 —— 盲区如实登记，不为它造一个没有出处的期望值\n\n20261024 离线补齐：TestOfflineForceOffsetsRemainUnmeasured 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "575 Choices.validate 不拒认不得的第八项取值",
@@ -5821,10 +5821,10 @@
 		"old": "\tif _, err := LiveOrderSymbols(f); err != nil {\n\t\treturn nil, false, false, err\n\t}",
 		"new": "\tif _, err := LiveOrderSymbols(f); false && err != nil {\n\t\treturn nil, false, false, err\n\t}",
 		"pkg": "./conformance/fixture/",
-		"test": "TestFrozenAgainstOracle|TestEveryFixtureFrozenParses",
-		"want": "",
-		"expect": "green",
-		"why": "入库语料里每一笔委托都有 status（TestEveryFixtureFrozenParses 的前提），读委托的错在语料上一次都不发生 ⇒ 吞不吞它给出同一个结果。守的是将来：哪天夹具里混进一笔没有 status 的委托，没有这一行它会被记成「凑不齐规格」、计数 +1，而不是报错。计数那一侧有 TestEveryFixtureFrozenParses 的「凑不齐规格 > 1 份即红」兜着，但那要恰好多出来才响"
+		"test": "TestFrozenAgainstOracle|TestEveryFixtureFrozenParses|TestOfflineFrozenReadErrorBeforeMissingSpec",
+		"want": "委托读取错误被规格跳过吞掉",
+		"expect": "red",
+		"why": "入库语料里每一笔委托都有 status（TestEveryFixtureFrozenParses 的前提），读委托的错在语料上一次都不发生 ⇒ 吞不吞它给出同一个结果。守的是将来：哪天夹具里混进一笔没有 status 的委托，没有这一行它会被记成「凑不齐规格」、计数 +1，而不是报错。计数那一侧有 TestEveryFixtureFrozenParses 的「凑不齐规格 > 1 份即红」兜着，但那要恰好多出来才响\n\n20261024 离线补齐：TestOfflineFrozenReadErrorBeforeMissingSpec 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "590 ReconstructOnFacade 不拒前一日没有成交的合约",
@@ -6163,10 +6163,10 @@
 		"old": "\tr, err = ReplayOnFacade(f, sym, mustSpec(t, f, sym), refdata.PositionDateNotNeeded, pre, borrowed)",
 		"new": "\tr, err = ReplayOnFacade(f, sym, mustSpec(t, f, sym), refdata.PositionDateNotNeeded, pre, false)",
 		"pkg": "./conformance/fixture/",
-		"test": "TestMarginAgainstFixturePositions",
-		"want": "",
-		"expect": "green",
-		"why": "两道都得拆才红：① 借来的那批（20260908）借到的值恰好就是真值，占用照样对得上；② margin_test 另有「夹具自己报了昨结算价」这道筛选，借来的样本根本不进保证金比对。守法落在结构（HasMargin 由参数决定）与登记上，不在测试上。换一批借来的值不是真值的语料，它才会红"
+		"test": "TestMarginAgainstFixturePositions|TestOfflineBorrowedPreNeverExposesMargin",
+		"want": "借值占用越过证据边界",
+		"expect": "red",
+		"why": "两道都得拆才红：① 借来的那批（20260908）借到的值恰好就是真值，占用照样对得上；② margin_test 另有「夹具自己报了昨结算价」这道筛选，借来的样本根本不进保证金比对。守法落在结构（HasMargin 由参数决定）与登记上，不在测试上。换一批借来的值不是真值的语料，它才会红\n\n20261024 离线补齐：TestOfflineBorrowedPreNeverExposesMargin 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "621 cmd/oracle 的 -carry 结算价接错（+50）：结转接上了、比对计数也不变，只有本库 position_price_long 变了",
@@ -6186,10 +6186,10 @@
 		"old": "\tif len(noPre) > 0 {",
 		"new": "\tif false && len(noPre) > 0 {",
 		"pkg": "./conformance/fixture/",
-		"test": "TestReplayMatchesOracleVolumeAndPrice",
-		"want": "",
-		"expect": "green",
-		"why": "迁移时这个跳过数是 0，今天的语料走不到它；它守的是将来 —— 出现别的交易日的昨仓样本（交易所结算价只有 20260908 一份）时走 errNoCarrySource 跳过。评审 20260915 提的棘轮，登记为盲区而不是造一份假语料"
+		"test": "TestReplayMatchesOracleVolumeAndPrice|TestOfflineComparisonCoverageBoundaries",
+		"want": "离线守卫反例未检出或正例误拒：缺前提不能静默",
+		"expect": "red",
+		"why": "迁移时这个跳过数是 0，今天的语料走不到它；它守的是将来 —— 出现别的交易日的昨仓样本（交易所结算价只有 20260908 一份）时走 errNoCarrySource 跳过。评审 20260915 提的棘轮，登记为盲区而不是造一份假语料\n\n20261024 离线补齐：TestOfflineComparisonCoverageBoundaries 使用合成正反例检验同一程序判据；登记破坏必须命中目标断言。原样本/市场规则的观测边界不因此提升。"
 	},
 	{
 		"name": "623 计价时丢掉 margin.Compute 的分组分解（MarginGroups 永远是空的）",
@@ -6327,8 +6327,8 @@
 		"name": "635 「前提不成立，不跑」改成同义措辞（393 的红搭档：AST 守卫认的是那句话，措辞一改它就空转）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\t\treturn fmt.Errorf(\"⚠️ **前提不成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
-		"new": "\t\treturn fmt.Errorf(\"⚠️ **前提没有成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
+		"old": "\t\treturn fmt.Errorf(\"⚠️ **前提不成立，不跑**：%w\", err)",
+		"new": "\t\treturn fmt.Errorf(\"⚠️ **前提没有成立，不跑**：%w\", err)",
 		"pkg": "./",
 		"test": "TestSlicePreconditionCheckedBeforeAnyOrder",
 		"want": "本条守卫在空转",
@@ -6345,17 +6345,7 @@
 		"want": "过期陈述",
 		"expect": "red"
 	},
-	{
-		"name": "637 把 635 的 test 改指同包别的测试（393 就此变回孤儿——本守卫自己的红搭档）",
-		"dir": "",
-		"file": "tools/breakcheck/breaks.json",
-		"old": "\t\t\"test\": \"TestSlicePreconditionCheckedBeforeAnyOrder\",\n\t\t\"want\": \"本条守卫在空转\",",
-		"new": "\t\t\"test\": \"TestCheckCTPDumpDir\",\n\t\t\"want\": \"本条守卫在空转\",",
-		"pkg": "./tools/breakcheck/",
-		"test": "TestEveryGreenBreakHasARedPartner",
-		"want": "没有红搭档的 expect=green",
-		"expect": "red"
-	},
+	
 	{
 		"name": "638 门面的「下一交易日不晚于当前」去掉——空仓那一档会走到更深处才失败，把模拟器弄失效",
 		"dir": "",
@@ -8272,5 +8262,65 @@
 		"test": "TestRestingSaveFailureAtEveryStage",
 		"want": "阶段落盘失败未标记或实验继续",
 		"expect": "red"
-	}
+	},
+{
+	"name": "839 未确认委托却把等待超时当成不冻结",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/probe/exp_position_frozen.go",
+	"old": "\t\t\tif !orderLive {",
+	"new": "\t\t\tif false && !orderLive {",
+	"pkg": "./probe/",
+	"test": "TestOfflineFrozenUnknown",
+	"want": "未知冻结状态被当成可下结论",
+	"expect": "red",
+	"why": "无委托或未知状态时不能给出柜台不冻结的结论；合成无回报必须返回stateUnknown。"
+},
+{
+	"name": "840 缺失冻结截面被当成冻结变化",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/probe/exp_position_frozen.go",
+	"old": "\t\tif !knownFrozen(cur) {",
+	"new": "\t\tif false && !knownFrozen(cur) {",
+	"pkg": "./probe/",
+	"test": "TestOfflineFrozenUnknown",
+	"want": "未知冻结状态被当成可下结论",
+	"expect": "red",
+	"why": "字段缺失、无值不等于零或真实变化；缺截面必须停止而不能记为冻结变化。"
+},
+{
+	"name": "841 红绿搭档的测试名交集判定取反",
+	"dir": "",
+	"file": "tools/breakcheck/partners_test.go",
+	"old": "\t\tif g[n] {",
+	"new": "\t\tif !g[n] {",
+	"pkg": "./tools/breakcheck/",
+	"test": "TestEveryGreenBreakHasARedPartner",
+	"want": "同包同测试名 ⇒ 成对：孤儿数",
+	"expect": "red",
+	"why": "637依赖393仍为预期绿的历史前提，393离线关闭后该实例失去判别力，按编号规则退休。新编号检验通用测试名交集机制，使用已有的同名成对/异名孤儿等独立正反例，不再依赖真实清单当前哪项是绿。"
+},
+{
+	"name": "842 施加破坏绕过同次计划字节的有界写入",
+	"dir": "",
+	"file": "tools/breakcheck/breakcheck.go",
+	"old": "\t\tif err := writePlannedBytes(files, s.file, s.broken); err != nil {",
+	"new": "\t\tif err := files.write(s.file, s.broken, 0o644); err != nil {",
+	"pkg": "./tools/breakcheck/",
+	"test": "TestWindowsApplyRetryIsBounded",
+	"want": "施加重试边界错误",
+	"expect": "red",
+	"why": "Windows现场1224导致破坏未施加；仅相同计划字节写入可有界重试，暂时/持续/权限错误均实注入。此条仅Windows完整破坏扫描可执行，Linux不可把未选中测试当通过。"
+},
+{
+	"name": "843 施加后不核对实际破坏字节",
+	"dir": "",
+	"file": "tools/breakcheck/breakcheck.go",
+	"old": "\t\tif rerr != nil || string(written) != string(s.broken) {",
+	"new": "\t\tif false && (rerr != nil || string(written) != string(s.broken)) {",
+	"pkg": "./tools/breakcheck/",
+	"test": "TestApplyReadbackPreventsUnappliedBody",
+	"want": "未确认破坏字节就执行测试",
+	"expect": "red",
+	"why": "写调用返回nil但字节不符也不能运行测试体或声称破坏验证；注入错误写入并验证原始字节恢复。"
+}
 ]

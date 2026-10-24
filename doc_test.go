@@ -1504,10 +1504,7 @@ func TestDateRoleMatchesFormat(t *testing.T) {
 	}
 	// ⚠️ 反空转：一处都没配过角色词的话，上面两个正则永远不可能命中，
 	// 而那时本条是恒绿的。
-	if okPairs < 20 {
-		t.Fatalf("⚠️ 全部文档里只找到 %d 处「角色词 + 日期」的搭配 —— "+
-			"太少，本条很可能在空转（是不是约定的写法变了？）", okPairs)
-	}
+	checkDateRoleCoverage(t, okPairs)
 	t.Logf("角色词与格式一致 %d 处，错配 %d 处；⚠️ 光秃秃的日期（无角色词）本条**不查**",
 		okPairs, bad)
 }
@@ -1582,6 +1579,7 @@ var breakRefRe = regexp.MustCompile(`破坏 (\d+)`)
 // ⚠️ 而且下面额外钉一条：**编号一旦回到清单里，本条要红** ——
 // 否则这张表会烂在原地，替一个已经能解析的编号继续开着口子。
 var retiredBreakNums = map[string]string{
+	"637": "20261024 退休：393已补运行时反例并改为预期红，修改635的测试名不会再制造绿孤儿。通用交集判据另开841，不用旧编号替换机制。",
 	"706": "20260922 F13 退休。它破坏的是「多手裸平、0 < 额度 < 平仓量时不再报错（按某种拆法静默收）」；F13 按交易日 20260923 两所的事前登记实验把这一格放开成按额度拆，" +
 		"「部分额度就报错」这道检查本身不在了。新机制（多手退回全今）由 760 / 763 守",
 	"694": "20260922 F12 退休。它破坏的是「CTP 侧已登记分歧（knownDivergence）的柜台钉值写错」；F12 把那两份样本转成正向断言、删了 knownDivergence 的钉值，前提不在了。" +
@@ -1817,5 +1815,13 @@ func TestRateFileColumnDebtIsDeclared(t *testing.T) {
 			"**过期陈述**：带列的那一份已经能排除替代解释", withColumn, len(files), column, debtPhrase)
 	default:
 		t.Logf("ⓘ %d/%d 份留底的表头带「%s」，§13 已不再写 %q", withColumn, len(files), column, debtPhrase)
+	}
+}
+
+// checkDateRoleCoverage 保留原判据，允许独立构造边界输入。
+func checkDateRoleCoverage(t interface{ Fatalf(string, ...any) }, okPairs int) {
+	if okPairs < 20 {
+		t.Fatalf("⚠️ 全部文档里只找到 %d 处「角色词 + 日期」的搭配 —— "+
+			"太少，本条很可能在空转（是不是约定的写法变了？）", okPairs)
 	}
 }
