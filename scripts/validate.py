@@ -6,33 +6,32 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from validation_runtime import snapshot, exclusive_run, atomic_json, bounded_process
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_checked(command, cwd, log, require_tests=False):
+def run_checked(command, cwd, log, require_tests=False, timeout=1800):
     """保存完整输出；真实跳过、零测试与进程失败均不能当作回归通过。"""
     passed, skipped = 0, []
     tail = deque(maxlen=60)
     with log.open("w", encoding="utf-8", newline="\n") as output:
-        process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, text=True,
-                                   encoding="utf-8", errors="replace")
-        for line in process.stdout:
-            output.write(line)
-            tail.append(line)
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(event, dict):
-                continue
-            if event.get("Test") and event.get("Action") == "pass":
-                passed += 1
-            if event.get("Action") == "skip":
-                skipped.append(event.get("Test", event.get("Package")))
-        process.stdout.close()
-        code = process.wait()
+        with bounded_process(command, cwd, timeout) as process:
+            for line in process.stdout:
+                output.write(line)
+                output.flush()
+                tail.append(line)
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(event, dict):
+                    continue
+                if event.get("Test") and event.get("Action") == "pass":
+                    passed += 1
+                if event.get("Action") == "skip":
+                    skipped.append(event.get("Test", event.get("Package")))
+            code = process.wait()
     if code != 0:
         # CI控制台保留失败上下文，完整输出仍由artifact保存。
         print("底层命令失败，最后60行输出：\n" + "".join(tail), file=sys.stderr, flush=True)
@@ -44,18 +43,26 @@ def run_checked(command, cwd, log, require_tests=False):
 
 
 def git_state():
-    return subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"],
-                                   cwd=ROOT, text=True, encoding="utf-8")
+    return snapshot(ROOT)
 
 
 def main():
+    with exclusive_run(ROOT):
+        run_suite()
+
+
+def run_suite():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=["regression", "race", "fuzz", "mutation", "bench"], default="regression")
     parser.add_argument("--out", type=Path, help="日志目录；默认创建系统临时目录")
     parser.add_argument("--fuzz-time", default="20s")
+    parser.add_argument("--timeout", type=float, default=3600, help="每条命令墙钟上限秒数")
+    parser.add_argument("--bench-time", default="30x", help="每次性能样本的操作次数/时长")
+    parser.add_argument("--bench-count", type=int, default=5, help="性能样本数")
     args = parser.parse_args()
     out = (args.out or Path(tempfile.mkdtemp(prefix="futsim-validation-"))).resolve()
     out.mkdir(parents=True, exist_ok=True)
+    atomic_json(out / "summary.json", {"suite": args.suite, "status": "running"})
     before = git_state()
     commands = []
     if args.suite in ["regression", "race"]:
@@ -71,18 +78,22 @@ def main():
             commands.append((name, ["go", "test", ".", "-run=^$", f"-fuzz=^{target}$",
                                    f"-fuzztime={args.fuzz_time}", "-parallel=2"], cwd, False))
     elif args.suite == "mutation":
-        if before:
+        if before["status"]:
             raise RuntimeError("破坏验证要求已跟踪文件干净；请先提交工作")
         commands.append(("mutation", ["go", "run", "./tools/breakcheck", "-out", str(out / "mutations.json")], ROOT, False))
     else:
-        commands.append(("bench", ["go", "test", ".", "-run=^$", "-bench=^BenchmarkOffline", "-benchmem", "-count=3", "-benchtime=3x"], ROOT, False))
+        if args.bench_count <= 0:
+            raise ValueError("性能样本数必须为正")
+        commands.append(("bench", ["go", "test", ".", "-run=^$", "-bench=^BenchmarkOffline", "-benchmem", f"-count={args.bench_count}", f"-benchtime={args.bench_time}"], ROOT, False))
     results = []
     status, failure = "failed", None
+    after = None
     try:
         for name, command, cwd, strict in commands:
-            results.append(run_checked(command, cwd, out / f"{name}.log", strict))
+            results.append(run_checked(command, cwd, out / f"{name}.log", strict, args.timeout))
             print(f"通过 {args.suite}/{name}，日志：{out / (name + '.log')}", flush=True)
-        if git_state() != before:
+        after = git_state()
+        if after != before:
             raise RuntimeError("验证改变了已跟踪文件，禁止将该轮视为通过")
         status = "passed"
     except BaseException as error:
@@ -90,7 +101,7 @@ def main():
         raise
     finally:
         # Windows默认会将换行转成CRLF；报告也必须遵守仓库LF约定。
-        (out / "summary.json").write_text(json.dumps({"suite": args.suite, "status": status, "failure": failure, "completed": results}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        atomic_json(out / "summary.json", {"suite": args.suite, "status": status, "failure": failure, "completed": results, "before": before, "after": after})
 
 
 if __name__ == "__main__":

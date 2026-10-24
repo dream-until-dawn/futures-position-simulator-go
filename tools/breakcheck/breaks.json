@@ -8322,5 +8322,181 @@
 	"want": "未确认破坏字节就执行测试",
 	"expect": "red",
 	"why": "写调用返回nil但字节不符也不能运行测试体或声称破坏验证；注入错误写入并验证原始字节恢复。"
-}
+},
+	{
+		"name": "844 内容指纹漏掉实际字节",
+		"dir": "",
+		"file": "scripts/validation_runtime.py",
+		"old": "digest.update(raw + b\"\\0\" + hashlib.sha256(content).digest())",
+		"new": "digest.update(raw + b\"\\0\")",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonIntegrityBoundary",
+		"want": "same porcelain hid changed content",
+		"expect": "red"
+	},
+	{
+		"name": "845 索引指纹恒定",
+		"dir": "",
+		"file": "scripts/validation_runtime.py",
+		"old": "hashlib.sha256(git(\"ls-files\", \"--stage\", \"-z\")).hexdigest()",
+		"new": "\"constant\"",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonIntegrityBoundary",
+		"want": "index-only change hidden",
+		"expect": "red"
+	},
+	{
+		"name": "846 超时不报告超时",
+		"dir": "",
+		"file": "scripts/validation_runtime.py",
+		"old": "if expired.is_set():",
+		"new": "if expired.is_set() and False:",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonRuntimeBoundary",
+		"want": "命令超时",
+		"expect": "red"
+	},
+	{
+		"name": "847 并发锁允许覆盖",
+		"dir": "",
+		"file": "scripts/validation_runtime.py",
+		"old": "os.O_CREAT | os.O_EXCL | os.O_WRONLY",
+		"new": "os.O_CREAT | os.O_WRONLY",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonRuntimeBoundary",
+		"want": "second owner entered",
+		"expect": "red"
+	},
+	{
+		"name": "848 原子替换前删除旧报告",
+		"dir": "",
+		"file": "scripts/validation_runtime.py",
+		"old": "os.replace(temporary, path)",
+		"new": "path.unlink(missing_ok=True)\n        os.replace(temporary, path)",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonRuntimeBoundary",
+		"want": "FileNotFoundError",
+		"expect": "red"
+	},
+	{
+		"name": "849 系统编号漂移不拒绝",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/resting_order.go",
+		"old": "out.SysID != \"\" && st.OrderSysID != \"\" && out.SysID != st.OrderSysID",
+		"new": "out.SysID != \"\" && st.OrderSysID != \"\" && out.SysID != st.OrderSysID && false",
+		"pkg": ".",
+		"test": "TestOwnedOrderReplay",
+		"want": "回放生命周期不符",
+		"expect": "red"
+	},
+	{
+		"name": "850 全部成交不核手数",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/resting_order.go",
+		"old": "st.Status == def.THOST_FTDC_OST_AllTraded && st.VolumeTraded != 1",
+		"new": "st.Status == def.THOST_FTDC_OST_AllTraded && st.VolumeTraded != 1 && false",
+		"pkg": ".",
+		"test": "TestOwnedOrderReplay",
+		"want": "回放生命周期不符",
+		"expect": "red"
+	},
+	{
+		"name": "851 批量恢复不核序号重复",
+		"dir": "",
+		"file": "order/sequence.go",
+		"old": "if seen[e.Sequence] {",
+		"new": "if seen[e.Sequence] && false {",
+		"pkg": "./order",
+		"test": "TestBatchRestoreSequenceChecks",
+		"want": "批量恢复接受非法存档",
+		"expect": "red"
+	},
+	{
+		"name": "852 批量恢复不核高水位",
+		"dir": "",
+		"file": "order/sequence.go",
+		"old": "if e.Sequence == 0 || e.Sequence > lastSequence {",
+		"new": "if (e.Sequence == 0 || e.Sequence > lastSequence) && false {",
+		"pkg": "./order",
+		"test": "TestBatchRestoreSequenceChecks",
+		"want": "批量恢复接受非法存档",
+		"expect": "red"
+	},
+	{
+		"name": "853 多合约费用账失去手续费",
+		"dir": "",
+		"file": "account/account.go",
+		"old": "\t\tSub(a.commission)",
+		"new": "\t\tSub(a.commission.Mul(decimal.Zero))",
+		"pkg": ".",
+		"test": "TestMultiContractIndependentLedger",
+		"want": "独立多合约账本不符",
+		"expect": "red"
+	},
+	{
+		"name": "854 证据复核不核报告哈希",
+		"dir": "",
+		"file": "scripts/verify_evidence.py",
+		"old": "certificate.get(name + \"_sha256\") == sha256(raw)",
+		"new": "name == \"report\" or certificate.get(name + \"_sha256\") == sha256(raw)",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonEvidenceBoundary",
+		"want": "ValueError not raised",
+		"expect": "red"
+	},
+	{
+		"name": "855 证据复核只看命令成功不看收尾",
+		"dir": "",
+		"file": "scripts/verify_evidence.py",
+		"old": "before == after",
+		"new": "True",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonEvidenceBoundary",
+		"want": "ValueError not raised",
+		"expect": "red"
+	},
+	{
+		"name": "856 证据复核接受编译模式",
+		"dir": "",
+		"file": "scripts/verify_evidence.py",
+		"old": "observed.get(\"verdict\") == verdict",
+		"new": "observed.get(\"verdict\") in [verdict, \"编译通过\"]",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonEvidenceBoundary",
+		"want": "ValueError not raised",
+		"expect": "red"
+	},
+	{
+		"name": "857 一手部分成交矛盾不拒绝",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/resting_order.go",
+		"old": "st.Status == def.THOST_FTDC_OST_PartTradedQueueing || st.Status == def.THOST_FTDC_OST_PartTradedNotQueueing",
+		"new": "(st.Status == def.THOST_FTDC_OST_PartTradedQueueing || st.Status == def.THOST_FTDC_OST_PartTradedNotQueueing) && false",
+		"pkg": ".",
+		"test": "TestOwnedOrderReplay",
+		"want": "回放未拒绝一手部分成交矛盾",
+		"expect": "red"
+	},
+	{
+		"name": "858 Windows正常结束漏清理后台后代",
+		"dir": "",
+		"file": "scripts/validation_runtime.py",
+		"old": "process.validation_job.close()",
+		"new": "pass # deliberately retain job and descendants",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonRuntimeBoundary",
+		"want": "background descendant survived normal completion",
+		"expect": "red"
+	},
+	{
+		"name": "859 历史绿条目省略want被误拒绝",
+		"dir": "",
+		"file": "scripts/verify_evidence.py",
+		"old": "row.get(\"want\", \"\")",
+		"new": "row.get(\"want\")",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonEvidenceBoundary",
+		"want": "ValueError: 条目来源字段不匹配",
+		"expect": "red"
+	}
 ]

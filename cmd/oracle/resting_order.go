@@ -55,6 +55,16 @@ func waitOwnedOrder(c ownedOrderClient, req ctp.OrderReq, wait, cancelWait, requ
 		if st.VolumeTraded < 0 || st.VolumeTraded > 1 {
 			return fmt.Errorf("本次一手委托的成交量无效")
 		}
+		// 一手委托不可能部分成交；身份或成交终态矛盾不能洗成成功。
+		if out.SysID != "" && st.OrderSysID != "" && out.SysID != st.OrderSysID {
+			return fmt.Errorf("本次委托系统编号发生变化")
+		}
+		if st.Status == def.THOST_FTDC_OST_AllTraded && st.VolumeTraded != 1 {
+			return fmt.Errorf("本次一手全部成交回报缺少成交量")
+		}
+		if st.Status == def.THOST_FTDC_OST_PartTradedQueueing || st.Status == def.THOST_FTDC_OST_PartTradedNotQueueing {
+			return fmt.Errorf("本次一手委托不允许部分成交回报")
+		}
 		out.Status = st.Status
 		out.ErrorID = st.ErrorID
 		out.Filled = st.VolumeTraded
@@ -96,6 +106,8 @@ func waitOwnedOrder(c ownedOrderClient, req ctp.OrderReq, wait, cancelWait, requ
 	for clock.Now().Before(cancelDeadline) {
 		if st, ok := c.Order(out.Ref); ok {
 			if err := observe(st); err != nil {
+				out.SubmissionUncertain = true
+				out.Terminal = false
 				return out, err
 			}
 			if out.Terminal {

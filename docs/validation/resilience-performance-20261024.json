@@ -1,0 +1,85 @@
+{
+  "scope": "synthetic Windows Restore 1000 lots and orders; no market evidence",
+  "go": "go version go1.26.1 windows/amd64",
+  "command": "go test . -run=^$ -bench=^BenchmarkOfflineRestore/1000$ -benchmem -benchtime=30x -count=5",
+  "baseline_order_source": "3fcd231b425ed5febc25fc9a525036772ea14998:order/sequence.go",
+  "optimized_order_sha256": "02b6be17a02ab72450ca4677fcf4147e64122ac368ddb9b6b67633fc236cba1f",
+  "samples": {
+    "before": {
+      "raw": "goos: windows\ngoarch: amd64\npkg: github.com/dream-until-dawn/futures-position-simulator-go\ncpu: AMD Ryzen 7 5700X 8-Core Processor             \nBenchmarkOfflineRestore/1000-16         \t      30\t  17069400 ns/op\t 6884518 B/op\t  195917 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  16384740 ns/op\t 6884472 B/op\t  195918 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  17375997 ns/op\t 6884675 B/op\t  195918 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  17609807 ns/op\t 6884484 B/op\t  195916 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  16911167 ns/op\t 6884682 B/op\t  195918 allocs/op\nPASS\nok  \tgithub.com/dream-until-dawn/futures-position-simulator-go\t16.311s\n",
+      "sha256": "447d10af23c8b852ad5ef8d8ed6695b36936aa8781e45359708b9b882e7f82aa",
+      "samples": [
+        [
+          17069400,
+          6884518,
+          195917
+        ],
+        [
+          16384740,
+          6884472,
+          195918
+        ],
+        [
+          17375997,
+          6884675,
+          195918
+        ],
+        [
+          17609807,
+          6884484,
+          195916
+        ],
+        [
+          16911167,
+          6884682,
+          195918
+        ]
+      ],
+      "median_ns": 17069400,
+      "median_bytes": 6884518
+    },
+    "after": {
+      "raw": "goos: windows\ngoarch: amd64\npkg: github.com/dream-until-dawn/futures-position-simulator-go\ncpu: AMD Ryzen 7 5700X 8-Core Processor             \nBenchmarkOfflineRestore/1000-16         \t      30\t  12674490 ns/op\t 6921324 B/op\t  195920 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  11480877 ns/op\t 6921696 B/op\t  195923 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  10963987 ns/op\t 6921513 B/op\t  195921 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  12211050 ns/op\t 6921707 B/op\t  195922 allocs/op\nBenchmarkOfflineRestore/1000-16         \t      30\t  12112117 ns/op\t 6921533 B/op\t  195922 allocs/op\nPASS\nok  \tgithub.com/dream-until-dawn/futures-position-simulator-go\t15.331s\n",
+      "sha256": "bb0d051ef610cf1905195f6bd6df2de9e96e67a789424d2e93a64d8308a5a571",
+      "samples": [
+        [
+          12674490,
+          6921324,
+          195920
+        ],
+        [
+          11480877,
+          6921696,
+          195923
+        ],
+        [
+          10963987,
+          6921513,
+          195921
+        ],
+        [
+          12211050,
+          6921707,
+          195922
+        ],
+        [
+          12112117,
+          6921533,
+          195922
+        ]
+      ],
+      "median_ns": 12112117,
+      "median_bytes": 6921533
+    }
+  },
+  "median_speedup_percent": 29.04192883171055,
+  "limitations": [
+    "Same-machine sequential measurements; no cross-machine latency threshold.",
+    "Initial whole-benchmark CPU/allocation profiles include setup; RestoreBook identified from Restore call stack, not total allocation ranking.",
+    "Uses extra per-restore sequence map; byte allocation can increase."
+  ],
+  "profiles": {
+    "cpu": "15c51158a7cb4a185203fc378357734c50e76ecf2ebbbb0a1296fd6ebfa63c83",
+    "mem": "86f17680b5f64900a8a3ef31e6bf7bf1402244a90d7e9f1aff3cf7042195bdd6"
+  }
+}
