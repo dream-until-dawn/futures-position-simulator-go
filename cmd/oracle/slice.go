@@ -116,7 +116,7 @@ func runCTPSlices(args []string) error {
 		return err
 	}
 	if err := checkSlicePrecondition(pos0, inst, *symbol); err != nil {
-		return fmt.Errorf("前提不成立，不跑：%w", err)
+		return fmt.Errorf("⚠️ **前提不成立，不跑**：%w", err)
 	}
 
 	// ⚠️⚠️ **收尾平仓必须注册在第一笔委托之前，而不是「开完腿 1 之后」。**
@@ -737,7 +737,7 @@ func flattenLongToday(c *ctp.Client, ex, inst string,
 // checkSlicePrecondition 验证既有今仓不会污染两片实验的成本增量。
 func checkSlicePrecondition(pos0 map[string]*def.CThostFtdcInvestorPositionField, inst, symbol string) error {
 	if p := longToday(pos0, inst); p != nil && int(p.Position) != 0 {
-		return fmt.Errorf("⚠️ **前提不成立，不跑**：%s 上已有 %d 手多头今仓。"+
+		return fmt.Errorf("%s 上已有 %d 手多头今仓。"+
 			"本命令靠 OpenCost 的增量反解片价，账上已有的片会混进来 —— "+
 			"先跑 `ctp-flatten -symbol %s`", symbol, int(p.Position), symbol)
 	}

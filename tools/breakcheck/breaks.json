@@ -775,7 +775,7 @@
 		"name": "70 【期望仍绿】waitFrozen 不再识别拒单",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/probe/exp_position_frozen.go",
-		"old": "\t\tif st, found := cli.OrderOf(orderID); found &&\n\t\t\tstrings.EqualFold(st.Status, \"FINISHED\") {\n\t\t\treturn cur, orderFinished\n\t\t}",
+		"old": "\t\tif found && strings.EqualFold(st.Status, \"FINISHED\") {\n\t\t\treturn cur, orderFinished\n\t\t}",
 		"new": "",
 		"pkg": "./probe/",
 		"test": "TestPositionFrozenUsesTheGuards|TestPositionFrozenDumpsWhileHeld|TestPositionFrozenStopsOnFill|TestPositionFrozenLimitPriceIsFar|TestOfflineFrozenWaitReasons",
@@ -6327,8 +6327,8 @@
 		"name": "635 「前提不成立，不跑」改成同义措辞（393 的红搭档：AST 守卫认的是那句话，措辞一改它就空转）",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/slice.go",
-		"old": "\t\treturn fmt.Errorf(\"⚠️ **前提不成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
-		"new": "\t\treturn fmt.Errorf(\"⚠️ **前提没有成立，不跑**：%s 上已有 %d 手多头今仓。\"+",
+		"old": "\t\treturn fmt.Errorf(\"⚠️ **前提不成立，不跑**：%w\", err)",
+		"new": "\t\treturn fmt.Errorf(\"⚠️ **前提没有成立，不跑**：%w\", err)",
 		"pkg": "./",
 		"test": "TestSlicePreconditionCheckedBeforeAnyOrder",
 		"want": "本条守卫在空转",
@@ -8272,5 +8272,29 @@
 		"test": "TestRestingSaveFailureAtEveryStage",
 		"want": "阶段落盘失败未标记或实验继续",
 		"expect": "red"
-	}
+	},
+{
+	"name": "839 未确认委托却把等待超时当成不冻结",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/probe/exp_position_frozen.go",
+	"old": "\t\t\tif !orderLive {",
+	"new": "\t\t\tif false && !orderLive {",
+	"pkg": "./probe/",
+	"test": "TestOfflineFrozenUnknown",
+	"want": "未知冻结状态被当成可下结论",
+	"expect": "red",
+	"why": "无委托或未知状态时不能给出柜台不冻结的结论；合成无回报必须返回stateUnknown。"
+},
+{
+	"name": "840 缺失冻结截面被当成冻结变化",
+	"dir": "cmd/oracle",
+	"file": "cmd/oracle/probe/exp_position_frozen.go",
+	"old": "\t\tif !knownFrozen(cur) {",
+	"new": "\t\tif false && !knownFrozen(cur) {",
+	"pkg": "./probe/",
+	"test": "TestOfflineFrozenUnknown",
+	"want": "未知冻结状态被当成可下结论",
+	"expect": "red",
+	"why": "字段缺失、无值不等于零或真实变化；缺截面必须停止而不能记为冻结变化。"
+}
 ]

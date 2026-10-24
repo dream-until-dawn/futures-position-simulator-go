@@ -3,6 +3,8 @@ package probe
 import (
 	"context"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -104,6 +106,8 @@ func (r *Runner) expPositionFrozen(ctx context.Context) error {
 		r.Logf("    挂单后：%s", fmtFrozen(during))
 
 		switch why {
+		case stateUnknown:
+			return fmt.Errorf("委托 %s 或冻结截面未确认，不作冻结结论；停止后续试单，请核对该引用", id)
 		case orderFinished:
 			st, _ := cli.OrderOf(id)
 			if st.VolumeLeft == 0 {
@@ -157,6 +161,8 @@ func (r *Runner) expPositionFrozen(ctx context.Context) error {
 			after, why2 := waitFrozen(cli, sym, id, during, 15*time.Second)
 			r.Logf("    撤单后：%s", fmtFrozen(after))
 			switch {
+			case why2 == stateUnknown:
+				return fmt.Errorf("撤单后委托 %s 或冻结截面未确认，停止后续试单", id)
 			case why2 == timedOut:
 				r.Logf("    ⚠️⚠️ 撤单之后冻结**没有释放**（15 秒内无变化）——")
 				r.Logf("       那意味着那些手数从此平不掉。**这条要单独查**。")
@@ -355,14 +361,14 @@ func fmtFrozen(m map[string]string) string {
 
 // waitReason 说明 waitFrozen 为什么停下来。
 //
-// ⚠️ 三态不能合并成布尔：「委托被拒所以没冻结」与「委托挂着但柜台不冻结」
-// 是完全不同的两条结论，而后者才是本实验想要的。
+// 已确认的三态之外单列未知：没有委托或缺少字段时不能作否定观测。
 type waitReason int
 
 const (
 	timedOut waitReason = iota
 	frozenChanged
 	orderFinished
+	stateUnknown
 )
 
 // waitFrozen 等冻结字段**相对 base 发生变化**，或委托走到终态，或超时。
@@ -386,16 +392,45 @@ func waitFrozenClock(cli frozenReader, sym, orderID string, base map[string]stri
 	timeout time.Duration, now func() time.Time) (map[string]string, waitReason) {
 	deadline := now().Add(timeout)
 	cur := base
-	for now().Before(deadline) {
+	orderLive := false
+	if !knownFrozen(base) {
+		return cur, stateUnknown
+	}
+	for {
 		cur = frozenSnapshot(cli, sym)
-		if !sameFrozen(cur, base) {
-			return cur, frozenChanged
-		}
-		if st, found := cli.OrderOf(orderID); found &&
-			strings.EqualFold(st.Status, "FINISHED") {
+		st, found := cli.OrderOf(orderID)
+		if found && strings.EqualFold(st.Status, "FINISHED") {
 			return cur, orderFinished
 		}
-		cli.WaitTrade(500 * time.Millisecond)
+		if !knownFrozen(cur) {
+			return cur, stateUnknown
+		}
+		orderLive = found && strings.EqualFold(st.Status, "ALIVE")
+		if orderLive && !sameFrozen(cur, base) {
+			return cur, frozenChanged
+		}
+		// 等待结束后仍先读取一次最新终态，不能用等待前的ALIVE作结论。
+		remaining := deadline.Sub(now())
+		if remaining <= 0 {
+			if !orderLive {
+				return cur, stateUnknown
+			}
+			return cur, timedOut
+		}
+		if remaining > 500*time.Millisecond {
+			remaining = 500 * time.Millisecond
+		}
+		cli.WaitTrade(remaining)
 	}
-	return cur, timedOut
+}
+
+// knownFrozen 排除缺截面、缺字段、无值和非法数；未知不能伪装成冻结变化或零。
+func knownFrozen(snapshot map[string]string) bool {
+	for _, key := range frozenFields {
+		value, err := strconv.ParseFloat(snapshot[key], 64)
+		if err != nil || math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
+			return false
+		}
+	}
+	return true
 }
