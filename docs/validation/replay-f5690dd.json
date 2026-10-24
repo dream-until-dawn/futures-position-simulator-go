@@ -1,0 +1,797 @@
+{
+  "format": 1,
+  "source_commit": "f5690dd65be25bb57cb5587a208b4769dbc5814b",
+  "source_tree": "9e75adec39d9ef955524fd1f00753b04a2586844",
+  "baseline_main": "2d2def0a147674e1cf09d2be22e32ffd073a3701",
+  "registry_sha256": "1932e8a783c8c9a0759ba54a72cbb513a63e1dd399e909150bc67bfc6c783fd9",
+  "report_sha256": "0958f10352fc9d5f5cbdd5472fc5124103b54138a22aab7b109e4ba55071ea22",
+  "summary_sha256": "6504ae26dd0fc63e92be09247bbb5533bce0ef2660791bf65757fe477c1b772c",
+  "counts": {
+    "executed": 797,
+    "expected_red": 788,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "new_breaks": [
+    860,
+    861,
+    862,
+    863,
+    864,
+    865,
+    866,
+    867,
+    868,
+    869,
+    870,
+    871,
+    872,
+    873,
+    874,
+    875,
+    876,
+    877,
+    878,
+    879,
+    880,
+    881,
+    882,
+    883
+  ],
+  "raw_directory": "C:\\Temp\\replay-full-f5690dd",
+  "mutation_log_sha256": "207bf3194096ca3642b8fcc6f21e956deb52ea8f1309be9b72f60b9eb38dd3c0",
+  "independent_post_run": {
+    "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b",
+    "porcelain": "",
+    "verified": true
+  },
+  "mutation_summary": {
+    "suite": "mutation",
+    "status": "passed",
+    "failure": null,
+    "completed": [
+      {
+        "command": [
+          "go",
+          "run",
+          "./tools/breakcheck",
+          "-out",
+          "C:\\Temp\\replay-full-f5690dd\\mutations.json"
+        ],
+        "cwd": "C:\\Users\\沁心\\.codex\\worktrees\\replay-validation\\futures-position-simulator-go",
+        "passed_tests": 0,
+        "skipped": [],
+        "log": "C:\\Temp\\replay-full-f5690dd\\mutation.log",
+        "exit_code": 0
+      }
+    ],
+    "before": {
+      "status": "",
+      "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+      "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+      "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+    },
+    "after": {
+      "status": "",
+      "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+      "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+      "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+    }
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\replay-regression-f5690dd\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 350,
+            "skipped": [],
+            "log": "C:\\Temp\\replay-regression-f5690dd\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+          "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+          "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+          "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+          "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+        }
+      },
+      "summary_sha256": "626fafee30ffd389adeb49eb5faf356cb56e192128223f5831e524cad554686e",
+      "logs": {
+        "oracle.log": "8519107fa7778aab22e464125f175d8165c69929edb31a9101d9568822bd4062",
+        "root.log": "fe2ba84e70038d7f946c603fadef6cac83609fce979d65443eb8eee40140ff69"
+      }
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\replay-race-f5690dd\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 350,
+            "skipped": [],
+            "log": "C:\\Temp\\replay-race-f5690dd\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+          "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+          "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+          "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+          "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+        }
+      },
+      "summary_sha256": "7dc5b0ec7ff3791ca7090c02ffb121b6d8da820a2acfcaff10e592ca9f568aa7",
+      "logs": {
+        "oracle.log": "a837419fbaac27dbcd63be4ebda5af494e39c1462afcd9bac26dbe7e1427edda",
+        "root.log": "e5cd06f638fb2fd92850351fe35daef9fa32a192ffac1be9bd9f4916415cf63e"
+      }
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\replay-fuzz-f5690dd\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\replay-fuzz-f5690dd\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\replay-fuzz-f5690dd\\report.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+          "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+          "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "fd3c5b1f806eb0ab679ff12e8ca57917d9c45226e02295314c1c4f8690a9af25",
+          "index_sha256": "032136311611c130d9d0b384709872e29625d4bd49854ee86853d92d11b1e27b",
+          "head": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+        }
+      },
+      "summary_sha256": "36364087818a105110d348431767e8dd043ddfc3fa997f0167ae8344a4b8cdc2",
+      "logs": {
+        "bundle.log": "e74ea05f5b07714a2a1490cbffdf648231ca463b8fac61401873c9c280746a5a",
+        "report.log": "cf6f55393ab7ad6bc93fa1aabf57b3133a87856d9cbc8389fd32ac6c7ce4e037",
+        "state.log": "503552142814a51de2db0fbfe339085f181119a8a2eb0cc7e3de8555e2e34a98"
+      }
+    }
+  },
+  "python_tests": {
+    "passed": 14,
+    "path": "C:\\Temp\\replay-python-f5690dd.log",
+    "sha256": "18c026bd11d5ab9c97cdcfe2ee298c9167bbddf7fb3e1b150cd1ca3b65d589ac"
+  },
+  "hosted_ci": {
+    "run": {
+      "id": 40074064051,
+      "head_sha": "f5690dd65be25bb57cb5587a208b4769dbc5814b",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40074064051"
+    },
+    "jobs": [
+      {
+        "id": 120813544886,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T07:25:25Z",
+            "completed_at": "2026-10-24T07:25:25Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T07:25:25Z",
+            "completed_at": "2026-10-24T07:25:32Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T07:25:32Z",
+            "completed_at": "2026-10-24T07:26:04Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T07:26:04Z",
+            "completed_at": "2026-10-24T07:26:23Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T07:26:23Z",
+            "completed_at": "2026-10-24T07:27:07Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T07:27:07Z",
+            "completed_at": "2026-10-24T07:28:22Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T07:28:22Z",
+            "completed_at": "2026-10-24T07:29:38Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T07:29:38Z",
+            "completed_at": "2026-10-24T07:29:39Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T07:29:39Z",
+            "completed_at": "2026-10-24T07:29:39Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T07:29:39Z",
+            "completed_at": "2026-10-24T07:29:41Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T07:29:41Z",
+            "completed_at": "2026-10-24T07:29:41Z"
+          }
+        ]
+      },
+      {
+        "id": 120813544977,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T07:25:24Z",
+            "completed_at": "2026-10-24T07:25:25Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T07:25:25Z",
+            "completed_at": "2026-10-24T07:25:27Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T07:25:27Z",
+            "completed_at": "2026-10-24T07:25:39Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T07:25:39Z",
+            "completed_at": "2026-10-24T07:25:52Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T07:25:52Z",
+            "completed_at": "2026-10-24T07:26:16Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T07:26:16Z",
+            "completed_at": "2026-10-24T07:27:12Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T07:27:12Z",
+            "completed_at": "2026-10-24T07:28:23Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T07:28:23Z",
+            "completed_at": "2026-10-24T07:28:24Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T07:28:24Z",
+            "completed_at": "2026-10-24T07:28:24Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T07:28:24Z",
+            "completed_at": "2026-10-24T07:28:24Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T07:28:24Z",
+            "completed_at": "2026-10-24T07:28:24Z"
+          }
+        ]
+      },
+      {
+        "id": 120813546014,
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
+  "native_cli": {
+    "probe": {
+      "source_commit": "f5690dd65be25bb57cb5587a208b4769dbc5814b",
+      "steps": [
+        {
+          "args": [
+            "demo",
+            "-out",
+            "C:\\Temp\\replay-cli-f5690dd\\bundle.json"
+          ],
+          "exit_code": 0,
+          "stdout": "离线处理完成，输出: C:\\Temp\\replay-cli-f5690dd\\bundle.json\n",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\Temp\\replay-cli-f5690dd\\bundle.json",
+            "-out",
+            "C:\\Temp\\replay-cli-f5690dd\\denied.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "失败: 回放失败，有效前缀已标记failed: 这是一份**占位**快照（evidence=placeholder），默认不许加载 —— 否则调用方拿到的会是「查不到这个合约」，而不是「本库还没有参考数据」。确实要用请设 LoadOptions.AllowPlaceholder\n"
+        },
+        {
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\Temp\\replay-cli-f5690dd\\bundle.json",
+            "-allow-placeholder",
+            "-out",
+            "C:\\Temp\\replay-cli-f5690dd\\report.json"
+          ],
+          "exit_code": 0,
+          "stdout": "离线处理完成，输出: C:\\Temp\\replay-cli-f5690dd\\report.json\n",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "diff",
+            "-left",
+            "C:\\Temp\\replay-cli-f5690dd\\report.json",
+            "-right",
+            "C:\\Temp\\replay-cli-f5690dd\\report.json",
+            "-out",
+            "C:\\Temp\\replay-cli-f5690dd\\equal.json"
+          ],
+          "exit_code": 0,
+          "stdout": "离线处理完成，输出: C:\\Temp\\replay-cli-f5690dd\\equal.json\n",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\Temp\\replay-cli-f5690dd\\short.json",
+            "-allow-placeholder",
+            "-out",
+            "C:\\Temp\\replay-cli-f5690dd\\short-report.json"
+          ],
+          "exit_code": 0,
+          "stdout": "离线处理完成，输出: C:\\Temp\\replay-cli-f5690dd\\short-report.json\n",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "diff",
+            "-left",
+            "C:\\Temp\\replay-cli-f5690dd\\report.json",
+            "-right",
+            "C:\\Temp\\replay-cli-f5690dd\\short-report.json",
+            "-out",
+            "C:\\Temp\\replay-cli-f5690dd\\different.json"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": ""
+        }
+      ],
+      "statement_balances": [
+        "1000001",
+        "1000000"
+      ],
+      "binary_sha256": "7baed5825f7714403ba46345e7c8679bf871e79e8a67db333e9aa8f617e4b6f4",
+      "files_sha256": {
+        "bundle.json": "d7260170d4cb0cf32d9c41276339b81efbfcf28ae090cb91a55e87579375cba9",
+        "denied.json": "56caf5b2d8b6c02a5c688d00c503c5dcf1a63bfc576dc3574fd3e58579073e6c",
+        "different.json": "67337d7db6943147af0fd1ff6d13297c8fc70af449bf4d49e424632ea3d32dcb",
+        "equal.json": "cd0c3f7e2933660d13cab6e6b7b4a1663d45d424983ef990fa99afb0c1f4fb2e",
+        "report.json": "5eacae04c8c9a68ac020b8f5de02204d099de335530f06a7d66ec26eab7cb4aa",
+        "short-report.json": "9da82b01255cd5cb2a8e817d3a8c2f56d42a9fa80c1e3b9960470042a94f691d",
+        "short.json": "f00db6bd8b97fe003e61231e0a8aaf0f133cc644944ef199e6d61f11d6254e24"
+      }
+    },
+    "path": "C:\\Temp\\replay-cli-f5690dd\\probe.json",
+    "sha256": "803bdfcf0b54fd153715eb96ccd76f8f7d2650eee85e60a6866c76d126ed3355"
+  },
+  "endurance": {
+    "rounds": 3,
+    "synthetic_days_per_round": 200,
+    "events_per_round": 2599,
+    "final_balance": "999802",
+    "final_high_water": 800,
+    "state_size_limit_bytes": 4000,
+    "observations": [
+      "endurance_test.go:58: round=0 largest_state=932 report_bytes=5460983 heap_after_gc=1282008",
+      "endurance_test.go:58: round=1 largest_state=932 report_bytes=5460983 heap_after_gc=1283848",
+      "endurance_test.go:58: round=2 largest_state=932 report_bytes=5460983 heap_after_gc=1290840"
+    ],
+    "heap_policy": "GC后只观测，不用机器噪声阈值；账本、存档大小和事件计数作确定性守卫"
+  },
+  "targeted_new_breaks": {
+    "860": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\860.json",
+      "sha256": "2b58da40062a46c5dce5e44b742653a84d2e4a99c64d3ca340dc6f6972bd9d79",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "861": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\861.json",
+      "sha256": "5c7bc3d2ac995390a1c23c71e795e952de94ee6921967b7aecc34f4796c7d28a",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "862": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\862.json",
+      "sha256": "9b7a0575466e9d16a017892be29510f35ff76d5c7a11920fc0a656e5927f2a5e",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "863": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\863.json",
+      "sha256": "5806da6a1e08c411e76d99de50385fb594f10a6071a21c9483881404f4622ecc",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "864": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\864.json",
+      "sha256": "4b4bd2a05a2296ab64304a2d45650f65c690864f38e82f45c53276c3346a4ae5",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "865": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\865.json",
+      "sha256": "044e0d8a60f3d9ea207b7450d0ce2b253b3cb973032a70ed86d24362abd0327a",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "866": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\866.json",
+      "sha256": "28bcb9f4f1758093abea9182285b6dff699354566dcc2f44fb5fd30382e36cf4",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "867": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\867.json",
+      "sha256": "6b4cbc73d4d6dcd500bc458d0719ba88deff0707d4db3e92312cc2e099d5e72a",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "868": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\868.json",
+      "sha256": "710beaab2d97fa472dc4df7fe23e188578724054c724abe1fdc84040abfef2c1",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "869": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\869.json",
+      "sha256": "34bbab045650820b1c2272b5005af5074697d365d0bda06a576cc25f06ec1cf8",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "870": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\870.json",
+      "sha256": "4f7c2031f08bc7434c6464926c3fff044bed583f14cf695856173bfbea413cf9",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "871": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\871.json",
+      "sha256": "8041234a473807a64b11ae1601c856f28a1d32d0e5b6fae8bb52727a25eaa6c7",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "872": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\872.json",
+      "sha256": "e8a0066b8ac958530ce6edea9c59035513c7ef0d2fca3528d24e72fc080eb120",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "873": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\873.json",
+      "sha256": "6a980cc9e94bbee9ae90433e7560213076d5566e935ac2a040dbc0628d672c2f",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "874": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\874.json",
+      "sha256": "50a3899ea59ccc07ab3f1f3af459513327cfbb94b2dd950787760f4652cdff0e",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "875": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\875.json",
+      "sha256": "777693d487d1c26265356ade557b0da8149de3b1e7ec1f8913c4fe4b679946b6",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "876": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\876.json",
+      "sha256": "f441daceca827126b873e94587a840e64e3088edb254ed4aade61a50ec1cddf1",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "877": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\877.json",
+      "sha256": "e9edab747ae675df81474b251634bdef5aa05aabd219385d3f8c042b95b65ddf",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "878": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\878.json",
+      "sha256": "b0a8d2a45820820f9c8cef4566f7ba651b37b499bcb665c28de67b08c66dd2d1",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "879": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\879.json",
+      "sha256": "6e4938d37df8225d6a0115cb4ac6c8458c2b6cc0883339c1caa532f8a87b21b5",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "880": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\880.json",
+      "sha256": "c9ec892b8956b785450364f7baee236a4fbd1352983a373537b69ae40e954407",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "881": {
+      "path": "C:\\Temp\\replay-targeted-8ccd83b\\881.json",
+      "sha256": "08840a29d173a3d369fb8110466bc38413464b585346a110e5a46426f357dae3",
+      "source_commit": "8ccd83b55dc679ae4b935053cacc2f2bff191333"
+    },
+    "882": {
+      "path": "C:\\Temp\\replay-882-3923374.json",
+      "sha256": "e544185187982aa726b9371ba30debd7b30ee6352b0ab12098f227c360a7e712",
+      "source_commit": "3923374bd521d597dcb8d604e698395b9644e9c2"
+    },
+    "883": {
+      "path": "C:\\Temp\\replay-883-f5690dd.json",
+      "sha256": "09f310c9d6111b9aa5279ba84272fd937a4cddeb7dc725e434ba2ee813659a77",
+      "source_commit": "f5690dd65be25bb57cb5587a208b4769dbc5814b"
+    }
+  },
+  "earlier_failures": [
+    {
+      "source": "e07ff85",
+      "reason": "新增生产Go目录尚未在main，fidelity缺开发独有横幅，回归和双平台CI正确拒绝",
+      "local_summary": {
+        "path": "C:\\Temp\\replay-regression-e07ff85\\summary.json",
+        "sha256": "b2a400b8f1752bfdbf2a8da72e537d7848d69d1b373ace0e15b1d549f410648e"
+      },
+      "ci": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40071511476",
+      "fix": "93620e1，保留原分支声明守卫"
+    },
+    {
+      "source": "93620e1",
+      "reason": "862大小写别名破坏未红；原反例被缺失字段检查提前拒绝，未隔离大小写守卫",
+      "report": {
+        "path": "C:\\Temp\\replay-targeted-93620e1\\862.json",
+        "sha256": "102a482d3ec2fba985f58e1c6251361579564d1fcf63388f8c137735b4a27bfb"
+      },
+      "fix": "8ccd83b补有正确必填键和冲突别名的有效哈希反例；873仅首日重复记账，命中手算账本而非预算"
+    },
+    {
+      "source": "f5690dd65be25bb57cb5587a208b4769dbc5814b",
+      "reason": "首次原生命令收集器误用day_end_balance字段；六条程序退出码正确，收集时KeyError，产物保留",
+      "raw_directory": "C:/Temp/replay-cli-3923374",
+      "fix": "新的-final目录独立重跑六步，按导出字段Statement.Balance核验"
+    },
+    {
+      "source": "3923374bd521d597dcb8d604e698395b9644e9c2",
+      "reason": "完整796项：785预期红、9预期绿、846/859中文断言编码错误共2异常；退出1，不作验收，不拼接",
+      "report": {
+        "path": "C:\\Temp\\replay-full-3923374\\mutations.json",
+        "sha256": "45b92fd919908abb8d28384367a5eba95333f88b8b448cb932dbd1f616479395"
+      },
+      "summary": {
+        "path": "C:\\Temp\\replay-full-3923374\\summary.json",
+        "sha256": "8a91d423a7c8a3d465969b132f435800bb6309df02a7601889b76347e13a7f5b"
+      },
+      "fix": "f5690dd显式Python标准流UTF-8；ASCII父环境真实测试先红后绿；883撤销约定命中断言"
+    }
+  ],
+  "encoding_fix": {
+    "before": {
+      "path": "C:\\Temp\\replay-python-encoding-before.log",
+      "sha256": "72331c0b814e62b9332ca61f1a691ce8f26f6890f1f4d34edfd7fe48565f97ee"
+    },
+    "after": {
+      "path": "C:\\Temp\\replay-python-encoding-after.log",
+      "sha256": "4703056b7b25fdd5bb07bb0147ebd84499bd0b1798382457afb11667beb6f792"
+    },
+    "targeted": {
+      "846": {
+        "path": "C:\\Temp\\replay-846-f5690dd.json",
+        "sha256": "8ca7de1f3309e6137d59bcfe6835169fb7bd9b92b0803c996260b85898b073a1"
+      },
+      "859": {
+        "path": "C:\\Temp\\replay-859-f5690dd.json",
+        "sha256": "c82ab5d7d39c89e7493cf3bbf56a0a9c46bda42ebff50ac6b8c17c3062d9061b"
+      },
+      "883": {
+        "path": "C:\\Temp\\replay-883-f5690dd.json",
+        "sha256": "09f310c9d6111b9aa5279ba84272fd937a4cddeb7dc725e434ba2ee813659a77"
+      }
+    }
+  },
+  "boundaries": [
+    "完全合成占位规则，必须显式授权，不提升市场证据等级",
+    "SHA256用于一致性，不是签名；内部报告检查不等于使用原包重新执行",
+    "显式成交/挂单事件不代表真实提交或K线撮合，F9c仍待合格实测前置",
+    "不自动跨进程重发委托，不连接柜台，不打tag",
+    "文件Sync后无覆盖硬链接发布；不承诺目录项断电持久化",
+    "完整797项独立扫描为本机Windows；托管Windows/Linux均另跑回归、race及三个限时fuzz",
+    "原9项预期绿保留原语义，不把未知规则当已实测"
+  ],
+  "publication": {
+    "code_locked_at": "f5690dd65be25bb57cb5587a208b4769dbc5814b",
+    "final_document_changes_only": true,
+    "banner_transition": "开发提交保留新增3目录的dev独有标记；实际main合并提交改为main已发布声明。两个阶段均执行原TestDevOnlyClaimIsAccurate，未改守卫或伪造main引用。"
+  }
+}
