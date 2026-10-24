@@ -174,8 +174,8 @@ func offTickAgrees(price, tick float64) bool {
 func checkTickOutcome(t evidenceReporter, msg string, off bool, location string) {
 	switch {
 	case msg == tickMsg && !off:
-		t.Errorf("整数倍拒因与程序判据冲突：%s", location)
+		t.Errorf("整数倍拒因与程序判据冲突，两份判据分岔了：%s", location)
 	case msg == limitMsg && off:
-		t.Errorf("涨停拒因与程序判据冲突：%s", location)
+		t.Errorf("涨停拒因与程序判据冲突，两份判据分岔了：%s", location)
 	}
 }
