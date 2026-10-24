@@ -8751,5 +8751,16 @@
 		"test": "TestBundleBindingAndStrictJSON",
 		"want": "非空字段null被解释成零",
 		"expect": "red"
-	}
+	},
+{
+	"name": "883 Python边界继承本地编码",
+	"dir": "",
+	"file": "tools/breakcheck/python_boundary_test.go",
+	"old": "cmd.Env = append(os.Environ(), \"PYTHONUTF8=1\", \"PYTHONIOENCODING=utf-8\")",
+	"new": "cmd.Env = os.Environ()",
+	"pkg": "./tools/breakcheck",
+	"test": "TestPythonBoundaryOutputUTF8",
+	"want": "Python中文输出不是UTF-8",
+	"expect": "red"
+}
 ]
