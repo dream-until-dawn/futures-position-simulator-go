@@ -10,7 +10,7 @@
 
 ## 2 自包含格式与边界
 
-单个JSON信封：格式1、payload（原规则快照JSON、显式配置、可选初始State、事件）及去除无意义空白后的payload SHA256。复用 refdata 保存/加载，不改内核StateFormat；绑定日历、八项口径、规则版本、涨跌停取整和限仓输入。哈希用于一致性检查，不是签名或真实性证明；重新生成哈希代表一份不同输入，报告始终记录该输入指纹。
+单个JSON信封：格式1、payload（原规则快照JSON、显式配置、可选初始State、事件）及规范payload SHA256。规范编码定义为严格解码到Payload后用Go的json.Marshal重编码（金额规范为定点字符串）；顶层字段顺序、空白及等值金额表示不改变解释。Rules作为既有线格式RawMessage只压缩空白，其对象内顺序不擅改。Encode/Decode/Run使用相同指纹算法。复用 refdata 保存/加载，不改内核StateFormat；绑定日历、八项口径、规则版本、涨跌停取整和限仓输入。哈希用于一致性检查，不是签名或真实性证明；重新生成哈希代表一份不同输入，报告始终记录该输入指纹。
 
 默认拒绝placeholder，演示合成规格必须显式allow-placeholder，报告原样保留证据等级。JSON拒绝重复键、未知字段、尾随第二文档、超深嵌套、超过16MiB输入及超长标量；金额只收有界十进制定点字符串，不接受浮点数或指数形式。事件最多4096、报告最多64MiB；资源超限也只能返回失败前缀。
 
@@ -25,5 +25,23 @@
 ## 5 接入与最终验收
 
 提供完全合成的演示包、CLI操作和外部Go模块示例，样例只能调用导出API；CI验证独立模块正例和错误配置反例。核对README、fidelity等现行陈述与历史语境，能力表明确已实现/仅设计/待实测，修正文档必须同步相关语义守卫，保留历史依据。
+
+使用时先运行 `go run ./cmd/replay demo -out demo-bundle.json`，再用 `go run ./cmd/replay run -bundle demo-bundle.json -allow-placeholder -out demo-report.json`，比较则用 `go run ./cmd/replay diff -left demo-report.json -right other-report.json -out difference.json`。输出路径必须不存在；diff二进制退出0为相同、2为差异、1为错误。go run包装器不保留所有非零退出码，需要自动化时先 `go build -o replay.exe ./cmd/replay`（Linux输出名可用replay），直接运行程序。合成演示提供25个事件和两次结算，日终结存手算1000001、1000000；最终仍携带一手昨仓，占用3001，不是平仓演示的假跨日。
+
+事件负载对应：mark→quote，trade→trade，accept→order（ref与request），fill/cancel→ref，deposit/withdraw→amount，settle→settlement（next_day与prices）。每个事件必须有id、day、kind且恰有一种匹配负载；金额输入最多24位整数和12位小数，不收指数。quote/trade/request/Initial沿用导出Go结构的字段名与枚举值，应通过replay.Encode生成格式，不能依赖显示用的中文枚举字符串。空事件也校验规则、配置和初始存档。初始State来自已确认的存档；此工具不是柜台会话恢复器，不自动重发旧委托。
+
+输入解码失败不会生成伪报告；Run失败返回error和status=failed的有效前缀。初始化尚未成功时initial、initial_account、final为null；比较器拒绝把它们当零账户。逐事件提交前计算报告预算，超限也回滚当前事件。发布前写盘/同步/关闭/链接失败不出现最终文件；发布成功后若仅临时文件清理失败，错误明确说明“已发布”，已有完整文件不回滚、不自动覆盖重试。SHA256只绑定解释后的规范输入，不提供来源签名；报告内部一致性检查不替代带原回放包重新执行。
+
+独立模块入口为 `examples/offline-replay`，该目录有自己的go.mod，用本地replace指向仓库；可执行go run .与go test .。主模块的TestExternalModuleIntegration在GOWORK/GOPROXY/GOSUMDB均off的环境执行其正反例，依赖必须预先缓存。普通回归包含三轮200个合成交易日（每轮2599个事件）的手算账本、逐日存档大小上限与GC后堆观测；合成日历可以包含自然周末，不对应真实交割和交易安排。限时模糊测试增加FuzzDecodeBundle，原两目标继续保留。
+
+| 能力 | 当前状态与边界 |
+|---|---|
+| 成交核算、显式挂单接受/手动成交/撤单、逐日结算 | 已实现；回放复用原内核，不替调用方补真实成交或风险校验事实 |
+| 自包含包、计算账单、报告首差异、无覆盖发布 | 已实现；本批新增离线验证，不提升输入规则的证据等级 |
+| match按报价立即全量成交 | 已实现的建模裁决，不是盘口/排队模型 |
+| Advance的K线守卫与计价 | 已实现；不因此宣称已按K线撮合 |
+| F9c K线撮合 | 仅设计与可行性验证；仍需合格实际挂单价探针前置 |
+| 未收敛的市场费率/取整等规则 | 仍待有判别力的实测，存在分歧时继续明确拒绝 |
+| 强平执行、盘口深度与跨会话自动重发 | 当前不覆盖；风险量、已知成交核算与实际执行不能混为一项 |
 
 先跑接口可行性与手算业务链，再逐项正反向和新破坏，最后干净隔离工作树完整清单、两模块回归/race/fuzz及Windows/Linux托管CI。证据绑定准确源码，最终文档提交不改代码，主分支合并后检查远端、父提交、工作树和回归。

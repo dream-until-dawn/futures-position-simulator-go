@@ -5,6 +5,8 @@
 
 一句话概括职责：**「成交与结算价 → 持仓 / 资金 / 结算单」的记账机。**
 
+当前能力与验收看 [项目状态顶部](docs/state.md)，下方2026-09-09横幅保留当时的依据和边界。新增纯离线工作流入口见 [离线重放设计与操作](docs/offline-replay.md)：已发生的成交或显式手动成交 → 核算 → 跨日账单 → 完整存档，不从K线猜测成交。
+
 > ### 状态（2026-09-09）：核算内核已实现并对拍；**口子只有一个**
 >
 > ~~文档阶段，尚无实现~~ —— 那句横幅从 2026-09-07 挂到 2026-09-09，
@@ -132,6 +134,16 @@
 ## 开发
 
 日常操作从 [当前开发与离线验证手册](docs/development.md) 开始；当前进度只看 [state.md](docs/state.md) 顶部最新批次，历史日期段不代表现在仍待实施。
+
+纯离线演示（需先安装并缓存Go依赖；二进制运行不联网、不读柜台凭据；输出必须是新文件）：
+
+```text
+go run ./cmd/replay demo -out demo-bundle.json
+go run ./cmd/replay run -bundle demo-bundle.json -allow-placeholder -out demo-report.json
+go run ./cmd/replay diff -left demo-report.json -right demo-report.json -out demo-diff.json
+```
+
+demo只生成完全合成的placeholder规格与合成日历，包含自然周末也不代表真实交易日；省略-allow-placeholder会明确失败。二进制diff退出0表示相同、2表示有差异、1表示输入/执行/落盘失败（go run自身可能把子程序非零码映射成1，应查看其exit status或直接运行编译后的程序）。独立模块接入示例在 [examples/offline-replay](examples/offline-replay/main.go)，可进入该目录执行go run .及go test .。
 
 挂单序号与存档示例见 [sequence_example_test.go](order/sequence_example_test.go)，可运行 `go test ./order -run Example -count=1`。`Live` 按 ID 排序；`OrderedIDs` 表示本地成功接收顺序。低层 Book 不执行完整报单校验；一般业务应通过 Simulator 的 Place / PlaceAccepted 接入，并用 State / Restore 保存完整账户。当前 StateFormat 为 5，旧格式明确拒绝且不自动迁移。K线撮合 F9c 仍待真实探针证据，当前 Advance 只守卫并计价。
 

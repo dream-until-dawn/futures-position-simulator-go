@@ -74,6 +74,7 @@ def run_suite():
             commands.append((name, command, cwd, True))
     elif args.suite == "fuzz":
         for name, cwd, target in [("state", ROOT, "FuzzStateSequence"),
+                                  ("bundle", ROOT / "replay", "FuzzDecodeBundle"),
                                   ("report", ROOT / "cmd/oracle", "FuzzReadRestingReport")]:
             commands.append((name, ["go", "test", ".", "-run=^$", f"-fuzz=^{target}$",
                                    f"-fuzztime={args.fuzz_time}", "-parallel=2"], cwd, False))
