@@ -54,6 +54,7 @@ func exerciseStateSequence(t *testing.T, input []byte) [2][8]int {
 		}
 		id := fmt.Sprintf("slot-%d", token%7)
 		request := order.Request{Instrument: inst, Direction: types.Buy, Offset: types.Open, Hedge: types.Speculation, Price: decimal.NewFromInt(3000), Volume: 1}
+		// 操作码：0/1开仓挂单、2撤单、3成交、4平今挂单、5非法方向、6结算、7正/反计价。
 		run := func(s *Simulator) error {
 			switch token % 8 {
 			case 0, 1:
@@ -73,6 +74,7 @@ func exerciseStateSequence(t *testing.T, input []byte) [2][8]int {
 				_, e := s.PlaceAccepted(day, id, request)
 				return e
 			case 6:
+				// 人工连续日期只验证跨日状态，不声称它们是真实交易日历。
 				now, _ := time.Parse("20060102", fmt.Sprint(day))
 				nextDate := now.AddDate(0, 0, 1)
 				next := types.TradingDay(nextDate.Year()*10000 + int(nextDate.Month())*100 + nextDate.Day())
