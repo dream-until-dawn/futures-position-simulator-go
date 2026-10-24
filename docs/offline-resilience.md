@@ -27,3 +27,7 @@
 ## 最终门槛
 
 Python 验证工具正反例；根模块和 cmd/oracle 无缓存完整回归、race、限时 fuzz；新机制逐项破坏；干净隔离工作树完整破坏扫描（逐项还原，失败立即停）；托管 Windows/Linux CI。记录准确源码提交与原始报告哈希，最终文档提交仅能更改文档。主分支合并后再次检查远端一致与回归，不打 tag。
+
+最终源码 d391df991dd5ada1bcf444b8246ab49dc509441f：独立完整773项，764预期红 / 9预期绿 / 0异常，退出码0，内容/索引指纹和HEAD前后一致，工作树干净。Python14项正反例及两模块回归、race、限时fuzz通过；[Windows/Linux托管验收](https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40065854414)成功。原772项扫描成功后，封存复核器误拒绝历史795省略want；保留原轮与复现日志，补合法省略正例和错误字段反例，新增859后完整重跑，没有拼接。最终来源、哈希、环境失败、实际CLI反向探针与限制见 [证书](./validation/resilience-d391df9.json)。
+
+复核命令：`python scripts/verify_evidence.py --certificate docs/validation/resilience-d391df9.json --report C:/Temp/resilience-full-d391df9/mutations.json --summary C:/Temp/resilience-full-d391df9/summary.json`。原始报告保存在本机上述目录；证书不能替代原始报告，也不提供签名或真实柜台证明。旧轮证书明确标注历史来源，最终结论只使用d391df9一轮。

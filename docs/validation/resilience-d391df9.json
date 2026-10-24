@@ -1,0 +1,538 @@
+{
+  "format": 1,
+  "source_commit": "d391df991dd5ada1bcf444b8246ab49dc509441f",
+  "source_tree": "ba2f7bd7b8db84392849c62e32a4be726483b198",
+  "baseline_main": "3fcd231b425ed5febc25fc9a525036772ea14998",
+  "registry_sha256": "3671e62d2d84254ec4875fa8d2cf1ceb002e16db2a25ce8d03d9b449c0a47572",
+  "report_sha256": "56e982b736b747568cc035f06bba72ab3c3a6839123411867db277c477469407",
+  "summary_sha256": "74a7aed96707e89d5f22c623e9e39d14ae6ef2678784910c6bc5db4a680792df",
+  "counts": {
+    "executed": 773,
+    "expected_red": 764,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "new_breaks": [
+    844,
+    845,
+    846,
+    847,
+    848,
+    849,
+    850,
+    851,
+    852,
+    853,
+    854,
+    855,
+    856,
+    857,
+    858,
+    859
+  ],
+  "raw_directory": "C:\\Temp\\resilience-full-d391df9",
+  "mutation_log_sha256": "f691c58ed9315c387a149f735e90947383658e9a15bc44b38d5e423b1c25cc0a",
+  "independent_post_run": {
+    "head": "d391df991dd5ada1bcf444b8246ab49dc509441f",
+    "porcelain": "",
+    "verified": true
+  },
+  "suites": {
+    "regression": {
+      "summary_sha256": "27980dc76ec551be7a3eeb9f081b808377362b27d9d42d731fb2679f4510e1be",
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 535,
+            "skipped": [],
+            "log": "C:\\Temp\\resilience-regression-d391df9\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 350,
+            "skipped": [],
+            "log": "C:\\Temp\\resilience-regression-d391df9\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3284be3c991e11a85220cda263da8f272952fde02eae87aeab25ac829e7d7271",
+          "index_sha256": "819b85c8097f138142f38739863083b051ca23f508bf9d5e536a58c36b42540d",
+          "head": "d391df991dd5ada1bcf444b8246ab49dc509441f"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3284be3c991e11a85220cda263da8f272952fde02eae87aeab25ac829e7d7271",
+          "index_sha256": "819b85c8097f138142f38739863083b051ca23f508bf9d5e536a58c36b42540d",
+          "head": "d391df991dd5ada1bcf444b8246ab49dc509441f"
+        }
+      },
+      "logs_sha256": {
+        "C:\\Temp\\resilience-regression-d391df9\\root.log": "55d80854ca956cbffedfb8a5603fc5bfedf0ab990fa8db65d18034c9a08252a9",
+        "C:\\Temp\\resilience-regression-d391df9\\oracle.log": "06d03eed1729f8cac154dbca59e47c96ecfa7ddc08142b1ed214fd6ad30e5b64"
+      }
+    },
+    "race": {
+      "summary_sha256": "50286a19dfbf6424012b04d37a131f71be8b001d266ab6ac72364dd18d8fe468",
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 535,
+            "skipped": [],
+            "log": "C:\\Temp\\resilience-race-d391df9\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 350,
+            "skipped": [],
+            "log": "C:\\Temp\\resilience-race-d391df9\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3284be3c991e11a85220cda263da8f272952fde02eae87aeab25ac829e7d7271",
+          "index_sha256": "819b85c8097f138142f38739863083b051ca23f508bf9d5e536a58c36b42540d",
+          "head": "d391df991dd5ada1bcf444b8246ab49dc509441f"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3284be3c991e11a85220cda263da8f272952fde02eae87aeab25ac829e7d7271",
+          "index_sha256": "819b85c8097f138142f38739863083b051ca23f508bf9d5e536a58c36b42540d",
+          "head": "d391df991dd5ada1bcf444b8246ab49dc509441f"
+        }
+      },
+      "logs_sha256": {
+        "C:\\Temp\\resilience-race-d391df9\\root.log": "c350e683a8e0975dd5f65a36752a03d1ae51d9472aba4183dcddba6993c9135f",
+        "C:\\Temp\\resilience-race-d391df9\\oracle.log": "9930c0671d676b4b0931e99e94cc13b0cf062467e1daec4e46fa0ff02399e1c5"
+      }
+    },
+    "fuzz": {
+      "summary_sha256": "bd2c514cc57339236c13695f9dd107826a32f375feeb3985186bfa6048610cc3",
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resilience-fuzz-d391df9\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resilience-fuzz-d391df9\\report.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3284be3c991e11a85220cda263da8f272952fde02eae87aeab25ac829e7d7271",
+          "index_sha256": "819b85c8097f138142f38739863083b051ca23f508bf9d5e536a58c36b42540d",
+          "head": "d391df991dd5ada1bcf444b8246ab49dc509441f"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3284be3c991e11a85220cda263da8f272952fde02eae87aeab25ac829e7d7271",
+          "index_sha256": "819b85c8097f138142f38739863083b051ca23f508bf9d5e536a58c36b42540d",
+          "head": "d391df991dd5ada1bcf444b8246ab49dc509441f"
+        }
+      },
+      "logs_sha256": {
+        "C:\\Temp\\resilience-fuzz-d391df9\\state.log": "53dbb02ebfce6880966020e104db108751b6edadaa4ba768c4e0c0bb7350195d",
+        "C:\\Temp\\resilience-fuzz-d391df9\\report.log": "eeb12699ff1ea80b818049a66c32dec443cf1fb5a9ad10bb9b6bbb2bf69f94c1"
+      }
+    }
+  },
+  "python": {
+    "test_count": 14,
+    "command": "python -m unittest discover -s scripts -p test_*.py",
+    "status": "passed",
+    "hosted_ci_step": "Validate the validator"
+  },
+  "benchmark": {
+    "measured_source_commit": "23a27f1353b558d102cb21adeecce9d121b12f19",
+    "go_source_diff_vs_final": [],
+    "unchanged_go_sources_verified": true,
+    "samples": 40,
+    "suite": {
+      "summary_sha256": "f83d5a15997ca99541943a6fe190e2bc35fb05022b58c9825d4538ca5ed16f87",
+      "summary": {
+        "suite": "bench",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-bench=^BenchmarkOffline",
+              "-benchmem",
+              "-count=5",
+              "-benchtime=30x"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resilience-bench-23a27f1\\bench.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "719847f10b3292fd5fd166f19ab850ec0bedfb9f32ca51513c72d15dc78967ab",
+          "index_sha256": "3b94e954adc856139c08d4390efbf1e58eb3320b5cd22a65d1bd7bf77768abbd",
+          "head": "23a27f1353b558d102cb21adeecce9d121b12f19"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "719847f10b3292fd5fd166f19ab850ec0bedfb9f32ca51513c72d15dc78967ab",
+          "index_sha256": "3b94e954adc856139c08d4390efbf1e58eb3320b5cd22a65d1bd7bf77768abbd",
+          "head": "23a27f1353b558d102cb21adeecce9d121b12f19"
+        }
+      },
+      "logs_sha256": {
+        "C:\\Temp\\resilience-bench-23a27f1\\bench.log": "02697fc10257486359d7e947df4ee53b38d25ec07094ee26f2521d55e3953fbd"
+      }
+    }
+  },
+  "ci": {
+    "run": {
+      "id": 40065854414,
+      "head_sha": "d391df991dd5ada1bcf444b8246ab49dc509441f",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40065854414"
+    },
+    "jobs": [
+      {
+        "id": 120788836845,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T05:20:20Z",
+            "completed_at": "2026-10-24T05:20:22Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T05:20:22Z",
+            "completed_at": "2026-10-24T05:20:33Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T05:20:33Z",
+            "completed_at": "2026-10-24T05:21:04Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T05:21:04Z",
+            "completed_at": "2026-10-24T05:21:23Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T05:21:23Z",
+            "completed_at": "2026-10-24T05:22:03Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T05:22:03Z",
+            "completed_at": "2026-10-24T05:23:08Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T05:23:08Z",
+            "completed_at": "2026-10-24T05:24:00Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T05:24:00Z",
+            "completed_at": "2026-10-24T05:24:01Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T05:24:01Z",
+            "completed_at": "2026-10-24T05:24:02Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T05:24:02Z",
+            "completed_at": "2026-10-24T05:24:04Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T05:24:04Z",
+            "completed_at": "2026-10-24T05:24:04Z"
+          }
+        ]
+      },
+      {
+        "id": 120788837026,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-24T05:20:20Z",
+            "completed_at": "2026-10-24T05:20:21Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-24T05:20:21Z",
+            "completed_at": "2026-10-24T05:20:22Z"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-24T05:20:22Z",
+            "completed_at": "2026-10-24T05:20:32Z"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-24T05:20:32Z",
+            "completed_at": "2026-10-24T05:20:45Z"
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-24T05:20:45Z",
+            "completed_at": "2026-10-24T05:21:08Z"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-24T05:21:08Z",
+            "completed_at": "2026-10-24T05:21:44Z"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-24T05:21:44Z",
+            "completed_at": "2026-10-24T05:22:33Z"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-24T05:22:33Z",
+            "completed_at": "2026-10-24T05:22:33Z"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-24T05:22:33Z",
+            "completed_at": "2026-10-24T05:22:34Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-24T05:22:34Z",
+            "completed_at": "2026-10-24T05:22:34Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-24T05:22:34Z",
+            "completed_at": "2026-10-24T05:22:34Z"
+          }
+        ]
+      },
+      {
+        "id": 120788837883,
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
+  "environment_failures_preserved": [
+    {
+      "directory": "C:/Temp/resilience-race-a36f7eb",
+      "reason": "GCC Chinese prefix cannot locate CRT objects; not accepted as race proof"
+    },
+    {
+      "directory": "C:/Temp/resilience-race-ascii-a36f7eb",
+      "reason": "GCC Chinese prefix cannot locate CRT objects; not accepted as race proof"
+    }
+  ],
+  "race_workaround": {
+    "temporary_junction": "C:/Temp/futsim-resilience-mingw",
+    "deleted": true,
+    "process_only_environment": [
+      "CC",
+      "PATH",
+      "GCC_EXEC_PREFIX",
+      "LIBRARY_PATH",
+      "COMPILER_PATH"
+    ],
+    "compiler_version": "WinLibs GCC 16.1.0"
+  },
+  "verifier_cli_negative_probes": {
+    "directory": "C:/Temp/resilience-running-rejection",
+    "running": {
+      "rows": 150,
+      "exit_code": 1,
+      "reason": "该轮未成功完成"
+    },
+    "wrong_tree": {
+      "exit_code": 1,
+      "reason": "源码 tree 不匹配"
+    },
+    "wrong_hash": {
+      "exit_code": 1,
+      "reason": "report SHA256 不匹配"
+    }
+  },
+  "limitations": [
+    "Synthetic replay and accounting tests do not upgrade market observations.",
+    "No broker access or automatic cross-process order resubmission; restart without confirmed terminal ownership is refused.",
+    "Nine existing expected-green entries retained; full registry supported/verified on Windows.",
+    "SIGKILL/power loss cannot guarantee cleanup: running/lock/dirty residue blocks acceptance and requires a new clean full run.",
+    "Performance is a same-machine measurement, not a portable latency threshold; sequence map costs approximately 37KB extra at 1000 orders."
+  ],
+  "prior_round": {
+    "source_commit": "23a27f1353b558d102cb21adeecce9d121b12f19",
+    "counts": {
+      "executed": 772,
+      "expected_red": 763,
+      "expected_green": 9,
+      "unexpected": 0,
+      "exit_code": 0
+    },
+    "report_sha256": "e5f074f462d2daaeb0a0ebd84fa552d7991e5a87ccac21ff956abe6be811f148",
+    "summary_sha256": "d512e8fa30107d308c81af8676cff5716df0448fed3ccfe61bd3d79fefffdb7f",
+    "accepted_as_final": false,
+    "merged_into_final": false,
+    "reason": "Scanner succeeded; sealing verifier falsely rejected legacy 795 missing want (Go string zero vs Python None). Added positive/negative compatibility and break 859; independently reran entire new registry.",
+    "directory": "C:/Temp/resilience-full-23a27f1",
+    "original_verifier_rejection_sha256": "5cba1dfe651dda67e9a8ceabda108a8083cde0c326a0db756a62553a12387184",
+    "fixed_verifier_acceptance_sha256": "d217de7ac52146ce92b4b9d70b846e153d4266e0dde181c073853ce8293127ab"
+  }
+}
