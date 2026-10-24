@@ -50,3 +50,12 @@ class EvidenceTests(unittest.TestCase):
                     self.check(r,p,s)
         with self.assertRaisesRegex(ValueError, "SHA256"):
             self.check(*self.fixture(), corrupt_hash=True)
+
+    def test_legacy_green_missing_want_uses_go_string_default(self):
+        registry, report, summary = self.fixture()
+        del registry[1]["want"]
+        self.assertEqual(self.check(registry, report, summary)["green"], 1)
+        # 只兼容登记省略；报告自身仍须携带 Go 输出的空字符串。
+        report[1]["want"] = "unexpected"
+        with self.assertRaisesRegex(ValueError, "条目来源字段不匹配"):
+            self.check(registry, report, summary)

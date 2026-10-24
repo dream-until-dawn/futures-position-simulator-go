@@ -8487,5 +8487,16 @@
 		"test": "TestPythonRuntimeBoundary",
 		"want": "background descendant survived normal completion",
 		"expect": "red"
+	},
+	{
+		"name": "859 历史绿条目省略want被误拒绝",
+		"dir": "",
+		"file": "scripts/verify_evidence.py",
+		"old": "row.get(\"want\", \"\")",
+		"new": "row.get(\"want\")",
+		"pkg": "./tools/breakcheck",
+		"test": "TestPythonEvidenceBoundary",
+		"want": "ValueError: 条目来源字段不匹配",
+		"expect": "red"
 	}
 ]

@@ -38,7 +38,10 @@ def verify_bundle(certificate, registry_raw, report_raw, summary_raw):
     counts = {"red": 0, "green": 0}
     for name, row in expected.items():
         observed = actual[name]
-        require(all(observed.get(key) == row.get(key) for key in ["name", "pkg", "test", "expect", "want"]), "条目来源字段不匹配：" + name)
+        # Go 的字符串字段省略时为 ""；历史绿条目795合法省略 want，报告仍输出空串。
+        # 仅归一化登记的省略值，不能容忍报告缺字段或把显式 null 当成空串。
+        source_fields = dict(row, want=row.get("want", ""))
+        require(all(observed.get(key) == source_fields.get(key) for key in ["name", "pkg", "test", "expect", "want"]), "条目来源字段不匹配：" + name)
         expect = row["expect"]
         require(expect in counts, "未知预期分类")
         verdict = "红对了" if expect == "red" else "如预期仍然绿"
