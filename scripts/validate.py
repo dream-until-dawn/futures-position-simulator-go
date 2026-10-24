@@ -1,5 +1,6 @@
 """跨平台离线验证入口。仅启动测试/构建，不读取凭据或运行柜台命令。"""
 import argparse
+from collections import deque
 import json
 import subprocess
 import sys
@@ -12,12 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 def run_checked(command, cwd, log, require_tests=False):
     """保存完整输出；真实跳过、零测试与进程失败均不能当作回归通过。"""
     passed, skipped = 0, []
+    tail = deque(maxlen=60)
     with log.open("w", encoding="utf-8", newline="\n") as output:
         process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True,
                                    encoding="utf-8", errors="replace")
         for line in process.stdout:
             output.write(line)
+            tail.append(line)
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
@@ -31,6 +34,8 @@ def run_checked(command, cwd, log, require_tests=False):
         process.stdout.close()
         code = process.wait()
     if code != 0:
+        # CI控制台保留失败上下文，完整输出仍由artifact保存。
+        print("底层命令失败，最后60行输出：\n" + "".join(tail), file=sys.stderr, flush=True)
         raise RuntimeError(f"验证失败 exit={code}，完整日志：{log}")
     if require_tests and (passed == 0 or skipped):
         raise RuntimeError(f"回归证据不完整 passed={passed} skipped={skipped}，日志：{log}")
@@ -84,7 +89,8 @@ def main():
         failure = str(error)
         raise
     finally:
-        (out / "summary.json").write_text(json.dumps({"suite": args.suite, "status": status, "failure": failure, "completed": results}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        # Windows默认会将换行转成CRLF；报告也必须遵守仓库LF约定。
+        (out / "summary.json").write_text(json.dumps({"suite": args.suite, "status": status, "failure": failure, "completed": results}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":
