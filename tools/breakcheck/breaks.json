@@ -8298,5 +8298,29 @@
 	"want": "同包同测试名 ⇒ 成对：孤儿数",
 	"expect": "red",
 	"why": "637依赖393仍为预期绿的历史前提，393离线关闭后该实例失去判别力，按编号规则退休。新编号检验通用测试名交集机制，使用已有的同名成对/异名孤儿等独立正反例，不再依赖真实清单当前哪项是绿。"
+},
+{
+	"name": "842 施加破坏绕过同次计划字节的有界写入",
+	"dir": "",
+	"file": "tools/breakcheck/breakcheck.go",
+	"old": "\t\tif err := writePlannedBytes(files, s.file, s.broken); err != nil {",
+	"new": "\t\tif err := files.write(s.file, s.broken, 0o644); err != nil {",
+	"pkg": "./tools/breakcheck/",
+	"test": "TestWindowsApplyRetryIsBounded",
+	"want": "施加重试边界错误",
+	"expect": "red",
+	"why": "Windows现场1224导致破坏未施加；仅相同计划字节写入可有界重试，暂时/持续/权限错误均实注入。此条仅Windows完整破坏扫描可执行，Linux不可把未选中测试当通过。"
+},
+{
+	"name": "843 施加后不核对实际破坏字节",
+	"dir": "",
+	"file": "tools/breakcheck/breakcheck.go",
+	"old": "\t\tif rerr != nil || string(written) != string(s.broken) {",
+	"new": "\t\tif false && (rerr != nil || string(written) != string(s.broken)) {",
+	"pkg": "./tools/breakcheck/",
+	"test": "TestApplyReadbackPreventsUnappliedBody",
+	"want": "未确认破坏字节就执行测试",
+	"expect": "red",
+	"why": "写调用返回nil但字节不符也不能运行测试体或声称破坏验证；注入错误写入并验证原始字节恢复。"
 }
 ]
