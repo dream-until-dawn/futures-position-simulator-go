@@ -232,6 +232,7 @@ func (c closable) target() string {
 // ⚠️ **这张表现在是空的，而空着正是这个实验的目的达成。**
 //
 // 20260909 一晚补掉三个：
+//
 //	volume_long_frozen_today   DCE.m2701 挂平今 1 手
 //	volume_short_frozen        rb2701 开一手空今仓后挂平今
 //	volume_short_frozen_today  同上
@@ -317,7 +318,7 @@ var frozenFields = []string{
 	"volume_short_frozen", "volume_short_frozen_today", "volume_short_frozen_his",
 }
 
-func frozenSnapshot(cli *kq.Client, sym string) map[string]string {
+func frozenSnapshot(cli frozenReader, sym string) map[string]string {
 	p := cli.PositionOf(sym)
 	out := map[string]string{}
 	for _, k := range frozenFields {
@@ -369,12 +370,23 @@ const (
 // ⚠️ 等变化而不是睡固定秒数：睡够了就往下走，
 // 会在慢的那一次读到「还没冻」并把它记成「不冻结」——
 // 而「不冻结」是个会被当真的结论。
-func waitFrozen(cli *kq.Client, sym, orderID string, base map[string]string,
-	timeout time.Duration) (map[string]string, waitReason) {
+type frozenReader interface {
+	PositionOf(string) map[string]any
+	OrderOf(string) (kq.OrderState, bool)
+	WaitTrade(time.Duration) bool
+}
 
-	deadline := time.Now().Add(timeout)
+func waitFrozen(cli frozenReader, sym, orderID string, base map[string]string,
+	timeout time.Duration) (map[string]string, waitReason) {
+	return waitFrozenClock(cli, sym, orderID, base, timeout, time.Now)
+}
+
+// waitFrozenClock 只注入时钟与读取边界，生产仍使用相同的等待与三态判据。
+func waitFrozenClock(cli frozenReader, sym, orderID string, base map[string]string,
+	timeout time.Duration, now func() time.Time) (map[string]string, waitReason) {
+	deadline := now().Add(timeout)
 	cur := base
-	for time.Now().Before(deadline) {
+	for now().Before(deadline) {
 		cur = frozenSnapshot(cli, sym)
 		if !sameFrozen(cur, base) {
 			return cur, frozenChanged

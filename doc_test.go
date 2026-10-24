@@ -1504,10 +1504,7 @@ func TestDateRoleMatchesFormat(t *testing.T) {
 	}
 	// ⚠️ 反空转：一处都没配过角色词的话，上面两个正则永远不可能命中，
 	// 而那时本条是恒绿的。
-	if okPairs < 20 {
-		t.Fatalf("⚠️ 全部文档里只找到 %d 处「角色词 + 日期」的搭配 —— "+
-			"太少，本条很可能在空转（是不是约定的写法变了？）", okPairs)
-	}
+	checkDateRoleCoverage(t, okPairs)
 	t.Logf("角色词与格式一致 %d 处，错配 %d 处；⚠️ 光秃秃的日期（无角色词）本条**不查**",
 		okPairs, bad)
 }
@@ -1817,5 +1814,13 @@ func TestRateFileColumnDebtIsDeclared(t *testing.T) {
 			"**过期陈述**：带列的那一份已经能排除替代解释", withColumn, len(files), column, debtPhrase)
 	default:
 		t.Logf("ⓘ %d/%d 份留底的表头带「%s」，§13 已不再写 %q", withColumn, len(files), column, debtPhrase)
+	}
+}
+
+// checkDateRoleCoverage 保留原判据，允许独立构造边界输入。
+func checkDateRoleCoverage(t interface{ Fatalf(string, ...any) }, okPairs int) {
+	if okPairs < 20 {
+		t.Fatalf("⚠️ 全部文档里只找到 %d 处「角色词 + 日期」的搭配 —— "+
+			"太少，本条很可能在空转（是不是约定的写法变了？）", okPairs)
 	}
 }

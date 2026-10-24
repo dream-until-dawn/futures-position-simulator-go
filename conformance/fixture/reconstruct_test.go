@@ -233,10 +233,7 @@ func TestReconstructCoversCarriedSides(t *testing.T) {
 	// 全跳了的话「保证金对得上」这句话一次都没被验，而本条照样绿。
 	t.Logf("ⓘ 保证金比对跳过：行情侧未滚（类 C）%d 个、柜台自己内部不自洽（换挡瞬间）%d 个",
 		skippedStalePre, skippedInconsistent)
-	if skippedStalePre >= reconstructed && reconstructed > 0 {
-		t.Error("⚠️ **每一个**截面的保证金都被跳过了 —— " +
-			"那一段等于没跑。要一份行情已滚（pre_settlement 与交易所结算价一致）的夹具")
-	}
+	checkReconstructionCoverage(t, skippedStalePre, reconstructed)
 	if reconstructed == 0 {
 		t.Fatal("⚠️ 一个截面都没重建 —— 本条在空转。" +
 			"要 20260909 的、rb2701 多头有昨仓的夹具")
@@ -394,4 +391,12 @@ func oracleDatetime(f *Fixture, sym string) string {
 		return "(无)"
 	}
 	return v.Text
+}
+
+// checkReconstructionCoverage 保留原判据，允许独立构造边界输入。
+func checkReconstructionCoverage(t evidenceReporter, skippedStalePre, reconstructed int) {
+	if skippedStalePre >= reconstructed && reconstructed > 0 {
+		t.Error("⚠️ **每一个**截面的保证金都被跳过了 —— " +
+			"那一段等于没跑。要一份行情已滚（pre_settlement 与交易所结算价一致）的夹具")
+	}
 }

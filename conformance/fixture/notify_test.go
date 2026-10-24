@@ -55,6 +55,7 @@ var notifyCodesPendingID = map[int]string{
 // 逼人去看那一条是什么。一个没人看过的码与一个看过并判定为无关的码，
 // 在数据里长得一模一样。
 func TestNotifyCodesAreKnown(t *testing.T) {
+	checkNotifyTables(t, notifyCodes, notifyCodesPendingID)
 	seen := map[int][]string{}
 	withNotifies := 0
 	for _, f := range loadAll(t) {
@@ -113,5 +114,14 @@ func TestNotifyCodesAreKnown(t *testing.T) {
 	if len(codes) < 2 {
 		t.Errorf("⚠️ 只见过 %d 个不同的码 —— "+
 			"「不同的拒因给不同的码」这句话在这么点样本上没有判别力", len(codes))
+	}
+}
+
+// checkNotifyTables 防止已识别的通知同时被登记为未知欠账。
+func checkNotifyTables(t evidenceReporter, known, pending map[int]string) {
+	for code := range known {
+		if _, ok := pending[code]; ok {
+			t.Errorf("通知已知与待认领表相交：%d", code)
+		}
 	}
 }

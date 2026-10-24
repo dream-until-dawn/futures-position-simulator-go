@@ -179,15 +179,7 @@ func TestCrossDayConformance(t *testing.T) {
 	// ⚠️ 所以规则是机械的：`?` 之外的类别都是**因果断言**，
 	// 而因果断言要求这个字段至少非零过一次。
 	neverNonZero := fieldsNeverNonZero(all)
-	for name, class := range known {
-		if !neverNonZero[name] || strings.HasSuffix(class, "-?") {
-			continue
-		}
-		t.Errorf("⚠️ 字段 %s 被指派了类别 %q，而它在全部 %d 份夹具里**一次都没有非零过** —— "+
-			"两边都是 0 时，几种机制给出同一个观测，此时任何因果类别都是猜的。"+
-			"⚠️ 改成「跨日-?」（样本区分不了），或者去取一份能区分它们的样本"+
-			"（空头那几个要一次**空头过夜**）", name, class, len(all))
-	}
+	checkObservedClasses(t, neverNonZero, known, len(all))
 
 	names := make([]string, 0, len(failedFields))
 	for n := range failedFields {
@@ -282,4 +274,17 @@ func fmtOracle(v Value) string {
 		return v.Text
 	}
 	return v.Number.String()
+}
+
+// checkObservedClasses 不允许对从未非零的字段给出确定机制。
+func checkObservedClasses(t evidenceReporter, neverNonZero map[string]bool, known map[string]string, count int) {
+	for name, class := range known {
+		if !neverNonZero[name] || strings.HasSuffix(class, "-?") {
+			continue
+		}
+		t.Errorf("⚠️ 字段 %s 被指派了类别 %q，而它在全部 %d 份夹具里**一次都没有非零过** —— "+
+			"两边都是 0 时，几种机制给出同一个观测，此时任何因果类别都是猜的。"+
+			"⚠️ 改成「跨日-?」（样本区分不了），或者去取一份能区分它们的样本"+
+			"（空头那几个要一次**空头过夜**）", name, class, count)
+	}
 }
