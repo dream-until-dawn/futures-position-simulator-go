@@ -66,7 +66,8 @@ def run_suite():
     before = git_state()
     commands = []
     if args.suite in ["regression", "race"]:
-        for name, cwd in [("root", ROOT), ("oracle", ROOT / "cmd/oracle")]:
+        for name, cwd in [("root", ROOT), ("oracle", ROOT / "cmd/oracle"),
+                          ("external", ROOT / "examples/offline-replay")]:
             command = ["go", "test", "-json", "-count=1"]
             if args.suite == "race":
                 command.append("-race")
@@ -75,7 +76,9 @@ def run_suite():
     elif args.suite == "fuzz":
         for name, cwd, target in [("state", ROOT, "FuzzStateSequence"),
                                   ("bundle", ROOT / "replay", "FuzzDecodeBundle"),
-                                  ("report", ROOT / "cmd/oracle", "FuzzReadRestingReport")]:
+                                  ("report", ROOT / "cmd/oracle", "FuzzReadRestingReport"),
+                                  ("risk", ROOT / "risk", "FuzzRiskDeposit"),
+                                  ("lifecycle", ROOT / "lifecycle", "FuzzLifecycleRules")]:
             commands.append((name, ["go", "test", ".", "-run=^$", f"-fuzz=^{target}$",
                                    f"-fuzztime={args.fuzz_time}", "-parallel=2"], cwd, False))
     elif args.suite == "mutation":

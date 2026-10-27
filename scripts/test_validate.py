@@ -17,7 +17,7 @@ class ValidationEvidenceTests(unittest.TestCase):
         # 同时覆盖正常完成和失败落盘；按字节检查，不让文本读取自动归一化。
         for failed in [False, True]:
             with self.subTest(failed=failed), tempfile.TemporaryDirectory() as folder:
-                with patch("sys.argv", ["validate.py", "--out", folder]), patch("validate.git_state", return_value=""), patch("validate.run_checked", side_effect=RuntimeError("故障") if failed else [None, None]), contextlib.redirect_stdout(io.StringIO()):
+                with patch("sys.argv", ["validate.py", "--out", folder]), patch("validate.git_state", return_value=""), patch("validate.run_checked", side_effect=RuntimeError("故障") if failed else [None, None, None]), contextlib.redirect_stdout(io.StringIO()):
                     if failed:
                         with self.assertRaisesRegex(RuntimeError, "故障"):
                             main()

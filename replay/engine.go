@@ -5,13 +5,25 @@ import (
 	"fmt"
 	futsim "github.com/dream-until-dawn/futures-position-simulator-go"
 	"github.com/dream-until-dawn/futures-position-simulator-go/account"
+	"github.com/dream-until-dawn/futures-position-simulator-go/lifecycle"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
 
 func configuration(p Payload, opt Options) (futsim.Config, refdata.Evidence, error) {
-	rules, cal, ev, err := loadRules(p.Rules, opt)
+	if (len(p.Rules) == 0) == (len(p.Lifecycle) == 0) {
+		return futsim.Config{}, "", fmt.Errorf("Rules与Lifecycle必须恰有一个完整规则输入")
+	}
+	var rules refdata.Provider
+	var cal *refdata.Calendar
+	var ev refdata.Evidence
+	var err error
+	if len(p.Lifecycle) > 0 {
+		rules, cal, ev, err = loadDaily(p.Lifecycle, opt)
+	} else {
+		rules, cal, ev, err = loadRules(p.Rules, opt)
+	}
 	if err != nil {
 		return futsim.Config{}, ev, err
 	}
@@ -96,12 +108,16 @@ func runBounded(input Payload, opt Options, limit int) (Report, error) {
 	}
 	initialAccount := sim.Account()
 	report.Initial, report.Final, report.InitialAccount = &st, &st, &initialAccount
+	if len(p.Lifecycle) > 0 {
+		report.InitialRules = &RuleBinding{Lifecycle: p.Lifecycle, Evidence: ev}
+	}
 	initialBytes, _ := json.MarshalIndent(report, "", "  ")
 	used := len(initialBytes) + 4096
 	if used > limit {
 		report.Initial = nil
 		report.InitialAccount = nil
 		report.Final = nil
+		report.InitialRules = nil
 		return fail(nil, fmt.Errorf("初始状态超过报告预算"))
 	}
 	seen := map[string]bool{}
@@ -118,7 +134,11 @@ func runBounded(input Payload, opt Options, limit int) (Report, error) {
 		if err != nil {
 			return fail(&index, err)
 		}
-		if err = apply(work, cfg, e); err != nil {
+		nextCfg, binding, err := prepareRules(currentCfg, e, opt)
+		if err != nil {
+			return fail(&index, fmt.Errorf("事件%d %s规则准备: %w", index, e.ID, err))
+		}
+		if err = apply(work, currentCfg, nextCfg, e); err != nil {
 			return fail(&index, fmt.Errorf("事件%d %s: %w", index, e.ID, err))
 		}
 		afterState, err := work.State()
@@ -127,6 +147,24 @@ func runBounded(input Payload, opt Options, limit int) (Report, error) {
 		}
 		after := work.Account()
 		frame := Frame{Index: index, Event: e, Account: after, State: afterState, Changes: changes(before, after)}
+		frame.Rules = binding
+		if daily, ok := nextCfg.Rules.(*lifecycle.DailyRules); ok {
+			result, err := work.AssessLifecycle()
+			if err != nil {
+				return fail(&index, err)
+			}
+			if daily.LifecycleDay() != after.TradingDay {
+				return fail(&index, fmt.Errorf("事件后的日规则未原子更新"))
+			}
+			frame.Lifecycle = &result
+		}
+		if e.Kind == "risk" {
+			result, err := work.AssessRisk(*e.RiskPolicy)
+			if err != nil {
+				return fail(&index, err)
+			}
+			frame.Risk = &result
+		}
 		if e.Kind == "settle" {
 			fee := beforeState.Account.SettleCommission
 			frame.Statement = &Statement{Day: e.Day, NextDay: after.TradingDay, PreBalance: before.PreBalance, Deposit: before.Deposit, Withdraw: before.Withdraw, CloseProfit: before.CloseProfit, Commission: fee, Balance: after.PreBalance, NextMargin: after.CurrMargin,
@@ -143,6 +181,8 @@ func runBounded(input Payload, opt Options, limit int) (Report, error) {
 		}
 		used += len(frameBytes) + 8
 		sim = work
+		cfg = nextCfg
+		cfg.Day = after.TradingDay
 		report.Frames = append(report.Frames, frame)
 		report.Final = &afterState
 	}
@@ -150,9 +190,9 @@ func runBounded(input Payload, opt Options, limit int) (Report, error) {
 	return report, nil
 }
 
-func apply(s *futsim.Simulator, cfg futsim.Config, e Event) error {
+func apply(s *futsim.Simulator, cfg, nextCfg futsim.Config, e Event) error {
 	n := 0
-	for _, present := range []bool{e.Quote != nil, e.Trade != nil, e.Order != nil, e.Ref != "", e.Amount != nil, e.Settlement != nil} {
+	for _, present := range []bool{e.Quote != nil, e.Trade != nil, e.Order != nil, e.Ref != "", e.Amount != nil, e.Settlement != nil, e.RiskPolicy != nil} {
 		if present {
 			n++
 		}
@@ -161,6 +201,14 @@ func apply(s *futsim.Simulator, cfg futsim.Config, e Event) error {
 		return fmt.Errorf("事件必须恰有一种负载")
 	}
 	switch e.Kind {
+	case "risk":
+		if e.RiskPolicy != nil {
+			if e.Day != s.Account().TradingDay {
+				return fmt.Errorf("风控事件交易日不匹配")
+			}
+			_, err := s.AssessRisk(*e.RiskPolicy)
+			return err
+		}
 	case "mark":
 		if e.Quote != nil {
 			return s.Mark(e.Day, *e.Quote)
@@ -206,6 +254,14 @@ func apply(s *futsim.Simulator, cfg futsim.Config, e Event) error {
 					return err
 				}
 				prices[p.Instrument] = p.Value
+			}
+			if len(e.Settlement.NextRules) > 0 {
+				daily, ok := nextCfg.Rules.(*lifecycle.DailyRules)
+				if !ok {
+					return fmt.Errorf("结算缺少候选日规则")
+				}
+				_, err := s.SettleWithRules(e.Day, prices, next, daily)
+				return err
 			}
 			return s.Settle(e.Day, prices, next)
 		}

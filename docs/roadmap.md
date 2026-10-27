@@ -13,6 +13,8 @@ O3新增risk包：`Policy`（MaxRiskRatio、MinEquity、MinAvailable），`Repor
 
 O4新增 `lifecycle` 包：`InvestorKind`（`InvestorUnknown`、`Individual`、`Institution`）、`MarginStep`（From、Rates）、`Contract`（Instrument、LastTradingDay、LastHoldingDay、MarginSteps）、`Schedule`（First、Last、Investor、Source、Contracts）、`Holding`（Instrument、Long、Short）、`Holdings`（Known、Positions）、`Status`（Instrument、Long、Short、MarginFrom、LastTradingDay、LastHoldingDay、Expired、CloseOnly、ExitByClose、HoldingViolation、Tradable）、`Report`（Day、Investor、Source、Contracts、HasBlockingHoldings）。`NewDailyRules` 返回不可变 `DailyRules`，实现Provider及 `LifecycleDay`、`Investor`、`CheckOpening`、`Assess`；门面新增 `AssessLifecycle` 和 `SettleWithRules`，原 `Settle` 在显式日绑定时要求切换入口。资格、覆盖和数值未知拒绝；旧普通Provider兼容；不改StateFormat。设计及合成证据边界见 [生命周期策略](./lifecycle-policy.md)，持久化/回放接线由O5继续。
 
+O5新增生命周期完整持久化 `PersistenceFormat`、`MaxSnapshotBytes`、`(*DailyRules).Save`、`lifecycle.Load`；保存原始base和完整声明，字段精确大小写（Schedule子对象沿用Go导出字段名），金额为定点字符串。replay新增 `RuleBinding`（Lifecycle、Evidence）、Payload.Lifecycle、Settlement.NextRules、Event.RiskPolicy、Report.InitialRules、Frame.Rules/Lifecycle/Risk。初始规则与每次切换独立记录证据，不升级来源；配置和状态连同报告预算通过后原子提交。新字段omitempty使旧格式1包规范字节保持，StateFormat不改；独立模块回归/race和风险/生命周期fuzz纳入统一验证入口。设计与909项完整独立验收见 [O5集成](./offline-integration.md)，本次已合入main；O6最终交付审计继续。
+
 ## 分支与发布约定
 
 **2026-10-23 最新约定**：使用者取消单独评审环节，授权实现方在北京时间今日 17:00 前持续推进。设计、实现、合并自行验证后执行；本段覆盖下方历史评审门禁。质量要求和具体交易手数授权继续有效，当前执行状态以 state.md 为准。
