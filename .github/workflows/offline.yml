@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.1'
+          go-version: '1.27.3'
           cache-dependency-path: |
             go.sum
             cmd/oracle/go.sum
@@ -61,7 +61,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.1'
+          go-version: '1.27.3'
       - run: python scripts/validate.py --suite mutation --out offline-results/mutation
       - uses: actions/upload-artifact@v4
         if: always()

@@ -58,3 +58,39 @@ func TestOfflineManualRejectsMissingTargets(t *testing.T) {
 		t.Fatal("验证手册守卫未识别空源码")
 	}
 }
+
+// offlineCIToolchainOK 防止CI退回含fuzz时限取消竞态的工具链；两个任务都须固定验证过的版本。
+func offlineCIToolchainOK(workflow string) bool {
+	versions := regexp.MustCompile(`(?m)^          go-version: '([^']+)'$`).FindAllStringSubmatch(workflow, -1)
+	if len(versions) != 2 {
+		return false
+	}
+	for _, version := range versions {
+		if version[1] != "1.27.3" {
+			return false
+		}
+	}
+	return true
+}
+
+func TestOfflineCIToolchain(t *testing.T) {
+	raw, err := os.ReadFile(".github/workflows/offline.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !offlineCIToolchainOK(string(raw)) {
+		t.Fatal("CI工具链必须两处固定已验证的1.27.3")
+	}
+}
+
+func TestOfflineCIToolchainRejectsRegression(t *testing.T) {
+	good := "          go-version: '1.27.3'\n          go-version: '1.27.3'\n"
+	if !offlineCIToolchainOK(good) {
+		t.Fatal("正确双任务配置被拒绝")
+	}
+	for _, bad := range []string{"", "          go-version: '1.27.3'\n", strings.Replace(good, "1.27.3", "1.26.1", 1), strings.ReplaceAll(good, "1.27.3", "stable")} {
+		if offlineCIToolchainOK(bad) {
+			t.Fatal("CI工具链守卫未拒绝缺项或版本退回")
+		}
+	}
+}
