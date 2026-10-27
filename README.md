@@ -166,8 +166,7 @@ demo只生成完全合成的placeholder规格与合成日历，包含自然周�
 go env -w GOPROXY=https://goproxy.cn,direct
 ```
 
-⚠️ **本机 `proxy.golang.org` 不可达**（[probes.md](docs/probes.md) §1）。
-不设 `GOPROXY` 会挂在第一个依赖上，而报错信息不会指向真正的原因。
+2026-09-07首次探针记录过本机 `proxy.golang.org` 不可达（[probes.md](docs/probes.md) §1）；这是历史网络观测，不代表当前仍不可达。上面的代理命令保留当时配置示例，不作为通用推荐或离线运行前提；纯离线验证需要预先缓存依赖，本批不修改全局代理配置。
 
 对拍与探针需要柜台凭据：
 
