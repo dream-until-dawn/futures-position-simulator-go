@@ -30,6 +30,8 @@
 
 使用时先运行 `go run ./cmd/replay demo -out demo-bundle.json`，再用 `go run ./cmd/replay run -bundle demo-bundle.json -allow-placeholder -out demo-report.json`，比较则用 `go run ./cmd/replay diff -left demo-report.json -right other-report.json -out difference.json`。输出路径必须不存在；diff二进制退出0为相同、2为差异、1为错误。go run包装器不保留所有非零退出码，需要自动化时先 `go build -o replay.exe ./cmd/replay`（Linux输出名可用replay），直接运行程序。合成演示提供25个事件和两次结算，日终结存手算1000001、1000000；最终仍携带一手昨仓，占用3001，不是平仓演示的假跨日。
 
+O5扩展：Payload.Lifecycle与Rules恰选其一；生命周期settle的settlement.next_rules携完整下一日规则，缺失不能沿用昨日台阶。risk事件用risk_policy显式Policy，只读结果在Frame.Risk；生命周期报告在Frame.Lifecycle。每段规则的完整快照和Evidence在InitialRules/Frame.Rules，顶层Evidence仅指初始来源。旧格式1包字节保持；报告读者核规则/日期/资格、风险与生命周期重算，失败和报告超限不提交候选配置。独立规则的有限精度范围较宽，但进入回放的所有原始金额仍遵守24整数/12小数输入约束。详细见[O5集成](./offline-integration.md)。
+
 事件负载对应：mark→quote，trade→trade，accept→order（ref与request），fill/cancel→ref，deposit/withdraw→amount，settle→settlement（next_day与prices）。每个事件必须有id、day、kind且恰有一种匹配负载；金额输入最多24位整数和12位小数，不收指数。quote/trade/request/Initial沿用导出Go结构的字段名与枚举值，应通过replay.Encode生成格式，不能依赖显示用的中文枚举字符串。空事件也校验规则、配置和初始存档。初始State来自已确认的存档；此工具不是柜台会话恢复器，不自动重发旧委托。
 
 输入解码失败不会生成伪报告；Run失败返回error和status=failed的有效前缀。初始化尚未成功时initial、initial_account、final为null；比较器拒绝把它们当零账户。逐事件提交前计算报告预算，超限也回滚当前事件。发布前写盘/同步/关闭/链接失败不出现最终文件；发布成功后若仅临时文件清理失败，错误明确说明“已发布”，已有完整文件不回滚、不自动覆盖重试。SHA256只绑定解释后的规范输入，不提供来源签名；报告内部一致性检查不替代带原回放包重新执行。

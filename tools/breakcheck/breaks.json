@@ -9994,5 +9994,104 @@
 		"test": "TestReplayLifecycleMoneyBudget",
 		"want": "生命周期原始JSON绕过回放金额边界",
 		"expect": "red"
+	},
+	{
+		"name": "996 台阶仅比较日号导致跨月提前生效",
+		"dir": "",
+		"file": "lifecycle/rules.go",
+		"old": "if step.From <= day {",
+		"new": "if step.From%100 <= day%100 {",
+		"pkg": "./",
+		"test": "TestLifecycleMonthAndYearBoundary",
+		"want": "跨月/跨年旧日提前套用新台阶",
+		"expect": "red"
+	},
+	{
+		"name": "997 禁止普通规则显式转为完整日规则",
+		"dir": "",
+		"file": "lifecycle.go",
+		"old": "if nextRules == nil || nextRules.LifecycleDay() != nextDay || nextRules.Version() == 0 || nextRules.Version() == s.rules.Version() {",
+		"new": "if _, ok := s.rules.(*lifecycle.DailyRules); !ok { return lifecycle.Report{}, fmt.Errorf(\"错误要求预先绑定日规则\") }; if nextRules == nil || nextRules.LifecycleDay() != nextDay || nextRules.Version() == 0 || nextRules.Version() == s.rules.Version() {",
+		"pkg": "./replay",
+		"test": "TestReplayPlainRuleAdoption",
+		"want": "普通规则显式接入日规则闭环失败",
+		"expect": "red"
+	},
+	{
+		"name": "998 只读风控仅比余额忽略完整存档",
+		"dir": "",
+		"file": "replay/lifecycle.go",
+		"old": "if !same(calculated, *frame.Risk) || !same(previous, frame.State) {",
+		"new": "if !same(calculated, *frame.Risk) || false && !same(previous, frame.State) {",
+		"pkg": "./replay",
+		"test": "TestReplayRiskReadOnlyEntireState",
+		"want": "只读风控报告接受了被修改的存档",
+		"expect": "red"
+	},
+	{
+		"name": "999 普通报告无切换也能改版本",
+		"dir": "",
+		"file": "replay/lifecycle.go",
+		"old": "if frame.Rules != nil || frame.State.RulesVersion != previous.RulesVersion {",
+		"new": "if frame.Rules != nil || false && frame.State.RulesVersion != previous.RulesVersion {",
+		"pkg": "./replay",
+		"test": "TestReplayPlainVersionInvariant",
+		"want": "普通报告允许非切换事件更换规则版本",
+		"expect": "red"
+	},
+	{
+		"name": "1000 当前手册漏掉生命周期fuzz目标",
+		"dir": "",
+		"file": "docs/development.md",
+		"old": "`FuzzLifecycleRules`",
+		"new": "`FuzzLifecycleRules_遗漏`",
+		"pkg": "./",
+		"test": "TestOfflineManualMatchesValidator",
+		"want": "手册缺少验证目标 FuzzLifecycleRules",
+		"expect": "red"
+	},
+	{
+		"name": "1001 手册同步在空源码上报成功",
+		"dir": "",
+		"file": "offline_manual_test.go",
+		"old": "if len(modules) < 3 || len(fuzzTargets) < 5 {",
+		"new": "if false && (len(modules) < 3 || len(fuzzTargets) < 5) {",
+		"pkg": "./",
+		"test": "TestOfflineManualRejectsMissingTargets",
+		"want": "验证手册守卫未识别空源码",
+		"expect": "red"
+	},
+	{
+		"name": "1002 投资者枚举数值漂移却不迁移文件",
+		"dir": "",
+		"file": "lifecycle/model.go",
+		"old": "\n\tIndividual\n",
+		"new": "\n\tIndividual InvestorKind = 7\n",
+		"pkg": "./",
+		"test": "TestOfflineWireCompatibility",
+		"want": "离线协议枚举或格式值改变",
+		"expect": "red"
+	},
+	{
+		"name": "1003 新可选字段使旧格式包哈希漂移",
+		"dir": "",
+		"file": "replay/model.go",
+		"old": "Lifecycle json.RawMessage `json:\"lifecycle,omitempty\"`",
+		"new": "Lifecycle json.RawMessage `json:\"lifecycle\"`",
+		"pkg": "./",
+		"test": "TestOfflineWireCompatibility",
+		"want": "旧格式1规范包发生非兼容变化",
+		"expect": "red"
+	},
+	{
+		"name": "1004 风控补资字段JSON键悄悄改名",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "\tRequiredDeposit decimal.Decimal\n",
+		"new": "\tRequiredDeposit decimal.Decimal `json:\"deposit\"`\n",
+		"pkg": "./",
+		"test": "TestOfflinePublicProtocolShape",
+		"want": "公开协议字段或标签改变 type=risk.Report",
+		"expect": "red"
 	}
 ]
