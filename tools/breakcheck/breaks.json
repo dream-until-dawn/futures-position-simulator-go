@@ -9158,5 +9158,159 @@
 		"test": "TestMainHistoryRef",
 		"want": "缺主线历史被当成可统计",
 		"expect": "red"
+	},
+	{
+		"name": "920 冻结适配不用完整状态",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "sim, err := futsim.Restore(cfg, seed)",
+		"new": "sim, err := futsim.New(cfg)",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateCompleteBook",
+		"want": "完整冻结状态接入失败",
+		"expect": "red"
+	},
+	{
+		"name": "921 冻结顺序不要求完整",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "if len(orderedIDs) != len(requests) {",
+		"new": "if false \u0026\u0026 len(orderedIDs) != len(requests) {",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateRejectsUnknown",
+		"want": "未知冻结输入被接受 kind=missing-order",
+		"expect": "red"
+	},
+	{
+		"name": "922 冻结接收顺序允许重复",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "if !ok || seen[id] {",
+		"new": "if !ok || false \u0026\u0026 seen[id] {",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateRejectsUnknown",
+		"want": "重复顺序未由覆盖门槛拒绝",
+		"expect": "red"
+	},
+	{
+		"name": "923 空冻结簿丢序号高水位",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "order.RestoreBook(state.LastOrderSequence, entries)",
+		"new": "order.RestoreBook(uint64(len(entries)), entries)",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateMissingAndEmpty",
+		"want": "已知空簿或历史高水位丢失",
+		"expect": "red"
+	},
+	{
+		"name": "924 冻结适配丢有效开平标志",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "Request: entry.Request",
+		"new": "Request: requests[entry.ID]",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateCompleteBook",
+		"want": "有效请求或费用额度丢失",
+		"expect": "red"
+	},
+	{
+		"name": "925 第二单失败仍返回部分簿",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "if _, err = sim.PlaceAccepted(f.TradingDay, id, req); err != nil {",
+		"new": "if _, err = sim.PlaceAccepted(f.TradingDay, id, req); false \u0026\u0026 err != nil {",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateFailureIsAtomic",
+		"want": "累计超平或资金不足未原子失败",
+		"expect": "red"
+	},
+	{
+		"name": "926 逐单仅算冻结不进入门面簿",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "sim.PlaceAccepted(f.TradingDay, id, req)",
+		"new": "sim.FreezeOf(f.TradingDay, req)",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateCompleteBook",
+		"want": "冻结接收顺序或高水位丢失",
+		"expect": "red"
+	},
+	{
+		"name": "927 冻结手数小数截断",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "|| !d.Equal(d.Truncate(0))",
+		"new": "|| false \u0026\u0026 !d.Equal(d.Truncate(0))",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateRejectsUnknown",
+		"want": "未知冻结输入被接受 kind=fraction",
+		"expect": "red"
+	},
+	{
+		"name": "928 缺手数假装已知零",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "if !present {",
+		"new": "if false \u0026\u0026 !present {",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateRejectsUnknown",
+		"want": "未知冻结输入被接受 kind=missing-volume",
+		"expect": "red"
+	},
+	{
+		"name": "929 未知状态假装已终结",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "return nil, false, fmt.Errorf(\"委托%s状态未知\", id)",
+		"new": "continue",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateRejectsUnknown",
+		"want": "未知冻结输入被接受 kind=unknown-status",
+		"expect": "red"
+	},
+	{
+		"name": "930 已有合法冻结重复重建",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "if len(seed.Orders) != 0 || !seed.Account.FrozenMargin.IsZero() || !seed.Account.FrozenCommission.IsZero() || !seed.Account.FrozenCash.IsZero() {",
+		"new": "if false \u0026\u0026 (len(seed.Orders) != 0 || !seed.Account.FrozenMargin.IsZero() || !seed.Account.FrozenCommission.IsZero() || !seed.Account.FrozenCash.IsZero()) {",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateRejectsUnknown",
+		"want": "未知冻结输入被接受 kind=orders",
+		"expect": "red"
+	},
+	{
+		"name": "931 手数指数预算去掉",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "d.Exponent() \u003c -64 || d.Exponent() \u003e 64",
+		"new": "false \u0026\u0026 d.Exponent() \u003c -64 || false \u0026\u0026 d.Exponent() \u003e 64",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateResourceBounds",
+		"want": "手数资源边界未独立拒绝",
+		"expect": "red"
+	},
+	{
+		"name": "932 手数系数预算去掉",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "d.Coefficient().BitLen() \u003e 512",
+		"new": "false \u0026\u0026 d.Coefficient().BitLen() \u003e 512",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateResourceBounds",
+		"want": "手数资源边界未独立拒绝",
+		"expect": "red"
+	},
+	{
+		"name": "933 倒序重建冻结",
+		"dir": "",
+		"file": "conformance/fixture/frozen_state.go",
+		"old": "for _, id := range orderedIDs {",
+		"new": "for index := range orderedIDs {\n id := orderedIDs[len(orderedIDs)-1-index]",
+		"pkg": "./conformance/fixture",
+		"test": "TestFrozenStateCompleteBook",
+		"want": "冻结接收顺序或高水位丢失",
+		"expect": "red"
 	}
 ]
