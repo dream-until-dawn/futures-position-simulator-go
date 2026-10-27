@@ -113,6 +113,16 @@ func TestHandshakeFailureMatrix(t *testing.T) {
 
 // TestHandshakeSharedDeadline 前一步已成功也不能为下一步重新分配完整预算。
 func TestHandshakeSharedDeadline(t *testing.T) {
+	prepare := newHandshake(time.Second, nil)
+	if err := prepare.prepare(handshakeFront, 0); err != nil {
+		t.Fatal(err)
+	}
+	prepare.mu.Lock()
+	prepare.deadline = time.Now().Add(-time.Millisecond)
+	prepare.mu.Unlock()
+	if err := prepare.prepare(handshakeAuth, 1); err == nil {
+		t.Fatal("共享截止未阻止下一阶段")
+	}
 	h := newHandshake(time.Second, nil)
 	count := 0
 	_, err := runFakeHandshake(h, func(stage string, id int) int32 {
