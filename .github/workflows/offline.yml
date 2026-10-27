@@ -12,6 +12,8 @@ on:
 
 env:
   PYTHONUTF8: '1'
+  # 保持现有JSON流解析语义；本轮仅引入fuzz取消竞态修复。
+  GOEXPERIMENT: 'nojsonv2'
 
 permissions:
   contents: read
