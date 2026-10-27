@@ -10093,5 +10093,38 @@
 		"test": "TestOfflinePublicProtocolShape",
 		"want": "公开协议字段或标签改变 type=risk.Report",
 		"expect": "red"
+	},
+	{
+		"name": "1005 CI回退到有fuzz时限竞态的工具链",
+		"dir": "",
+		"file": ".github/workflows/offline.yml",
+		"old": "go-version: '1.27.3'\n          cache-dependency-path:",
+		"new": "go-version: '1.26.1'\n          cache-dependency-path:",
+		"pkg": "./",
+		"test": "TestOfflineCIToolchain",
+		"want": "CI工具链必须两处固定已验证的1.27.3",
+		"expect": "red"
+	},
+	{
+		"name": "1006 CI工具链守卫放过版本退回",
+		"dir": "",
+		"file": "offline_manual_test.go",
+		"old": "if version[1] != \"1.27.3\" {",
+		"new": "if false && version[1] != \"1.27.3\" {",
+		"pkg": "./",
+		"test": "TestOfflineCIToolchainRejectsRegression",
+		"want": "CI工具链守卫未拒绝缺项或版本退回",
+		"expect": "red"
+	},
+	{
+		"name": "1007 CI静默切换JSON后端使收尾守卫失去判别力",
+		"dir": "",
+		"file": ".github/workflows/offline.yml",
+		"old": "  GOEXPERIMENT: 'nojsonv2'",
+		"new": "  GOEXPERIMENT: 'jsonv2'",
+		"pkg": "./",
+		"test": "TestOfflineCIToolchain",
+		"want": "CI工具链必须两处固定已验证的1.27.3",
+		"expect": "red"
 	}
 ]

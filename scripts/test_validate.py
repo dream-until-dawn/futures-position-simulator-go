@@ -34,6 +34,24 @@ class ValidationEvidenceTests(unittest.TestCase):
                 run_checked([sys.executable, "-c", "print('underlying failure'); raise SystemExit(7)"], Path(folder), Path(folder) / "failed.log")
             self.assertIn("underlying failure", diagnostic.getvalue())
 
+    def test_fuzz_deadline_and_real_panic(self):
+        # 真实Go进程验证正常总时限结束，以及panic仍以非零退出传播；不按错误文本豁免失败。
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "go.mod").write_text("module fuzzboundary\n\ngo 1.23\n", encoding="utf-8")
+            test = root / "boundary_test.go"
+            test.write_text('package fuzzboundary\nimport ("testing"; "time")\nfunc FuzzBoundary(f *testing.F) { f.Add([]byte("seed")); f.Fuzz(func(t *testing.T, b []byte) { time.Sleep(time.Millisecond) }) }\n', encoding="utf-8")
+            command = ["go", "test", ".", "-run=^$", "-fuzz=^FuzzBoundary$", "-fuzztime=2s", "-parallel=2"]
+            for index in range(2):
+                run_checked(command, root, root / f"deadline-{index}.log")
+                self.assertIn("now fuzzing with", (root / f"deadline-{index}.log").read_text(encoding="utf-8"))
+            test.write_text('package fuzzboundary\nimport "testing"\nfunc FuzzBoundary(f *testing.F) { f.Add([]byte("boom")); f.Fuzz(func(t *testing.T, b []byte) { panic("deliberate fuzz fault") }) }\n', encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaisesRegex(RuntimeError, "exit=1"):
+                run_checked(command, root, root / "panic.log")
+            self.assertIn("deliberate fuzz fault", (root / "panic.log").read_text(encoding="utf-8"))
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaisesRegex(RuntimeError, "exit=1"):
+                run_checked([sys.executable, "-c", "print('context deadline exceeded'); raise SystemExit(1)"], root, root / "deadline-error.log")
+
     def test_cli_accepts_non_utf8_host_console(self):
         env = dict(os.environ, PYTHONIOENCODING="cp1252")
         command = [sys.executable, str(Path(__file__).with_name("validate.py")), "--help"]
