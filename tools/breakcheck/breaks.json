@@ -8762,5 +8762,27 @@
 	"test": "TestPythonBoundaryOutputUTF8",
 	"want": "Python中文输出不是UTF-8",
 	"expect": "red"
-}
+},
+	{
+		"name": "884 撤销今日启动日期和窗口",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/resting_price_probe.go",
+		"old": "local.Format(\"20060102\") != restingProbeDay || hm < 1055 || hm >= 1115",
+		"new": "false && (local.Format(\"20060102\") != restingProbeDay || hm < 1055 || hm >= 1115)",
+		"pkg": ".",
+		"test": "TestRestingRegistrationStartBoundary",
+		"want": "越界启动未在报单前拒绝",
+		"expect": "red"
+	},
+	{
+		"name": "885 陈旧日期行情获准进入今日探针",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/resting_price_rules.go",
+		"old": "day != restingProbeDay || local.Format(\"20060102\") != day",
+		"new": "false && day != restingProbeDay || local.Format(\"20060102\") != day",
+		"pkg": ".",
+		"test": "TestRestingRegistrationQuoteBoundary",
+		"want": "登记行情边界错误",
+		"expect": "red"
+	}
 ]

@@ -39,7 +39,7 @@ func verifyRestingReport(report restingProbeReport) (string, error) {
 	if _, err := hex.DecodeString(report.PlanCommit); err != nil {
 		return "", fmt.Errorf("报告计划号无效")
 	}
-	if report.Symbol != "SHFE.rb2701" || report.TradingDay != "20261023" || report.Tick != "1" || report.Multiplier != "10" {
+	if report.Symbol != "SHFE.rb2701" || report.TradingDay != restingProbeDay || report.Tick != "1" || report.Multiplier != "10" {
 		return "", fmt.Errorf("报告范围不符合登记")
 	}
 	if report.Control.Ref == "" || !report.Control.Terminal || !report.Control.QueueObserved || !report.Control.CancelAttempted || report.Control.Filled != 0 || report.Control.ErrorID != 0 {
