@@ -1,0 +1,463 @@
+{
+  "format": 1,
+  "source_commit": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5",
+  "source_tree": "c616dd036219ffae087cd1df2bc3dc70cf0c3209",
+  "baseline_main": "ec4af4f0b4f817ed2bb360b82da73dc07a12f9b7",
+  "registry_sha256": "56e1f90cffb47f57aba7fe63082e305842dc82bf7c3dd00d556cd10ba0a05bee",
+  "report_sha256": "cb43f0ab64334fb8dbd9b3c4d1dd96b69b5cbf187578443422ea8202a9377d04",
+  "summary_sha256": "30ff1f76cdced0ed935848df9fbc83e89acc1870f08de4bd2b3222620aec2f7e",
+  "counts": {
+    "executed": 833,
+    "expected_red": 824,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "new_breaks": [
+    903,
+    904,
+    905,
+    906,
+    907,
+    908,
+    909,
+    910,
+    911,
+    912,
+    913,
+    914,
+    915,
+    916,
+    917,
+    918,
+    919
+  ],
+  "raw_directory": "C:\\Temp\\offline-o1-full-8f54c04",
+  "summary": {
+    "suite": "mutation",
+    "status": "passed",
+    "failure": null,
+    "completed": [
+      {
+        "command": [
+          "go",
+          "run",
+          "./tools/breakcheck",
+          "-out",
+          "C:\\Temp\\offline-o1-full-8f54c04\\mutations.json"
+        ],
+        "cwd": "C:\\Temp\\offline-o1-final-validation",
+        "passed_tests": 0,
+        "skipped": [],
+        "log": "C:\\Temp\\offline-o1-full-8f54c04\\mutation.log",
+        "exit_code": 0
+      }
+    ],
+    "before": {
+      "status": "",
+      "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+      "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+      "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+    },
+    "after": {
+      "status": "",
+      "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+      "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+      "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+    }
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\offline-o1-full-8f54c04\\mutation.log",
+    "sha256": "2790a708416bf6ec7f651d6f51f28feffc641890f7022f9776166da42948f047"
+  },
+  "independent_post_run": {
+    "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5",
+    "porcelain": "",
+    "git_directory": true
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o1-checks",
+            "passed_tests": 583,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o1-regression-8f54c04\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o1-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o1-regression-8f54c04\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+          "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+          "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+          "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+          "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\offline-o1-regression-8f54c04\\summary.json",
+        "sha256": "0a4d06f8a630e98dc3b7399ae552c376a7273581e8d93391cbf5a520e3381a70"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\offline-o1-regression-8f54c04\\oracle.log",
+          "sha256": "42855758a6af6dc4a8d1721afd4e38e0c2a56404e452ffd9491fe167ca1a67fd"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\offline-o1-regression-8f54c04\\root.log",
+          "sha256": "81e4b4b51bc8c25bcf3a80003b7b0839eecca046c8845021ec7f0e239c3aceef"
+        }
+      }
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o1-checks",
+            "passed_tests": 583,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o1-race-8f54c04\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o1-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o1-race-8f54c04\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+          "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+          "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+          "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+          "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\offline-o1-race-8f54c04\\summary.json",
+        "sha256": "79af36a89596af39dd2b887a671daded4e233df28a8a57d0a3fe51c254ff39f4"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\offline-o1-race-8f54c04\\oracle.log",
+          "sha256": "65385e8b1fb64cb2f949f67b5511a28d31ad4e17ecd43d35cba58503f031ec5c"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\offline-o1-race-8f54c04\\root.log",
+          "sha256": "b6d0770e22a8458305b15a938a49f91a9add07b0efbeb6032edfb0a02455c2da"
+        }
+      }
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o1-checks",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o1-fuzz-8f54c04\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o1-checks\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o1-fuzz-8f54c04\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o1-checks\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o1-fuzz-8f54c04\\report.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+          "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+          "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "d5f8c54dce6ac80c6bd72cbaba1a10ee2b530b4f348d1cc3a58500768a7f0de3",
+          "index_sha256": "aad4e85ecae73b79c94f340891a08ce5ecf251ca3b1fe0092572bad6d3ab98ee",
+          "head": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\offline-o1-fuzz-8f54c04\\summary.json",
+        "sha256": "94d08e1d6c0de4e20d4bcba975d826f3cb6fa9763b53ed11df8ac414f2560c97"
+      },
+      "logs": {
+        "bundle.log": {
+          "path": "C:\\Temp\\offline-o1-fuzz-8f54c04\\bundle.log",
+          "sha256": "556c7a64a3ddcf5ae000f03cc894bcccd813839bf3249008f9d1b657eef87e3d"
+        },
+        "report.log": {
+          "path": "C:\\Temp\\offline-o1-fuzz-8f54c04\\report.log",
+          "sha256": "1c55fa7b51ca53dde2337b0cf1e23c4683fd2fea6e02ac5e15346b7df512ef50"
+        },
+        "state.log": {
+          "path": "C:\\Temp\\offline-o1-fuzz-8f54c04\\state.log",
+          "sha256": "dd5fec0f23e3836567879ea12920adf837d4b1aa1f761e35ac9d14baa6a94883"
+        }
+      }
+    }
+  },
+  "python_tests": {
+    "passed": 14,
+    "path": "C:\\Temp\\offline-o1-python-8f54c04.log",
+    "sha256": "a6571cb0f544a632e01bd2264d359a42cd4249ee97635da6d47b95dcbe35df9f"
+  },
+  "ci": {
+    "run": {
+      "id": 40467594590,
+      "head_sha": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40467594590"
+    },
+    "jobs": [
+      {
+        "id": 122066655813,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 122066656053,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 122066657029,
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "targeted": {
+    "417": {
+      "path": "C:\\Temp\\offline-o1-target-417-8f54c04.json",
+      "sha256": "9185cf1db53009ec1950dd58b0ed435c5d87cb500bea5a9ffd5a138f0a76c7e8"
+    },
+    "903": {
+      "path": "C:\\Temp\\offline-o1-target-903-8f54c04.json",
+      "sha256": "b7077881cf891a5042cd49d9d1942af63dcb3f82e3f3f97fcd3be1b92416982f"
+    },
+    "904": {
+      "path": "C:\\Temp\\offline-o1-target-904-8f54c04.json",
+      "sha256": "671c09342f55ed6effb187871dacb670e2b4a63c32a57695d10bc19d4e25cb25"
+    },
+    "905": {
+      "path": "C:\\Temp\\offline-o1-target-905-8f54c04.json",
+      "sha256": "ff76c87c47f3e2dff2cc609c7964213d9fc5b0442010ef2e0560c97846a6bb6b"
+    },
+    "906": {
+      "path": "C:\\Temp\\offline-o1-target-906-8f54c04.json",
+      "sha256": "a4b9f06ac1d36378157758b7199cf2b8416b6322951bf8ce51b36307b56af9fe"
+    },
+    "907": {
+      "path": "C:\\Temp\\offline-o1-target-907-8f54c04.json",
+      "sha256": "3913feb629c051a1fc5abed9a9b4640ca0df7698c62cd8138348dc8425da4fb4"
+    },
+    "908": {
+      "path": "C:\\Temp\\offline-o1-target-908-8f54c04.json",
+      "sha256": "4821ca92a55e86e1a34f32a5be9035c9ab659828f534c3e8820ec3a748eab4ce"
+    },
+    "909": {
+      "path": "C:\\Temp\\offline-o1-target-909-8f54c04.json",
+      "sha256": "b7e3e5f610294e8ca99e9ef3476f1fdae5d4fdad1c402c127dee8455bb01b9d7"
+    },
+    "910": {
+      "path": "C:\\Temp\\offline-o1-target-910-8f54c04.json",
+      "sha256": "f6be145ce02c1170d1ba806954b11f9c8620cb45026671cc077b5bcee7bc58ba"
+    },
+    "911": {
+      "path": "C:\\Temp\\offline-o1-target-911-8f54c04.json",
+      "sha256": "3b99f29f5c3fef091b806cf9f0b17cd0c6bc5ef669c305c4d1af766030305559"
+    },
+    "912": {
+      "path": "C:\\Temp\\offline-o1-target-912-8f54c04.json",
+      "sha256": "f995f42a2a2e32ac94559ba67618abb7d85f5a4fd15ab9075574656f1564aede"
+    },
+    "913": {
+      "path": "C:\\Temp\\offline-o1-target-913-8f54c04.json",
+      "sha256": "3fc08c9889ea6b106622943fba9ed11b0a04340ab23f24f2702e17c95f624b0f"
+    },
+    "914": {
+      "path": "C:\\Temp\\offline-o1-target-914-8f54c04.json",
+      "sha256": "3f5fcb8a406c065327c9d1cf3a2eeb8851d0bde4896cdfa0694dbd7373c65e13"
+    },
+    "915": {
+      "path": "C:\\Temp\\offline-o1-target-915-8f54c04.json",
+      "sha256": "30719547c85896a90cc339032f5703c5df6b3dbb7e926555be76cd7fce4eba7c"
+    },
+    "916": {
+      "path": "C:\\Temp\\offline-o1-target-916-8f54c04.json",
+      "sha256": "3bf3b3be60235eee15aa02f2f3990f53235353eb15d77d134f887c4788c9c707"
+    },
+    "917": {
+      "path": "C:\\Temp\\offline-o1-target-917-8f54c04.json",
+      "sha256": "4d5a4771689a813f1ccc891afa920621d1dcde2e10058e10ba5370101ebf3308"
+    },
+    "918": {
+      "path": "C:\\Temp\\offline-o1-target-918-8f54c04.json",
+      "sha256": "110cb156ef1622577a530aa968e2a5a7fc6827d20d7f38f4db8cd3775c416538"
+    },
+    "919": {
+      "path": "C:\\Temp\\offline-o1-target-919-8f54c04.json",
+      "sha256": "d7ad8f0bd3911b269b7b709d7bda623057fb7333d67eeb7f17aa4e80f4da42ab"
+    }
+  },
+  "boundaries": [
+    "完整清单为本机Windows独立扫描，托管Windows/Linux仅严格双模块回归/race/限时fuzz，optional mutation skipped",
+    "全部使用合成输入、已有脱敏语料及明确资料来源，不读取交易凭据、不连接柜台、不执行报撤单",
+    "失败轮不拼接补跑；完整报告与源码和还原指纹绑定，未知不当零",
+    "不替换已批准10月28日一手探针的df96b43源码与既有构建，不提升F9c或lh实测等级"
+  ],
+  "earlier_runs": [
+    {
+      "description": "旧实现真实将未知夜盘归到节后，修复后拒绝未知；不是已有实测规则被新造",
+      "log": {
+        "path": "C:\\Temp\\offline-o1-before.log",
+        "sha256": "face7758ba3d2b12ab4baa8ac14a78bf610f44a2969f252b28e642a7aaa1d685"
+      }
+    },
+    {
+      "description": "首次完整回归检出未迁移nil夜盘调用者及工作区旧证书CRLF；配置和换行分别修正，Git证书内容未变",
+      "log": {
+        "path": "C:\\Temp\\offline-o1-root-first.log",
+        "sha256": "a2ef68d9938a8f4a27c7abb3bd6666bcaddabcfc35f2d58f3c4ddcae7cfe4ff3"
+      }
+    },
+    {
+      "description": "904实际先红但目标断言登记不符；修正稳定排序后的首个判据",
+      "report": {
+        "path": "C:\\Temp\\offline-o1-target-904-41cd0de.json",
+        "sha256": "56ad24635e7f47770eb4c96289f22cdbb06ade030f89face554d660deee000e3"
+      }
+    },
+    {
+      "description": "数字-only误选含日期名称；结果不唯一被独立复核拒绝，改完整条目名称重新定向",
+      "report": {
+        "path": "C:\\Temp\\offline-o1-target-915-d67b734.json",
+        "sha256": "3ebf694ad3f0cd0a2c920b7f88e8ec33c9c95aba4b25a78abc9ddd0248c36211"
+      }
+    },
+    {
+      "description": "重叠启动被排他锁拒绝，改独立克隆；未并发修改同一工作树",
+      "log": {
+        "path": "C:\\Temp\\offline-o1-target-903-d67b734-exact.log",
+        "sha256": "54c39d489c385af33089784ad1fea7d6651b3e24a84ea927cab6579021cccb6c"
+      }
+    },
+    {
+      "description": "原d67b734完整831项只有417判错理由：无本地main无法统计。完整保留，补已抓取引用正反例及918/919后重新完整833项，未拼接",
+      "source_commit": "d67b73421857f530a27af7bbc0f413ab44734e74",
+      "summary": {
+        "path": "C:\\Temp\\offline-o1-full-d67b734\\summary.json",
+        "sha256": "fca7568858c9fb2dd60323d8e8113a90b9ff2ad8e176cdaf3aa149fa20e96079"
+      },
+      "report": {
+        "path": "C:\\Temp\\offline-o1-full-d67b734\\mutations.json",
+        "sha256": "6cff155f5416bc4f0ad458eba319b940600a8856eb30a6597f526cf2717a4ecb"
+      }
+    }
+  ],
+  "source_statement": {
+    "url": "https://www.shfe.com.cn/publicnotice/notice/202512/t20251217_829805.html",
+    "scope": "only SHFE and declared fixture dates in 2026; not extrapolated to other exchanges",
+    "type": "documented announcement, not new broker behavior"
+  }
+}
