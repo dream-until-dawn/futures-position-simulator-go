@@ -1,0 +1,867 @@
+{
+  "format": 1,
+  "source_commit": "aac038d1a6991ab2205aa67abf8fda964f283357",
+  "source_tree": "112f5eff617b179c6876abe510fac8449b46629e",
+  "registry_sha256": "0f71e174920f98062216dbcd56279acd8b1b2b8e3dfadb75a40d58922c0f18ba",
+  "report_sha256": "6b50b420fe5a61f5696bc11cf14ef1b4fa46e918aa1a1f558c039686b1350d6a",
+  "summary_sha256": "606eb31bfa3d4266593dfb9cd0828ac8808015c90d79ced1e56c28790ad4bea2",
+  "counts": {
+    "executed": 909,
+    "expected_red": 900,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+    "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+    "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks",
+            "passed_tests": 734,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-regression-aac038d\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-regression-aac038d\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-regression-aac038d\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+          "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+          "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+          "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+          "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-o5-regression-aac038d\\summary.json",
+        "sha256": "4949420daf40bbc7b8a88ab84e2638519991513f048c6dfa1722470590fc17dc"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-o5-regression-aac038d\\root.log",
+          "sha256": "d64cb63ebb644561955b44b098b9bd58b9d7cece27e202fe5f5a8915dd97e180"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-regression-aac038d\\oracle.log",
+          "sha256": "0ecf57b6a333b8d0afada39588887b46a825b30a826add370dcd09024feac9a7"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-regression-aac038d\\external.log",
+          "sha256": "f1df36ef46a22abf221bb0b780397df30234b1b5b15006ce14d2487c39dbdb78"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks",
+            "passed_tests": 734,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-race-aac038d\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-race-aac038d\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-race-aac038d\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+          "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+          "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+          "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+          "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-o5-race-aac038d\\summary.json",
+        "sha256": "cc404bef08080725a3900f6c690d81bdb6af8110d72ce046319d9cd1132ab85f"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-o5-race-aac038d\\root.log",
+          "sha256": "d08b92ec7e1c26eb8841b94813489cc56c5e52a7df37d817dc3f6daf6bcc4cca"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-race-aac038d\\oracle.log",
+          "sha256": "d25a346c8527384812256483c94d9269e6c4033186fa31359c795e17f7e79dd4"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-race-aac038d\\external.log",
+          "sha256": "cee3b311cd5f5b9cdf949dc7bd1b8b52144dde5bfe77469b4334fa8c4e5ac641"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-fuzz-aac038d\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-fuzz-aac038d\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-fuzz-aac038d\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-fuzz-aac038d\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o5-final-checks\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o5-fuzz-aac038d\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+          "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+          "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+          "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+          "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-o5-fuzz-aac038d\\summary.json",
+        "sha256": "f10cfe9282ef9dc4e16830d392df1fef4862786789747adc70a5526c4cb585b6"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-o5-fuzz-aac038d\\state.log",
+          "sha256": "b20482a57a6f987587af2c6e5afb5d61f9e24b4ffb6d8ad89b0ad93f0f588d27"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-fuzz-aac038d\\bundle.log",
+          "sha256": "22401b48b2b174fe4e2e08c8cee394635f3e62011aeb1005eea43bac9562f933"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-fuzz-aac038d\\report.log",
+          "sha256": "e3fa7be4fabb886005cc400c554b79769023a1c6200905bf8b3be23abff383f6"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-fuzz-aac038d\\risk.log",
+          "sha256": "2e6abf86a43dd4ec3322a30926f00956cafbad4f59c26540fab0e64d36de2453"
+        },
+        {
+          "path": "C:\\Temp\\offline-o5-fuzz-aac038d\\lifecycle.log",
+          "sha256": "a044474b2efd52d083badb7bb6ccbad6afaf5fb1ff1457a903b04c29a654d984"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "summary": {
+      "source_commit": "aac038d1a6991ab2205aa67abf8fda964f283357",
+      "exit_code": 0,
+      "before": {
+        "status": "",
+        "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+        "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+        "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+      },
+      "after": {
+        "status": "",
+        "tracked_sha256": "fda8a81a2485ea261ef8dd31c7599e34c846f328bc8691bc077fbf6ccb23a083",
+        "index_sha256": "3c2aabd794afafca1c847b032e41d9fff9bdaf88397811b3990575727ef2ef52",
+        "head": "aac038d1a6991ab2205aa67abf8fda964f283357"
+      },
+      "log": "C:\\Temp\\offline-o5-python-aac038d-recheck.log"
+    },
+    "artifact": {
+      "path": "C:\\Temp\\offline-o5-python-aac038d-recheck.json",
+      "sha256": "ffb1e5e342888e323197b4eb0b79090c179a65362577a40c850b92f36a967dc3"
+    },
+    "log": {
+      "path": "C:\\Temp\\offline-o5-python-aac038d-recheck.log",
+      "sha256": "2f64dac57cf45b3eb2ffdcddc9d760ab6df2e60812731c68448d57682c4c3362"
+    }
+  },
+  "ci": {
+    "id": 40488775016,
+    "sha": "aac038d1a6991ab2205aa67abf8fda964f283357",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "All three Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "All three Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
+  "new_breaks": [
+    "972 生命周期JSON重复键后值覆盖",
+    "973 生命周期JSON忽略未知字段",
+    "974 生命周期JSON缺字段洗零",
+    "975 生命周期JSON null洗零",
+    "976 重复基准费率静默覆盖",
+    "977 基准缺失交易状态洗成停止交易",
+    "978 文件自行允许占位日规则",
+    "979 只保存已覆盖台阶的日视图",
+    "980 吞掉生命周期writer失败",
+    "981 日规则JSON超限仍解析",
+    "982 日规则金额指数伪装定点",
+    "983 日规则存档丢掉附带日历",
+    "984 回放跨日不提交候选配置",
+    "985 回放隐去生命周期报告",
+    "986 回放隐去风控结果",
+    "987 报告不重算风险补资",
+    "988 报告不重算生命周期告警",
+    "989 回放省略切换规则绑定",
+    "990 候选规则改变严格下一日",
+    "991 两种初始规则歧义仍运行",
+    "992 错日风控仍给正常结果",
+    "993 报告擅自提升规则证据",
+    "994 日规则短写伪装写入成功",
+    "995 日规则原始金额绕过回放预算"
+  ],
+  "targeted": [
+    {
+      "name": "111 包树画了一个不存在也没归属的包",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-111-aac038d.json",
+        "sha256": "0afc922efbbe381e8c246ce9fc3d088efc5d7e3ce7cfb3a01c95fe9201564355"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-111-aac038d.log",
+        "sha256": "d5321d7b60bc3565d7e29c089717e0aeb9c7461713a0893e97defcbaa1ddc211"
+      }
+    },
+    {
+      "name": "160 包差集算成「全都只在 dev 上」——横幅有无标记都该红（want 认两个漏报分支共用的标签，与仓库状态无关）",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-160-aac038d.json",
+        "sha256": "78efcb16f1af9721d770b84d3dcd83be8e68dccc9cd9f1fdd905447f4da39ef8"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-160-aac038d.log",
+        "sha256": "df7abe237b63bc6b9ad224a424235e96ee30483dcfff014b42356130b2b77413"
+      }
+    },
+    {
+      "name": "417 约定改回「每次合并都打」——而仓库里一个 tag 都没有，那条约定是句没人执行的话",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-417-aac038d.json",
+        "sha256": "c9d221c0a0d8763980cadd8f1fcb4d6211812381fb9bd4dd8dabb18457694720"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-417-aac038d.log",
+        "sha256": "ed345f2d02da53ab707ada6fb0378d0669d68f4a2709591fad78e5c695e3f557"
+      }
+    },
+    {
+      "name": "972 生命周期JSON重复键后值覆盖",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-972-aac038d.json",
+        "sha256": "6d3fbc5ec7e114163c2cc5b95441d41bc6079ce262514b17083c3db7afb5e574"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-972-aac038d.log",
+        "sha256": "aa68beb31f882cfc1a61d377fa6d9af03bcb343a6332953ab14e61e51b722cd7"
+      }
+    },
+    {
+      "name": "973 生命周期JSON忽略未知字段",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-973-aac038d.json",
+        "sha256": "381d602bce8b8105eff65a5b90f088cccc97271e6f22ba282f6a11542bedbb5a"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-973-aac038d.log",
+        "sha256": "01b53763e4a8720d6be8efee3c24b0618a5fe261e10060243d0a67896c7459b3"
+      }
+    },
+    {
+      "name": "974 生命周期JSON缺字段洗零",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-974-aac038d.json",
+        "sha256": "c3340c784a66aedaa7d25609ca477dba6ebaa6c14588ed965687b1180a05de20"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-974-aac038d.log",
+        "sha256": "530e8be95b30051ab67c2a6d2e52c522d1f2eb6e8b0418b5380cbc081e7ec793"
+      }
+    },
+    {
+      "name": "975 生命周期JSON null洗零",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-975-aac038d.json",
+        "sha256": "d017807845e8024c9af5a33166b6f046980938eec2fbfd325305bb6acacc9aba"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-975-aac038d.log",
+        "sha256": "6cece1ae0eddd0031e68322a814fe4099149f0e5870e01c99a8dccdba38de425"
+      }
+    },
+    {
+      "name": "976 重复基准费率静默覆盖",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-976-aac038d.json",
+        "sha256": "0d25a6066ea26116b332587cd9fb84051fea3425152942651bbb2bb0bd3d3937"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-976-aac038d.log",
+        "sha256": "59d86b84b86635c64b7776f539f0a6097621d1dbd75b4ffb7aa628ab63ece60f"
+      }
+    },
+    {
+      "name": "977 基准缺失交易状态洗成停止交易",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-977-aac038d.json",
+        "sha256": "6e208aef38a8ff62c2c392aee39c60a729c46d94f8692a274b243f3dbcb2262d"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-977-aac038d.log",
+        "sha256": "9b241fc31ab9c31d34ea6e05890b32eb8899e6e08cf500f341d96999bd21f969"
+      }
+    },
+    {
+      "name": "978 文件自行允许占位日规则",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-978-aac038d.json",
+        "sha256": "f444f45f71debe432a84bc8f8754b31d90fe771f38da29fdb0fee76e1c9583de"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-978-aac038d.log",
+        "sha256": "7641dca90461f6920419ab8dedee624348213410dd9b313ab100a3ab83fc74e7"
+      }
+    },
+    {
+      "name": "979 只保存已覆盖台阶的日视图",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-979-aac038d.json",
+        "sha256": "28abe23d44a2a52bb5cd7e28a61895d731a4cfe358f58b6e240a3b82a09701e4"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-979-aac038d.log",
+        "sha256": "6e7faed41950117b35062387149c95f4238473a8030a9b4446e0c474d4c526a9"
+      }
+    },
+    {
+      "name": "980 吞掉生命周期writer失败",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-980-aac038d.json",
+        "sha256": "a72e801c912404387292f9fea2636e3bdc8b55417f8b97fc5e971ad8eac14d59"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-980-aac038d.log",
+        "sha256": "6cbe463937ae821ccfc52caa42af70f3b8773394ad04eae3bb58f074261d842e"
+      }
+    },
+    {
+      "name": "981 日规则JSON超限仍解析",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-981-aac038d.json",
+        "sha256": "f9c8c3206dde6b97a5bcb69b5db11c0d6d87a6bdf65b59075bcac9f43c548600"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-981-aac038d.log",
+        "sha256": "1f55bc5c1dacfc9f62c6e38312edaae99d0cff324d09ec288fe84ffe768969ee"
+      }
+    },
+    {
+      "name": "982 日规则金额指数伪装定点",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-982-aac038d.json",
+        "sha256": "5a08b29c3e1b2c05c45983eebcff9d0e82b0b9a358496a7e1f72c03864691997"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-982-aac038d.log",
+        "sha256": "034cd4828f64517085c12c23b108605922e72fd92a498ad6da74cde695885ec7"
+      }
+    },
+    {
+      "name": "983 日规则存档丢掉附带日历",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-983-aac038d.json",
+        "sha256": "17be0b0807a9cf8a91bafdfdbdb0ad096b033f27ee2fe5c0e384356d2db46f7c"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-983-aac038d.log",
+        "sha256": "48d9ee4cf3b1bda80d15120c4534eaccaec6e4cb5635e5a60df7b0e322c05bc8"
+      }
+    },
+    {
+      "name": "984 回放跨日不提交候选配置",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-984-aac038d.json",
+        "sha256": "b8e88b2620ddfa176fe1d404beffb015ecadaf126a60ad40cfab7846a0f717a5"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-984-aac038d.log",
+        "sha256": "8f9219d143894f4bed0d5aa85670b315adfc9311173aec14d0b0c4fcd7dc9035"
+      }
+    },
+    {
+      "name": "985 回放隐去生命周期报告",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-985-aac038d.json",
+        "sha256": "eaad2ed578584cb8ccab69d9d886efec2f6bfcf907744b76e388cad40fef8b74"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-985-aac038d.log",
+        "sha256": "ea1349ce3c71ab5c93cc49dea165a4a23239515bbc23150b37388c779c482345"
+      }
+    },
+    {
+      "name": "986 回放隐去风控结果",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-986-aac038d.json",
+        "sha256": "d01060b0ec257f1a11a06e3ea3d89bff82ca4872b43b0b2fb5ed48435c6dbefc"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-986-aac038d.log",
+        "sha256": "89a08ea90050c72530cad86396fd095aefdcbdc46335ab6cdfc4f6eecd64314b"
+      }
+    },
+    {
+      "name": "987 报告不重算风险补资",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-987-aac038d.json",
+        "sha256": "89a225908bd6e75a30a15559e91d9359065229b02bb1d868379144fbc696de97"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-987-aac038d.log",
+        "sha256": "b14fe7a2f7b148bcf67f9dfa045f9ee116e47670367cca350f877ee679d4a90a"
+      }
+    },
+    {
+      "name": "988 报告不重算生命周期告警",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-988-aac038d.json",
+        "sha256": "71ab6915e1ddfa8e088c923bce4101693b1c832f5a1acfa13add1ccccd6bba78"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-988-aac038d.log",
+        "sha256": "038af39d46cd17b39d1fcf2883123f94d5e6b4bbbc7166d4883aa84728fd3101"
+      }
+    },
+    {
+      "name": "989 回放省略切换规则绑定",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-989-aac038d.json",
+        "sha256": "a8b67b8fc6be4eb3d8cdea43367388ed9261f14a8ffdb79c4e5584ddd6bb274c"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-989-aac038d.log",
+        "sha256": "307e39281ba451f9ac69098854988f177e7ee8f1cdcef45050f4c32592cda0a9"
+      }
+    },
+    {
+      "name": "990 候选规则改变严格下一日",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-990-aac038d.json",
+        "sha256": "032c3798c2d0263704a10ed1cccc82d816de2fd4e22b4c9fc9e585fa91903acc"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-990-aac038d.log",
+        "sha256": "ea8b904c58dc858ffde97c723eadc5a7dcf7dc7d02332c4798273f1e10da1ea4"
+      }
+    },
+    {
+      "name": "991 两种初始规则歧义仍运行",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-991-aac038d.json",
+        "sha256": "85f31a43f12b81cab20da8491d32c1ff306ab50bbe3b7cd88199e6391eb41436"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-991-aac038d.log",
+        "sha256": "2414f9378615b1aefa7bf56bf0b02d3d50d224ece0b75e3de38a31d2b52b7a18"
+      }
+    },
+    {
+      "name": "992 错日风控仍给正常结果",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-992-aac038d.json",
+        "sha256": "8fd55cb2d7e3a88479db6b4a792afcffa17c1f871febdc737a119f2a3d923ce0"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-992-aac038d.log",
+        "sha256": "f37889efec5b5ba9fc21d743788ac32de1c8b8fdd1e7fe8abcf7a65388bb9251"
+      }
+    },
+    {
+      "name": "993 报告擅自提升规则证据",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-993-aac038d.json",
+        "sha256": "876a872e0dc51e33558b6a71ba104d87dbfa6e1b550c478c2a43e8b0d8e1751c"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-993-aac038d.log",
+        "sha256": "dcd64034dd8eb9a1f1a03a6e3d10ad15a9bb53c39eaa7b3f889dbf5589c7c5e4"
+      }
+    },
+    {
+      "name": "994 日规则短写伪装写入成功",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-994-aac038d.json",
+        "sha256": "bd042514c3053512a8271bb7f3b5b35cda0de25a4575ece736ed97626d08d6d0"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-994-aac038d.log",
+        "sha256": "4042304efb97d18272571714633b8fbf7be7ae274ef1806087f1644344226e6b"
+      }
+    },
+    {
+      "name": "995 日规则原始金额绕过回放预算",
+      "report": {
+        "path": "C:\\Temp\\offline-o5-target-995-aac038d.json",
+        "sha256": "e8820bc15e4e1f18af981d14018cad02c78f801970b6143d76c006406c9271b9"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o5-target-995-aac038d.log",
+        "sha256": "a1d60f9c54bb152eae8098a2c5408b6856880c2633052c0b86dbe963a630aadb"
+      }
+    }
+  ],
+  "raw_directory": "C:\\Temp\\offline-o5-full-aac038d",
+  "summary": {
+    "path": "C:\\Temp\\offline-o5-full-aac038d\\summary.json",
+    "sha256": "606eb31bfa3d4266593dfb9cd0828ac8808015c90d79ced1e56c28790ad4bea2"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\offline-o5-full-aac038d\\mutation.log",
+    "sha256": "2e0c759423488712d10a121ad20c42319d44ee43216a5ca88658ebb43050365d"
+  },
+  "legacy_compatibility": {
+    "packet": {
+      "path": "C:\\Temp\\offline-replay-v1-compat-aac038d.json",
+      "sha256": "70a723b4ac9f91281c28a81fb268a7d5af931c97736a6536bd6df14c5a88f644"
+    },
+    "expected_sha256": "70a723b4ac9f91281c28a81fb268a7d5af931c97736a6536bd6df14c5a88f644"
+  },
+  "earlier_runs": [
+    {
+      "description": "重复基准费率被旧Builder静默覆盖，真实反例先红后在新格式入口拒绝",
+      "log": {
+        "path": "C:\\Temp\\offline-o5-rate-duplicate-before.log",
+        "sha256": "27f7288844020969b77e41a13b5e930781849f9e31ac2152ee650ab53cf31794"
+      }
+    },
+    {
+      "description": "154位台阶率借RawMessage绕过原回放金额预算，真实先红后统一接入预算；17f1ce9部分通过结果不作为修复后的最终验收",
+      "log": {
+        "path": "C:\\Temp\\offline-o5-replay-money-before.log",
+        "sha256": "3adf3b13f31bc4d59b74633442ac454bb341cddeb8334237d89132683065cb06"
+      }
+    },
+    {
+      "description": "提交前文档守卫正确检出O5设计未登记doc_sections，补登记，不关闭守卫",
+      "log": {
+        "path": "C:\\Temp\\offline-o5-root-first.log",
+        "sha256": "d31fcd048a7d7a955f6fed22a1025d7617957c40c34157f8caa0620db29c069c"
+      }
+    }
+  ],
+  "coverage_audit": {
+    "log": {
+      "path": "C:\\Temp\\offline-o5-integration-cover-aac038d.log",
+      "sha256": "886e21d5c46a0ca875b4f63d48a9296934b2ff9e451e1b6cf029769ac82306b3"
+    },
+    "functions": {
+      "path": "C:\\Temp\\offline-o5-integration-cover-aac038d-functions.log",
+      "sha256": "084e5f8338a316b17142d862f7197399e20f0cd0d8149e6652deb6a598a85b12"
+    },
+    "profile": {
+      "path": "C:\\Temp\\offline-o5-integration-cover-aac038d.out",
+      "sha256": "4d2c023a12d236766b952c0ac10ff6128672bd1ada98a55e0ae149f39c3a52ca"
+    },
+    "purpose": "只用于O6查分支，不以覆盖率替代语义或市场真实性"
+  },
+  "boundaries": [
+    "纯离线合成资料，不提升来源证据等级，不连接柜台",
+    "规则文件不可自行允许placeholder；回放各段绑定独立Evidence",
+    "风险只读，补资必须显式事件，不执行强平或交割",
+    "旧格式1编码保持；外部规则不进入内核StateFormat",
+    "O6最终覆盖与文档审计另行交付；不据此宣称v1.0发布",
+    "托管完整破坏任务未启用；909项为本机独立干净副本实际执行"
+  ]
+}
