@@ -182,6 +182,15 @@ func (s *Simulator) validate(day types.TradingDay, at time.Time, req order.Reque
 	if !res.FullyChecked() {
 		return req, order.Frozen{}, f, &match.UncheckedError{Unchecked: res.Unchecked}
 	}
+	if req.Offset == types.Open {
+		if guard, ok := s.rules.(interface {
+			CheckOpening(types.InstrumentID) error
+		}); ok {
+			if err := guard.CheckOpening(req.Instrument); err != nil {
+				return req, order.Frozen{}, f, err
+			}
+		}
+	}
 	return req, fr, f, nil
 }
 
