@@ -1,0 +1,584 @@
+{
+  "format": 1,
+  "source_commit": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c",
+  "source_tree": "4f2d595acd4237fe357af1fbfec18f26d21ebaae",
+  "baseline_main": "2afd6aa0a80815bb3b26e7ac3817121a8da68957",
+  "registry_sha256": "d94088a63f9f38749fb7711c2f6f47a31b71d35e7d09c7b11186a862f718823a",
+  "report_sha256": "e3497dd68ea9c11fe6e8def5cddc7613e47f895a2f585cd5b6d7ac66fcc0ddc4",
+  "summary_sha256": "6199e4946099d4c19e331a730446e0ae3e3fba98381d40938405f33151b0af95",
+  "counts": {
+    "executed": 799,
+    "expected_red": 790,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "new_breaks": [
+    884,
+    885
+  ],
+  "raw_directory": "C:\\Temp\\resting-full-91bdbba",
+  "summary": {
+    "suite": "mutation",
+    "status": "passed",
+    "failure": null,
+    "completed": [
+      {
+        "command": [
+          "go",
+          "run",
+          "./tools/breakcheck",
+          "-out",
+          "C:\\Temp\\resting-full-91bdbba\\mutations.json"
+        ],
+        "cwd": "C:\\Users\\沁心\\.codex\\worktrees\\resting-20261027-validation\\futures-position-simulator-go",
+        "passed_tests": 0,
+        "skipped": [],
+        "log": "C:\\Temp\\resting-full-91bdbba\\mutation.log",
+        "exit_code": 0
+      }
+    ],
+    "before": {
+      "status": "",
+      "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+      "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+      "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+    },
+    "after": {
+      "status": "",
+      "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+      "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+      "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+    }
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\resting-full-91bdbba\\mutation.log",
+    "sha256": "12e0be167202df450c5e121749c09fa34400e017f37afbe0b4cba6bf62d4fe1b"
+  },
+  "independent_post_run": {
+    "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c",
+    "porcelain": ""
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-regression-91bdbba\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 352,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-regression-91bdbba\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+          "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+          "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+          "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+          "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\resting-regression-91bdbba\\summary.json",
+        "sha256": "d4d284fbf804c0fa09ec5f3b37b2dc62a656a61ba702e976652b1482907c4abe"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\resting-regression-91bdbba\\oracle.log",
+          "sha256": "182520ab1c1054d48626150930824245f491e8392d6d35bf8fdef5465fe2d456"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\resting-regression-91bdbba\\root.log",
+          "sha256": "80f9c620b201fff6a6ce33785a94b4b7755a53a9ef44c9c2d650709e35a35693"
+        }
+      }
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-race-91bdbba\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 352,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-race-91bdbba\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+          "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+          "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+          "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+          "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\resting-race-91bdbba\\summary.json",
+        "sha256": "91d5fa98051109a88ed13f873ad7bb41a6d6b3d1c17b56549f9c741a3abfdb70"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\resting-race-91bdbba\\oracle.log",
+          "sha256": "7c8b8b6270fb12b802c8dfff0d9c03db0e4c29fe8acb83027c6fc2329383f097"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\resting-race-91bdbba\\root.log",
+          "sha256": "ec30a0f2af7067556f068526a306bd240ee6bf6a21d415cea2dab17156dc09af"
+        }
+      }
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-fuzz-91bdbba\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-fuzz-91bdbba\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\VScodeProject\\futures-position-simulator-go\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-fuzz-91bdbba\\report.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+          "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+          "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "8aa549019ee6ba16e83979759f4365c43738c55f2f6da6cab0167703dad03885",
+          "index_sha256": "91f4a145c9f0399bdc6bb300af6a4a7395bf984d39392b5d979672312e1c3ca5",
+          "head": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\resting-fuzz-91bdbba\\summary.json",
+        "sha256": "fc1f7960ead75fc796fa3ab13c0d4e2b244f40ee7e33dd5b4484e30ce812151f"
+      },
+      "logs": {
+        "bundle.log": {
+          "path": "C:\\Temp\\resting-fuzz-91bdbba\\bundle.log",
+          "sha256": "f406c9c484a02cc5ad20883f15f7e454af80a94666cdabd067c9a20914892c43"
+        },
+        "report.log": {
+          "path": "C:\\Temp\\resting-fuzz-91bdbba\\report.log",
+          "sha256": "d25ade5a2e8a68418f1db00c158b7ffa7d1cd99355f5384eae2f5d5e25dbd972"
+        },
+        "state.log": {
+          "path": "C:\\Temp\\resting-fuzz-91bdbba\\state.log",
+          "sha256": "80a0ea8ef3c8e827ba982b0757c378c17841c0d110f37bfc6864e4b7d1edcee6"
+        }
+      }
+    }
+  },
+  "python_tests": {
+    "passed": 14,
+    "path": "C:\\Temp\\resting-python-91bdbba.log",
+    "sha256": "f08264fde07ae20f06df804747109cd8ccfc774a6c2913f769a3542aa3a6efc1"
+  },
+  "ci": {
+    "run": {
+      "id": 40438768883,
+      "head_sha": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c",
+      "head_branch": "codex/resting-20261027",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40438768883"
+    },
+    "jobs": [
+      {
+        "id": 121973773429,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 121973773652,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 121973774929,
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": null
+      }
+    ],
+    "channel": "connected GitHub"
+  },
+  "targeted": {
+    "884": {
+      "path": "C:\\Temp\\resting-884-91bdbba.json",
+      "sha256": "5f0a40c38aea7f33146ccc83876d9fa01d4e71edfbcd82d17a02de5a851ecc5e"
+    },
+    "885": {
+      "path": "C:\\Temp\\resting-885-91bdbba.json",
+      "sha256": "66fa22d747865f563b1fa9c64a57ac302ad06b9c2a58fd9a4af569a6728fe297"
+    }
+  },
+  "red_before_fix": {
+    "path": "C:\\Temp\\resting-registration-before-20261027.log",
+    "sha256": "523ee03a36fe79847e917e6ccde5416521b0acec7c3d1af817d475fd2c07977c"
+  },
+  "green_after_fix": {
+    "path": "C:\\Temp\\resting-registration-after-20261027.log",
+    "sha256": "f4fa687e73d9688114aa4deadfe65b3456a3074e07a63df4eac201571f34fa9f"
+  },
+  "boundaries": [
+    "本机Windows完整799项；托管Windows/Linux另跑两模块回归/race及三个限时fuzz",
+    "只验证工具与证据一致性，不代替今日实际成交行为",
+    "原9项预期绿保留，不把合成数据提升为市场证据",
+    "固定日期和窗口不提供任意日期执行开关，未完成验证或错过窗口就不执行",
+    "不修改.env，不提高一手上限，不运行两手或跨日种子实验",
+    "本轮无委托/成交样本，未验证挂单成交价，不满足F9c实测前置",
+    "窗口已过，不使用本次批准重试或改到下午；重新安排须重新登记具体范围",
+    "连接超时与后续独立已知空仓分别记录；空JSONL被离线复核器明确拒绝",
+    "ReqAuthenticate/ReqUserLogin/ReqSettlementInfoConfirm即时返回码被旧req丢弃，通用OnRspError未转入握手完成通道；这是源码诊断盲区，不等于已证明本次超时由它造成"
+  ],
+  "execution": {
+    "approval": "批准本次一手仿真探针",
+    "scope": "最多一笔撤单费用对照、一笔主单，每单1手，仅本次持仓收尾；不改安全阀、不重试交易，窗口外不执行",
+    "start": {
+      "plan": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c",
+      "started": "2026-10-27T11:14:52.743205+08:00",
+      "binary_sha256": "3dcabeabc7cf8867f774448dbeae600fe83118984962f5ef77f5ecfde47bac9b"
+    },
+    "exit_code": 1,
+    "outcome": "connect-timeout-before-order-workflow",
+    "diagnosis": "已收到登录成功，10秒内未完成结算确认；即时返回码未记录，不能判定具体根因",
+    "report_empty": true,
+    "price_sample": false,
+    "order_workflow_called": false,
+    "order_workflow_basis": "runCTPRestingPrice在Connect返回错误后直接返回，未调用executeRestingPrice；独立后查成交和未终结委托均0",
+    "postcheck": {
+      "ReadOnly": true,
+      "TradingDay": "20261027",
+      "Held": 0,
+      "UnfinishedOrders": 0,
+      "Trades": 0,
+      "Commission": 0
+    },
+    "configuration_unchanged": true,
+    "summary": {
+      "path": "C:\\Temp\\trading-20261027-022341\\execution-summary.json",
+      "sha256": "9238b8f8777212cddbc096caa2bec49814890c734c2913efa352160d933a90b6"
+    },
+    "raw_log": {
+      "path": "C:\\Temp\\trading-20261027-022341\\execution-91bdbba.log",
+      "sha256": "524c9d2f9416a3153cb8811019f6d0bb634ff25b385c8f6ee505714ac9c89360"
+    },
+    "empty_report": {
+      "path": "C:\\Temp\\trading-20261027-022341\\resting-91bdbba.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "independent_post_log": {
+      "path": "C:\\Temp\\trading-20261027-022341\\postcheck-91bdbba.log",
+      "sha256": "dbce9e4fd96877b1adec35728e3ff4c1d42cc2f144d05d3f487211fb79acf1d7"
+    },
+    "readonly_helper_source": {
+      "path": "C:\\Temp\\trading-20261027-022341\\postcheck.go",
+      "sha256": "3e27572c45544f28f369f25cbcb49784defd75aa4b6fa09cdee3c20f2424415d"
+    },
+    "readonly_helper_binary": {
+      "path": "C:\\Temp\\trading-20261027-022341\\postcheck.exe",
+      "sha256": "de68cbc61a901055053447a7ae2f5c23cf2af2bed3521311a9c9f2c684dc0977"
+    },
+    "build_info": {
+      "path": "C:\\Temp\\trading-20261027-022341\\build-91bdbba.txt",
+      "sha256": "acb220534c67c5571391ca1bd5de3c71580fb1649c2e8fad86c4b9711a51e30b"
+    },
+    "verify_empty": {
+      "exit_code": 1,
+      "expected_rejection": true,
+      "reason": "没有逐阶段记录，不能作为成交价证据"
+    },
+    "verify_empty_log": {
+      "path": "C:\\Temp\\trading-20261027-022341\\verify-empty-91bdbba.log",
+      "sha256": "cab49d32829a943d81db1eaee88efe9c3bca2393476d3773891b620cbc820d82"
+    }
+  },
+  "readonly_preflight": {
+    "initial_queries": {
+      "path": "C:\\Temp\\trading-20261027-022341\\summary.json",
+      "sha256": "20cf0b2ed7ea969d85ca80fbc28ac3181c6d8b0872fe162f9e48ceb482a805d5"
+    },
+    "preview": {
+      "source": "91bdbbaaa8bf9ceefd00ec57d38692286432fb3c",
+      "exit_code": 0,
+      "error_type": null,
+      "preview": {
+        "Symbol": "SHFE.rb2701",
+        "TradingDay": "20261027",
+        "NowUTC": "2026-10-27T02:31:49.0006757Z",
+        "QuoteTime": "10:31:45",
+        "Tick": "1",
+        "Multiplier": "10",
+        "Last": "3016",
+        "Ask": "3017",
+        "PassivePrice": "3013",
+        "Lower": "2888",
+        "Upper": "3193",
+        "ReadOnly": true
+      }
+    },
+    "independent_first_connect": "timeout-unknown; not treated as empty",
+    "independent_first_log": {
+      "path": "C:\\Temp\\trading-20261027-022341\\postcheck-baseline.log",
+      "sha256": "8622041751659759d44b117729756f5583ba5d12baeb0685d470b1a6b2fcbaf6"
+    },
+    "independent_retry": {
+      "exit_code": 0,
+      "report": {
+        "ReadOnly": true,
+        "TradingDay": "20261027",
+        "Held": 0,
+        "UnfinishedOrders": 0,
+        "Trades": 0,
+        "Commission": 0
+      }
+    }
+  }
+}
