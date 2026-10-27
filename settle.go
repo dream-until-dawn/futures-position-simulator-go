@@ -25,6 +25,9 @@ func (s *Simulator) Settle(day types.TradingDay, prices map[types.InstrumentID]d
 	if err := s.usable(day); err != nil {
 		return err
 	}
+	if _, bound := rulesLifecycleDay(s.rules); bound {
+		return fmt.Errorf("按日生命周期规则必须使用SettleWithRules切换，不能沿用昨日台阶")
+	}
 	if !nextDay.After(day) {
 		return fmt.Errorf("下一交易日 %d 不晚于当前交易日 %d", nextDay, day)
 	}

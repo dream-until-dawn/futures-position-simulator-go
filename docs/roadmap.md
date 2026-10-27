@@ -11,6 +11,8 @@ O2新增主模块导出面 `fixture.FrozenBookWithState(f *Fixture, cfg futsim.C
 
 O3新增risk包：`Policy`（MaxRiskRatio、MinEquity、MinAvailable），`Report`（Account、Policy、RatioExceeded、EquityBelowMinimum、AvailableBelowMinimum、NeedsMarginCall、RequiredDeposit），`Assess(st account.State, policy Policy) (Report, error)`；根门面新增 `(*Simulator).AssessRisk(policy risk.Policy) (risk.Report, error)`。完整账户重算、精确乘法越线、正缺口向上补资，只读不执行强平。设计见 [风控策略](./risk-policy.md)，合成正反例及934–947破坏验收，不当作券商制度实测，不改StateFormat。
 
+O4新增 `lifecycle` 包：`InvestorKind`（`InvestorUnknown`、`Individual`、`Institution`）、`MarginStep`（From、Rates）、`Contract`（Instrument、LastTradingDay、LastHoldingDay、MarginSteps）、`Schedule`（First、Last、Investor、Source、Contracts）、`Holding`（Instrument、Long、Short）、`Holdings`（Known、Positions）、`Status`（Instrument、Long、Short、MarginFrom、LastTradingDay、LastHoldingDay、Expired、CloseOnly、ExitByClose、HoldingViolation、Tradable）、`Report`（Day、Investor、Source、Contracts、HasBlockingHoldings）。`NewDailyRules` 返回不可变 `DailyRules`，实现Provider及 `LifecycleDay`、`Investor`、`CheckOpening`、`Assess`；门面新增 `AssessLifecycle` 和 `SettleWithRules`，原 `Settle` 在显式日绑定时要求切换入口。资格、覆盖和数值未知拒绝；旧普通Provider兼容；不改StateFormat。设计及合成证据边界见 [生命周期策略](./lifecycle-policy.md)，持久化/回放接线由O5继续。
+
 ## 分支与发布约定
 
 **2026-10-23 最新约定**：使用者取消单独评审环节，授权实现方在北京时间今日 17:00 前持续推进。设计、实现、合并自行验证后执行；本段覆盖下方历史评审门禁。质量要求和具体交易手数授权继续有效，当前执行状态以 state.md 为准。

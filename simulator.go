@@ -79,6 +79,9 @@ func New(cfg Config) (*Simulator, error) {
 	if cfg.Rules == nil {
 		return nil, fmt.Errorf("没有规则数据（Rules 为 nil）")
 	}
+	if day, bound := rulesLifecycleDay(cfg.Rules); bound && day != cfg.Day {
+		return nil, fmt.Errorf("规则绑定日%d与账户日%d不一致", day, cfg.Day)
+	}
 	if err := cfg.Choices.validate(); err != nil {
 		return nil, fmt.Errorf("口径没选齐：\n%w", err)
 	}
@@ -102,6 +105,9 @@ func (s *Simulator) usable(day types.TradingDay) error {
 	}
 	if day != s.acc.Day {
 		return fmt.Errorf("模拟器停在交易日 %d，收到交易日 %d 的操作", s.acc.Day, day)
+	}
+	if boundDay, bound := rulesLifecycleDay(s.rules); bound && boundDay != day {
+		return fmt.Errorf("生命周期规则日期过期，必须显式切换规则")
 	}
 	return nil
 }
