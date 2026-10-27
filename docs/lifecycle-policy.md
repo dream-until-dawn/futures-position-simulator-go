@@ -1,0 +1,35 @@
+# O4：交割月费率台阶与到期约束
+
+本批补齐可离线实现的生命周期机制。使用调用者给定的覆盖、投资者资格、最后交易日、最后可持仓日和完整保证金台阶，不内置未知交易所/期货公司的日期或比例。没有真实资料时只使用标注合成的用例，不提升规则证据等级；不执行强平、交割或柜台交易。
+
+## 1 独立规则模块
+
+新增lifecycle包，依赖refdata/types，禁止依赖根门面。Schedule显式给覆盖首末日、投资者类别（自然人/机构，零值未知）、来源和逐合约Contract；每个Contract含Instrument、LastTradingDay、LastHoldingDay及MarginSteps。MarginStep含From和完整MarginRates，首阶必须等于覆盖首日，后续严格升序，不推测日期或比率。
+
+`NewDailyRules(base *refdata.Snapshot, schedule Schedule, day types.TradingDay, version int64) (*DailyRules, error)`生成不可变的当日Provider。Contract清单须唯一且完整覆盖base合约集合；最后交易日必须与base明确的ExpireDate一致，最后持仓日不得晚于最后交易日。未知资格、来源、费率、覆盖、错日及版本复用均拒绝。新版本由调用者显式给，必须正且不同于base；调用者负责全局版本唯一性，包内不读当前时钟。
+
+## 2 费率、交易与告警
+
+复制合约和已知费用/保证金数据到独立快照，投机保证金按From含端点取最近台阶，其他已存在档位保留；Source与所选From可在报告解释。深拷贝输入，构造后改base指针或Schedule切片不能改当日规则。
+
+最后交易日当天仍按base的IsTrading，之后置为不可交易；超过LastHoldingDay只允许减仓，新增开仓在原报单校验成功后由生命周期守卫拒绝，不编造CTP拒因码。已发生成交/已接受挂单仍属事实接入，不用模拟前置守卫丢弃真实记录。到期不静默删除持仓或把它记成0。
+
+独立持仓快照必须显式Known=true；缺失、负手数、重复或规则外合约拒绝，明确空快照才算0。报告列逐合约长短仓、所选台阶、到期、只减仓及最后持仓日收盘前退出告警；持仓超过期限标为阻断。自然人/机构只是调用者选择的规则集合身份，不按身份猜一张期限表。
+
+## 3 门面接线
+
+DailyRules公开LifecycleDay用于日期绑定、CheckOpening用于开仓守卫、Assess用于已知完整持仓评估，并实现原Provider。New/usable检查绑定日与账户日；Submit/Place共用validate末尾的开仓守卫，原八项拒绝优先级保留。规则日期不匹配是未知/配置错误，不当休市。
+
+新增只读Simulator.AssessLifecycle，从真实内部持仓明细合计手数，拒绝未绑定DailyRules或失效态。普通Settle遇DailyRules明确提示改用SettleWithRules，不能跨日后继续沿用昨日台阶。旧普通Provider路径保持原行为，不自动替调用者选择生命周期资料。
+
+## 4 原子跨日规则切换
+
+`SettleWithRules(day, prices, nextDay, nextRules *lifecycle.DailyRules)`要求nextRules绑定nextDay且版本不同。先用下一日规则评估现有持仓，期限阻断则状态完整不动；不自动平仓，也不允许删掉持仓以绕过。缺规则或不完整参数同样拒绝。
+
+以完整State/Restore构造临时实例，用当前规则完成当日费用与结算；次日改用新规则重算公司/交易所占用和计价，核在仓合约的乘数、价位和今昨身份不被悄悄改写，再用新Config/State完整复核后一次提交。当前规则只在临时结算中以原Provider接口转发，不能解除外部实例的日期绑定。任一步失败都不返回半提交状态，不抬StateFormat；成功存档绑定新RulesVersion，旧版本恢复必须拒绝。
+
+## 5 验收与持久化边界
+
+覆盖台阶前一日/当日/后一日、资格和来源未知、前后覆盖越界、顺序/重复/遗漏、非法数值、输入修改；自然人/机构分别使用不同显式期限，不能把两者政策硬编码成市场事实。到期空仓禁止新开；非空到期/持仓期限越界报告且阻断跨日，错误后完整State相同。
+
+跨日独立手算保证金前后变化，并验证当日手续费仍按原规则、次日按新规则；新配置恢复等价，旧配置恢复失败。Submit与Place两个入口均验证开仓守卫，手动事实接入边界明确。规则保存/加载和回放接入由O5把Schedule、Day、Version与原始规则快照一起绑定，不把普通规则JSON缺少生命周期元数据伪装成完整DailyRules。新增破坏后按干净准确提交完整验收。
