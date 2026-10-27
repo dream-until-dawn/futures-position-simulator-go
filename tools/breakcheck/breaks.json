@@ -8991,7 +8991,7 @@
 		"new": "true \u0026\u0026 anchor \u003e= entry.First",
 		"pkg": "./refdata",
 		"test": "TestNightCoverageExchangeAndAnchor",
-		"want": "夜盘覆盖锚日错误",
+		"want": "跨所/跨零点停盘隔离失败",
 		"expect": "red"
 	},
 	{
