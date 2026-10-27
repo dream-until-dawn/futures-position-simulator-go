@@ -1,0 +1,728 @@
+{
+  "format": 1,
+  "source_commit": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98",
+  "source_tree": "8717deabd8ec43a4048be4a82419846d84df1064",
+  "registry_sha256": "d3eea82d6387f8a6aef8bf1dfbf1fcffa373b4a7beb82b6b1fc7726d36b2c0e3",
+  "report_sha256": "95dd6d7e1aa5a3a87d9b5cce04a71daf067a5c1ef31db50c42780539f3a5544e",
+  "summary_sha256": "b689a83bc4ba270739b82d264ac93360cd451ae23d44d96b40415994f3e6fb16",
+  "counts": {
+    "executed": 921,
+    "expected_red": 912,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "60af13db2806931d370007565426414323667a85f317e6b0faf9fbb676e787c0",
+    "index_sha256": "c4a5d3973673ea7947ad0accd40c542ee30863c1cad08fd6bbce0b3c5a19e6df",
+    "head": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+  },
+  "raw_directory": "C:\\Temp\\offline-ci-full-f2bbab7-results",
+  "summary": {
+    "path": "C:\\Temp\\offline-ci-full-f2bbab7-results\\summary.json",
+    "sha256": "b689a83bc4ba270739b82d264ac93360cd451ae23d44d96b40415994f3e6fb16"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\offline-ci-full-f2bbab7-results\\mutation.log",
+    "sha256": "f887f5bbb2a19c00f424a7b56f8ff6038b75dc8ded454425cbfc78d15ec9d925"
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-regression-f2bbab7\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-regression-f2bbab7\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-regression-f2bbab7\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "60af13db2806931d370007565426414323667a85f317e6b0faf9fbb676e787c0",
+          "index_sha256": "c4a5d3973673ea7947ad0accd40c542ee30863c1cad08fd6bbce0b3c5a19e6df",
+          "head": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "60af13db2806931d370007565426414323667a85f317e6b0faf9fbb676e787c0",
+          "index_sha256": "c4a5d3973673ea7947ad0accd40c542ee30863c1cad08fd6bbce0b3c5a19e6df",
+          "head": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-ci-regression-f2bbab7\\summary.json",
+        "sha256": "cb0046d9194e063a812b270afae1d79c20ac1620e1118acb60fdfa8933c5b121"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-ci-regression-f2bbab7\\root.log",
+          "sha256": "2e1883e13af81e4c8cf1053f29fe42a1209dfee7e42679f60ae47836273f6998"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-regression-f2bbab7\\oracle.log",
+          "sha256": "b1eb1d3ea12f2378ee02837aeef22c13202186598bb0731b3b71e3c2c74ba6f8"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-regression-f2bbab7\\external.log",
+          "sha256": "2e4e28d8f5c8adec6d435ffeea6c432447af92f749ac2695f3f6255a7fd98789"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-race-f2bbab7\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-race-f2bbab7\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-race-f2bbab7\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "60af13db2806931d370007565426414323667a85f317e6b0faf9fbb676e787c0",
+          "index_sha256": "c4a5d3973673ea7947ad0accd40c542ee30863c1cad08fd6bbce0b3c5a19e6df",
+          "head": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "60af13db2806931d370007565426414323667a85f317e6b0faf9fbb676e787c0",
+          "index_sha256": "c4a5d3973673ea7947ad0accd40c542ee30863c1cad08fd6bbce0b3c5a19e6df",
+          "head": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-ci-race-f2bbab7\\summary.json",
+        "sha256": "2633730970e9cd9ba1d1b7eed9a007f62d93e7727b8f2502e4d891bf8fa1ef89"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-ci-race-f2bbab7\\root.log",
+          "sha256": "59d315f791f24f52d9785f71a858dad534ce07d94dff3e0b74fda478421d4a79"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-race-f2bbab7\\oracle.log",
+          "sha256": "0df4f9c368c908032c707d7ea21dbc3e810b6f5a1721bdd40d7a03b31b3cb8b4"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-race-f2bbab7\\external.log",
+          "sha256": "18d534e52c05043d8c41f96049b7f4b48befb306b45bdf5c7580df95f7e839fa"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-ci-checks-jsoncompat\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "60af13db2806931d370007565426414323667a85f317e6b0faf9fbb676e787c0",
+          "index_sha256": "c4a5d3973673ea7947ad0accd40c542ee30863c1cad08fd6bbce0b3c5a19e6df",
+          "head": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "60af13db2806931d370007565426414323667a85f317e6b0faf9fbb676e787c0",
+          "index_sha256": "c4a5d3973673ea7947ad0accd40c542ee30863c1cad08fd6bbce0b3c5a19e6df",
+          "head": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\summary.json",
+        "sha256": "6f6a68827ab8f786ab576a1d044e8c32ef04a1fb1e9060b432db8a8d7e3483ec"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\state.log",
+          "sha256": "05288107eef8c426f6efbdc053399efbf62a81d4c1bac5621bed07a30d062380"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\bundle.log",
+          "sha256": "e1b487255d5928df0e466fbdae845fa655470e45e683f7491da2b36dfdb1e2e0"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\report.log",
+          "sha256": "1ca90cc9c2ac94927137e112c7848cd085cb5360270257fa3abd8d8a133941b4"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\risk.log",
+          "sha256": "2c66a6c6d3e2b539cdf58294f65a06a50d35c0079722b5f448832621054792e7"
+        },
+        {
+          "path": "C:\\Temp\\offline-ci-fuzz-f2bbab7\\lifecycle.log",
+          "sha256": "1f623bc3231261b3e30f8643d72c8e41e7639f91884257de7b497d7610e87339"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "log": {
+      "path": "C:\\Temp\\offline-ci-python-f2bbab7.log",
+      "sha256": "27d60801bcf5f38e3bd8168a01b8c508285530e555d420b9c62b128e65c52cde"
+    },
+    "observed_chain_exit_code": 0
+  },
+  "targeted": [
+    {
+      "name": "303 流在条目之间断掉不再被发现（半份结果看起来最正常）",
+      "report": {
+        "path": "C:\\Temp\\offline-ci-target-303-f2bbab7.json",
+        "sha256": "e5b961656867cea9c5cc82844cdb9ff8b55fcaeeaf699d8e126238d8dc56b1cc"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-ci-target-303-f2bbab7.log",
+        "sha256": "a4f67b6952420caeaa074302708eb2c3075a9081d0b44e6794099e06bf5498cd"
+      }
+    },
+    {
+      "name": "1005 CI回退到有fuzz时限竞态的工具链",
+      "report": {
+        "path": "C:\\Temp\\offline-ci-target-1005-f2bbab7.json",
+        "sha256": "cd49f965eb329e0daaafd87e49503385a4e3778c0348fd2db79ab344c225d103"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-ci-target-1005-f2bbab7.log",
+        "sha256": "f17786f993ef679e6b087598705313409776b826737d929c951d27e8b60886cc"
+      }
+    },
+    {
+      "name": "1006 CI工具链守卫放过版本退回",
+      "report": {
+        "path": "C:\\Temp\\offline-ci-target-1006-f2bbab7.json",
+        "sha256": "c3bc010f5ed9da79492679caf54fb54f2464768444c591b53f65bf9d7eb1fa9c"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-ci-target-1006-f2bbab7.log",
+        "sha256": "2094e41d5e3d62f64ad442e2bbbe35d37c9a791c729d260b39dbdd6d83905fd8"
+      }
+    },
+    {
+      "name": "1007 CI静默切换JSON后端使收尾守卫失去判别力",
+      "report": {
+        "path": "C:\\Temp\\offline-ci-target-1007-f2bbab7.json",
+        "sha256": "1ef1e2573c591b02397d671a9f9d08b590dc32c5ef5ce5daad3835dd66cd3999"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-ci-target-1007-f2bbab7.log",
+        "sha256": "fbbb9ba72d1c93055208c9970bc098972e88bd19811cc0998772a1ec08fdc4f1"
+      }
+    }
+  ],
+  "ci": {
+    "run_id": 40501351379,
+    "sha": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98",
+    "conclusion": "success",
+    "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40501351379",
+    "jobs": [
+      {
+        "id": 122179533517,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40501351379,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "All three Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 122179533900,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40501351379,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "All three Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      }
+    ]
+  },
+  "ci_design_history": {
+    "design_commit": "57221b5022e0ae8b2c328c7587219e2bbbcd2fed",
+    "implementation_commit": "bb83821843660561c23f6e242e8c854c7be96e4f",
+    "design_diff_sha256": "9f05a9dc811133412c8a969a2933329b5ed7c9198fa0f59f0b44d0b611623269",
+    "source_commit": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98"
+  },
+  "toolchain": {
+    "version": "go version go1.27.3 windows/amd64",
+    "experiment": "nojsonv2",
+    "zip_sha256": "f26081f438319757f8a1b46d7d0b2c5ec7583d4038e485e0aa725cfde7885fff",
+    "fuzz_source": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\toolchain-go1.27.3\\go\\src\\internal\\fuzz\\fuzz.go",
+      "sha256": "db5a9c6f3b26220eb9fb1c144caf012a555c6adef785cb9d185426e508d9d2aa"
+    },
+    "upstream_fix": "https://go.googlesource.com/go/+/5a957dc766aed011cdfe7c953987a2ff86c0829c%5E%21/"
+  },
+  "failures_preserved": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\windows.zip",
+      "sha256": "6a71243a9984e84ff7c9e74b96ebd8a3f36bdadf330fc2c76df28db594de68aa"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\bb83821-linux.zip",
+      "sha256": "ba0194d2c1f5e4705543d1d978ab0e3224ea58af6f8050344d74f524bed084ce"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\local-report-debug.log",
+      "sha256": "359917395d2d8e519a0c4c87fb90409fbb3ef9f2a67670e0c150fbca8ec09cf8"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\toolchain-guard-before.log",
+      "sha256": "462f66db9183da9b016dd33db4e2ee8a124810007a58e5342b9c67e1cc2591f8"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\python-after.log",
+      "sha256": "292c236e547ccc2354ee94090940ce447505bdfe7bab82b6359cbc121baff697"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\python-recheck.log",
+      "sha256": "2e920117f3f957ee07991c33fe1496e2a15d0758bbb69e6d5f267eb2fb9327ee"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\json-compat-after.log",
+      "sha256": "f472f5a4f5b9229824e88a883c95f20d277659e815b908369b59824a3a886f99"
+    }
+  ],
+  "superseded_full_failure": {
+    "source_commit": "bb83821843660561c23f6e242e8c854c7be96e4f",
+    "executed": 920,
+    "unexpected": [
+      {
+        "name": "303 流在条目之间断掉不再被发现（半份结果看起来最正常）",
+        "pkg": "./refdata/live/",
+        "test": "TestFetchRefusesCutBetweenEntries",
+        "expect": "red",
+        "want": "只缺收尾的流没有报错",
+        "verdict": "红错了理由",
+        "detail": "断言失败了，但断言输出里没有 \"只缺收尾的流没有报错\"（第三层不成立）：\n=== RUN   TestFetchRefusesCutBetweenEntries\n    live_test.go:201: 红了但红错了理由：扫到第 5 个条目时读键失败：unexpected end of JSON input（**不续传**，本次整体失败）\n--- FAIL: TestFetchRefusesCutBetweenEntries (0.00s)\nFAIL\nFAIL\tgithub.com/dream-until-dawn/futures-position-simulator-go/refdata/live\t1.064s\nFAIL\n"
+      }
+    ],
+    "exit_code": 1,
+    "restored_state": {
+      "status": "",
+      "tracked_sha256": "10be17ae01196ca225cd2c2ed4d1cb0b25f9540e360df07ce3a4517f7c727f06",
+      "index_sha256": "ee99dae6a7b60e6f91d251492f58b884d8e13e4d1f3fdd6528826fc1b23d3bbc",
+      "head": "bb83821843660561c23f6e242e8c854c7be96e4f"
+    },
+    "report": {
+      "path": "C:\\Temp\\offline-ci-full-bb83821-results\\mutations.json",
+      "sha256": "77269ebb2bed6ed33f7c81af002f87791cb3fae408f810b846d7cea0093e99aa"
+    },
+    "summary": {
+      "path": "C:\\Temp\\offline-ci-full-bb83821-results\\summary.json",
+      "sha256": "fbc01881292d508a2b96c0723e64f636e29f5faf271c8475157b8c5d7eea841d"
+    },
+    "log": {
+      "path": "C:\\Temp\\offline-ci-full-bb83821-results\\mutation.log",
+      "sha256": "609e6057ae54f231fe16fdd76d4523ca15387cb7d0e4cb8254fe4bc1cb1ee28c"
+    }
+  },
+  "remaining_scope_reverified": {
+    "data": {
+      "source_commit": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98",
+      "retained_green_ids": [
+        173,
+        175,
+        313,
+        407,
+        433,
+        441,
+        457,
+        732,
+        795
+      ],
+      "pending_market_rules": [
+        5,
+        6,
+        7,
+        12,
+        14,
+        19
+      ],
+      "probe_schedule_active": true,
+      "probe_schedule_time": "2026-10-28T10:50:00+08:00",
+      "probe_sha256": "0dd9c045415b5849f6b6c9f4a490d8f996846397169e6451dd32351577be7b55",
+      "excluded_from_offline_completion": [
+        "F9c qualified resting price sample",
+        "lh two lots and cross settlement live evidence",
+        "remaining market rule convergence"
+      ]
+    },
+    "artifact": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\remaining-scope-reverified.json",
+      "sha256": "d63e1e4e090b68a84dd7d04396c4bd73f9c3dd839ccf018a093883a37d90db02"
+    }
+  },
+  "six_batches_reverified": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\six-batches-reverified.json",
+    "sha256": "33f7b3861069cd62fb952dc7d208e55d6d6c9f9b8946e11437f679094fe63d5c"
+  },
+  "source_and_probe_audit": {
+    "data": {
+      "source_commit": "f2bbab7ab4adc9eae145fe316b26a1b6f313bb98",
+      "changed_code_files": [
+        "offline_manual_test.go",
+        "scripts/test_validate.py"
+      ],
+      "production_code_unchanged": true,
+      "probe_sha256": "0dd9c045415b5849f6b6c9f4a490d8f996846397169e6451dd32351577be7b55"
+    },
+    "artifact": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\source-and-probe-audit.json",
+      "sha256": "452b882506d6cfa05abfb251f90e09338e57a93e64ba33a31a882370e080dc79"
+    }
+  },
+  "design_history_reverified": {
+    "data": [
+      {
+        "batch": "O1",
+        "design": "docs/offline-delivery.md",
+        "design_commit": "46242f4fc5c48ef51054cb633d614c099cb3e559",
+        "implementation": "refdata/night_coverage.go",
+        "implementation_commit": "b371d216836ac288e18d2e4755ba001f6c0c4664"
+      },
+      {
+        "batch": "O2",
+        "design": "docs/frozen-state.md",
+        "design_commit": "ac5f61e30c5af6f5cbd2dd5065d3815dba9ef5e4",
+        "implementation": "conformance/fixture/frozen_state.go",
+        "implementation_commit": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+      },
+      {
+        "batch": "O3",
+        "design": "docs/risk-policy.md",
+        "design_commit": "4ef85c6ab6f8b9fbb2a6a75ab6bd03943c99699d",
+        "implementation": "risk/policy.go",
+        "implementation_commit": "0ebae9895b85bf7fb18ae88bc38cf211a51382c5"
+      },
+      {
+        "batch": "O4",
+        "design": "docs/lifecycle-policy.md",
+        "design_commit": "36f6b802270fde7418039f130679756733a50744",
+        "implementation": "lifecycle/rules.go",
+        "implementation_commit": "6b0f4e30395a45afb6df476e97417a0c9e26cbe2"
+      },
+      {
+        "batch": "O5",
+        "design": "docs/offline-integration.md",
+        "design_commit": "807c79d27b9c0a8e849818e7a52c291b3fe0c5d0",
+        "implementation": "lifecycle/persist.go",
+        "implementation_commit": "b08296b96fcae90a5a8c7223a52062e601c32343"
+      },
+      {
+        "batch": "O6",
+        "design": "docs/offline-acceptance.md",
+        "design_commit": "f08f7d86be164b68d0995cf9126bbb3ff0513be4",
+        "implementation": "offline_manual_test.go",
+        "implementation_commit": "bb9ae4f48df4f596365d1fb38fc06d32962a229a"
+      }
+    ],
+    "artifact": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ci-failure-8a123e8\\design-history-reverified.json",
+      "sha256": "54bbbd43b30c12693e3c0dfe052dbcb144181eb7a393795017541f385f853c12"
+    }
+  },
+  "limits": [
+    "未合入主线前的准确源码验收；发布结果另核",
+    "保留原有JSON实现，不宣称新后端迁移完成",
+    "未读取凭据、连接柜台、更换已批准固定探针或创建tag",
+    "托管mutation未启用；全量为独立本机克隆实际执行"
+  ]
+}
