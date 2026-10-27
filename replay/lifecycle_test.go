@@ -309,3 +309,16 @@ func TestReplayRuleBudgetRollback(t *testing.T) {
 		t.Fatal("测试没有覆盖规则切换已准备但报告预算不足的边界")
 	}
 }
+
+// TestReplayLifecycleMoneyBudget 不能借RawMessage绕过普通回放金额范围，产生读者无法读取的报告。
+func TestReplayLifecycleMoneyBudget(t *testing.T) {
+	p := lifecycleDemo(t)
+	p.Events = p.Events[:2]
+	p.Lifecycle = changeLife(t, p.Lifecycle, func(m map[string]any) {
+		m["schedule"].(map[string]any)["Contracts"].([]any)[0].(map[string]any)["MarginSteps"].([]any)[0].(map[string]any)["Rates"].(map[string]any)["LongByMoney"] = strings.Repeat("9", 154)
+	})
+	r, err := Run(p, Options{AllowPlaceholder: true})
+	if err == nil || !strings.Contains(err.Error(), "有界定点") || r.Initial != nil {
+		t.Fatalf("生命周期原始JSON绕过回放金额边界 err=%v", err)
+	}
+}

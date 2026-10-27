@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
 
 	futsim "github.com/dream-until-dawn/futures-position-simulator-go"
 	"github.com/dream-until-dawn/futures-position-simulator-go/lifecycle"
@@ -13,7 +15,53 @@ import (
 
 // loadDaily 对直接Go输入和文件输入使用同一严格加载器，许可只能来自调用者Options。
 func loadDaily(raw json.RawMessage, opt Options) (*lifecycle.DailyRules, *refdata.Calendar, refdata.Evidence, error) {
+	if err := checkDailyAmounts(raw); err != nil {
+		return nil, nil, "", err
+	}
 	return lifecycle.Load(bytes.NewReader(raw), refdata.LoadOptions{AllowPlaceholder: opt.AllowPlaceholder})
+}
+
+// checkDailyAmounts 把RawMessage内的新格式金额纳入原回放预算，防止产出超出报告数字范围的状态。
+// 独立lifecycle接口的有限精度范围较宽；接入回放时仍须遵守固定24整数/12小数的输入契约。
+func checkDailyAmounts(raw []byte) error {
+	if len(raw) > MaxInputBytes {
+		return fmt.Errorf("回放日规则超过输入上限")
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
+	value, err := readValue(d, 0)
+	if err != nil {
+		return err
+	}
+	if _, err = d.Token(); err != io.EOF {
+		return fmt.Errorf("回放日规则尾随内容")
+	}
+	money := map[string]bool{"volumemultiple": true, "pricetick": true, "pricelimitratio": true, "longbymoney": true, "longbyvolume": true, "shortbymoney": true, "shortbyvolume": true, "companyaddon": true, "openbymoney": true, "openbyvolume": true, "closebymoney": true, "closebyvolume": true, "closetodaybymoney": true, "closetodaybyvolume": true}
+	var walk func(any) error
+	walk = func(v any) error {
+		switch x := v.(type) {
+		case map[string]any:
+			for key, value := range x {
+				if money[strings.ToLower(strings.ReplaceAll(key, "_", ""))] {
+					s, ok := value.(string)
+					if !ok || !fixedMoney.MatchString(s) {
+						return fmt.Errorf("回放日规则金额必须是有界定点字符串: %s", key)
+					}
+				}
+				if err := walk(value); err != nil {
+					return err
+				}
+			}
+		case []any:
+			for _, value := range x {
+				if err := walk(value); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	return walk(value)
 }
 
 // prepareRules 只准备候选配置；报告超限或事件失败时调用方不能提交本结果。

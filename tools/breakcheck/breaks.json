@@ -9983,5 +9983,16 @@
 		"test": "TestLifecyclePersistenceIO",
 		"want": "生命周期writer错误被吞掉",
 		"expect": "red"
+	},
+	{
+		"name": "995 日规则原始金额绕过回放预算",
+		"dir": "",
+		"file": "replay/lifecycle.go",
+		"old": "if err := checkDailyAmounts(raw); err != nil {",
+		"new": "if err := checkDailyAmounts(raw); false && err != nil {",
+		"pkg": "./replay",
+		"test": "TestReplayLifecycleMoneyBudget",
+		"want": "生命周期原始JSON绕过回放金额边界",
+		"expect": "red"
 	}
 ]
