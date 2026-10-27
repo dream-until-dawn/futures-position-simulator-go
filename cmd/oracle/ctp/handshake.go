@@ -158,7 +158,7 @@ func (h *handshakeCollector) wait() (handshakeLoginResult, error) {
 		return handshakeLoginResult{}, err
 	}
 	event := "finished"
-	if !h.complete {
+	if !h.complete || !time.Now().Before(h.deadline) {
 		h.err = h.failure("timeout", 0)
 		event = "timeout"
 	}

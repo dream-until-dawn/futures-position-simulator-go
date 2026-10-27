@@ -182,8 +182,34 @@ func TestHandshakeLateDeadline(t *testing.T) {
 	h.mu.Unlock()
 	row := handshakeFixture()
 	h.reply(handshakeAuth, 1, &row, 0, true)
+	h.mu.Lock()
+	accepted := h.complete || h.result != (handshakeLoginResult{})
+	h.mu.Unlock()
+	if accepted {
+		t.Fatal("截止后的回调进入收集状态")
+	}
 	if result, err := h.wait(); err == nil || result != (handshakeLoginResult{}) {
 		t.Fatal("截止后的回调变成成功", result, err)
+	}
+}
+
+// TestHandshakeLateSendReturn 最后一步同步成功后发送调用迟返，也不能突破整体截止。
+func TestHandshakeLateSendReturn(t *testing.T) {
+	h := newHandshake(time.Second, nil)
+	count := 0
+	result, err := runFakeHandshake(h, func(stage string, id int) int32 {
+		count++
+		row := handshakeFixture()
+		h.reply(stage, id, &row, 0, true)
+		if stage == handshakeConfirm {
+			h.mu.Lock()
+			h.deadline = time.Now().Add(-time.Millisecond)
+			h.mu.Unlock()
+		}
+		return 0
+	})
+	if err == nil || result != (handshakeLoginResult{}) || count != 3 || !strings.Contains(err.Error(), "timeout") {
+		t.Fatalf("最后发送迟返被当成及时成功: %+v %v count=%d", result, err, count)
 	}
 }
 

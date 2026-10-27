@@ -8940,14 +8940,14 @@
 		"expect": "red"
 	},
 	{
-		"name": "900 截止后迟到成功覆盖超时",
+		"name": "900 截止后回调污染握手收集状态",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/ctp/handshake.go",
 		"old": "id != h.id || !time.Now().Before(h.deadline)",
 		"new": "id != h.id || false && !time.Now().Before(h.deadline)",
 		"pkg": "./ctp",
 		"test": "TestHandshakeLateDeadline",
-		"want": "截止后的回调变成成功",
+		"want": "截止后的回调进入收集状态",
 		"expect": "red"
 	},
 	{
@@ -8959,6 +8959,17 @@
 		"pkg": "./ctp",
 		"test": "TestHandshakeFrontAndInvalidLogin",
 		"want": "非法请求编号仍发送握手",
+		"expect": "red"
+	},
+	{
+		"name": "902 最后握手发送迟返仍成功",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "if !h.complete || !time.Now().Before(h.deadline) {",
+		"new": "if !h.complete {",
+		"pkg": "./ctp",
+		"test": "TestHandshakeLateSendReturn",
+		"want": "最后发送迟返被当成及时成功",
 		"expect": "red"
 	}
 ]
