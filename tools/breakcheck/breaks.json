@@ -9312,5 +9312,159 @@
 		"test": "TestFrozenStateCompleteBook",
 		"want": "冻结接收顺序或高水位丢失",
 		"expect": "red"
+	},
+	{
+		"name": "934 风险越线使用展示除法",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "snapshot.HasRiskRatio \u0026\u0026 gap.IsPositive()",
+		"new": "snapshot.HasRiskRatio \u0026\u0026 snapshot.RiskRatio.GreaterThan(policy.MaxRiskRatio)",
+		"pkg": "./risk",
+		"test": "TestRiskExactBoundary",
+		"want": "风险越线被展示除法隐藏",
+		"expect": "red"
+	},
+	{
+		"name": "935 风险等于上限也触发",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "snapshot.HasRiskRatio \u0026\u0026 gap.IsPositive()",
+		"new": "snapshot.HasRiskRatio \u0026\u0026 !gap.IsNegative()",
+		"pkg": "./risk",
+		"test": "TestRiskSignalsAndDeposit",
+		"want": "风控信号或手算补资错误 kind=equal-thresholds",
+		"expect": "red"
+	},
+	{
+		"name": "936 风控拿结存当可用",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "snapshot.Available.LessThan(policy.MinAvailable)",
+		"new": "snapshot.Balance.LessThan(policy.MinAvailable)",
+		"pkg": "./risk",
+		"test": "TestRiskSignalsAndDeposit",
+		"want": "风控信号或手算补资错误 kind=available",
+		"expect": "red"
+	},
+	{
+		"name": "937 最低权益越线被忽略",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "snapshot.Balance.LessThan(policy.MinEquity)",
+		"new": "false \u0026\u0026 snapshot.Balance.LessThan(policy.MinEquity)",
+		"pkg": "./risk",
+		"test": "TestRiskSignalsAndDeposit",
+		"want": "风控信号或手算补资错误 kind=equity",
+		"expect": "red"
+	},
+	{
+		"name": "938 风控用交易所而非公司占用",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "gap := snapshot.CurrMargin.Sub",
+		"new": "gap := snapshot.ExchangeMargin.Sub",
+		"pkg": "./risk",
+		"test": "TestRiskUsesCompanyAndAvailable",
+		"want": "风控使用了交易所而非公司保证金",
+		"expect": "red"
+	},
+	{
+		"name": "939 补资不含可用资金缺口",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "policy.MinAvailable.Sub(snapshot.Available)",
+		"new": "decimal.Zero.Mul(policy.MinAvailable.Sub(snapshot.Available))",
+		"pkg": "./risk",
+		"test": "TestRiskSignalsAndDeposit",
+		"want": "风控信号或手算补资错误 kind=available",
+		"expect": "red"
+	},
+	{
+		"name": "940 允许未知最低权益策略",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "|| !policy.MinEquity.IsPositive()",
+		"new": "|| false \u0026\u0026 !policy.MinEquity.IsPositive()",
+		"pkg": "./risk",
+		"test": "TestRiskRejectsUnknownAndUnbounded",
+		"want": "未知风控输入被当健康 kind=equity-zero",
+		"expect": "red"
+	},
+	{
+		"name": "941 允许负最低可用策略",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "|| policy.MinAvailable.IsNegative()",
+		"new": "|| false \u0026\u0026 policy.MinAvailable.IsNegative()",
+		"pkg": "./risk",
+		"test": "TestRiskRejectsUnknownAndUnbounded",
+		"want": "未知风控输入被当健康 kind=available-negative",
+		"expect": "red"
+	},
+	{
+		"name": "942 风险正缺口有余数仍向下",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "if remainder.IsPositive() {",
+		"new": "if false \u0026\u0026 remainder.IsPositive() {",
+		"pkg": "./risk",
+		"test": "TestRiskCeilingFromGap",
+		"want": "风险正缺口取整错误",
+		"expect": "red"
+	},
+	{
+		"name": "943 补资四舍五入少收",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "needed.RoundCeil(2)",
+		"new": "needed.Round(2)",
+		"pkg": "./risk",
+		"test": "TestRiskMoneyCeiling",
+		"want": "权益或可用缺口未向上取整",
+		"expect": "red"
+	},
+	{
+		"name": "944 补资结果无界仍报告",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "if !bounded(report.RequiredDeposit) {",
+		"new": "if false \u0026\u0026 !bounded(report.RequiredDeposit) {",
+		"pkg": "./risk",
+		"test": "TestRiskRejectsUnknownAndUnbounded",
+		"want": "未知风控输入被当健康 kind=result-budget",
+		"expect": "red"
+	},
+	{
+		"name": "945 风控不恢复完整账户",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "acc, err := account.Restore(st)",
+		"new": "acc, err := account.New(st.Currency, st.Day, st.PreBalance, st.Algorithm)",
+		"pkg": "./risk",
+		"test": "TestRiskSignalsAndDeposit",
+		"want": "风控信号或手算补资错误 kind=ratio",
+		"expect": "red"
+	},
+	{
+		"name": "946 失效模拟器仍评估风控",
+		"dir": "",
+		"file": "risk.go",
+		"old": "if s.broken != nil {",
+		"new": "if false \u0026\u0026 s.broken != nil {",
+		"pkg": "./",
+		"test": "TestFacadeRiskIsReadOnly",
+		"want": "失效模拟器仍给出风控结论",
+		"expect": "red"
+	},
+	{
+		"name": "947 补资重复扣冻结保证金",
+		"dir": "",
+		"file": "risk/policy.go",
+		"old": "policy.MinAvailable.Sub(snapshot.Available)",
+		"new": "policy.MinAvailable.Sub(snapshot.Available.Sub(snapshot.FrozenMargin))",
+		"pkg": "./risk",
+		"test": "TestRiskSignalsAndDeposit",
+		"want": "风控信号或手算补资错误 kind=available",
+		"expect": "red"
 	}
 ]
