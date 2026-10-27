@@ -9,8 +9,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// restingProbeDay 绑定已推送的10月27日事前登记，不提供任意日期执行开关。
-const restingProbeDay = "20261027"
+// restingProbeDay 绑定已推送的10月28日事前登记，不提供任意日期执行开关。
+const restingProbeDay = "20261028"
 
 var probeShanghai = time.FixedZone("Asia/Shanghai", 8*60*60)
 

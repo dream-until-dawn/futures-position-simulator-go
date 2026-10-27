@@ -12,14 +12,14 @@ func TestRestingRegistrationQuoteBoundary(t *testing.T) {
 		day, at string
 		valid   bool
 	}{
-		{"20261027", "10:30:00", true},
-		{"20261027", "10:55:00", true},
-		{"20261027", "11:24:59", true},
-		{"20261027", "10:29:59", false},
-		{"20261027", "11:25:00", false},
-		{"20261027", "13:35:00", false},
-		{"20261023", "10:55:00", false},
-		{"20261028", "10:55:00", false},
+		{"20261028", "10:30:00", true},
+		{"20261028", "10:55:00", true},
+		{"20261028", "11:24:59", true},
+		{"20261028", "10:29:59", false},
+		{"20261028", "11:25:00", false},
+		{"20261028", "13:35:00", false},
+		{"20261027", "10:55:00", false},
+		{"20261029", "10:55:00", false},
 	} {
 		md, spec, _ := restingQuoteFixture()
 		now, err := time.ParseInLocation("20060102 15:04:05", tc.day+" "+tc.at, probeShanghai)
@@ -41,13 +41,13 @@ func TestRestingRegistrationStartBoundary(t *testing.T) {
 		day, at string
 		valid   bool
 	}{
-		{"20261027", "10:55:00", true},
-		{"20261027", "11:14:59", true},
-		{"20261027", "10:54:59", false},
-		{"20261027", "11:15:00", false},
-		{"20261027", "13:35:00", false},
-		{"20261023", "10:55:00", false},
-		{"20261028", "10:55:00", false},
+		{"20261028", "10:55:00", true},
+		{"20261028", "11:14:59", true},
+		{"20261028", "10:54:59", false},
+		{"20261028", "11:15:00", false},
+		{"20261028", "13:35:00", false},
+		{"20261027", "10:55:00", false},
+		{"20261029", "10:55:00", false},
 	} {
 		f := newFakeRestingProbe()
 		now, err := time.ParseInLocation("20060102 15:04:05", tc.day+" "+tc.at, probeShanghai)
