@@ -35,9 +35,10 @@ jobs:
           cache-dependency-path: |
             go.sum
             cmd/oracle/go.sum
+            examples/offline-replay/go.sum
       - name: Validate the validator
         run: python -m unittest discover -s scripts -p "test_*.py"
-      - name: Both Go modules (no skipped tests)
+      - name: All three Go modules (no skipped tests)
         run: python scripts/validate.py --suite regression --out offline-results/regression
       - name: Race detector on both platforms
         run: python scripts/validate.py --suite race --out offline-results/race

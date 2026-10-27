@@ -2586,6 +2586,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/frozen-state.md` | 5 |
 | `docs/risk-policy.md` | 5 |
 | `docs/lifecycle-policy.md` | 5 |
+| `docs/offline-integration.md` | 5 |
 | `docs/offline-gaps.md` | 4 |
 | `docs/offline-resilience.md` | 6 |
 | `docs/offline-replay.md` | 5 |

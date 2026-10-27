@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	futsim "github.com/dream-until-dawn/futures-position-simulator-go"
 	"github.com/dream-until-dawn/futures-position-simulator-go/account"
+	"github.com/dream-until-dawn/futures-position-simulator-go/lifecycle"
 	"github.com/dream-until-dawn/futures-position-simulator-go/match"
 	"github.com/dream-until-dawn/futures-position-simulator-go/order"
 	"github.com/dream-until-dawn/futures-position-simulator-go/refdata"
+	"github.com/dream-until-dawn/futures-position-simulator-go/risk"
 	"github.com/dream-until-dawn/futures-position-simulator-go/types"
 	"github.com/shopspring/decimal"
 )
@@ -47,10 +49,12 @@ type Limit struct {
 
 // Payload 是同一回放所需的完整输入；Initial为空时按Settings开户。
 type Payload struct {
-	Rules    json.RawMessage `json:"rules"`
-	Settings Settings        `json:"settings"`
-	Initial  *futsim.State   `json:"initial"`
-	Events   []Event         `json:"events"`
+	Rules json.RawMessage `json:"rules,omitempty"`
+	// Lifecycle与Rules恰选其一，不能从不完整普通快照猜生命周期资料。
+	Lifecycle json.RawMessage `json:"lifecycle,omitempty"`
+	Settings  Settings        `json:"settings"`
+	Initial   *futsim.State   `json:"initial"`
+	Events    []Event         `json:"events"`
 }
 
 // Accepted 表示调用方明确声明已接受的委托，不代表本工具执行了柜台报单校验。
@@ -69,6 +73,8 @@ type Price struct {
 type Settlement struct {
 	NextDay types.TradingDay `json:"next_day"`
 	Prices  []Price          `json:"prices"`
+	// NextRules携带下一日完整生命周期快照；缺失时保留旧普通Provider路径。
+	NextRules json.RawMessage `json:"next_rules,omitempty"`
 }
 
 // Event 只允许kind所需的一个负载，避免忽略无关字段造成假重放。
@@ -82,6 +88,13 @@ type Event struct {
 	Ref        string           `json:"ref,omitempty"`
 	Amount     *decimal.Decimal `json:"amount,omitempty"`
 	Settlement *Settlement      `json:"settlement,omitempty"`
+	RiskPolicy *risk.Policy     `json:"risk_policy,omitempty"`
+}
+
+// RuleBinding记录一段日规则的完整来源；Evidence仅约束本绑定，不代表真实性认证。
+type RuleBinding struct {
+	Lifecycle json.RawMessage  `json:"lifecycle"`
+	Evidence  refdata.Evidence `json:"evidence"`
 }
 
 // Options 的合成数据许可由调用方显式给，不能藏进回放包自行授权。
@@ -101,12 +114,15 @@ type Statement struct {
 
 // Frame 只保存已成功提交的事件及其完整结果。
 type Frame struct {
-	Index     int              `json:"index"`
-	Event     Event            `json:"event"`
-	Account   account.Snapshot `json:"account"`
-	State     futsim.State     `json:"state"`
-	Changes   Changes          `json:"changes"`
-	Statement *Statement       `json:"statement,omitempty"`
+	Index     int               `json:"index"`
+	Event     Event             `json:"event"`
+	Account   account.Snapshot  `json:"account"`
+	State     futsim.State      `json:"state"`
+	Changes   Changes           `json:"changes"`
+	Statement *Statement        `json:"statement,omitempty"`
+	Rules     *RuleBinding      `json:"rules,omitempty"`
+	Lifecycle *lifecycle.Report `json:"lifecycle,omitempty"`
+	Risk      *risk.Report      `json:"risk,omitempty"`
 }
 
 // Report 的failed携带有效前缀；调用方必须同时检查返回error与status。
@@ -119,6 +135,8 @@ type Report struct {
 	Failure        string            `json:"failure,omitempty"`
 	Initial        *futsim.State     `json:"initial"`
 	InitialAccount *account.Snapshot `json:"initial_account"`
-	Frames         []Frame           `json:"frames"`
-	Final          *futsim.State     `json:"final"`
+	// InitialRules只在初始配置采用生命周期规则时出现，后续变更记录在Frame.Rules。
+	InitialRules *RuleBinding  `json:"initial_rules,omitempty"`
+	Frames       []Frame       `json:"frames"`
+	Final        *futsim.State `json:"final"`
 }

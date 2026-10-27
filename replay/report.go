@@ -39,7 +39,7 @@ func validateReport(r Report) error {
 		return fmt.Errorf("失败报告缺少原因")
 	}
 	if r.Initial == nil {
-		if r.Status != "failed" || r.InitialAccount != nil || r.Final != nil || len(r.Frames) != 0 || r.FailedIndex != nil {
+		if r.Status != "failed" || r.InitialAccount != nil || r.Final != nil || len(r.Frames) != 0 || r.FailedIndex != nil || r.InitialRules != nil {
 			return fmt.Errorf("未初始化报告包含伪状态")
 		}
 		return nil
@@ -70,7 +70,7 @@ func validateReport(r Report) error {
 	before := *r.InitialAccount
 	last := r.Initial
 	for i, f := range r.Frames {
-		if f.Event.Day != before.TradingDay || f.State.Day != f.Account.TradingDay || f.State.Format != r.Initial.Format || f.State.Choices != r.Initial.Choices || f.State.RulesVersion != r.Initial.RulesVersion || f.State.LastOrderSequence < last.LastOrderSequence {
+		if f.Event.Day != before.TradingDay || f.State.Day != f.Account.TradingDay || f.State.Format != r.Initial.Format || f.State.Choices != r.Initial.Choices || f.State.LastOrderSequence < last.LastOrderSequence {
 			return fmt.Errorf("事件时序、版本或高水位矛盾")
 		}
 		if f.Index != i || f.Event.ID == "" || ids[f.Event.ID] {
@@ -102,5 +102,5 @@ func validateReport(r Report) error {
 	if !same(last, r.Final) {
 		return fmt.Errorf("最终存档不等于有效前缀")
 	}
-	return nil
+	return validateRuleReports(r)
 }

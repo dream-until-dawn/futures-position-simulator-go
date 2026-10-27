@@ -105,7 +105,7 @@ func Compare(a, b Report) (Difference, error) {
 	for _, item := range []struct {
 		name string
 		a, b any
-	}{{"initial", a.Initial, b.Initial}, {"initial_account", a.InitialAccount, b.InitialAccount}, {"evidence", a.Evidence, b.Evidence}} {
+	}{{"initial", a.Initial, b.Initial}, {"initial_account", a.InitialAccount, b.InitialAccount}, {"evidence", a.Evidence, b.Evidence}, {"initial_rules", a.InitialRules, b.InitialRules}} {
 		if path, l, r, diff := firstDifference(asJSON(item.a), asJSON(item.b), "/"+item.name); diff {
 			result.Equal = false
 			result.Path, result.Left, result.Right = path, l, r
@@ -123,7 +123,7 @@ func Compare(a, b Report) (Difference, error) {
 		for _, item := range []struct {
 			name string
 			a, b any
-		}{{"account", af.Account, bf.Account}, {"statement", af.Statement, bf.Statement}, {"event", af.Event, bf.Event}, {"state", af.State, bf.State}} {
+		}{{"account", af.Account, bf.Account}, {"statement", af.Statement, bf.Statement}, {"event", af.Event, bf.Event}, {"state", af.State, bf.State}, {"rules", af.Rules, bf.Rules}, {"lifecycle", af.Lifecycle, bf.Lifecycle}, {"risk", af.Risk, bf.Risk}} {
 			if path, l, r, diff := firstDifference(asJSON(item.a), asJSON(item.b), fmt.Sprintf("/frames/%d/%s", i, item.name)); diff {
 				result.Equal = false
 				result.Step = i

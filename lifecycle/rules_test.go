@@ -12,7 +12,7 @@ import (
 func money(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 
 // scheduleFixture 使用纯合成期限和比率，不是rb实际交割日期或自然人规则。
-func scheduleFixture(t *testing.T) (*refdata.Snapshot, Schedule, types.InstrumentID) {
+func scheduleFixture(t testing.TB) (*refdata.Snapshot, Schedule, types.InstrumentID) {
 	t.Helper()
 	id := types.InstrumentID{Exchange: types.SHFE, Product: "rb", Year: 2026, Month: 10}
 	inst := refdata.Instrument{ID: id, VolumeMultiple: money("10"), PriceTick: money("1"), PositionDateType: refdata.UseHistory, ExpireDate: 20261029, IsTrading: true, MinLimitOrderVolume: 1, MaxLimitOrderVolume: 1000, HasPriceLimitRatio: true, PriceLimitRatio: money("0.1")}
