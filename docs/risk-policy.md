@@ -1,0 +1,29 @@
+# O3：离线风控判据与补资报告
+
+本批只实现明确策略下的核算信号，不执行强平、不调用柜台、不假定期货公司的追保制度。已有account.RiskRatio继续作为展示值；使用者目标要求补齐可离线实现的判据层，设计先于实现。
+
+## 1 模块和输入
+
+新增risk包，依赖方向为risk → account/types/decimal；根门面可只读调用risk，不反向依赖根包。入口 `risk.Assess(st account.State, policy risk.Policy) (risk.Report, error)` 先校验有限精度，再用account.Restore派生快照，禁止信任手填的Balance/Available/RiskRatio。Policy显式给MaxRiskRatio（正）、MinEquity（正）、MinAvailable（非负），无默认策略。只支持现有CNY账户，策略真实性由调用者负责。
+
+## 2 判据和数值
+
+报告保留account.Snapshot、实际Policy、RatioExceeded、EquityBelowMinimum、AvailableBelowMinimum、NeedsMarginCall及RequiredDeposit。非正权益的HasRiskRatio仍为false，不能把风险度显示为0；正的最低权益策略保证这种状态必有信号。
+
+风险度上限是允许值：只有公司保证金 > 权益×MaxRiskRatio才越线，比较用精确乘法，不先除法取展示精度，避免越线被四舍五入藏住。最低权益和最低可用同样在严格小于时触发，等于阈值合法。可用已经扣过全部冻结及口径排除浮盈，不能再次扣冻结或用交易所保证金代公司占用。
+
+## 3 补资的可解释含义
+
+RequiredDeposit为三个缺口的最大值：最低权益减当前权益、最低可用减当前可用、满足公司保证金/风险上限所需权益减当前权益，与0取大，并向上取整到分。风险目标权益先用QuoRem按分向上取整，不能用普通Div/四舍五入低估。它假设补资时持仓、行情、费率、冻结不变，不承诺真实券商会据此撤销追保。
+
+金额/比例输入限制指数绝对值64、系数最多512bit；非法、未知策略或不一致账户返回错误，不生成假健康报告。计算结果超出同一有限精度预算也明确拒绝。该预算是防无界分配，不是券商资金限制。
+
+## 4 门面和状态
+
+新增只读 `(*Simulator).AssessRisk(policy risk.Policy) (risk.Report, error)`，拒绝未初始化或失效实例。策略按本次调用显式传入，不写Config/State，不抬StateFormat；不修改账户、挂单或持仓。纯包和门面返回一致结果，后续回放/示例由O5接入，不凭此新增交易行为。
+
+## 5 验收
+
+正反例覆盖健康、三个单独越线、同时越线、等于阈值、零/负权益、浮盈排除口径、冻结占用、公司/交易所差、非法策略与状态、资源预算。独立手算补资并实际对恢复账户Deposit，再重新Assess应全部回到允许范围；使用会被显示精度抹平的近边界值测试精确比较，使用重复小数测试补资向上取整。
+
+门面正反例比较完整State前后相同。新增破坏分别撤销判据、换错占用、重复扣冻结、误用展示除法、补资少算/取整方向及失效拒绝；必须命中各自目标断言。按锁定干净提交执行严格双模块回归、race/fuzz、定向和完整破坏，不能把策略正确性等同于市场制度已取证。
