@@ -9136,5 +9136,27 @@
 		"test": "TestNightCoverageRejectsAmbiguity",
 		"want": "非法日历日期被接受",
 		"expect": "red"
+	},
+	{
+		"name": "918 主线统计不支持已抓取引用",
+		"dir": "",
+		"file": "branch_claim_test.go",
+		"old": "[]string{\"refs/heads/main\", \"refs/remotes/origin/main\"}",
+		"new": "[]string{\"refs/heads/main\"}",
+		"pkg": "./",
+		"test": "TestMainHistoryRef",
+		"want": "已抓取主线未用于隔离克隆",
+		"expect": "red"
+	},
+	{
+		"name": "919 不存在主线反而当可用",
+		"dir": "",
+		"file": "branch_claim_test.go",
+		"old": "if _, err := cmd.Output(); err == nil {",
+		"new": "if _, err := cmd.Output(); err != nil {",
+		"pkg": "./",
+		"test": "TestMainHistoryRef",
+		"want": "缺主线历史被当成可统计",
+		"expect": "red"
 	}
 ]
