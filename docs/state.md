@@ -2575,6 +2575,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/f9c-design.md` | 5 |
 | `docs/offline-work.md` | 5 |
 | `docs/offline-delivery.md` | 5 |
+| `docs/frozen-state.md` | 5 |
 | `docs/offline-gaps.md` | 4 |
 | `docs/offline-resilience.md` | 6 |
 | `docs/offline-replay.md` | 5 |
