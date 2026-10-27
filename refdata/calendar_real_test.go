@@ -103,7 +103,20 @@ func loadRealCalendar(t *testing.T) *refdata.Calendar {
 	if len(tables) < 3 {
 		t.Fatalf("时段表只有 %d 个品种 —— 太少", len(tables))
 	}
-	c, err := refdata.NewCalendar(days, tables, nil)
+	// O1：夜盘是否停开另有来源，交易日列表和每天时段表不能代替它。
+	// 已核上期所2026年休市公告，仅给SHFE、本夹具覆盖的2026年日期，不外推到别的交易所。
+	const source = "https://www.shfe.com.cn/publicnotice/notice/202512/t20251217_829805.html"
+	first, last := int32(days[0]), int32(days[len(days)-1])
+	if first < 20260101 || last > 20261231 {
+		t.Fatal("实测日历超出所核公告年度")
+	}
+	var suspended []int32
+	for _, d := range []int32{20260213, 20260403, 20260430, 20260618, 20260924, 20260930} {
+		if d >= first && d <= last {
+			suspended = append(suspended, d)
+		}
+	}
+	c, err := refdata.NewCalendarWithNightCoverage(days, tables, []refdata.NightCoverage{{Exchange: types.SHFE, First: first, Last: last, Suspended: suspended, Source: source}})
 	if err != nil {
 		t.Fatalf("用实测数据建日历失败：%v", err)
 	}

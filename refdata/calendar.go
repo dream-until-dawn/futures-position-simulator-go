@@ -171,21 +171,30 @@ type Calendar struct {
 	// 不说那天晚上有没有夜盘。缺了它，节前 21:30 会被算成节后那个交易日，
 	// 而那是一个**看起来完全合理的答案**。
 	noNight map[int32]bool
+	// nil名单表示未知；nights用于按交易所和自然日显式限定覆盖。
+	nightKnown bool
+	nights     []NightCoverage
 }
 
-// NewCalendar 由数据构造日历。days 必须非空且严格升序。
+// NewCalendar 由数据构造日历。days 必须合法、非空且严格升序。
+// nightSuspended的nil表示未知，只可查日盘；非nil空列表明确声明本范围内没有停夜盘。
+// 旧全局名单表示调用者确认它适用于全部时段表；按交易所分开声明请用NewCalendarWithNightCoverage。
 func NewCalendar(days []types.TradingDay, tables []SessionTable, nightSuspended []int32) (*Calendar, error) {
 	if len(days) == 0 {
 		return nil, fmt.Errorf("交易日列表为空 —— 本库不推算交易日，没有数据就答不了")
 	}
 	c := &Calendar{
-		days:    make([]types.TradingDay, len(days)),
-		dayset:  make(map[types.TradingDay]bool, len(days)),
-		tables:  map[string]SessionTable{},
-		noNight: map[int32]bool{},
+		days:       make([]types.TradingDay, len(days)),
+		dayset:     make(map[types.TradingDay]bool, len(days)),
+		tables:     map[string]SessionTable{},
+		noNight:    map[int32]bool{},
+		nightKnown: nightSuspended != nil,
 	}
 	copy(c.days, days)
 	for i, d := range c.days {
+		if err := d.Validate(); err != nil {
+			return nil, fmt.Errorf("日历自然日期无效：%w", err)
+		}
 		if i > 0 && d <= c.days[i-1] {
 			return nil, fmt.Errorf("交易日列表未严格升序：第 %d 项 %d 不大于前一项 %d",
 				i+1, d, c.days[i-1])
@@ -203,12 +212,17 @@ func NewCalendar(days []types.TradingDay, tables []SessionTable, nightSuspended 
 		if _, dup := c.tables[k]; dup {
 			return nil, fmt.Errorf("品种 %s 的时段表重复登记", k)
 		}
+		t.Day = append([]Session(nil), t.Day...)
+		t.Night = append([]Session(nil), t.Night...)
 		c.tables[k] = t
 	}
 	if len(c.tables) == 0 {
 		return nil, fmt.Errorf("一张时段表都没有 —— 没有时段就判不出任何时刻的归属")
 	}
 	for _, d := range nightSuspended {
+		if err := types.TradingDay(d).Validate(); err != nil || d < int32(c.days[0]) || d > int32(c.days[len(c.days)-1]) || c.noNight[d] {
+			return nil, fmt.Errorf("停夜盘日期无效、超出覆盖或重复：%d", d)
+		}
 		c.noNight[d] = true
 	}
 	return c, nil
@@ -317,7 +331,11 @@ func (c *Calendar) SessionAt(t time.Time, ex types.Exchange, product string) (Se
 		if s.CrossesMidnight() && clock < s.End {
 			anchor = naturalDayOf(t.In(cnZone).AddDate(0, 0, -1))
 		}
-		if c.noNight[anchor] {
+		suspended, err := c.nightStatus(ex, anchor)
+		if err != nil {
+			return SessionSpan{}, err
+		}
+		if suspended {
 			return SessionSpan{}, fmt.Errorf("自然日 %d 当晚**夜盘不开**（长假前等），"+
 				"而 %s 落在夜盘时段内 —— 数据与时刻矛盾，**不猜**",
 				anchor, t.In(cnZone).Format("2006-01-02 15:04:05"))

@@ -5,6 +5,8 @@
 
 2026-10-24 离线交付分期：新增 `replay` 包及 `cmd/replay`，复用现有规则快照与内核State/Restore；包依赖方向为replay → futsim/refdata，不改变内核存档格式。按业务重放、自包含包、首差异与账单、长周期/耐久、独立模块接入推进，设计与验收见 [离线重放](./offline-replay.md)。F9c仍保留实测前置。
 
+2026-10-27 全部离线交付目标：六批范围见 [总设计](./offline-delivery.md)。O1新增主模块导出面 `refdata.NightCoverage`（Exchange、First、Last、Suspended、Source）及 `NewCalendarWithNightCoverage(days []types.TradingDay, tables []SessionTable, coverage []NightCoverage) (*Calendar, error)`。旧NewCalendar签名不改，nil夜盘名单改为未知；查询夜盘时明确失败，日盘照常。非nil空名单表示调用者明确确认本范围内没有停盘；按所分开请用新入口。Snapshot保留未知/已知空/按所覆盖，旧文件缺字段不升格；不抬Simulator.StateFormat，不改探针源码。新增903–917逐项验证这些门槛可被检出，完整验收结果另记。
+
 ## 分支与发布约定
 
 **2026-10-23 最新约定**：使用者取消单独评审环节，授权实现方在北京时间今日 17:00 前持续推进。设计、实现、合并自行验证后执行；本段覆盖下方历史评审门禁。质量要求和具体交易手数授权继续有效，当前执行状态以 state.md 为准。

@@ -126,9 +126,18 @@ type wireSessionTable struct {
 }
 
 type wireCalendar struct {
-	Days           []int32            `json:"trading_days"`
-	Tables         []wireSessionTable `json:"session_tables"`
-	NightSuspended []int32            `json:"night_suspended,omitempty"`
+	Days           []int32             `json:"trading_days"`
+	Tables         []wireSessionTable  `json:"session_tables"`
+	NightSuspended []int32             `json:"night_suspended"`
+	NightCoverage  []wireNightCoverage `json:"night_coverage,omitempty"`
+}
+
+type wireNightCoverage struct {
+	Exchange  string  `json:"exchange"`
+	First     int32   `json:"first"`
+	Last      int32   `json:"last"`
+	Suspended []int32 `json:"suspended"`
+	Source    string  `json:"source"`
 }
 
 type wireSnapshot struct {
@@ -200,6 +209,12 @@ func (s *Snapshot) Save(w io.Writer, ev Evidence, source string, generatedAt tim
 	}
 	if cal != nil {
 		wc := &wireCalendar{}
+		if cal.nightKnown {
+			wc.NightSuspended = []int32{}
+		}
+		for _, entry := range cal.nights {
+			wc.NightCoverage = append(wc.NightCoverage, wireNightCoverage{string(entry.Exchange), entry.First, entry.Last, append([]int32{}, entry.Suspended...), entry.Source})
+		}
 		for _, d := range cal.days {
 			wc.Days = append(wc.Days, int32(d))
 		}
@@ -418,7 +433,19 @@ func Load(r io.Reader, opt LoadOptions) (*Snapshot, *Calendar, Evidence, error) 
 			}
 			tables = append(tables, t)
 		}
-		if cal, err = NewCalendar(days, tables, in.Calendar.NightSuspended); err != nil {
+		if in.Calendar.NightCoverage != nil {
+			if in.Calendar.NightSuspended != nil {
+				return nil, nil, "", fmt.Errorf("日历同时提供旧全局名单和分交易所覆盖，拒绝歧义")
+			}
+			var coverage []NightCoverage
+			for _, entry := range in.Calendar.NightCoverage {
+				coverage = append(coverage, NightCoverage{types.Exchange(entry.Exchange), entry.First, entry.Last, entry.Suspended, entry.Source})
+			}
+			cal, err = NewCalendarWithNightCoverage(days, tables, coverage)
+		} else {
+			cal, err = NewCalendar(days, tables, in.Calendar.NightSuspended)
+		}
+		if err != nil {
 			return nil, nil, "", fmt.Errorf("日历过不了构造期校验：%w", err)
 		}
 	}
