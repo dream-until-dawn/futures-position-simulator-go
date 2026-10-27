@@ -1,0 +1,464 @@
+{
+  "status": "completed_scope_at_verified_code_baseline",
+  "scope": "用户要求的六批全部可离线范围，非市场真实性或v1.0发布",
+  "source_commit": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+  "merge_commit": "297543cea22e2d443ccfd01248b687d8e19dda1c",
+  "certificates": [
+    {
+      "batch": "O1",
+      "source": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5",
+      "counts": {
+        "source_commit": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5",
+        "total": 833,
+        "red": 824,
+        "green": 9,
+        "unexpected": 0
+      },
+      "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o1-8f54c04.json",
+      "sha256": "89f06bb305662c9d1fda7394de963940bebd45b9a747eb6b760f459a9d846ea1"
+    },
+    {
+      "batch": "O2",
+      "source": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916",
+      "counts": {
+        "source_commit": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916",
+        "total": 847,
+        "red": 838,
+        "green": 9,
+        "unexpected": 0
+      },
+      "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o2-5c62c9a.json",
+      "sha256": "09ee1a2aac64e1048d04b15667a6076e4fde4914ba91403592396c2aadd6b2b4"
+    },
+    {
+      "batch": "O3",
+      "source": "eb5325b2b1aeff14936949c2d52228c80feee888",
+      "counts": {
+        "source_commit": "eb5325b2b1aeff14936949c2d52228c80feee888",
+        "total": 861,
+        "red": 852,
+        "green": 9,
+        "unexpected": 0
+      },
+      "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o3-eb5325b.json",
+      "sha256": "25db60b3eb1fcb0251f0673aa5eeecc1982ac7e22f8dbe64ea57aeb80a1de316"
+    },
+    {
+      "batch": "O4",
+      "source": "b052342359809f09ad95ed3d6879e0591cb95ce0",
+      "counts": {
+        "source_commit": "b052342359809f09ad95ed3d6879e0591cb95ce0",
+        "total": 885,
+        "red": 876,
+        "green": 9,
+        "unexpected": 0
+      },
+      "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o4-b052342.json",
+      "sha256": "76883fb04a4bcb044a161c9eff791c81c2747b27f8d64af9d52a34537716df33"
+    },
+    {
+      "batch": "O5",
+      "source": "aac038d1a6991ab2205aa67abf8fda964f283357",
+      "counts": {
+        "source_commit": "aac038d1a6991ab2205aa67abf8fda964f283357",
+        "total": 909,
+        "red": 900,
+        "green": 9,
+        "unexpected": 0
+      },
+      "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o5-aac038d.json",
+      "sha256": "be1142035de4f3181904b5448d91fcafb159dfb8eeaa982e5e83e4a23359c50b"
+    },
+    {
+      "batch": "O6",
+      "source": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+      "counts": {
+        "source_commit": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+        "total": 918,
+        "red": 909,
+        "green": 9,
+        "unexpected": 0
+      },
+      "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o6-0750635.json",
+      "sha256": "22c7377f211b1a9d93c474623a84c6d37ea111bcf29bb90d53a0dc4be4464626"
+    }
+  ],
+  "merge_regression": {
+    "suite": "regression",
+    "status": "passed",
+    "failure": null,
+    "completed": [
+      {
+        "command": [
+          "go",
+          "test",
+          "-json",
+          "-count=1",
+          "./..."
+        ],
+        "cwd": "C:\\Temp\\offline-o6-release",
+        "passed_tests": 744,
+        "skipped": [],
+        "log": "C:\\Temp\\offline-o6-main-regression\\root.log",
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "go",
+          "test",
+          "-json",
+          "-count=1",
+          "./..."
+        ],
+        "cwd": "C:\\Temp\\offline-o6-release\\cmd\\oracle",
+        "passed_tests": 390,
+        "skipped": [],
+        "log": "C:\\Temp\\offline-o6-main-regression\\oracle.log",
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "go",
+          "test",
+          "-json",
+          "-count=1",
+          "./..."
+        ],
+        "cwd": "C:\\Temp\\offline-o6-release\\examples\\offline-replay",
+        "passed_tests": 3,
+        "skipped": [],
+        "log": "C:\\Temp\\offline-o6-main-regression\\external.log",
+        "exit_code": 0
+      }
+    ],
+    "before": {
+      "status": "",
+      "tracked_sha256": "f24564ed7e79cc7247a6a94e925b8b98162583c7315f8d7af9e3a0d219c07d6c",
+      "index_sha256": "20ca9fc11676a7c69fed86cc9cb5f516a571e7a876e61b157faaa952a2fd1f49",
+      "head": "297543cea22e2d443ccfd01248b687d8e19dda1c"
+    },
+    "after": {
+      "status": "",
+      "tracked_sha256": "f24564ed7e79cc7247a6a94e925b8b98162583c7315f8d7af9e3a0d219c07d6c",
+      "index_sha256": "20ca9fc11676a7c69fed86cc9cb5f516a571e7a876e61b157faaa952a2fd1f49",
+      "head": "297543cea22e2d443ccfd01248b687d8e19dda1c"
+    }
+  },
+  "code_and_registry_equal_to_source": true,
+  "retained_green_ids": [
+    173,
+    175,
+    313,
+    407,
+    433,
+    441,
+    457,
+    732,
+    795
+  ],
+  "probe_binary_sha256": "0dd9c045415b5849f6b6c9f4a490d8f996846397169e6451dd32351577be7b55",
+  "probe_schedule_active": true,
+  "probe_schedule": "FREQ=DAILY;BYHOUR=10;BYMINUTE=50;BYSECOND=0;COUNT=1",
+  "not_modified": [
+    "credentials",
+    "safety valves",
+    "registered probe binary",
+    "tags"
+  ],
+  "remaining": [],
+  "publication_ci": {
+    "source_commit": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+    "merge_commit": "297543cea22e2d443ccfd01248b687d8e19dda1c",
+    "full_mutation": {
+      "executed": 918,
+      "expected_red": 909,
+      "expected_green": 9,
+      "unexpected": 0
+    },
+    "ci": [
+      {
+        "run_id": 40497794092,
+        "sha": "297543cea22e2d443ccfd01248b687d8e19dda1c",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "offline (ubuntu-24.04)",
+            "status": "completed",
+            "conclusion": "success",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Validate the validator",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "All three Go modules (no skipped tests)",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Race detector on both platforms",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Bounded fuzzing",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/upload-artifact@v4",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ]
+          },
+          {
+            "name": "offline (windows-2022)",
+            "status": "completed",
+            "conclusion": "success",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Validate the validator",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "All three Go modules (no skipped tests)",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Race detector on both platforms",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Bounded fuzzing",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/upload-artifact@v4",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ]
+          },
+          {
+            "name": "mutation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "steps": []
+          }
+        ]
+      },
+      {
+        "run_id": 40497804275,
+        "sha": "297543cea22e2d443ccfd01248b687d8e19dda1c",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "offline (ubuntu-24.04)",
+            "status": "completed",
+            "conclusion": "success",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Validate the validator",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "All three Go modules (no skipped tests)",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Race detector on both platforms",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Bounded fuzzing",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/upload-artifact@v4",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ]
+          },
+          {
+            "name": "offline (windows-2022)",
+            "status": "completed",
+            "conclusion": "success",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Validate the validator",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "All three Go modules (no skipped tests)",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Race detector on both platforms",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Bounded fuzzing",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Run actions/upload-artifact@v4",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/setup-go@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Post Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ]
+          },
+          {
+            "name": "mutation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "steps": []
+          }
+        ]
+      }
+    ]
+  },
+  "code_baseline_note": "本证据封存修订仅改文档；运行时代码、测试、清单和工作流与0750635相同。后续文档修订的CI按其准确提交另查。",
+  "completion_scope": "offline-delivery六批全部可离线机制、接入、覆盖及文档；不等于真实规则已收敛或v1.0发布",
+  "live_dependencies_retained": [
+    "F9c合格实际挂单价样本",
+    "lh两手/跨结算具体授权及实际取证",
+    "市场规则5/6/7/12/14/19的剩余判别输入"
+  ]
+}
