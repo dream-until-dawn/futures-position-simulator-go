@@ -8784,5 +8784,181 @@
 		"test": "TestRestingRegistrationQuoteBoundary",
 		"want": "登记行情边界错误",
 		"expect": "red"
+	},
+	{
+		"name": "886 握手同步成功掩盖发送拒绝",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "if sendErr != nil {",
+		"new": "if sendErr != nil && false {",
+		"pkg": "./ctp",
+		"test": "TestHandshakeFailureMatrix",
+		"want": "握手阶段失败后仍推进",
+		"expect": "red"
+	},
+	{
+		"name": "887 通用错误不通知握手",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "if code != 0 {\n\t\th.reply(stage, id, nil, code, true)",
+		"new": "if code != 0 && false {\n\t\th.reply(stage, id, nil, code, true)",
+		"pkg": "./ctp",
+		"test": "TestHandshakeFailureMatrix",
+		"want": "握手错误码丢失",
+		"expect": "red"
+	},
+	{
+		"name": "888 握手接受其他请求编号",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "id != h.id",
+		"new": "false && id != h.id",
+		"pkg": "./ctp",
+		"test": "TestHandshakeFailureMatrix",
+		"want": "握手阶段失败后仍推进",
+		"expect": "red"
+	},
+	{
+		"name": "889 握手接受其他阶段回调",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "stage != h.stage",
+		"new": "false && stage != h.stage",
+		"pkg": "./ctp",
+		"test": "TestHandshakeFailureMatrix",
+		"want": "握手阶段失败后仍推进",
+		"expect": "red"
+	},
+	{
+		"name": "890 非最终成功回调完成握手",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "if code == 0 && !last {",
+		"new": "if code == 0 && !last && false {",
+		"pkg": "./ctp",
+		"test": "TestHandshakeFailureMatrix",
+		"want": "握手阶段失败后仍推进",
+		"expect": "red"
+	},
+	{
+		"name": "891 空握手应答被当成成功",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "h.err = h.failure(\"missing-response\", 0)",
+		"new": "h.result = handshakeLoginResult{}",
+		"pkg": "./ctp",
+		"test": "TestHandshakeFailureMatrix",
+		"want": "握手阶段失败后仍推进",
+		"expect": "red"
+	},
+	{
+		"name": "892 握手下一阶段忽略总截止",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "if !time.Now().Before(h.deadline) {",
+		"new": "if !time.Now().Before(h.deadline) && false {",
+		"pkg": "./ctp",
+		"test": "TestHandshakeSharedDeadline",
+		"want": "共享截止未阻止下一阶段",
+		"expect": "red"
+	},
+	{
+		"name": "893 关闭握手后允许重新准备",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "h.stopped = true",
+		"new": "h.stopped = false",
+		"pkg": "./ctp",
+		"test": "TestHandshakeAbortAndLateReply",
+		"want": "终止后重新准备了握手",
+		"expect": "red"
+	},
+	{
+		"name": "894 断开回调不终止握手",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "hs.abort(\"disconnected\", int32(reason))",
+		"new": "_ = reason",
+		"pkg": "./ctp",
+		"test": "TestHandshakeWindowsWiring",
+		"want": "前置断开未终止握手",
+		"expect": "red"
+	},
+	{
+		"name": "895 结算确认回调丢失请求编号",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "hs.reply(handshakeConfirm, id, payload, handshakeErrorID(info), last)",
+		"new": "hs.reply(handshakeConfirm, 0, payload, handshakeErrorID(info), last)",
+		"pkg": "./ctp",
+		"test": "TestHandshakeWindowsWiring",
+		"want": "握手回调编号或阶段丢失",
+		"expect": "red"
+	},
+	{
+		"name": "896 公开Connect吞掉握手错误",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "login, err := hs.run(start, c.nextRequestID, send)\n\tif err != nil {\n\t\treturn err",
+		"new": "login, err := hs.run(start, c.nextRequestID, send)\n\tif err != nil {\n\t\treturn nil",
+		"pkg": "./ctp",
+		"test": "TestHandshakeClientFailureDoesNotPublish",
+		"want": "Connect失败被当成成功",
+		"expect": "red"
+	},
+	{
+		"name": "897 非法最大报单引用获准连接",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "!ok || n < 0 || n == int64(1<<63-1)",
+		"new": "false && (!ok || n < 0 || n == int64(1<<63-1))",
+		"pkg": "./ctp",
+		"test": "TestHandshakeInvalidOrderRef",
+		"want": "未知最大引用被当成可用会话",
+		"expect": "red"
+	},
+	{
+		"name": "898 握手诊断泄漏原始字段",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "event: event, code: code",
+		"new": "event: event + h.result.maxOrderRef, code: code",
+		"pkg": "./ctp",
+		"test": "TestHandshakeDiagnosticRedaction",
+		"want": "握手诊断泄漏原始业务字段",
+		"expect": "red"
+	},
+	{
+		"name": "899 原生握手发送总返回零",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "return int32(result)",
+		"new": "return int32(result) * 0",
+		"pkg": "./ctp",
+		"test": "TestHandshakeWindowsWiring",
+		"want": "握手原生返回码未传播",
+		"expect": "red"
+	},
+	{
+		"name": "900 截止后迟到成功覆盖超时",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "id != h.id || !time.Now().Before(h.deadline)",
+		"new": "id != h.id || false && !time.Now().Before(h.deadline)",
+		"pkg": "./ctp",
+		"test": "TestHandshakeLateDeadline",
+		"want": "截止后的回调变成成功",
+		"expect": "red"
+	},
+	{
+		"name": "901 握手使用非法请求编号",
+		"dir": "cmd/oracle",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "stage != handshakeFront && id <= 0",
+		"new": "stage != handshakeFront && id <= 0 && false",
+		"pkg": "./ctp",
+		"test": "TestHandshakeFrontAndInvalidLogin",
+		"want": "非法请求编号仍发送握手",
+		"expect": "red"
 	}
 ]

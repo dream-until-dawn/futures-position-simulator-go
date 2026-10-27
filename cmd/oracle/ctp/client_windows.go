@@ -5,6 +5,7 @@ package ctp
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -48,9 +49,14 @@ type Client struct {
 	// 第一次被调用之前就被回收 —— 那种崩溃看起来像 DLL 的问题。
 	keep []any
 
-	tradingDay string
-	loggedIn   chan error
-	q          queryer
+	tradingDay     string
+	hs             *handshakeCollector
+	connectStarted bool
+	setupMu        sync.Mutex
+	// 私有注入仅覆盖握手初始化和发送，不暴露任何报单方法。
+	handshakeStart func(*handshakeCollector)
+	handshakeSend  func(*handshakeCollector, string, int) int32
+	q              queryer
 	// querySend 是只读查询的传输边界；nil 时使用 DLL，测试可注入确定性的回调。
 	// 报单不经过此字段，也不能借此绕过 Insert 的安全阀。
 	querySend      func(string, unsafe.Pointer, int) int32
@@ -80,13 +86,11 @@ func New(cred Credentials, logf func(string, ...any)) *Client {
 	if logf == nil {
 		logf = func(string, ...any) {}
 	}
-	return &Client{cred: cred, logf: logf,
-		loggedIn: make(chan error, 1),
-	}
+	return &Client{cred: cred, logf: logf}
 }
 
 // TradingDay 返回柜台报的交易日；登录之前是空串。
-func (c *Client) TradingDay() string { return c.tradingDay }
+func (c *Client) TradingDay() string { c.mu.Lock(); defer c.mu.Unlock(); return c.tradingDay }
 
 func (c *Client) call(name string, args ...uintptr) uintptr {
 	r, _, _ := c.h.MustFindProc(name).Call(args...)
@@ -125,6 +129,89 @@ func errOf(info *def.CThostFtdcRspInfoField) error {
 // 而拒掉的表现可能是**回调根本不来**，不是返回一个错误 ——
 // 那种「什么都没发生」最难查，所以这里把它做进连接流程，不留给调用方记得。
 func (c *Client) Connect(timeout time.Duration) error {
+	if timeout <= 0 {
+		return fmt.Errorf("连接超时必须为正")
+	}
+	hs := newHandshake(timeout, func(d handshakeDiagnostic) {
+		c.logf("[ctp.handshake] stage=%s request=%d event=%s code=%d elapsed=%s", d.stage, d.id, d.event, d.code, d.elapsed)
+	})
+	c.mu.Lock()
+	if c.closed || c.connectStarted {
+		c.mu.Unlock()
+		return fmt.Errorf("Client已关闭或已尝试Connect，必须新建客户端")
+	}
+	c.connectStarted, c.hs = true, hs
+	c.mu.Unlock()
+	defer hs.seal()
+	// 初始化、发送及Release互斥，Close先唤醒握手，再等待原生调用退出。
+	c.setupMu.Lock()
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	var err error
+	if closed {
+		err = fmt.Errorf("Client已关闭")
+	} else if c.handshakeStart != nil || c.handshakeSend != nil {
+		if c.handshakeStart == nil || c.handshakeSend == nil {
+			err = fmt.Errorf("握手传输注入不完整")
+		}
+	} else {
+		err = c.initializeHandshake(hs)
+	}
+	c.setupMu.Unlock()
+	if err != nil {
+		return err
+	}
+	start := func() {
+		c.setupMu.Lock()
+		defer c.setupMu.Unlock()
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+		if closed {
+			hs.abort("closed", 0)
+			return
+		}
+		if c.handshakeStart != nil {
+			c.handshakeStart(hs)
+		} else {
+			c.call("Init", c.api)
+		}
+	}
+	send := func(stage string, id int) int32 {
+		c.setupMu.Lock()
+		defer c.setupMu.Unlock()
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+		if closed {
+			hs.abort("closed", 0)
+			return 0
+		}
+		if c.handshakeSend != nil {
+			return c.handshakeSend(hs, stage, id)
+		}
+		return c.sendHandshake(stage, id)
+	}
+	login, err := hs.run(start, c.nextRequestID, send)
+	if err != nil {
+		return err
+	}
+	n, _ := parseMaxOrderRef(login.maxOrderRef) // 执行器已拒绝缺失、负数及无法递增的引用。
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return fmt.Errorf("Client已关闭，不发布握手结果")
+	}
+	c.tradingDay, c.frontID, c.sessionID = login.day, login.frontID, login.sessionID
+	atomic.StoreInt64(&c.orderSeq, n)
+	c.mu.Unlock()
+	c.logf("[ctp] 握手完整成功，交易日=%s，最大报单引用=%d", login.day, n)
+	return nil
+}
+
+// initializeHandshake 只接线，不在DLL回调中推进下一阶段。
+func (c *Client) initializeHandshake(hs *handshakeCollector) error {
 	dir, how, err := DLLDir()
 	if err != nil {
 		return err
@@ -157,6 +244,9 @@ func (c *Client) Connect(timeout time.Duration) error {
 	c.h = h
 	c.api = c.call("CreateApi")
 	c.spi = c.call("CreateSpi")
+	if c.api == 0 || c.spi == 0 {
+		return fmt.Errorf("CTP初始化未取得有效API/SPI句柄")
+	}
 	// ⚠️ 这里**不写** uintptr(unsafe.Pointer(c.spi))：c.spi 本来就是 uintptr，
 	// 那个来回转是个恒等式，而 go vet 会（正确地）把它标成 possible misuse。
 	// goctp 原样写着那一句，照抄会把一条本可以干净的 vet 变成有噪声的 vet ——
@@ -164,67 +254,41 @@ func (c *Client) Connect(timeout time.Duration) error {
 	c.call("RegisterSpi", c.api, c.spi)
 
 	c.on("SetOnFrontConnected", func() uintptr {
-		c.logf("[ctp] 前置已连接 —— 发认证")
-		f := def.CThostFtdcReqAuthenticateField{}
-		copy(f.BrokerID[:], c.cred.BrokerID)
-		copy(f.UserID[:], c.cred.UserID)
-		copy(f.AppID[:], c.cred.AppID)
-		copy(f.AuthCode[:], c.cred.AuthCode)
-		c.req("ReqAuthenticate", unsafe.Pointer(&f))
+		hs.reply(handshakeFront, 0, &handshakeLoginResult{}, 0, true)
 		return 0
 	})
-	c.on("SetOnRspAuthenticate", func(_ *def.CThostFtdcRspAuthenticateField,
-		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
-		if err := errOf(info); err != nil {
-			c.finishLogin(fmt.Errorf("认证失败：%w", err))
-			return 0
-		}
-		c.logf("[ctp] 认证通过 —— 发登录")
-		f := def.CThostFtdcReqUserLoginField{}
-		copy(f.BrokerID[:], c.cred.BrokerID)
-		copy(f.UserID[:], c.cred.UserID)
-		copy(f.Password[:], c.cred.Password)
-		c.req("ReqUserLogin", unsafe.Pointer(&f))
+	c.on("SetOnFrontDisconnected", func(reason int) uintptr {
+		hs.abort("disconnected", int32(reason))
 		return 0
 	})
-	c.on("SetOnRspUserLogin", func(lf *def.CThostFtdcRspUserLoginField,
-		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
-		if err := errOf(info); err != nil {
-			c.finishLogin(fmt.Errorf("登录失败：%w", err))
-			return 0
+	c.on("SetOnRspAuthenticate", func(row *def.CThostFtdcRspAuthenticateField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
+		var payload *handshakeLoginResult
+		if row != nil {
+			payload = &handshakeLoginResult{}
 		}
-		c.tradingDay = text(lf.TradingDay[:])
-		c.frontID, c.sessionID = int(lf.FrontID), int(lf.SessionID)
-		// ⚠️ **`MaxOrderRef` 必须读，而漏读它的表现不是报错，是「第二笔单被拒」。**
-		// 登录应答里给的是该投资者**当日已经用掉的最大报单引用**，
-		// 客户端要从它往后续。20260910 夜盘之前这个字段一直没读 —— 见 probes.md §6.8。
-		max := text(lf.MaxOrderRef[:])
-		n, ok := parseMaxOrderRef(max)
-		if !ok {
-			// ⚠️ 解析不了就从 0 起，但要**说出来** —— 一个安静的回退会让
-			// 「柜台给的是个怪值」和「柜台给的是空」长得一模一样。
-			c.logf("[ctp] ⚠️ MaxOrderRef=%q 解析不出数字，报单引用从 0 起算", max)
-			n = 0
-		}
-		atomic.StoreInt64(&c.orderSeq, n)
-		c.logf("[ctp] 登录成功  交易日 %s  MaxOrderRef=%q ⇒ 报单引用从 %d 往后",
-			c.tradingDay, max, n+1)
-		f := def.CThostFtdcSettlementInfoConfirmField{}
-		copy(f.BrokerID[:], c.cred.BrokerID)
-		copy(f.InvestorID[:], c.cred.UserID)
-		copy(f.AccountID[:], c.cred.UserID)
-		c.req("ReqSettlementInfoConfirm", unsafe.Pointer(&f))
+		hs.reply(handshakeAuth, id, payload, handshakeErrorID(info), last)
 		return 0
 	})
-	c.on("SetOnRspSettlementInfoConfirm", func(_ *def.CThostFtdcSettlementInfoConfirmField,
-		info *def.CThostFtdcRspInfoField, _ int, _ bool) uintptr {
-		c.logf("[ctp] 结算单确认完成")
-		c.finishLogin(errOf(info))
+	c.on("SetOnRspUserLogin", func(row *def.CThostFtdcRspUserLoginField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
+		var payload *handshakeLoginResult
+		if row != nil {
+			payload = &handshakeLoginResult{day: text(row.TradingDay[:]), maxOrderRef: text(row.MaxOrderRef[:]), frontID: int(row.FrontID), sessionID: int(row.SessionID)}
+		}
+		hs.reply(handshakeLogin, id, payload, handshakeErrorID(info), last)
+		return 0
+	})
+	c.on("SetOnRspSettlementInfoConfirm", func(row *def.CThostFtdcSettlementInfoConfirmField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
+		var payload *handshakeLoginResult
+		if row != nil {
+			payload = &handshakeLoginResult{}
+		}
+		hs.reply(handshakeConfirm, id, payload, handshakeErrorID(info), last)
 		return 0
 	})
 	c.on("SetOnRspError", func(info *def.CThostFtdcRspInfoField, id int, _ bool) uintptr {
 		if err := errOf(info); err != nil {
-			c.logf("[ctp] ⚠️ OnRspError %v", err)
+			c.logf("[ctp] OnRspError request=%d code=%d", id, info.ErrorID)
+			hs.generalError(id, int32(info.ErrorID))
 			// 通用错误回调也带请求编号；不能只打印后让调用方误读为空成功。
 			c.positionRows.receive(id, nil, err, true)
 			c.orderRows.receive(id, nil, err, true)
@@ -250,24 +314,47 @@ func (c *Client) Connect(timeout time.Duration) error {
 	c.call("RegisterFront", c.api, uintptr(unsafe.Pointer(bs)))
 	c.call("SubscribePrivateTopic", c.api, uintptr(def.THOST_TERT_RESTART))
 	c.call("SubscribePublicTopic", c.api, uintptr(def.THOST_TERT_RESTART))
-	c.call("Init", c.api)
-
-	select {
-	case err := <-c.loggedIn:
-		return err
-	case <-time.After(timeout):
-		// ⚠️ 超时是一个**没有结论**的结果，不是「连不上」——
-		// 两者要人做的事不同（等一会儿再试 / 去查凭据与前置）。
-		return fmt.Errorf("%v 内没有走完 认证→登录→确认结算单，"+
-			"⚠️ 这是**没有结论**，不是「登录失败」：前置 %s", timeout, c.cred.Front)
-	}
+	return nil
 }
 
-func (c *Client) finishLogin(err error) {
-	select {
-	case c.loggedIn <- err:
-	default:
+// handshakeErrorID 不把柜台自由文本带入握手诊断或错误返回。
+func handshakeErrorID(info *def.CThostFtdcRspInfoField) int32 {
+	if info == nil {
+		return 0
 	}
+	return int32(info.ErrorID)
+}
+
+// sendHandshake 使用执行器预先登记的编号，保留原生即时返回码。
+func (c *Client) sendHandshake(stage string, id int) int32 {
+	var name string
+	var pointer unsafe.Pointer
+	switch stage {
+	case handshakeAuth:
+		f := &def.CThostFtdcReqAuthenticateField{}
+		copy(f.BrokerID[:], c.cred.BrokerID)
+		copy(f.UserID[:], c.cred.UserID)
+		copy(f.AppID[:], c.cred.AppID)
+		copy(f.AuthCode[:], c.cred.AuthCode)
+		name, pointer = "ReqAuthenticate", unsafe.Pointer(f)
+	case handshakeLogin:
+		f := &def.CThostFtdcReqUserLoginField{}
+		copy(f.BrokerID[:], c.cred.BrokerID)
+		copy(f.UserID[:], c.cred.UserID)
+		copy(f.Password[:], c.cred.Password)
+		name, pointer = "ReqUserLogin", unsafe.Pointer(f)
+	case handshakeConfirm:
+		f := &def.CThostFtdcSettlementInfoConfirmField{}
+		copy(f.BrokerID[:], c.cred.BrokerID)
+		copy(f.InvestorID[:], c.cred.UserID)
+		copy(f.AccountID[:], c.cred.UserID)
+		name, pointer = "ReqSettlementInfoConfirm", unsafe.Pointer(f)
+	default:
+		return -1
+	}
+	result, _, _ := c.h.MustFindProc(name).Call(c.api, uintptr(pointer), uintptr(id))
+	runtime.KeepAlive(pointer)
+	return int32(result)
 }
 
 // BrokerParams 查经纪商交易参数（simnow_pending#9）。
@@ -290,12 +377,21 @@ func (c *Client) BrokerParams(timeout time.Duration) (*def.CThostFtdcBrokerTradi
 // Close 释放连接。
 func (c *Client) Close() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.closed || c.h == nil {
+	if c.closed {
+		c.mu.Unlock()
 		return
 	}
 	c.closed = true
-	// ⚠️ 不 Release DLL：goctp 的注释记着「函数结束后会释放导致后续函数执行失败」。
-	// 一个进程里只连一次，让它随进程走。
+	hs := c.hs
+	c.mu.Unlock()
+	if hs != nil {
+		hs.abort("closed", 0)
+	}
+	c.setupMu.Lock()
+	defer c.setupMu.Unlock()
+	if c.h == nil || c.api == 0 {
+		return
+	}
+	// DLL不卸载：Release只释放API，沿用原有进程生命周期约束。
 	c.call("Release", c.api)
 }

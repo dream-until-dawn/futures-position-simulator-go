@@ -601,6 +601,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
     常量   Source / GoctpModule / DLLDirEnv / QueryGap
     变量   RequiredDLLs
     类型   Client / Credentials / Fixture / OrderReq / OrderState
+    内部error实现   handshakeFailure.Error（20261027：返回阶段/编号/数值码/耗时；接收类型未导出，不新增可构造的公共类型，按现有方法清单守卫列入）
     字段   Client.Valve
            Credentials.Front / BrokerID / UserID / Password / AppID / AuthCode
            Fixture.Source / TradingDay / CapturedAt / Note / BrokerParams / **Trades**（20260912 新增） /
