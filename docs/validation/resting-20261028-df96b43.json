@@ -1,0 +1,474 @@
+{
+  "format": 1,
+  "source_commit": "df96b439c2f8e850b0e480a82cfdaf017178fdc3",
+  "source_tree": "62632c71a0754b4d7853c050e2288848a744da97",
+  "baseline_main": "9a3b8666200159e0906bf1c6fa952ddd4185527a",
+  "registry_sha256": "db5ff794be54dd788e1717af5893548e6613f9e7c229579482a788a543923746",
+  "report_sha256": "fb865ace84169900e44404e6a6d797998e8f44939ee87effa796194997f5d85b",
+  "summary_sha256": "a5347b53b96592e7e6b99a0b60faaafe5118866303099a20ee2f887269b74136",
+  "counts": {
+    "executed": 816,
+    "expected_red": 807,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "raw_directory": "C:\\Temp\\resting-20261028-full-df96b43",
+  "summary": {
+    "suite": "mutation",
+    "status": "passed",
+    "failure": null,
+    "completed": [
+      {
+        "command": [
+          "go",
+          "run",
+          "./tools/breakcheck",
+          "-out",
+          "C:\\Temp\\resting-20261028-full-df96b43\\mutations.json"
+        ],
+        "cwd": "C:\\Temp\\handshake-validation-65be632",
+        "passed_tests": 0,
+        "skipped": [],
+        "log": "C:\\Temp\\resting-20261028-full-df96b43\\mutation.log",
+        "exit_code": 0
+      }
+    ],
+    "before": {
+      "status": "",
+      "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+      "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+      "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+    },
+    "after": {
+      "status": "",
+      "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+      "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+      "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+    }
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\resting-20261028-full-df96b43\\mutation.log",
+    "sha256": "9e5e29b875d11745622bec66f6d1e1e34c71a369dc0a77d9409ef7bc6b691cc5"
+  },
+  "independent_post_run": {
+    "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3",
+    "porcelain": "",
+    "git_directory": true
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261028-regression-df96b43\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261028-regression-df96b43\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+          "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+          "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+          "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+          "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\resting-20261028-regression-df96b43\\summary.json",
+        "sha256": "fbf115991e4fe995b3489238750a3873ca65a99451a6f2e322af2b22e267f681"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\resting-20261028-regression-df96b43\\oracle.log",
+          "sha256": "4b19392dddb53a9c03238ec2041785d1419f129de016491323c168b9b505c80a"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\resting-20261028-regression-df96b43\\root.log",
+          "sha256": "245034fd1e31c33370bad65a83b0abdb931ae7404d71bd1328c171b03da00c3d"
+        }
+      }
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261028-race-df96b43\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261028-race-df96b43\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+          "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+          "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+          "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+          "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\resting-20261028-race-df96b43\\summary.json",
+        "sha256": "c825d9ed85ad2aa73bda3daf69b8df59800b10eafff0b09a9218449d000cebf0"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\resting-20261028-race-df96b43\\oracle.log",
+          "sha256": "a4b3ac2984a1cfd4b78afdd1ad8bc274db4846ecb6ad6472463d7b226c60b57d"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\resting-20261028-race-df96b43\\root.log",
+          "sha256": "6c575ec468c59b370cc7691cfdde2d474946d3c4162dfb5d3c88f4d3d12ffbd1"
+        }
+      }
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261028-fuzz-df96b43\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261028-fuzz-df96b43\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261028-fuzz-df96b43\\report.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+          "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+          "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "49049e878815ab2028bf0cfaa8ad97ba8eea44e3e534e414a1f39431c566fb23",
+          "index_sha256": "98f6312537c9090996a711f314327de6bd642aa73d7a769bd0701ed1632b4b63",
+          "head": "df96b439c2f8e850b0e480a82cfdaf017178fdc3"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\resting-20261028-fuzz-df96b43\\summary.json",
+        "sha256": "af42bc31618cb052ec8fb32669e2761885d67b77ef8b0b711b9c31f8b7764a5c"
+      },
+      "logs": {
+        "bundle.log": {
+          "path": "C:\\Temp\\resting-20261028-fuzz-df96b43\\bundle.log",
+          "sha256": "1d9a2b644008e1f5caf7ab9cc82e1b1392d8459004fc75f5ac6e0e72f63d7354"
+        },
+        "report.log": {
+          "path": "C:\\Temp\\resting-20261028-fuzz-df96b43\\report.log",
+          "sha256": "b3ae07b1446a50519e5d4a771a93cacbe00a92f618f53f972a2a220ac60835d1"
+        },
+        "state.log": {
+          "path": "C:\\Temp\\resting-20261028-fuzz-df96b43\\state.log",
+          "sha256": "5030ab88394111f363725e1367f87f2c2c8c34704df683f632ac8f27ac4e26fd"
+        }
+      }
+    }
+  },
+  "python_tests": {
+    "passed": 14,
+    "path": "C:\\Temp\\resting-20261028-python-df96b43.log",
+    "sha256": "e8690412b46aec4a691d16b7f6ab567204fbe5dc2d11b92d46fb836de814c027"
+  },
+  "ci": {
+    "run": {
+      "id": 40453180525,
+      "head_sha": "df96b439c2f8e850b0e480a82cfdaf017178fdc3",
+      "head_branch": "codex/resting-20261028",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40453180525"
+    },
+    "jobs": [
+      {
+        "id": 122020382206,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 122020382483,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 122020383243,
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "targeted": {
+    "884": {
+      "path": "C:\\Temp\\resting-20261028-target-884.json",
+      "sha256": "d7e6c34d1296c99a6bf4f252751747ff52e5422dfc97707a7e519e0aa40ee057"
+    },
+    "885": {
+      "path": "C:\\Temp\\resting-20261028-target-885.json",
+      "sha256": "b980d41747d2c3fe8a4277ee8b91f958d6238151b9c13b366d9567545833ab34"
+    }
+  },
+  "registration_red_before_update": {
+    "path": "C:\\Temp\\resting-20261028-registration-before.log",
+    "sha256": "ea26ed1af44982b5882f5af37a87d7b7ef967d26feaa6e2849942075e0974fe4"
+  },
+  "registration_green_after_update": {
+    "path": "C:\\Temp\\resting-20261028-after.log",
+    "sha256": "83792e30b9b096129413a4d761df28dbdee753e620e04df50566921ec8225957"
+  },
+  "build": {
+    "path": "C:\\Temp\\resting-20261028-df96b43.exe",
+    "sha256": "0dd9c045415b5849f6b6c9f4a490d8f996846397169e6451dd32351577be7b55",
+    "revision": "df96b439c2f8e850b0e480a82cfdaf017178fdc3",
+    "modified": false,
+    "build_info": "C:\\Temp\\resting-20261028-df96b43.exe: go1.26.1\n\tpath\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\n\tmod\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\tv0.0.0-20261027050352-df96b439c2f8\t\n\tdep\tgitee.com/haifengat/goctp\tv1.10.17\th1:8G7T10OlcutHgwTZca/Qb+Dk64yORSB62Sj8D/InIcs=\n\tdep\tgithub.com/coder/websocket\tv1.8.15\th1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=\n\tdep\tgithub.com/dream-until-dawn/futures-position-simulator-go\tv0.0.0\n\t=>\t../..\t(devel)\t\n\t\n\tdep\tgithub.com/shopspring/decimal\tv1.4.0\th1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\tDefaultGODEBUG=containermaxprocs=0,cryptocustomrand=1,decoratemappings=0,gotestjsonbuildtext=1,httpcookiemaxnum=0,multipathtcp=0,randseednop=0,rsa1024min=0,tlsmlkem=0,tlssecpmlkem=0,tlssha1=1,updatemaxprocs=0,urlmaxqueryparams=0,urlstrictcolons=0,x509rsacrt=0,x509sha256skid=0,x509usepolicies=0\n\tbuild\tCGO_ENABLED=1\n\tbuild\tCGO_CFLAGS=\n\tbuild\tCGO_CPPFLAGS=\n\tbuild\tCGO_CXXFLAGS=\n\tbuild\tCGO_LDFLAGS=\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=windows\n\tbuild\tGOAMD64=v1\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=df96b439c2f8e850b0e480a82cfdaf017178fdc3\n\tbuild\tvcs.time=2026-10-27T05:03:52Z\n\tbuild\tvcs.modified=false\n"
+  },
+  "actual_binary_outside_date": {
+    "exit_code": 1,
+    "report_created": false,
+    "path": "C:\\Temp\\resting-20261028-binary-reject.log",
+    "sha256": "ba53f488e770241c5460adfa727f7526c04a7eea00dc0d3222632f5e54d18c51"
+  },
+  "approved_read_only_observation": {
+    "approval": "user explicitly approved authentication and read-only queries for broker9999/registered30001/rb2701/lh2701",
+    "safe_summary": {
+      "exit_code": 0,
+      "elapsed_seconds": 11.932,
+      "raw_log_sha256": "1d4bb3d1dc5859a590db837bc2a4ed7b03af64e39b1f2ef7720caf6c13f62754",
+      "handshake_trace": [
+        "[ctp.handshake] stage=front request=0 event=begin code=0 elapsed=42.2689ms",
+        "[ctp.handshake] stage=front request=0 event=finished code=0 elapsed=156.6448ms",
+        "[ctp.handshake] stage=authenticate request=1 event=begin code=0 elapsed=156.6448ms",
+        "[ctp.handshake] stage=authenticate request=1 event=send-return code=0 elapsed=156.6448ms",
+        "[ctp.handshake] stage=front request=0 event=response code=0 elapsed=156.6448ms",
+        "[ctp.handshake] stage=authenticate request=1 event=response code=0 elapsed=208.6825ms",
+        "[ctp.handshake] stage=authenticate request=1 event=finished code=0 elapsed=208.6825ms",
+        "[ctp.handshake] stage=login request=2 event=begin code=0 elapsed=208.6825ms",
+        "[ctp.handshake] stage=login request=2 event=send-return code=0 elapsed=223.6203ms",
+        "[ctp.handshake] stage=login request=2 event=response code=0 elapsed=250.4655ms",
+        "[ctp.handshake] stage=login request=2 event=finished code=0 elapsed=250.4655ms",
+        "[ctp.handshake] stage=settlement-confirm request=3 event=begin code=0 elapsed=250.4655ms",
+        "[ctp.handshake] stage=settlement-confirm request=3 event=send-return code=0 elapsed=250.4655ms",
+        "[ctp.handshake] stage=settlement-confirm request=3 event=response code=0 elapsed=332.1898ms",
+        "[ctp.handshake] stage=settlement-confirm request=3 event=finished code=0 elapsed=332.1898ms"
+      ],
+      "read_only": true,
+      "report": {
+        "ReadOnly": true,
+        "SequentialOnly": true,
+        "TradingDay": "20261027",
+        "ObservedUTC": "2026-10-27T05:10:54.3635316Z",
+        "Symbols": [
+          {
+            "Symbol": "SHFE.rb2701",
+            "Tick": "1",
+            "Multiplier": "10",
+            "Expiry": "20270115",
+            "DeclaredTrading": true,
+            "FeeScope": 51,
+            "OpenMoney": "0.0001",
+            "CloseMoney": "0.0001",
+            "TodayMoney": "0.0001",
+            "OpenVolume": "0",
+            "CloseVolume": "0",
+            "TodayVolume": "0",
+            "QuoteDay": "20261027",
+            "QuoteTime": "11:29:59",
+            "Last": "3026",
+            "Ask": "3027",
+            "Bid": "3026",
+            "Lower": "2888",
+            "Upper": "3193",
+            "QuoteFresh": false
+          },
+          {
+            "Symbol": "DCE.lh2701",
+            "Tick": "5",
+            "Multiplier": "16",
+            "Expiry": "20270126",
+            "DeclaredTrading": true,
+            "FeeScope": 51,
+            "OpenMoney": "0.0002",
+            "CloseMoney": "0.0002",
+            "TodayMoney": "0.0004",
+            "OpenVolume": "0",
+            "CloseVolume": "0",
+            "TodayVolume": "0",
+            "QuoteDay": "20261027",
+            "QuoteTime": "11:29:59",
+            "Last": "9970",
+            "Ask": "9970",
+            "Bid": "9965",
+            "Lower": "9150",
+            "Upper": "10310",
+            "QuoteFresh": false
+          }
+        ],
+        "Held": 0,
+        "UnfinishedOrders": 0,
+        "Trades": 0,
+        "AvailableAtLeast50000": true,
+        "Commission": "0"
+      }
+    },
+    "summary_artifact": {
+      "path": "C:\\Temp\\handshake-readonly-approved-20261027\\safe-summary.json",
+      "sha256": "e70195127eb4f6a588116e899c8cb8d450d3470a9eebe2b4afd022307a1e6ef2"
+    },
+    "build": {
+      "dependency_commit": "df96b439c2f8e850b0e480a82cfdaf017178fdc3",
+      "ctp_production_equal_to": "cd6e6d5982967b234d267fb4730fc392889d1be3",
+      "main_sha256": "74b87509a68266f89261cd604784bfb65ace57d3f875d1a807d2ac5e17f0420f",
+      "binary_sha256": "76e187fd41cd8193954609fa7391ccc7859828cd4362261541d3fd807a45cfaf",
+      "read_only_interface": true,
+      "credentials_in_report": false
+    },
+    "build_artifact": {
+      "path": "C:\\Temp\\handshake-readonly-approved-20261027\\build.json",
+      "sha256": "5683def9a47b5978fc5c11a4bd039ee3d2b3c1c4cdc471272dad29ff0a86e71b"
+    },
+    "main_source": {
+      "path": "C:\\Temp\\handshake-readonly-cd6e6d5\\main.go",
+      "sha256": "74b87509a68266f89261cd604784bfb65ace57d3f875d1a807d2ac5e17f0420f"
+    },
+    "boundaries": [
+      "2026-10-27 snapshot only; recheck on execution day",
+      "midday quotes stale; cannot be order inputs",
+      "no Insert/Cancel methods on diagnostic reader interface",
+      "success does not explain previous timeout or supply a resting-fill-price sample",
+      "trace is emitted outside collector locks and may interleave across threads; stage/request/elapsed identify each event"
+    ]
+  },
+  "registration": {
+    "date": "2026-10-28",
+    "timezone": "Asia/Shanghai",
+    "start_inclusive": "10:55",
+    "start_exclusive": "11:15",
+    "quote_and_cleanup_exclusive": "11:25",
+    "trade_exclusive": "11:20",
+    "broker": "9999",
+    "front": "tcp://182.254.243.31:30001",
+    "symbol": "SHFE.rb2701",
+    "max_exposure": 1,
+    "executed": false,
+    "new_order_approval": "pending",
+    "fresh_site_check": "2026-10-27 approved read-only snapshot passed; 2026-10-28 fresh preflight still required"
+  },
+  "boundaries": [
+    "本机Windows完整816项，托管双平台回归/race/限时fuzz；不声称托管完整破坏通过",
+    "只更新固定登记日，保留原窗口、定价、一手安全阀和停止条件",
+    "新日正反例先在旧程序上实际先红，884/885定向后另起完整清单，未拼接",
+    "获明确批准后完成10月27日13:10只读认证查询；未报撤单、无真实价格报告或F9c证据；执行日仍须重新核对",
+    "日期门槛真实程序反例只使用不存在的env，先于读取凭据和创建报告退出"
+  ]
+}
