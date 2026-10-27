@@ -1,0 +1,400 @@
+{
+  "format": 1,
+  "source_commit": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916",
+  "source_tree": "8779ce48eb25c69c81ee32d6e1d039f3f8b8a984",
+  "baseline_main": "ec4af4f0b4f817ed2bb360b82da73dc07a12f9b7",
+  "registry_sha256": "241375bc0a98ca0cc230ccfe20bb735d1915c7916ba4932112c636a7b44bec29",
+  "report_sha256": "53f311b36c2b3a8e3c44e4187405d86ea21f254f60183b998dbdef93c827598b",
+  "summary_sha256": "b3c0b0bf9d9d7d303c5fb02f70c3a7bffb48a48018774e526cfab867dd624fd6",
+  "counts": {
+    "executed": 847,
+    "expected_red": 838,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "new_breaks": [
+    920,
+    921,
+    922,
+    923,
+    924,
+    925,
+    926,
+    927,
+    928,
+    929,
+    930,
+    931,
+    932,
+    933
+  ],
+  "raw_directory": "C:\\Temp\\offline-o2-full-5c62c9a",
+  "summary": {
+    "suite": "mutation",
+    "status": "passed",
+    "failure": null,
+    "completed": [
+      {
+        "command": [
+          "go",
+          "run",
+          "./tools/breakcheck",
+          "-out",
+          "C:\\Temp\\offline-o2-full-5c62c9a\\mutations.json"
+        ],
+        "cwd": "C:\\Temp\\offline-o2-validation",
+        "passed_tests": 0,
+        "skipped": [],
+        "log": "C:\\Temp\\offline-o2-full-5c62c9a\\mutation.log",
+        "exit_code": 0
+      }
+    ],
+    "before": {
+      "status": "",
+      "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+      "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+      "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+    },
+    "after": {
+      "status": "",
+      "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+      "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+      "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+    }
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\offline-o2-full-5c62c9a\\mutation.log",
+    "sha256": "adafcb53683cd3396bb9ea5a6b478766c663d2216396c1dacb2c163a996de4f1"
+  },
+  "independent_post_run": {
+    "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916",
+    "porcelain": "",
+    "git_directory": true
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o2-checks",
+            "passed_tests": 607,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o2-regression-5c62c9a\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o2-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o2-regression-5c62c9a\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+          "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+          "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+          "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+          "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\offline-o2-regression-5c62c9a\\summary.json",
+        "sha256": "ab4997b95e0dfca1726fd38357537abb0a33ac3d035fccfb0996088672516a76"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\offline-o2-regression-5c62c9a\\oracle.log",
+          "sha256": "b5d5c3d597eb2172367cf37d50a59e74051ebdc4d5e4f3157d2d494df2a7b308"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\offline-o2-regression-5c62c9a\\root.log",
+          "sha256": "b13a25317994369c6a2d7745c9d8c14471035fe76624ca3673c3379d6475da84"
+        }
+      }
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o2-checks",
+            "passed_tests": 607,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o2-race-5c62c9a\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o2-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o2-race-5c62c9a\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+          "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+          "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+          "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+          "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\offline-o2-race-5c62c9a\\summary.json",
+        "sha256": "f7772aab6288acca1882b3fa222df4319c0a65ac2f5c030f2e7f801fc1173091"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\offline-o2-race-5c62c9a\\oracle.log",
+          "sha256": "757ccc82722deb56035c0ceaa4d2ced5bc479650bf10a1e8167abf4114906417"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\offline-o2-race-5c62c9a\\root.log",
+          "sha256": "01b2580a89440eab291e30bea6c98d89fce766ac8f1fccc2269dae2ed66be719"
+        }
+      }
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o2-checks",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o2-fuzz-5c62c9a\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o2-checks\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o2-fuzz-5c62c9a\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o2-checks\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o2-fuzz-5c62c9a\\report.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+          "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+          "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "b294b06f7f872d8d5d80a1e91d6f23c288b3a5ac9a4ed6b7cfadb77609cc1c82",
+          "index_sha256": "1f80a3d9565b6981d2ed560a8b5e37926c538b78a1e52d9e73e2ca7d1cb6d00e",
+          "head": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\offline-o2-fuzz-5c62c9a\\summary.json",
+        "sha256": "943637dd79bccda80005a5a905bbc074ddd95f78ebb67a40d904a6623c3fbc4f"
+      },
+      "logs": {
+        "bundle.log": {
+          "path": "C:\\Temp\\offline-o2-fuzz-5c62c9a\\bundle.log",
+          "sha256": "e31b149417023ed5030d0be46ef55a0c3f2a841114efd9dd1e3498fb0d74f21f"
+        },
+        "report.log": {
+          "path": "C:\\Temp\\offline-o2-fuzz-5c62c9a\\report.log",
+          "sha256": "b072a7dacb37d6e9039944b56e7f0a42bfae0ea8c43fa34deafccec9fda6c3e5"
+        },
+        "state.log": {
+          "path": "C:\\Temp\\offline-o2-fuzz-5c62c9a\\state.log",
+          "sha256": "094020df74ebd05c79d0e4782b934b6c30e899305124d1625bf96613719ef50b"
+        }
+      }
+    }
+  },
+  "python_tests": {
+    "passed": 14,
+    "path": "C:\\Temp\\offline-o2-python-5c62c9a.log",
+    "sha256": "cc2925717f22a8ac87dd96b1e395e6610929cfb8bd87bb1082064f7a0664fb24"
+  },
+  "ci": {
+    "run": {
+      "id": 40467871668,
+      "head_sha": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40467871668"
+    },
+    "jobs": [
+      {
+        "id": 122067560857,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 122067561266,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 122067562456,
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "targeted": {
+    "920": {
+      "path": "C:\\Temp\\offline-o2-target-920-5c62c9a.json",
+      "sha256": "5519efe7ac6be929186b110cfe0d5bc7a2d87c17e9dc41f6c5bfe4fc3b2ada86"
+    },
+    "921": {
+      "path": "C:\\Temp\\offline-o2-target-921-5c62c9a.json",
+      "sha256": "05b9a3ae354c5b5c931d7d40c58e93559fae330305853ce8934067925ba612b3"
+    },
+    "922": {
+      "path": "C:\\Temp\\offline-o2-target-922-5c62c9a.json",
+      "sha256": "ad25cdd936b2f0b023e5ca8062c21031e98463eac247ccfcddf71240f4191240"
+    },
+    "923": {
+      "path": "C:\\Temp\\offline-o2-target-923-5c62c9a.json",
+      "sha256": "793c17337bfd47217cb082b13277c445c96a321fa6a7134ee71b0669668da329"
+    },
+    "924": {
+      "path": "C:\\Temp\\offline-o2-target-924-5c62c9a.json",
+      "sha256": "b934d2d5058bd7fae3224b9a64ef186b0c1cecc688525a871e1b4cde4d062af0"
+    },
+    "925": {
+      "path": "C:\\Temp\\offline-o2-target-925-5c62c9a.json",
+      "sha256": "3b9da169c037dcc8dd75a96a67df84668a3a8c7fa0aca19040be8a8f813a382b"
+    },
+    "926": {
+      "path": "C:\\Temp\\offline-o2-target-926-5c62c9a.json",
+      "sha256": "047c296e5a88b57c99aa926179180c8ce0ba619a5fee8ac82018fee1fc1f79c5"
+    },
+    "927": {
+      "path": "C:\\Temp\\offline-o2-target-927-5c62c9a.json",
+      "sha256": "82222a282267c0bfdbf71e26e5fef384f6a11d9fda9343816222b76345c6e502"
+    },
+    "928": {
+      "path": "C:\\Temp\\offline-o2-target-928-5c62c9a.json",
+      "sha256": "ae57155db497a1f71c25a05642263fe0a7a439a3e03a5cea2982277473e1ef83"
+    },
+    "929": {
+      "path": "C:\\Temp\\offline-o2-target-929-5c62c9a.json",
+      "sha256": "cbf2d84e4322c87624e7a829475960cee61330ae1683e7f2fa4b39b7df050fb1"
+    },
+    "930": {
+      "path": "C:\\Temp\\offline-o2-target-930-5c62c9a.json",
+      "sha256": "801c67fddc50b4c2d2e672186a657b9abd54ad8d1c2f9174c6480c9c526406ba"
+    },
+    "931": {
+      "path": "C:\\Temp\\offline-o2-target-931-5c62c9a.json",
+      "sha256": "1407fc4347546953142bfadb1bdcab220a1124db24f795fe7556ffc49fe77685"
+    },
+    "932": {
+      "path": "C:\\Temp\\offline-o2-target-932-5c62c9a.json",
+      "sha256": "7fa1609955e1ac94930a39c73075401307f293e9432acac41265314ee1b94eda"
+    },
+    "933": {
+      "path": "C:\\Temp\\offline-o2-target-933-5c62c9a.json",
+      "sha256": "9d09a5f39d41ed6e0276add578235c9bd4d823b3805a1db59230ecb65bafacbd"
+    }
+  },
+  "boundaries": [
+    "完整清单为本机Windows独立扫描，托管Windows/Linux仅严格双模块回归/race/限时fuzz，optional mutation skipped",
+    "全部使用合成输入、已有脱敏语料及明确资料来源，不读取交易凭据、不连接柜台、不执行报撤单",
+    "失败轮不拼接补跑；完整报告与源码和还原指纹绑定，未知不当零",
+    "不替换已批准10月28日一手探针的df96b43源码与既有构建，不提升F9c或lh实测等级"
+  ],
+  "business_tests": {
+    "path": "C:\\Temp\\offline-o2-after.log",
+    "sha256": "14fabd7351d80d04960b0370332ac84ce468b7f942c73230b188d20551ce549f"
+  },
+  "independent_manual_check": {
+    "open_margin": "200",
+    "total_commission": "23",
+    "ordering_and_high_water": "explicit 5 accepted orders advance17 to22; empty book preserves17",
+    "unknowns": "no output-derived input seed; fractional/missing/unknown state rejected; second failure returns no partial book"
+  }
+}

@@ -38,7 +38,8 @@ func testCalendar(t *testing.T) *Calendar {
 		Exchange: types.CZCE, Product: "AP",
 		Day: dayReal,
 	}
-	c, err := NewCalendar(days, []SessionTable{rb, cu, ap}, nil)
+	// 此处只验证合成归属算法，显式声明样本范围内没有停夜盘；不冒充真实公告。
+	c, err := NewCalendar(days, []SessionTable{rb, cu, ap}, []int32{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,13 +147,13 @@ func TestNightSuspendedBeforeHoliday(t *testing.T) {
 		Day:   []Session{{MustClockTime(9, 0, 0), MustClockTime(15, 0, 0)}},
 		Night: []Session{{MustClockTime(21, 0, 0), MustClockTime(23, 0, 0)}},
 	}
-	// 不声明停夜盘时：09-30 晚 21:30 会被算成节后的 20261009。
+	// 未声明时必须报资料未知，不能静默归到节后交易日。
 	loose, err := NewCalendar(days, []SessionTable{rb}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d, err := loose.TradingDayAt(at(t, "2026-09-30 21:30:00"), types.SHFE, "rb"); err != nil || d != 20261009 {
-		t.Fatalf("前提变了：不声明停夜盘时应得到 20261009，实为 %d / %v", d, err)
+	if d, err := loose.TradingDayAt(at(t, "2026-09-30 21:30:00"), types.SHFE, "rb"); err == nil || d != 0 || !strings.Contains(err.Error(), "夜盘覆盖未知") {
+		t.Fatalf("未声明夜盘覆盖却得到确定归属，实为 %d / %v", d, err)
 	}
 
 	// 声明之后必须报错 —— ⚠️ 那一夜根本没有盘，答任何交易日都是错的。

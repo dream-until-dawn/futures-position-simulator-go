@@ -1,6 +1,7 @@
 package futsim
 
 import (
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -315,7 +316,12 @@ func TestTagConventionMatchesReality(t *testing.T) {
 		//	本条查的是「约定 ↔ tag 现实」，不查「roadmap 对本条的描述 ↔ 本条」。
 		//
 		// ⇒ 按文档那句**改强**（`≥` 比「不为零」对：每次合并都打，就该数得上）。
-		out, err := exec.Command("git", "rev-list", "--merges", "--count", "main").Output()
+		ref, err := mainHistoryRef(".")
+		if err != nil {
+			t.Fatalf("⚠️ 数不出 main 上的合并数：%v —— **没有结论**", err)
+		}
+		t.Logf("统计本地已存在的主线历史 %s；不是远端即时发布状态", ref)
+		out, err := exec.Command("git", "rev-list", "--merges", "--count", ref).Output()
 		if err != nil {
 			t.Fatalf("⚠️ 数不出 main 上的合并数：%v —— **没有结论**", err)
 		}
@@ -362,6 +368,44 @@ func TestTagConventionMatchesReality(t *testing.T) {
 			t.Fatal(p.Msg)
 		}
 		t.Error(p.Msg)
+	}
+}
+
+// mainHistoryRef 允许分支检出只有origin/main的完整克隆；两者都缺失时明确失败，不把未知当0。
+func mainHistoryRef(directory string) (string, error) {
+	for _, ref := range []string{"refs/heads/main", "refs/remotes/origin/main"} {
+		cmd := exec.Command("git", "rev-parse", "--verify", ref+"^{commit}")
+		cmd.Dir = directory
+		if _, err := cmd.Output(); err == nil {
+			return ref, nil
+		}
+	}
+	return "", fmt.Errorf("没有可验证的main或已抓取的origin/main提交")
+}
+
+// TestMainHistoryRef 用真实临时仓库覆盖缺主线、仅有远程跟踪主线、本地主线优先三种情况。
+func TestMainHistoryRef(t *testing.T) {
+	dir := t.TempDir()
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("临时Git命令失败 args=%v err=%v output=%s", args, err, out)
+		}
+	}
+	git("init", "-b", "validation")
+	git("-c", "user.name=OfflineTest", "-c", "user.email=offline@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath="+filepath.Join(dir, "empty-hooks"), "commit", "--allow-empty", "-m", "seed")
+	if ref, err := mainHistoryRef(dir); err == nil || ref != "" {
+		t.Fatal("缺主线历史被当成可统计")
+	}
+	git("update-ref", "refs/remotes/origin/main", "HEAD")
+	if ref, err := mainHistoryRef(dir); err != nil || ref != "refs/remotes/origin/main" {
+		t.Fatalf("已抓取主线未用于隔离克隆 ref=%s err=%v", ref, err)
+	}
+	git("update-ref", "refs/heads/main", "HEAD")
+	if ref, err := mainHistoryRef(dir); err != nil || ref != "refs/heads/main" {
+		t.Fatalf("本地主线优先级错误 ref=%s err=%v", ref, err)
 	}
 }
 

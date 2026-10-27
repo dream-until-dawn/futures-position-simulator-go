@@ -33,7 +33,7 @@ func submitCalendar(t *testing.T) *refdata.Calendar {
 	rb.Exchange, rb.Product = types.SHFE, "rb"
 	lh, jd := m, m // F13 决策点 1 的报单路径用（合成）
 	lh.Product, jd.Product = "lh", "jd"
-	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m, y, rb, lh, jd}, nil)
+	c, err := refdata.NewCalendar([]types.TradingDay{simDay, simNext}, []refdata.SessionTable{m, y, rb, lh, jd}, []int32{})
 	if err != nil {
 		t.Fatal(err)
 	}

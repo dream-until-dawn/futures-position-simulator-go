@@ -735,9 +735,9 @@ func TestFacadePlaceAgainstCTPFrozen(t *testing.T) {
 		{Start: refdata.MustClockTime(10, 30, 0), End: refdata.MustClockTime(11, 30, 0)},
 		{Start: refdata.MustClockTime(13, 30, 0), End: refdata.MustClockTime(15, 0, 0)},
 	}
-	cal, err := refdata.NewCalendar([]types.TradingDay{day("20260909"), day("20260910"), day("20260911"), day("20260914")},
+	cal, err := refdata.NewCalendarWithNightCoverage([]types.TradingDay{day("20260909"), day("20260910"), day("20260911"), day("20260914")},
 		[]refdata.SessionTable{{Exchange: types.SHFE, Product: "rb", Day: sessions,
-			Night: []refdata.Session{{Start: refdata.MustClockTime(21, 0, 0), End: refdata.MustClockTime(23, 0, 0)}}}}, nil)
+			Night: []refdata.Session{{Start: refdata.MustClockTime(21, 0, 0), End: refdata.MustClockTime(23, 0, 0)}}}}, []refdata.NightCoverage{{Exchange: types.SHFE, First: 20260909, Last: 20260914, Source: "https://www.shfe.com.cn/publicnotice/notice/202512/t20251217_829805.html"}})
 	if err != nil {
 		t.Fatal(err)
 	}

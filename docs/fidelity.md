@@ -31,6 +31,8 @@
 >	`main` 上新增  `replay`、`cmd/replay`、`examples/offline-replay`：
 >	               纯离线重放、自包含包、计算账单、首差异和独立模块接入。
 >
+> `risk`、显式策略风控、按分最小充分补资报告及只读AssessRisk已通过独立验收并合入main。
+>
 > ⚠️ **但仍然没有任何 semver tag。** 没有 tag 时 `go get` 拿的是 `main` 的最新提交，
 > 所以上面这些现在**取得到** —— 而取得到不等于**做了承诺**。
 > 差什么才够打 tag，见本页 `rules_measured` 那几行。

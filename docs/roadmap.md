@@ -5,6 +5,12 @@
 
 2026-10-24 离线交付分期：新增 `replay` 包及 `cmd/replay`，复用现有规则快照与内核State/Restore；包依赖方向为replay → futsim/refdata，不改变内核存档格式。按业务重放、自包含包、首差异与账单、长周期/耐久、独立模块接入推进，设计与验收见 [离线重放](./offline-replay.md)。F9c仍保留实测前置。
 
+2026-10-27 全部离线交付目标：六批范围见 [总设计](./offline-delivery.md)。O1新增主模块导出面 `refdata.NightCoverage`（Exchange、First、Last、Suspended、Source）及 `NewCalendarWithNightCoverage(days []types.TradingDay, tables []SessionTable, coverage []NightCoverage) (*Calendar, error)`。旧NewCalendar签名不改，nil夜盘名单改为未知；查询夜盘时明确失败，日盘照常。非nil空名单表示调用者明确确认本范围内没有停盘；按所分开请用新入口。Snapshot保留未知/已知空/按所覆盖，旧文件缺字段不升格；不抬Simulator.StateFormat，不改探针源码。新增903–917逐项验证这些门槛可被检出，完整验收结果另记。
+
+O2新增主模块导出面 `fixture.FrozenBookWithState(f *Fixture, cfg futsim.Config, seed futsim.State, orderedIDs []string) (*order.Book, bool, error)`，详见 [冻结适配设计](./frozen-state.md)。从独立完整挂单前状态Restore，按显式完整接收顺序逐单PlaceAccepted，再保留有效请求/冻结/序号/高水位返回独立簿；任一失败不返回部分结果。旧FrozenBook保留，不把历史柜台输出倒填成输入；不改StateFormat。合成手算及正反例通过，新增920–933待独立破坏验收。
+
+O3新增risk包：`Policy`（MaxRiskRatio、MinEquity、MinAvailable），`Report`（Account、Policy、RatioExceeded、EquityBelowMinimum、AvailableBelowMinimum、NeedsMarginCall、RequiredDeposit），`Assess(st account.State, policy Policy) (Report, error)`；根门面新增 `(*Simulator).AssessRisk(policy risk.Policy) (risk.Report, error)`。完整账户重算、精确乘法越线、正缺口向上补资，只读不执行强平。设计见 [风控策略](./risk-policy.md)，合成正反例及934–947破坏验收，不当作券商制度实测，不改StateFormat。
+
 ## 分支与发布约定
 
 **2026-10-23 最新约定**：使用者取消单独评审环节，授权实现方在北京时间今日 17:00 前持续推进。设计、实现、合并自行验证后执行；本段覆盖下方历史评审门禁。质量要求和具体交易手数授权继续有效，当前执行状态以 state.md 为准。
