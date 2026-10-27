@@ -7,6 +7,21 @@
 
 当前能力与验收看 [项目状态顶部](docs/state.md)，下方2026-09-09横幅保留当时的依据和边界。新增纯离线工作流入口见 [离线重放设计与操作](docs/offline-replay.md)：已发生的成交或显式手动成交 → 核算 → 跨日账单 → 完整存档，不从K线猜测成交。
 
+**当前分支的离线能力**（准确验收、已合main的提交及仍在开发的批次见[state顶部](docs/state.md)，不以版本号推断API是否存在）：
+
+| 能力 | 公开入口 | 边界 |
+|---|---|---|
+| 完整状态冻结适配 | `fixture.FrozenBookWithState` | 独立前置种子与完整顺序；失败不返回半簿 |
+| 显式风控与补资信号 | `risk.Assess`、`Simulator.AssessRisk` | 阈值必填、补资向上到分、只读；不执行强平 |
+| 保证金台阶/持仓期限 | `lifecycle.NewDailyRules`、`AssessLifecycle`、`SettleWithRules` | 资格、来源、覆盖及期限须明确给出；不内置未知市场制度 |
+| 规则存取与跨日回放 | `DailyRules.Save`、`lifecycle.Load`、`replay.Payload.Lifecycle`、`Settlement.NextRules` | 原始基准和声明一起保存；旧日/版本恢复拒绝；状态与配置原子更新 |
+| 回放风控/生命周期报告 | `Event.RiskPolicy`、`Frame.Risk`、`Frame.Lifecycle` | 有效前缀、独立重算；证据按规则绑定，不冒充柜台原始账单 |
+| K线撮合、真实未收敛规则 | F9c及实际取证清单 | 仍需合格真实样本；不以合成测试补造 |
+
+规则、适配和完整示例见[离线集成设计](docs/offline-integration.md)与[独立模块操作](examples/offline-replay/README.md)。统一验证运行三个Go模块及五项fuzz，命令见[当前开发手册](docs/development.md)。
+
+**历史依据（2026-09-09）**：下方引用块保留当时的语料与判断；“一个口子”和相应覆盖描述是当日结论，当前证据等级、实际差异及未收敛项以state和规则表为准。
+
 > ### 状态（2026-09-09）：核算内核已实现并对拍；**口子只有一个**
 >
 > ~~文档阶段，尚无实现~~ —— 那句横幅从 2026-09-07 挂到 2026-09-09，
@@ -143,7 +158,7 @@ go run ./cmd/replay run -bundle demo-bundle.json -allow-placeholder -out demo-re
 go run ./cmd/replay diff -left demo-report.json -right demo-report.json -out demo-diff.json
 ```
 
-demo只生成完全合成的placeholder规格与合成日历，包含自然周末也不代表真实交易日；省略-allow-placeholder会明确失败。二进制diff退出0表示相同、2表示有差异、1表示输入/执行/落盘失败（go run自身可能把子程序非零码映射成1，应查看其exit status或直接运行编译后的程序）。独立模块接入示例在 [examples/offline-replay](examples/offline-replay/main.go)，可进入该目录执行go run .及go test .。
+demo只生成完全合成的placeholder规格与合成日历，包含自然周末也不代表真实交易日；省略-allow-placeholder会明确失败。二进制diff退出0表示相同、2表示有差异、1表示输入/执行/落盘失败（go run自身可能把子程序非零码映射成1，应查看其exit status或直接运行编译后的程序）。独立模块接入示例在 [examples/offline-replay](examples/offline-replay/main.go)，可进入该目录执行go run .及go test .；生命周期/风控与完整状态冻结示例分别用 `go run . -scenario lifecycle`、`go run . -scenario frozen`，负例和手算见该目录README。
 
 挂单序号与存档示例见 [sequence_example_test.go](order/sequence_example_test.go)，可运行 `go test ./order -run Example -count=1`。`Live` 按 ID 排序；`OrderedIDs` 表示本地成功接收顺序。低层 Book 不执行完整报单校验；一般业务应通过 Simulator 的 Place / PlaceAccepted 接入，并用 State / Restore 保存完整账户。当前 StateFormat 为 5，旧格式明确拒绝且不自动迁移。K线撮合 F9c 仍待真实探针证据，当前 Advance 只守卫并计价。
 
@@ -151,8 +166,7 @@ demo只生成完全合成的placeholder规格与合成日历，包含自然周�
 go env -w GOPROXY=https://goproxy.cn,direct
 ```
 
-⚠️ **本机 `proxy.golang.org` 不可达**（[probes.md](docs/probes.md) §1）。
-不设 `GOPROXY` 会挂在第一个依赖上，而报错信息不会指向真正的原因。
+2026-09-07首次探针记录过本机 `proxy.golang.org` 不可达（[probes.md](docs/probes.md) §1）；这是历史网络观测，不代表当前仍不可达。上面的代理命令保留当时配置示例，不作为通用推荐或离线运行前提；纯离线验证需要预先缓存依赖，本批不修改全局代理配置。
 
 对拍与探针需要柜台凭据：
 

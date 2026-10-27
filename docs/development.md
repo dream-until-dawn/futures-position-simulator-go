@@ -4,11 +4,11 @@
 
 核算内核的当前实现与验收以 [state.md](./state.md) 顶部最新批次为准，历史日期段保留当时判断；路线与设计分别见 [roadmap.md](./roadmap.md)、[design.md](./design.md)。第一批五项见 [offline-work.md](./offline-work.md)，第二批设计与验收见 [offline-resilience.md](./offline-resilience.md)。挂单序号和K线守卫已实现，F9c撮合仍需合格挂单价探针证据；非交易日只补离线能力，不补造规则实测。
 
-离线业务重放、自包含包、计算账单、首差异定位、长周期/存档演练及外部模块接入见 [offline-replay.md](./offline-replay.md)。当前限时fuzz包含State、回放包和探针报告三个目标；历史两目标的记录不改写成当时已有三目标。
+离线业务重放、自包含包、计算账单、首差异定位、长周期/存档演练及外部模块接入见 [offline-replay.md](./offline-replay.md)。当前统一入口分别运行 `root`（仓库根）、`oracle`（cmd/oracle）、`external`（examples/offline-replay）三个Go模块，回归和race都拒绝跳过及零测试。限时fuzz包括 `FuzzStateSequence`、`FuzzDecodeBundle`、`FuzzReadRestingReport`、`FuzzRiskDeposit`、`FuzzLifecycleRules` 五个目标；历史两/三个目标的记录保留当时范围，不改写为当时已有五个。新增规则保存/加载、跨日配置绑定和只读报告见 [O5集成](./offline-integration.md)，完整离线收口判据见 [O6验收](./offline-acceptance.md)。
 
 ## 本地与CI命令
 
-从仓库根运行，Python仅用标准库；Go按两个go.mod的最低要求安装，本批实际测量为Go1.26.1。所有命令返回非零都表示未通过，日志默认进入系统临时目录，也可用--out显式指定。回归与竞态模式拒绝真实跳过和零测试；在已跟踪文件有改动时可做回归，但运行后内容必须与运行前一致。完整破坏扫描要求干净工作区，建议独立工作树。
+从仓库根运行，Python仅用标准库；Go按三个go.mod的最低要求安装，本批实际测量为Go1.26.1。所有命令返回非零都表示未通过，日志默认进入系统临时目录，也可用--out显式指定。回归与竞态模式拒绝真实跳过和零测试；在已跟踪文件有改动时可做回归，但运行后内容必须与运行前一致。完整破坏扫描要求干净工作区，建议独立工作树。
 
 ```text
 python -m unittest discover -s scripts -p "test_*.py"
@@ -21,7 +21,7 @@ python scripts/validate.py --suite bench
 
 性能模式默认5个样本、每样本30次操作，可用--bench-count与--bench-time调整；旧的3次操作基线保留作历史记录。超时/中断可能在破坏施加与还原之间终止，工具不会把残留源码自动覆盖为HEAD；必须保留失败证据、核实差异后恢复，再从干净修订整轮重跑。
 
-race要求可用的C编译器；本机中文工具链目录若触发gcc路径问题，可用仅本进程的ASCII路径与CC/库搜索路径，不能把编译失败或跳过记为竞态通过。CI分别在Windows2022和Ubuntu24.04执行两个模块的回归、竞态及限时模糊测试；完整破坏扫描仅workflow_dispatch显式选择full_mutation时运行，日志作为artifact保留。[工作流](../.github/workflows/offline.yml) 使用[setup-go官方参数](https://github.com/actions/setup-go)，Windows编译器环境依据[官方镜像清单](https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md)，最后仍以实际作业日志为准。非Windows的CTP仅有报错桩，CI不连接柜台、不读取.env。
+race要求可用的C编译器；本机中文工具链目录若触发gcc路径问题，可用仅本进程的ASCII路径与CC/库搜索路径，不能把编译失败或跳过记为竞态通过。CI分别在Windows2022和Ubuntu24.04执行三个模块的回归/竞态及五项限时模糊测试；完整破坏扫描仅workflow_dispatch显式选择full_mutation时运行，日志作为artifact保留。[工作流](../.github/workflows/offline.yml) 使用[setup-go官方参数](https://github.com/actions/setup-go)，Windows编译器环境依据[官方镜像清单](https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md)，最后仍以实际作业日志为准。非Windows的CTP仅有报错桩，CI不连接柜台、不读取.env。
 
 ## 覆盖与证据阅读
 
@@ -36,6 +36,8 @@ race要求可用的C编译器；本机中文工具链目录若触发gcc路径问
 ## 下次实际探针登记检查表
 
 以下是待填写模板，不构成下单许可，也不使旧工具重新可执行。2026-10-23窗口已失效。
+
+2026-10-28这一轮已由使用者明确批准：北京时间10:55–11:15启动、11:25前收尾；仍须执行前重新核验全部现场前提，固定使用已登记df96b43构建，不因后续离线分支变化替换。该批准不延长窗口，不扩大手数、环境或收尾归属；具体方案见 [10月28日登记](./resting-price-20261028.md)。本节后续条目仍是每次新登记的核对项。
 
 2026-10-27的上午一手探针已在登记窗口内尝试，但Connect超时，未进入报单流程；独立后查无持仓、未终结委托和成交。该日启动窗口也已结束，具体批准不能延长到下午或下一日；重新安排仍须重新登记。空报告的离线拒绝与连接未知、后续已知空仓分别保留，见 [当日结果](./resting-price-20261027.md)。
 

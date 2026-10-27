@@ -1,0 +1,3491 @@
+{
+  "format": 1,
+  "source_commit": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+  "source_tree": "4bf1b4a6549ae24e5f938bb9bba4b596ab1ec8ca",
+  "registry_sha256": "cb7962e26cd21f61b5cb21d2bb075e5a3fa93ec387338d687640709d215c56e8",
+  "report_sha256": "243b7d7423a055ae94d94f625f88c6f4010b627c0c31fb228d25d2495f28f2f9",
+  "summary_sha256": "fb16c47627a9535454ed5fd33d7b22e7294f8d755f270de57cd0becab0ef2a97",
+  "counts": {
+    "executed": 918,
+    "expected_red": 909,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+    "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+    "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks",
+            "passed_tests": 744,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-regression-0750635\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-regression-0750635\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-regression-0750635\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-o6-regression-0750635\\summary.json",
+        "sha256": "fdd748b1bada07f674475ecb2e28130fbd7a09dcbb69005e8088c0fcb85e8b7a"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-o6-regression-0750635\\root.log",
+          "sha256": "2cb87ad7a76e9db5b05e43722f24414751bc7eaf22aaa3c0c894dd7faee4d7ab"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-regression-0750635\\oracle.log",
+          "sha256": "ae6d7817c0330ea87cbafcbbab4ce1b1860d343216349452c899a9778276ce12"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-regression-0750635\\external.log",
+          "sha256": "66c4dafbaccc1fd6bd59dd178d3aee84c6daf8b076f5dbd7eb21e1d420614e26"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks",
+            "passed_tests": 744,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-race-0750635\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-race-0750635\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-race-0750635\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-o6-race-0750635\\summary.json",
+        "sha256": "61676756661573c82515695bb39162d258a41fa9f8b049da80eab88ca357c83f"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-o6-race-0750635\\root.log",
+          "sha256": "412ce8f854d3c2059d592cb10e8e4b7b5bdcc3d845ad3d436ab31c12dab4c735"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-race-0750635\\oracle.log",
+          "sha256": "52a5ede8a514c820e4b4d0f434cedf2c2ee315a6a6487dca8f4fded56a7a4730"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-race-0750635\\external.log",
+          "sha256": "65d4059d0382d9add444c86770612ca16f0e4d868175c239b61dc453a4dc384d"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-fuzz-0750635\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-fuzz-0750635\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-fuzz-0750635\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-fuzz-0750635\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-fuzz-0750635\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-o6-fuzz-0750635\\summary.json",
+        "sha256": "e3845b0a3a13e5ab9367eb957a39617b1a08a0af91f62467a594e5e536f58adb"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-o6-fuzz-0750635\\state.log",
+          "sha256": "5d8545e248bd35045f0a1488043096c9dbe2c5f510d55d40052f414c917c4028"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-fuzz-0750635\\bundle.log",
+          "sha256": "8052901a023ec5d8d429c088cd3bf8ff15b1fd98b107df6b3fc2936bd27dfc04"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-fuzz-0750635\\report.log",
+          "sha256": "d65967e9c48abad389b582c37f680fc8804983de149d8b797be8be19343df3db"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-fuzz-0750635\\risk.log",
+          "sha256": "bdef8a3401a1f15812ead833f9b4cda26e54c52bbb70543ee6f20c606a38fcdc"
+        },
+        {
+          "path": "C:\\Temp\\offline-o6-fuzz-0750635\\lifecycle.log",
+          "sha256": "ebab35013022c945d69f1f171964f16208b36f8a3ef0372b34128f41c3f7e5ae"
+        }
+      ]
+    },
+    "bench": {
+      "summary": {
+        "suite": "bench",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-bench=^BenchmarkOffline",
+              "-benchmem",
+              "-count=5",
+              "-benchtime=30x"
+            ],
+            "cwd": "C:\\Temp\\offline-o6-final-checks",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\offline-o6-bench-0750635\\bench.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "c2434fe8610f5c7475106ee78ab354be0bce07583aea26584c1982e579665fdf",
+          "index_sha256": "ab08f1e68858f3dd33a8f54c0cd0c35a7d792c2d5a5f01872c929c74c8c53ab9",
+          "head": "0750635b153b257d0e9a9c865aa8b58cee6968f2"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\offline-o6-bench-0750635\\summary.json",
+        "sha256": "06e9a2b25ee6ca15dd70a584ecf644199c22c089efd9af34217c1b4f8839f16e"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\offline-o6-bench-0750635\\bench.log",
+          "sha256": "b66698c5f1cefd87e452ab3dd80647ba0ecabb92aedc96f331b666f5a34f1106"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "log": {
+      "path": "C:\\Temp\\offline-o6-python-0750635.log",
+      "sha256": "8a17be3fca7e1d727166f8daff9d0551890d879effaf8087af3de6470e3d9893"
+    },
+    "observed_chain_exit_code": 0,
+    "explanation": "同一验证会话逐命令非零即退出；其末尾bench完成并直接观察整链退出0"
+  },
+  "ci": {
+    "id": 40494148460,
+    "sha": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "All three Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "All three Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
+  "new_breaks": [
+    "996 台阶仅比较日号导致跨月提前生效",
+    "997 禁止普通规则显式转为完整日规则",
+    "998 只读风控仅比余额忽略完整存档",
+    "999 普通报告无切换也能改版本",
+    "1000 当前手册漏掉生命周期fuzz目标",
+    "1001 手册同步在空源码上报成功",
+    "1002 投资者枚举数值漂移却不迁移文件",
+    "1003 新可选字段使旧格式包哈希漂移",
+    "1004 风控补资字段JSON键悄悄改名"
+  ],
+  "targeted": [
+    {
+      "name": "111 包树画了一个不存在也没归属的包",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-111-0750635.json",
+        "sha256": "0afc922efbbe381e8c246ce9fc3d088efc5d7e3ce7cfb3a01c95fe9201564355"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-111-0750635.log",
+        "sha256": "261e1a139de2d509d3d82ec9cca2a943feac26df546afb50f587c237fb87a354"
+      }
+    },
+    {
+      "name": "160 包差集算成「全都只在 dev 上」——横幅有无标记都该红（want 认两个漏报分支共用的标签，与仓库状态无关）",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-160-0750635.json",
+        "sha256": "78efcb16f1af9721d770b84d3dcd83be8e68dccc9cd9f1fdd905447f4da39ef8"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-160-0750635.log",
+        "sha256": "901074c77bc8b50b9c2c12a9576af3439b0711dabcaab54e60d57d9ec515fe08"
+      }
+    },
+    {
+      "name": "417 约定改回「每次合并都打」——而仓库里一个 tag 都没有，那条约定是句没人执行的话",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-417-0750635.json",
+        "sha256": "c9d221c0a0d8763980cadd8f1fcb4d6211812381fb9bd4dd8dabb18457694720"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-417-0750635.log",
+        "sha256": "edc53ef8236123d96ed2f85032a943b3fa3d8b310dc5dd0a4d30449c17999af1"
+      }
+    },
+    {
+      "name": "995 日规则原始金额绕过回放预算",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-995-0750635.json",
+        "sha256": "e8820bc15e4e1f18af981d14018cad02c78f801970b6143d76c006406c9271b9"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-995-0750635.log",
+        "sha256": "f8d9981951dc0530b1fc9595cd2f1777de2d87519e93bfbc443a9600098f3f7f"
+      }
+    },
+    {
+      "name": "996 台阶仅比较日号导致跨月提前生效",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-996-0750635.json",
+        "sha256": "052f740d0592c29e00c61330a18544619f6e92dc982fce60ef84b194d86bed46"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-996-0750635.log",
+        "sha256": "a29548e0cf1b45210c125b49971ca389c2c39f2709708dd1d51a76e33c0c3ac6"
+      }
+    },
+    {
+      "name": "997 禁止普通规则显式转为完整日规则",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-997-0750635.json",
+        "sha256": "a79ac401c0c315c87305234076096b1f21af09447b5eb4868d5d2cf76105cf28"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-997-0750635.log",
+        "sha256": "feeacb7efd880e81124689f4b2e6dd71db1bc590348952c2fcf52290c0437d2c"
+      }
+    },
+    {
+      "name": "998 只读风控仅比余额忽略完整存档",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-998-0750635.json",
+        "sha256": "087fa74af2bf03b0b9e98d5bc3ce2559e8ae7ebf9997f95838793743801a134d"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-998-0750635.log",
+        "sha256": "59bacde6a707524e3385e159969d794faa60fe26c72e77689ea023a044d7f1f5"
+      }
+    },
+    {
+      "name": "999 普通报告无切换也能改版本",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-999-0750635.json",
+        "sha256": "1cd51c2477728710d8e58c2b4307d324f88e3c958a7ddfc25c295425417d7f6e"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-999-0750635.log",
+        "sha256": "6e32dbe2bb86f032e01f119aabeff1d92fa84bd36a1be51b764f0fff8c4cb14b"
+      }
+    },
+    {
+      "name": "1000 当前手册漏掉生命周期fuzz目标",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-1000-0750635.json",
+        "sha256": "b80d217188010bb5bbd270bff151bbf0a5aea9eb349996259d8ab2ad6dd44f75"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-1000-0750635.log",
+        "sha256": "0f6f5b83e3a744195890cff5937448b14df384b8328f2e1f2f8f74741418af05"
+      }
+    },
+    {
+      "name": "1001 手册同步在空源码上报成功",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-1001-0750635.json",
+        "sha256": "e581e0977c76fe98c6d2768befb3ace08b303cf45b64344b09131f0a30c058d8"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-1001-0750635.log",
+        "sha256": "85171023d5b06d93cc64c959235d9ed4fb8efed86dc8f06d6e6d3c99668c51b7"
+      }
+    },
+    {
+      "name": "1002 投资者枚举数值漂移却不迁移文件",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-1002-0750635.json",
+        "sha256": "4f5e9acab677f152fb1870c0c792f5268e6343c96643f8bd5a03c105c62951a3"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-1002-0750635.log",
+        "sha256": "6201770c26dd7f177721e8757804c206a72188cc93ca7055fdd3706df224f18d"
+      }
+    },
+    {
+      "name": "1003 新可选字段使旧格式包哈希漂移",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-1003-0750635.json",
+        "sha256": "2ce7a7fbe5c1f30d5033aca61823f841b0494c83179856c20bdc8662c443619b"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-1003-0750635.log",
+        "sha256": "a390e3b7a8635ec5fc4500846ef0a801be69a312faafe7c0f4c4e9dbdefe7d24"
+      }
+    },
+    {
+      "name": "1004 风控补资字段JSON键悄悄改名",
+      "report": {
+        "path": "C:\\Temp\\offline-o6-target-1004-0750635.json",
+        "sha256": "a3909a7d2cd4ee1cb374a9328e6a0a6b49aabfd9615805de7e495b6531697e85"
+      },
+      "log": {
+        "path": "C:\\Temp\\offline-o6-target-1004-0750635.log",
+        "sha256": "ee20f31dae14ebf17e05ad34d981750c5d3389ce75c7585f93c92b205619cce5"
+      }
+    }
+  ],
+  "raw_directory": "C:\\Temp\\offline-o6-full-0750635",
+  "summary": {
+    "path": "C:\\Temp\\offline-o6-full-0750635\\summary.json",
+    "sha256": "fb16c47627a9535454ed5fd33d7b22e7294f8d755f270de57cd0becab0ef2a97"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\offline-o6-full-0750635\\mutation.log",
+    "sha256": "945fca6a355b607c512a42d79f91e448c76f75369f8240bcbd3cf0186d0c737d"
+  },
+  "coverage_audit": {
+    "data": {
+      "source_commit": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+      "scope": "go test ./...默认按被测试包统计语句，不是全调用图/子进程/柜台真实性覆盖；不设百分比完成门槛",
+      "modules": {
+        "root": {
+          "raw": [
+            {
+              "path": "C:\\Temp\\offline-o6-cover-root-0750635.out",
+              "sha256": "8da868bd8517139bbabd0cbd87a50eabbd581fe5f146c8e903e04e8cfce1db40"
+            },
+            {
+              "path": "C:\\Temp\\offline-o6-cover-root-0750635.log",
+              "sha256": "c72cf5fdc21e44072283b2928371abc62c77c4e8277ea501907c002006dce904"
+            },
+            {
+              "path": "C:\\Temp\\offline-o6-cover-root-0750635-functions.log",
+              "sha256": "69dc398188550ee2a30a2dfcd2963126f1b650d8e98888856b1ee01463495a25"
+            }
+          ],
+          "reported_total_percent": 81.5,
+          "zero": [
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/refdata-sync/main.go:31:",
+              "function": "main",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/refdata-sync/main.go:52:",
+              "function": "run",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/refdata-sync/main.go:214:",
+              "function": "dumpRaw",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/refdata-sync/main.go:225:",
+              "function": "fmtSessions",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/refdata-sync/main.go:261:",
+              "function": "dumpSpecs",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/replay/main.go:13:",
+              "function": "main",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/settlement/main.go:26:",
+              "function": "main",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/rebuild.go:238:",
+              "function": "ProductInstruments",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/ctperr/ctperr.go:48:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/ctperr/ctperr.go:64:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/ctperr/ctperr.go:180:",
+              "function": "Error",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/fee/basis.go:41:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/match/match.go:67:",
+              "function": "Error",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/freeze.go:298:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/order.go:251:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/lot.go:56:",
+              "function": "IsHistory",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/lot.go:71:",
+              "function": "Volume",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:405:",
+              "function": "IsFlat",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/restore.go:21:",
+              "function": "Restore",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/calendar.go:232:",
+              "function": "IsTradingDay",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/exchange/shfe.go:298:",
+              "function": "FetchSHFE",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/exchange/shfe.go:337:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/exchange/shfe.go:353:",
+              "function": "ProbeDay",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/refdata.go:73:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/refdata.go:214:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:106:",
+              "function": "main",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:567:",
+              "function": "gitDirty",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:611:",
+              "function": "hasTrackedChanges",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/instrument.go:106:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/instrument.go:109:",
+              "function": "YearMonth",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/order.go:160:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/order.go:170:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/order.go:190:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/trading_day.go:47:",
+              "function": "NewTradingDay",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/trading_day.go:89:",
+              "function": "CalendarDate",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/view/position.go:367:",
+              "function": "Fields",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/view/view.go:58:",
+              "function": "String",
+              "percent": 0.0
+            }
+          ],
+          "partial": [
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/account.go:91:",
+              "function": "checkDay",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/account.go:163:",
+              "function": "Withdraw",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/account.go:252:",
+              "function": "Freeze",
+              "percent": 88.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/account.go:271:",
+              "function": "Unfreeze",
+              "percent": 90.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/account.go:299:",
+              "function": "Settle",
+              "percent": 88.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/account.go:380:",
+              "function": "Check",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/algorithm.go:47:",
+              "function": "String",
+              "percent": 57.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/account/state.go:53:",
+              "function": "Restore",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/advance.go:57:",
+              "function": "Advance",
+              "percent": 93.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/advance.go:90:",
+              "function": "barInOneSession",
+              "percent": 93.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/advance.go:118:",
+              "function": "barWithinLimits",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/replay/main.go:21:",
+              "function": "run",
+              "percent": 77.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/settlement/main.go:40:",
+              "function": "run",
+              "percent": 8.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/settlement/main.go:175:",
+              "function": "probeCalendar",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/conformance.go:75:",
+              "function": "String",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/conformance.go:216:",
+              "function": "classifyOne",
+              "percent": 95.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/conformance.go:273:",
+              "function": "Passed",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/conformance.go:294:",
+              "function": "Summary",
+              "percent": 87.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/carry.go:22:",
+              "function": "Split",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/carry.go:63:",
+              "function": "ReconstructOnFacade",
+              "percent": 80.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/compare.go:28:",
+              "function": "ComparePosition",
+              "percent": 85.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/fixture.go:108:",
+              "function": "Load",
+              "percent": 82.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/fixture.go:238:",
+              "function": "toValue",
+              "percent": 62.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/fixture.go:264:",
+              "function": "toTrade",
+              "percent": 76.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/frozen.go:43:",
+              "function": "FrozenBook",
+              "percent": 91.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/frozen.go:143:",
+              "function": "textOf",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/frozen.go:159:",
+              "function": "dirOffsetOf",
+              "percent": 89.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/frozen.go:198:",
+              "function": "liveOrders",
+              "percent": 91.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/frozen.go:219:",
+              "function": "LiveOrderSymbols",
+              "percent": 92.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/frozen_state.go:16:",
+              "function": "FrozenBookWithState",
+              "percent": 90.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/measured.go:51:",
+              "function": "LoadMeasuredRules",
+              "percent": 95.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/rebuild.go:72:",
+              "function": "Rebuild",
+              "percent": 76.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/rebuild.go:254:",
+              "function": "floatProfitOf",
+              "percent": 81.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/replay.go:33:",
+              "function": "replayedOf",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/replay.go:70:",
+              "function": "ReplayOnFacade",
+              "percent": 90.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/replay.go:109:",
+              "function": "opposite",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/fixture/specs.go:44:",
+              "function": "LoadSpecs",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/conformance/known.go:76:",
+              "function": "Validate",
+              "percent": 88.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/ctperr/ctperr.go:185:",
+              "function": "New",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/fee/basis.go:57:",
+              "function": "BasisPrice",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/fee/fee.go:157:",
+              "function": "CloseTodayPremium",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx/decimalx.go:48:",
+              "function": "String",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/internal/decimalx/decimalx.go:61:",
+              "function": "Apply",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle.go:22:",
+              "function": "lifecycleHoldings",
+              "percent": 86.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle.go:65:",
+              "function": "AssessLifecycle",
+              "percent": 90.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle.go:88:",
+              "function": "SettleWithRules",
+              "percent": 79.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/codec.go:19:",
+              "function": "readJSON",
+              "percent": 88.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/codec.go:89:",
+              "function": "checkJSON",
+              "percent": 90.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/codec.go:156:",
+              "function": "jsonShape",
+              "percent": 95.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/codec.go:194:",
+              "function": "checkBaseMoney",
+              "percent": 96.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/persist.go:33:",
+              "function": "Save",
+              "percent": 84.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/persist.go:63:",
+              "function": "Load",
+              "percent": 88.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/rules.go:15:",
+              "function": "NewDailyRules",
+              "percent": 90.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/lifecycle/rules.go:180:",
+              "function": "CheckOpening",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/margin/margin.go:110:",
+              "function": "String",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/margin/margin.go:151:",
+              "function": "String",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/margin/margin.go:214:",
+              "function": "price",
+              "percent": 81.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/margin/margin.go:306:",
+              "function": "Compute",
+              "percent": 97.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/margin/margin.go:389:",
+              "function": "groupKey",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/margin/margin.go:414:",
+              "function": "CanDiscriminateScope",
+              "percent": 90.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/freeze.go:95:",
+              "function": "FreezeOf",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/freeze.go:189:",
+              "function": "insertAt",
+              "percent": 88.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/freeze.go:242:",
+              "function": "TotalOf",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/freeze.go:260:",
+              "function": "closingSide",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/order.go:118:",
+              "function": "String",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/order.go:274:",
+              "function": "Validate",
+              "percent": 92.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/order.go:400:",
+              "function": "checkClosable",
+              "percent": 96.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/order/order.go:472:",
+              "function": "openVolumeAfter",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/place.go:16:",
+              "function": "Place",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/place.go:52:",
+              "function": "PlaceAccepted",
+              "percent": 89.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/place.go:97:",
+              "function": "Cancel",
+              "percent": 63.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/place.go:119:",
+              "function": "Fill",
+              "percent": 65.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/pnl/pnl.go:72:",
+              "function": "String",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/pnl/pnl.go:99:",
+              "function": "pick",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/pnl/pnl.go:189:",
+              "function": "PositionProfit",
+              "percent": 84.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/pnl/pnl.go:215:",
+              "function": "FloatProfit",
+              "percent": 84.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/lot.go:102:",
+              "function": "weightedAvg",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/lot.go:132:",
+              "function": "Append",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:54:",
+              "function": "String",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:108:",
+              "function": "New",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:133:",
+              "function": "Side",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:144:",
+              "function": "checkDay",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:157:",
+              "function": "Open",
+              "percent": 72.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:206:",
+              "function": "Close",
+              "percent": 90.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:294:",
+              "function": "consumeByOrder",
+              "percent": 84.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:335:",
+              "function": "Settle",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:387:",
+              "function": "VolumeToday",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/position/position.go:396:",
+              "function": "VolumeHistory",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/calendar.go:45:",
+              "function": "MustClockTime",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/calendar.go:89:",
+              "function": "Contains",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/calendar.go:100:",
+              "function": "Validate",
+              "percent": 60.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/calendar.go:123:",
+              "function": "Validate",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/calendar.go:182:",
+              "function": "NewCalendar",
+              "percent": 89.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/calendar.go:294:",
+              "function": "SessionAt",
+              "percent": 93.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/exchange/shfe.go:144:",
+              "function": "ParseSHFE",
+              "percent": 87.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/exchange/shfe.go:265:",
+              "function": "numText",
+              "percent": 91.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/live/convert.go:24:",
+              "function": "fromFloat",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/live/convert.go:78:",
+              "function": "ToInstrument",
+              "percent": 64.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/live/convert.go:114:",
+              "function": "ToSessionTable",
+              "percent": 68.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/live/convert.go:226:",
+              "function": "SessionTablesOf",
+              "percent": 97.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/live/convert.go:280:",
+              "function": "sameTable",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/live/live.go:68:",
+              "function": "Validate",
+              "percent": 56.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/live/live.go:109:",
+              "function": "FetchSymbols",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/night_coverage.go:22:",
+              "function": "NewCalendarWithNightCoverage",
+              "percent": 89.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/persist.go:163:",
+              "function": "Save",
+              "percent": 91.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/persist.go:278:",
+              "function": "parseHedge",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/persist.go:304:",
+              "function": "Load",
+              "percent": 85.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/persist.go:456:",
+              "function": "parseClock",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/refdata.go:139:",
+              "function": "Validate",
+              "percent": 86.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/refdata.go:245:",
+              "function": "PriceLimits",
+              "percent": 93.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/refdata/refdata.go:404:",
+              "function": "AddCommissionRates",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/bundle.go:28:",
+              "function": "Encode",
+              "percent": 69.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/bundle.go:49:",
+              "function": "Decode",
+              "percent": 88.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/bundle.go:78:",
+              "function": "loadRules",
+              "percent": 88.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/codec.go:24:",
+              "function": "strictDecodeSized",
+              "percent": 93.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/codec.go:48:",
+              "function": "readValue",
+              "percent": 90.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/codec.go:97:",
+              "function": "checkShape",
+              "percent": 89.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/demo.go:22:",
+              "function": "demoDays",
+              "percent": 92.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/diff.go:37:",
+              "function": "firstDifference",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/diff.go:95:",
+              "function": "Compare",
+              "percent": 76.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/engine.go:14:",
+              "function": "configuration",
+              "percent": 89.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/engine.go:63:",
+              "function": "runBounded",
+              "percent": 89.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/engine.go:193:",
+              "function": "apply",
+              "percent": 85.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/lifecycle.go:26:",
+              "function": "checkDailyAmounts",
+              "percent": 88.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/lifecycle.go:68:",
+              "function": "prepareRules",
+              "percent": 93.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/lifecycle.go:94:",
+              "function": "boundRules",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/lifecycle.go:109:",
+              "function": "lifecycleResult",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/lifecycle.go:121:",
+              "function": "validateRuleReports",
+              "percent": 78.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/report.go:14:",
+              "function": "ReadReport",
+              "percent": 71.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/replay/report.go:28:",
+              "function": "validateReport",
+              "percent": 74.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/settle.go:24:",
+              "function": "Settle",
+              "percent": 86.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/simulator.go:78:",
+              "function": "New",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/simulator.go:102:",
+              "function": "usable",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/simulator.go:155:",
+              "function": "sortedKeys",
+              "percent": 88.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/state.go:85:",
+              "function": "State",
+              "percent": 86.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/state.go:136:",
+              "function": "Restore",
+              "percent": 84.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/state.go:306:",
+              "function": "checkOrderFreeze",
+              "percent": 86.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/submit.go:32:",
+              "function": "FreezeOf",
+              "percent": 84.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/submit.go:202:",
+              "function": "Submit",
+              "percent": 76.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:324:",
+              "function": "validate",
+              "percent": 72.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:425:",
+              "function": "withBreakFiles",
+              "percent": 93.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:492:",
+              "function": "classify",
+              "percent": 90.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:589:",
+              "function": "gitDirtyIn",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:599:",
+              "function": "tail",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:628:",
+              "function": "anchorProblem",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/tools/breakcheck/breakcheck.go:649:",
+              "function": "adaptEOL",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/trade.go:31:",
+              "function": "value",
+              "percent": 86.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/trade.go:94:",
+              "function": "Mark",
+              "percent": 91.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/trade.go:132:",
+              "function": "ApplyTrade",
+              "percent": 86.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/trade.go:281:",
+              "function": "commission",
+              "percent": 81.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/trade.go:348:",
+              "function": "sameAsWholeTrade",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/trade.go:380:",
+              "function": "chargeUndated",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/trade.go:413:",
+              "function": "bookQuota",
+              "percent": 93.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/instrument.go:230:",
+              "function": "ParseSymbol",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/types/trading_day.go:54:",
+              "function": "Validate",
+              "percent": 76.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/view/position.go:76:",
+              "function": "statsOf",
+              "percent": 76.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/view/position.go:129:",
+              "function": "total",
+              "percent": 88.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/view/position.go:149:",
+              "function": "PositionOf",
+              "percent": 96.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/view/view.go:106:",
+              "function": "Validate",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/view/view.go:157:",
+              "function": "AccountOf",
+              "percent": 90.9
+            }
+          ]
+        },
+        "oracle": {
+          "raw": [
+            {
+              "path": "C:\\Temp\\offline-o6-cover-oracle-0750635.out",
+              "sha256": "27aea223349a9c3ca382b7cf8ad8f90753277ebf47022e2cd899d46c4d455b39"
+            },
+            {
+              "path": "C:\\Temp\\offline-o6-cover-oracle-0750635.log",
+              "sha256": "9fdbd73a2da429297b0625ac50e5f48b3430d0b1dfc66ceb5f547bea0fb486b2"
+            },
+            {
+              "path": "C:\\Temp\\offline-o6-cover-oracle-0750635-functions.log",
+              "sha256": "7410a9bf5dcfcb3a511b238d49d996e79a60e2d5935fff90c2ac7f3879020b9f"
+            }
+          ],
+          "reported_total_percent": 26.3,
+          "zero": [
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/cancel.go:27:",
+              "function": "runCTPCancel",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/capture.go:28:",
+              "function": "captureWithQuote",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee.go:251:",
+              "function": "closeFeeRates",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quota.go:209:",
+              "function": "tradesExpected",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quota.go:211:",
+              "function": "note",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quota.go:228:",
+              "function": "runCTPQuota",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:135:",
+              "function": "tradesExpected",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:137:",
+              "function": "note",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:191:",
+              "function": "moneyRates",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:335:",
+              "function": "closeShortTodayOnly",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:360:",
+              "function": "runCTPQuotaExt",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closeorder.go:137:",
+              "function": "closeOrderDescribe",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closeorder.go:191:",
+              "function": "note",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closeorder.go:396:",
+              "function": "closeTodayOnly",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closeorder.go:480:",
+              "function": "closeOrderCleanup",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closeorder.go:500:",
+              "function": "runCZCEX0",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance/live.go:190:",
+              "function": "String",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance/live.go:231:",
+              "function": "MarshalFixture",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/control.go:76:",
+              "function": "runControl",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/control.go:91:",
+              "function": "runControlDeclaring",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:95:",
+              "function": "call",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:101:",
+              "function": "req",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:114:",
+              "function": "on",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:119:",
+              "function": "errOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:214:",
+              "function": "initializeHandshake",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:329:",
+              "function": "sendHandshake",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/dump_windows.go:34:",
+              "function": "AttachQuote",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/dump_windows.go:51:",
+              "function": "Capture",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/dump_windows.go:126:",
+              "function": "AttachTrades",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/marketdata_windows.go:41:",
+              "function": "registerMarketDataCallback",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/order.go:63:",
+              "function": "Alive",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:68:",
+              "function": "Positions",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:95:",
+              "function": "LiveOrders",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:110:",
+              "function": "UnfinishedOrders",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:118:",
+              "function": "queryOrders",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:185:",
+              "function": "Trades",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:209:",
+              "function": "SettlementText",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:232:",
+              "function": "indexZero",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:272:",
+              "function": "registerQueryCallbacks",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/sanitize.go:100:",
+              "function": "Text",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/sanitize.go:184:",
+              "function": "Write",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/send_windows.go:38:",
+              "function": "send",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/send_windows.go:105:",
+              "function": "Insert",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/send_windows.go:139:",
+              "function": "Order",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/send_windows.go:142:",
+              "function": "Cancel",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/send_windows.go:171:",
+              "function": "CancelByOrder",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/send_windows.go:193:",
+              "function": "registerOrderCallbacks",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/send_windows.go:305:",
+              "function": "settled",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/symbol.go:32:",
+              "function": "FarPrice",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp_dup.go:57:",
+              "function": "runCTPDup",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/fee.go:28:",
+              "function": "runCTPFee",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/feeprobe.go:169:",
+              "function": "writeFeeDeltas",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/feeprobe.go:192:",
+              "function": "note",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/feeprobe.go:197:",
+              "function": "tradesExpected",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/insertcancel.go:59:",
+              "function": "sweepLive",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/insertcancel.go:88:",
+              "function": "insertOrCancel",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/insertcancel.go:104:",
+              "function": "cancelAndConfirm",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/inst.go:21:",
+              "function": "runCTPInst",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:100:",
+              "function": "New",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:117:",
+              "function": "AuthID",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:120:",
+              "function": "Auth",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:186:",
+              "function": "headers",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:194:",
+              "function": "getJSON",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:213:",
+              "function": "TradeURL",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:231:",
+              "function": "QuoteURL",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:255:",
+              "function": "dial",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:276:",
+              "function": "ConnectTrade",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:299:",
+              "function": "ConnectQuote",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:314:",
+              "function": "send",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:326:",
+              "function": "baseCtx",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:333:",
+              "function": "peek",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:337:",
+              "function": "readLoop",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:378:",
+              "function": "collectNotifyLocked",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:398:",
+              "function": "Notifies",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:407:",
+              "function": "MergePatch",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:431:",
+              "function": "TradeSnapshot",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:438:",
+              "function": "QuoteSnapshot",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:444:",
+              "function": "deepCopy",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:457:",
+              "function": "Dig",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:470:",
+              "function": "Account",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:476:",
+              "function": "Positions",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:482:",
+              "function": "Orders",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:488:",
+              "function": "Trades",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:497:",
+              "function": "TradingDay",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:503:",
+              "function": "WaitTrade",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:506:",
+              "function": "WaitQuote",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:508:",
+              "function": "wait",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:521:",
+              "function": "WaitUntil",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:535:",
+              "function": "Close",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/client.go:588:",
+              "function": "logNotifyOnce",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:116:",
+              "function": "InsertOrder",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:143:",
+              "function": "CancelOrder",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:160:",
+              "function": "OrderOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:178:",
+              "function": "WaitOrderFinished",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:192:",
+              "function": "PositionOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:201:",
+              "function": "Num",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:214:",
+              "function": "MustNum",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/order.go:225:",
+              "function": "OpenLots",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/quote.go:49:",
+              "function": "Valid",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/quote.go:54:",
+              "function": "HasSpec",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/quote.go:57:",
+              "function": "SubscribeQuotes",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/quote.go:68:",
+              "function": "QuoteOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/quote.go:93:",
+              "function": "WaitQuoteReady",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/quote.go:115:",
+              "function": "AggressivePrice",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/quote.go:126:",
+              "function": "FarPrice",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/sanitize.go:516:",
+              "function": "WhitelistReport",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/sanitize.go:525:",
+              "function": "writeTable",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:37:",
+              "function": "usage",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:125:",
+              "function": "main",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:274:",
+              "function": "runProbe",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:327:",
+              "function": "runConformance",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:440:",
+              "function": "loadCarry",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:587:",
+              "function": "marginPriceTypeName",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:601:",
+              "function": "algorithmName",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:615:",
+              "function": "includeCloseProfitName",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:680:",
+              "function": "ctpValveExempt",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:1007:",
+              "function": "runCTPFlatten",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:1154:",
+              "function": "runCTPHold",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/pairs.go:85:",
+              "function": "runCTPPairs",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/priority.go:123:",
+              "function": "runCTPPriority",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/priority.go:242:",
+              "function": "ctpCodeOfObservation",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/env.go:57:",
+              "function": "Secrets",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/env.go:69:",
+              "function": "LoadEnv",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_avg_price.go:31:",
+              "function": "expAvgPrice",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_avg_price.go:161:",
+              "function": "avgSnapshot",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_avg_price.go:178:",
+              "function": "openPricesOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_avg_price.go:204:",
+              "function": "fillPriceOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_avg_price.go:225:",
+              "function": "fmtMaybe",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_baseline.go:39:",
+              "function": "expBaselineFull",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_baseline.go:136:",
+              "function": "expYdVsHis",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_close_order.go:43:",
+              "function": "expCloseOrder",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_close_profit_sign.go:32:",
+              "function": "expCloseProfitSign",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee.go:50:",
+              "function": "expFeeRates",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee.go:148:",
+              "function": "reportMarginRate",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee.go:186:",
+              "function": "minNotional",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee.go:196:",
+              "function": "maxNotional",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee.go:210:",
+              "function": "feeSampleDiscriminating",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee.go:218:",
+              "function": "nearlyEqual",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee.go:229:",
+              "function": "reportFeeTier",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_base.go:30:",
+              "function": "expFeeBase",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_close_history.go:33:",
+              "function": "expFeeCloseHistory",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_close_history.go:171:",
+              "function": "openFeeOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_close_history.go:204:",
+              "function": "historyLegWithSpare",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_form.go:29:",
+              "function": "expFeeForm",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_form.go:103:",
+              "function": "reportFeeForm",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_predict.go:30:",
+              "function": "expFeePredict",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_predict.go:234:",
+              "function": "numOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_predict.go:249:",
+              "function": "instOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_fee_predict.go:254:",
+              "function": "sortedProducts",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_frozen.go:28:",
+              "function": "expFrozen",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_max_margin_lock.go:17:",
+              "function": "checkLockSample",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_max_margin_lock.go:43:",
+              "function": "expMaxMarginLock",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_max_margin_side.go:71:",
+              "function": "expMaxMarginSide",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_max_margin_side.go:237:",
+              "function": "abs",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_overnight.go:67:",
+              "function": "expOvernightSetup",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_overnight.go:134:",
+              "function": "requireYesterday",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_position_date_type.go:37:",
+              "function": "expPositionDateType",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_position_frozen.go:48:",
+              "function": "expPositionFrozen",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_position_frozen.go:385:",
+              "function": "waitFrozen",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject.go:71:",
+              "function": "expRejectCode",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject_priority.go:207:",
+              "function": "expRejectPriority",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject_priority.go:430:",
+              "function": "symbolLots",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject_priority.go:446:",
+              "function": "tickFromSpecs",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject_tick_limit.go:30:",
+              "function": "expRejectTickVsLimit",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject_tick_limit.go:172:",
+              "function": "fracLabel",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject_tradable.go:33:",
+              "function": "expRejectTradable",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_session.go:46:",
+              "function": "expSessionCheck",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_session.go:199:",
+              "function": "latestSameDayBaseline",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_settle.go:53:",
+              "function": "latestBaselineBefore",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_settle.go:99:",
+              "function": "expSettleCheck",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_settle_watch.go:46:",
+              "function": "expSettleWatch",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_shape.go:30:",
+              "function": "expShapeBothSides",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_shape.go:111:",
+              "function": "shapePrecondition",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_shape.go:135:",
+              "function": "shapeReached",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:61:",
+              "function": "openOneLot",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:114:",
+              "function": "observe",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:157:",
+              "function": "expMarginPrice",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:222:",
+              "function": "reportMarginVerdict",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:277:",
+              "function": "flatten",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:364:",
+              "function": "expFlattenAll",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:452:",
+              "function": "flattenAny",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:44:",
+              "function": "Run",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:133:",
+              "function": "expStatus",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:250:",
+              "function": "dump",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:332:",
+              "function": "dumpNotifyLocal",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:381:",
+              "function": "sortedKeys",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:402:",
+              "function": "freeFixturePath",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:433:",
+              "function": "observedQuotes",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:453:",
+              "function": "observedSymbols",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:496:",
+              "function": "LiveFixtureJSON",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:556:",
+              "function": "connect",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:583:",
+              "function": "fillQuotes",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/runner.go:617:",
+              "function": "WriteFixtureJSON",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/profit.go:26:",
+              "function": "runCTPProfit",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/profit.go:177:",
+              "function": "flattenNow",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/rates.go:46:",
+              "function": "runCTPRates",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/reject.go:97:",
+              "function": "runCTPReject",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_order.go:25:",
+              "function": "Now",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_order.go:26:",
+              "function": "Sleep",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_check.go:46:",
+              "function": "runRestingPriceCheck",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/rounding_preflight.go:172:",
+              "function": "runCTPRoundingPreflight",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/settleresidual.go:140:",
+              "function": "runSettleResidual",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/settletrades.go:181:",
+              "function": "settlementSummary",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/settletrades.go:203:",
+              "function": "runCTPSettleTrades",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:447:",
+              "function": "dumpSlices",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:523:",
+              "function": "hitMark",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:556:",
+              "function": "openOneLot",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:596:",
+              "function": "openOneLotResting",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:641:",
+              "function": "openCostOf",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:662:",
+              "function": "filledPrice",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:680:",
+              "function": "flattenOneLongToday",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:710:",
+              "function": "flattenLongToday",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ticksource.go:47:",
+              "function": "resolveTick",
+              "percent": 0.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ticksource.go:70:",
+              "function": "nowClock",
+              "percent": 0.0
+            }
+          ],
+          "partial": [
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee.go:103:",
+              "function": "runCTPCloseFee",
+              "percent": 13.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quota.go:179:",
+              "function": "quotaRegistered",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quota.go:362:",
+              "function": "closeOrderPieceVerdict",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:30:",
+              "function": "String",
+              "percent": 28.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:58:",
+              "function": "tiers",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:204:",
+              "function": "judgeMoneyRates",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closefee_quotaext.go:755:",
+              "function": "uniqueRoundingTrade",
+              "percent": 94.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closeorder.go:111:",
+              "function": "closeOrderVerdict",
+              "percent": 91.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/closeorder.go:222:",
+              "function": "runCTPCloseOrder",
+              "percent": 11.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance/live.go:89:",
+              "function": "Compare",
+              "percent": 69.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance/live.go:237:",
+              "function": "hasAnyVolume",
+              "percent": 71.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance/live.go:258:",
+              "function": "compareOne",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/conformance/rules.go:22:",
+              "function": "BuildSpecs",
+              "percent": 93.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:131:",
+              "function": "Connect",
+              "percent": 80.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/client_windows.go:378:",
+              "function": "Close",
+              "percent": 78.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/dllpath.go:52:",
+              "function": "DLLDir",
+              "percent": 36.4
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/dllpath.go:86:",
+              "function": "CheckDLLs",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/handshake.go:77:",
+              "function": "prepare",
+              "percent": 95.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/orderbook.go:14:",
+              "function": "put",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/orderbook.go:38:",
+              "function": "get",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/position_rows.go:6:",
+              "function": "positionRowsByKey",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_batch.go:49:",
+              "function": "wait",
+              "percent": 87.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:37:",
+              "function": "wait",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/query_windows.go:308:",
+              "function": "queryRows",
+              "percent": 77.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/sanitize.go:66:",
+              "function": "sanitizeStruct",
+              "percent": 94.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/sanitize.go:102:",
+              "function": "text",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/ctp/symbol.go:14:",
+              "function": "SplitSymbol",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/dumpdir.go:54:",
+              "function": "ctpDumpDir",
+              "percent": 77.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/dumpdir.go:70:",
+              "function": "repoRoot",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/feeprobe.go:49:",
+              "function": "runCTPFeeProbe",
+              "percent": 15.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/sanitize.go:325:",
+              "function": "Sanitize",
+              "percent": 93.9
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/kq/sanitize.go:486:",
+              "function": "Scrubbed",
+              "percent": 81.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:504:",
+              "function": "runCTPParams",
+              "percent": 31.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:702:",
+              "function": "runCTPOrder",
+              "percent": 14.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/main.go:878:",
+              "function": "runCTPRoundTrip",
+              "percent": 14.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/priority.go:71:",
+              "function": "caseReason",
+              "percent": 80.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_max_margin_side.go:34:",
+              "function": "checkSpreadSample",
+              "percent": 94.1
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_position_frozen.go:310:",
+              "function": "hitsZeroObserved",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_position_frozen.go:391:",
+              "function": "waitFrozenClock",
+              "percent": 95.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_reject_priority.go:135:",
+              "function": "applyAll",
+              "percent": 63.6
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/exp_settle_watch.go:197:",
+              "function": "numOrDash",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/probe/experiments.go:50:",
+              "function": "tradingDay",
+              "percent": 66.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/rates.go:170:",
+              "function": "rateDigits",
+              "percent": 87.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/rejectcorpus.go:154:",
+              "function": "writeRejectCorpus",
+              "percent": 70.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_order.go:38:",
+              "function": "waitOwnedOrder",
+              "percent": 93.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_check.go:20:",
+              "function": "collectRestingPricePreview",
+              "percent": 64.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_probe.go:52:",
+              "function": "checkRestingEmpty",
+              "percent": 64.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_probe.go:93:",
+              "function": "finishRestingExposure",
+              "percent": 75.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_probe.go:171:",
+              "function": "executeRestingPrice",
+              "percent": 90.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_probe.go:302:",
+              "function": "runCTPRestingPrice",
+              "percent": 24.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_rules.go:21:",
+              "function": "validateRestingQuote",
+              "percent": 90.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_price_rules.go:68:",
+              "function": "restingPriceVerdict",
+              "percent": 85.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_trade_evidence.go:20:",
+              "function": "copyOwnedTradeEvidence",
+              "percent": 83.3
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_trade_evidence.go:32:",
+              "function": "verifyRestingReport",
+              "percent": 75.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_verify.go:13:",
+              "function": "readRestingReport",
+              "percent": 92.7
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/resting_verify.go:72:",
+              "function": "runRestingVerify",
+              "percent": 90.5
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/rounding_preflight.go:47:",
+              "function": "collectRoundingPreflight",
+              "percent": 87.2
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/safety/safety.go:54:",
+              "function": "String",
+              "percent": 50.0
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/settleresidual.go:76:",
+              "function": "settleInputFrom",
+              "percent": 87.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/settletrades.go:103:",
+              "function": "tradeRows",
+              "percent": 89.8
+            },
+            {
+              "location": "github.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle/slice.go:47:",
+              "function": "runCTPSlices",
+              "percent": 11.1
+            }
+          ]
+        },
+        "external": {
+          "raw": [
+            {
+              "path": "C:\\Temp\\offline-o6-cover-external-0750635.out",
+              "sha256": "4753d5f4ca952ebee86e40391f37fb8f04c0a67f8e2bfe981cb8d7847838abe6"
+            },
+            {
+              "path": "C:\\Temp\\offline-o6-cover-external-0750635.log",
+              "sha256": "5bfe93717de8eb5b8d942816023d2b0c8010e776284f4e04db1fc461e192b83f"
+            },
+            {
+              "path": "C:\\Temp\\offline-o6-cover-external-0750635-functions.log",
+              "sha256": "79437013ddaeebefa6c30877d17e61e85e09cf601e4a10811d0abf8d3078ef48"
+            }
+          ],
+          "reported_total_percent": 63.6,
+          "zero": [
+            {
+              "location": "example.org/futures-offline-replay/main.go:32:",
+              "function": "main",
+              "percent": 0.0
+            }
+          ],
+          "partial": [
+            {
+              "location": "example.org/futures-offline-replay/lifecycle.go:23:",
+              "function": "exampleConfiguration",
+              "percent": 81.2
+            },
+            {
+              "location": "example.org/futures-offline-replay/lifecycle.go:52:",
+              "function": "demonstrateLifecycle",
+              "percent": 74.4
+            },
+            {
+              "location": "example.org/futures-offline-replay/lifecycle.go:113:",
+              "function": "demonstrateFrozen",
+              "percent": 80.8
+            },
+            {
+              "location": "example.org/futures-offline-replay/main.go:12:",
+              "function": "demonstrate",
+              "percent": 75.0
+            }
+          ]
+        }
+      },
+      "targeted_closures": [
+        {
+          "ids": [
+            996
+          ],
+          "tests": [
+            "TestLifecycleMonthAndYearBoundary"
+          ],
+          "property": "完整日期而非日号；跨月/跨年台阶含生效端点、失败原子、恢复等价"
+        },
+        {
+          "ids": [
+            997,
+            998,
+            999
+          ],
+          "tests": [
+            "TestReplayPlainRuleAdoption",
+            "TestReplayRiskReadOnlyEntireState",
+            "TestReplayPlainVersionInvariant"
+          ],
+          "property": "隔开生命周期冗余兜底，独立证明普通规则接入、完整只读State与版本约束"
+        },
+        {
+          "ids": [
+            1000,
+            1001,
+            1002,
+            1003,
+            1004
+          ],
+          "tests": [
+            "TestOfflineManualMatchesValidator",
+            "TestOfflineManualRejectsMissingTargets",
+            "TestOfflineWireCompatibility",
+            "TestOfflinePublicProtocolShape"
+          ],
+          "property": "当前手册、空源码拒绝、外部签名、字段/JSON键、枚举与旧包兼容"
+        }
+      ],
+      "interpretation": [
+        "命令main入口、网络/DLL包装和格式化函数常在独立CLI或跨包调用中验证，默认每包覆盖不包括所有这类调用，0不等于从未运行",
+        "只读报表的核心分支通过独立反例与精确破坏补齐；标准JSON/IO错误和真实DLL/柜台行为不能因覆盖率数字而声称全部验证",
+        "覆盖文件和逐函数原表保留供后续查漏，现有九项预期绿原因不被覆盖率取代"
+      ],
+      "bench_note": "与完整扫描并行，仅验证手册命令可运行，不与既有性能基线比较"
+    },
+    "artifact": {
+      "path": "C:\\Temp\\offline-o6-coverage-audit-0750635.json",
+      "sha256": "34a47152ebb04f7ee5b160b86bcbc80af9eeb6372978d5d18358a07b99c7af9a"
+    }
+  },
+  "cli_smoke": {
+    "summary": {
+      "source_commit": "0750635b153b257d0e9a9c865aa8b58cee6968f2",
+      "binary_sha256": "e3498c4b4fe855303bb5e428d8c4f77bffa1205a9aec4f77418a78461e528482",
+      "build_info": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\build.log",
+      "results": [
+        {
+          "name": "demo",
+          "args": [
+            "demo",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\bundle.json"
+          ],
+          "exit_code": 0,
+          "expected": 0,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\demo.log",
+          "log_sha256": "0537cde620c6e057cc1efac7b2a9e070a1ececa17dfefd5109771b8d8d28ff8a"
+        },
+        {
+          "name": "denied",
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\bundle.json",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\denied.json"
+          ],
+          "exit_code": 1,
+          "expected": 1,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\denied.log",
+          "log_sha256": "3c64174f30c7eac917b8f19c9495257c30c8ca2f07e8deaa81a403a7b774ff97"
+        },
+        {
+          "name": "run",
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\bundle.json",
+            "-allow-placeholder",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\report.json"
+          ],
+          "exit_code": 0,
+          "expected": 0,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\run.log",
+          "log_sha256": "b24f62c5f1aedb2664c96c7491427038de65926f6ee849a222d4b3f0f1fc68c5"
+        },
+        {
+          "name": "variant",
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\variant.json",
+            "-allow-placeholder",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\variant-report.json"
+          ],
+          "exit_code": 0,
+          "expected": 0,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\variant.log",
+          "log_sha256": "9fd31b5069e9fac0ccdd801364c248badc99aac262330ff887e061b6f97f9db0"
+        },
+        {
+          "name": "same",
+          "args": [
+            "diff",
+            "-left",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\report.json",
+            "-right",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\report.json",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\same.json"
+          ],
+          "exit_code": 0,
+          "expected": 0,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\same.log",
+          "log_sha256": "da24dd22cea00e96f2184e24e3bf3cbe1ba96c1c90a08c540782dbe8238226bf"
+        },
+        {
+          "name": "different",
+          "args": [
+            "diff",
+            "-left",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\report.json",
+            "-right",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\variant-report.json",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\different.json"
+          ],
+          "exit_code": 2,
+          "expected": 2,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\different.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "overwrite",
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\bundle.json",
+            "-allow-placeholder",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\report.json"
+          ],
+          "exit_code": 1,
+          "expected": 1,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\overwrite.log",
+          "log_sha256": "7b88eb8b72a1702c09c4f4ab5035400d7716a67fa348afaef7081feaf541dfb3"
+        },
+        {
+          "name": "truncated",
+          "args": [
+            "run",
+            "-bundle",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\truncated.json",
+            "-allow-placeholder",
+            "-out",
+            "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\truncated-report.json"
+          ],
+          "exit_code": 1,
+          "expected": 1,
+          "log": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\truncated.log",
+          "log_sha256": "87ea4237d121c43e5f5046418eecf6695929b9eb73bcc3169df6b8b32ebe1f69"
+        }
+      ],
+      "boundaries": "纯离线合成演示；直接二进制0/1/2；无凭据/柜台连接",
+      "prior_attempts": "首次自动审批启动前超时；普通Windows sandbox拒绝原子硬链接，保留原实现，改授权环境执行"
+    },
+    "artifact": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\summary.json",
+      "sha256": "4cea7b68c1aea282119bf4eaaed1d07a7212724a16e00a008514a43e2e208810"
+    },
+    "build_info": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\build.log",
+      "sha256": "1af2bc929e7a316f8f9c48648e82f81daf9e7bfc6eb02c3d42975f08891721d5"
+    }
+  },
+  "precompletion_audit": {
+    "data": {
+      "status": "incomplete",
+      "completed_evidence": [
+        {
+          "batch": "O1",
+          "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o1-8f54c04.json",
+          "certificate_sha256": "89f06bb305662c9d1fda7394de963940bebd45b9a747eb6b760f459a9d846ea1",
+          "source": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5",
+          "counts": {
+            "source_commit": "8f54c04c2da8cc382b38cb1f84c794ed85f611f5",
+            "total": 833,
+            "red": 824,
+            "green": 9,
+            "unexpected": 0
+          }
+        },
+        {
+          "batch": "O2",
+          "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o2-5c62c9a.json",
+          "certificate_sha256": "09ee1a2aac64e1048d04b15667a6076e4fde4914ba91403592396c2aadd6b2b4",
+          "source": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916",
+          "counts": {
+            "source_commit": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916",
+            "total": 847,
+            "red": 838,
+            "green": 9,
+            "unexpected": 0
+          }
+        },
+        {
+          "batch": "O3",
+          "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o3-eb5325b.json",
+          "certificate_sha256": "25db60b3eb1fcb0251f0673aa5eeecc1982ac7e22f8dbe64ea57aeb80a1de316",
+          "source": "eb5325b2b1aeff14936949c2d52228c80feee888",
+          "counts": {
+            "source_commit": "eb5325b2b1aeff14936949c2d52228c80feee888",
+            "total": 861,
+            "red": 852,
+            "green": 9,
+            "unexpected": 0
+          }
+        },
+        {
+          "batch": "O4",
+          "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o4-b052342.json",
+          "certificate_sha256": "76883fb04a4bcb044a161c9eff791c81c2747b27f8d64af9d52a34537716df33",
+          "source": "b052342359809f09ad95ed3d6879e0591cb95ce0",
+          "counts": {
+            "source_commit": "b052342359809f09ad95ed3d6879e0591cb95ce0",
+            "total": 885,
+            "red": 876,
+            "green": 9,
+            "unexpected": 0
+          }
+        },
+        {
+          "batch": "O5",
+          "certificate": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\offline-o5-aac038d.json",
+          "certificate_sha256": "be1142035de4f3181904b5448d91fcafb159dfb8eeaa982e5e83e4a23359c50b",
+          "source": "aac038d1a6991ab2205aa67abf8fda964f283357",
+          "counts": {
+            "source_commit": "aac038d1a6991ab2205aa67abf8fda964f283357",
+            "total": 909,
+            "red": 900,
+            "green": 9,
+            "unexpected": 0
+          }
+        }
+      ],
+      "design_before_implementation": [
+        {
+          "batch": "O1",
+          "design": "docs/offline-delivery.md",
+          "design_commit": "46242f4fc5c48ef51054cb633d614c099cb3e559",
+          "implementation": "refdata/night_coverage.go",
+          "implementation_commit": "b371d216836ac288e18d2e4755ba001f6c0c4664"
+        },
+        {
+          "batch": "O2",
+          "design": "docs/frozen-state.md",
+          "design_commit": "ac5f61e30c5af6f5cbd2dd5065d3815dba9ef5e4",
+          "implementation": "conformance/fixture/frozen_state.go",
+          "implementation_commit": "5c62c9ac5ea2c684d97338ec8bf828deab2ed916"
+        },
+        {
+          "batch": "O3",
+          "design": "docs/risk-policy.md",
+          "design_commit": "4ef85c6ab6f8b9fbb2a6a75ab6bd03943c99699d",
+          "implementation": "risk/policy.go",
+          "implementation_commit": "0ebae9895b85bf7fb18ae88bc38cf211a51382c5"
+        },
+        {
+          "batch": "O4",
+          "design": "docs/lifecycle-policy.md",
+          "design_commit": "36f6b802270fde7418039f130679756733a50744",
+          "implementation": "lifecycle/rules.go",
+          "implementation_commit": "6b0f4e30395a45afb6df476e97417a0c9e26cbe2"
+        },
+        {
+          "batch": "O5",
+          "design": "docs/offline-integration.md",
+          "design_commit": "807c79d27b9c0a8e849818e7a52c291b3fe0c5d0",
+          "implementation": "lifecycle/persist.go",
+          "implementation_commit": "b08296b96fcae90a5a8c7223a52062e601c32343"
+        },
+        {
+          "batch": "O6",
+          "design": "docs/offline-acceptance.md",
+          "design_commit": "f08f7d86be164b68d0995cf9126bbb3ff0513be4",
+          "implementation": "offline_manual_test.go",
+          "implementation_commit": "bb9ae4f48df4f596365d1fb38fc06d32962a229a"
+        }
+      ],
+      "retained_green_ids": [
+        173,
+        175,
+        313,
+        407,
+        433,
+        441,
+        457,
+        732,
+        795
+      ],
+      "pending_market_rules": [
+        5,
+        6,
+        7,
+        12,
+        14,
+        19
+      ],
+      "probe_binary_sha256": "0dd9c045415b5849f6b6c9f4a490d8f996846397169e6451dd32351577be7b55",
+      "remaining": [
+        "O6完整918项扫描尚在运行",
+        "O6准确源码CI及最终发布提交仍需核对",
+        "验收文档/README历史网络观测措辞收口与主线三模块回归",
+        "最终main/dev远端一致及完整目标完成审计"
+      ]
+    },
+    "artifact": {
+      "path": "C:\\Temp\\offline-precompletion-audit-0750635.json",
+      "sha256": "04b5dd3ba74346f06534293c3510d2ff9eb116a167ee404a90ed9f44e80cc44d"
+    }
+  },
+  "earlier_runs": [
+    {
+      "description": "当前手册仍写旧范围，源码驱动守卫真实先红；修正并补缺项/空源码反例，新增1000/1001",
+      "log": {
+        "path": "C:\\Temp\\offline-o6-manual-before.log",
+        "sha256": "23d495ce2ca484c9c74d03b9f41a50fa9d6908d1f92002803ba1f433686cf92e"
+      }
+    },
+    {
+      "description": "旧bb9ae4f九项定向用于可行性，最终0750635重新13项定向与918项整轮，不拼接",
+      "source_commit": "bb9ae4f"
+    },
+    {
+      "description": "CLI初次启动审批超时未启动；Windows普通sandbox临时目录写入和os.Link被拒绝，保持原发布语义并在授权执行环境成功实跑；非业务行为失败",
+      "artifact": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\cli-smoke-0750635\\prior-attempts.json",
+        "sha256": "60bc499de7de316a5136b7d82ea111b279589fdd2c8360b05f9508cb5dd16b05"
+      }
+    }
+  ],
+  "boundaries": [
+    "六批文档先行已按Git新增提交顺序独立核对；前五批各自完整原始证据重新核对通过",
+    "八项刻意演示和441真实种子核对仍为预期绿，不把它们说成已实测",
+    "rules_pending六项和F9c/lh取证仍保留，离线目标完成不等于完整v1.0发布",
+    "不读.env、不连柜台，不执行风险入金/强平/交割；明日固定二进制哈希已核未变",
+    "覆盖率是默认按包/进程统计，不能代替全调用图和市场真实性；bench并行只验证命令不作性能比较",
+    "托管mutation未启用；918项为本机独立干净克隆实际执行，主线发布与合并后CI另核"
+  ]
+}
