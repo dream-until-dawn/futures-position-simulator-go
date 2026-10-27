@@ -1,0 +1,644 @@
+{
+  "format": 1,
+  "source_commit": "cd6e6d5982967b234d267fb4730fc392889d1be3",
+  "source_tree": "a18e027023eb351d01f549ff7ab77c5aea61ffc4",
+  "baseline_main": "0fba6452b3c912970dbec74bd061c4f4edfb43f4",
+  "registry_sha256": "db5ff794be54dd788e1717af5893548e6613f9e7c229579482a788a543923746",
+  "report_sha256": "ff5a259f100a5a76b6efe464f135bd327fcc3acba600de37e3aab8f4f45594e7",
+  "summary_sha256": "74b071bb282fefa751a3c45d6c8b4e6053ac1943b5be0982fc4e3f01eaa134eb",
+  "counts": {
+    "executed": 816,
+    "expected_red": 807,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "new_breaks": [
+    886,
+    887,
+    888,
+    889,
+    890,
+    891,
+    892,
+    893,
+    894,
+    895,
+    896,
+    897,
+    898,
+    899,
+    900,
+    901,
+    902
+  ],
+  "raw_directory": "C:\\Temp\\handshake-full-cd6e6d5",
+  "summary": {
+    "suite": "mutation",
+    "status": "passed",
+    "failure": null,
+    "completed": [
+      {
+        "command": [
+          "go",
+          "run",
+          "./tools/breakcheck",
+          "-out",
+          "C:\\Temp\\handshake-full-cd6e6d5\\mutations.json"
+        ],
+        "cwd": "C:\\Temp\\handshake-validation-65be632",
+        "passed_tests": 0,
+        "skipped": [],
+        "log": "C:\\Temp\\handshake-full-cd6e6d5\\mutation.log",
+        "exit_code": 0
+      }
+    ],
+    "before": {
+      "status": "",
+      "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+      "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+      "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+    },
+    "after": {
+      "status": "",
+      "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+      "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+      "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+    }
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\handshake-full-cd6e6d5\\mutation.log",
+    "sha256": "093cc69aec1a6e9f09c1cd9e736128ba39920dcdfb1a8040f5154a8ddeb25cf2"
+  },
+  "independent_post_run": {
+    "head": "cd6e6d5982967b234d267fb4730fc392889d1be3",
+    "porcelain": "",
+    "git_directory": true
+  },
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\handshake-regression-cd6e6d5\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\handshake-regression-cd6e6d5\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+          "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+          "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+          "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+          "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\handshake-regression-cd6e6d5\\summary.json",
+        "sha256": "efeb553e79381afaaa88d0204ed4b51e449f57bca4f80d555f8919cdf25911e8"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\handshake-regression-cd6e6d5\\oracle.log",
+          "sha256": "1d3ab3a445ae063f625395d9fc36eeeeeb5bac51bb5d7ea754e8b59e0e7ee0fa"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\handshake-regression-cd6e6d5\\root.log",
+          "sha256": "681e8315899d52f0b08c450559fd288e29b1ed85da9ff6088b416f3185d54aae"
+        }
+      }
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8",
+            "passed_tests": 562,
+            "skipped": [],
+            "log": "C:\\Temp\\handshake-race-cd6e6d5\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\handshake-race-cd6e6d5\\oracle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+          "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+          "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+          "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+          "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\handshake-race-cd6e6d5\\summary.json",
+        "sha256": "dbefbcaaf7a69269e029b0ab1e3d990dbfbd29e2e4271beba291100047415224"
+      },
+      "logs": {
+        "oracle.log": {
+          "path": "C:\\Temp\\handshake-race-cd6e6d5\\oracle.log",
+          "sha256": "ff1e8062e125f70a509c95eef49a024404d7728744adc4f57794843d0dd99b22"
+        },
+        "root.log": {
+          "path": "C:\\Temp\\handshake-race-cd6e6d5\\root.log",
+          "sha256": "da999f76896a49e6da9ee386170028a8b72eb21be57c896f4bd95be1e8c35882"
+        }
+      }
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\handshake-fuzz-cd6e6d5\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\handshake-fuzz-cd6e6d5\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\handshake-checks-f4705e8\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\handshake-fuzz-cd6e6d5\\report.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+          "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+          "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "e3e0c51260b20343fffbeee995e74c497f5ef20633577a6b5d876cb8b2a9a78a",
+          "index_sha256": "12647185235def4075c55e1641c48d5eff08eb48e4739d42576ad7cea4dab550",
+          "head": "cd6e6d5982967b234d267fb4730fc392889d1be3"
+        }
+      },
+      "summary_artifact": {
+        "path": "C:\\Temp\\handshake-fuzz-cd6e6d5\\summary.json",
+        "sha256": "aadd76d41016ad2f0aeae13d7f3deab69c287e7420b4b6d6385441aa4d85bb50"
+      },
+      "logs": {
+        "bundle.log": {
+          "path": "C:\\Temp\\handshake-fuzz-cd6e6d5\\bundle.log",
+          "sha256": "d80b0543c2b115bedec249822a73542311d47807eb3af7e66d4eaad121e110a3"
+        },
+        "report.log": {
+          "path": "C:\\Temp\\handshake-fuzz-cd6e6d5\\report.log",
+          "sha256": "f87f56345e2b2ace327d2e53ecc46507a78356d2d145fbee3838e01010f4447f"
+        },
+        "state.log": {
+          "path": "C:\\Temp\\handshake-fuzz-cd6e6d5\\state.log",
+          "sha256": "cdf6a902bbbfdca6d465451653de99d900c79f49fa4e60732632ca277db7a24c"
+        }
+      }
+    }
+  },
+  "python_tests": {
+    "passed": 14,
+    "path": "C:\\Temp\\handshake-python-cd6e6d5.log",
+    "sha256": "ca0018dc440e54de9a161c1336e234928660de664d32aee6a881030e9af03289"
+  },
+  "ci": {
+    "run": {
+      "id": 40450135896,
+      "head_sha": "cd6e6d5982967b234d267fb4730fc392889d1be3",
+      "head_branch": "codex/ctp-handshake",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40450135896"
+    },
+    "jobs": [
+      {
+        "id": 122010667203,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40450135896,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 122010667455,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40450135896,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Validate the validator",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Both Go modules (no skipped tests)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Race detector on both platforms",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bounded fuzzing",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-go@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 122010668707,
+        "name": "mutation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 40450135896,
+        "logs_url": null,
+        "steps": null
+      }
+    ]
+  },
+  "targeted": {
+    "886": {
+      "path": "C:\\Temp\\handshake-target-886-cd6e6d5.json",
+      "sha256": "fc2bd761d901be167aad27277a2c15a7411ab4621e5bc454f38bfc057d10c917"
+    },
+    "887": {
+      "path": "C:\\Temp\\handshake-target-887-cd6e6d5.json",
+      "sha256": "309707058b7612c99eab84a00220e447ea5c5b410efb63c9c619d422a8b27961"
+    },
+    "888": {
+      "path": "C:\\Temp\\handshake-target-888-cd6e6d5.json",
+      "sha256": "2913b1afd4e52b1cf193d36369cc2318231e10bc34e1ed5430d91af2f93a6cb9"
+    },
+    "889": {
+      "path": "C:\\Temp\\handshake-target-889-cd6e6d5.json",
+      "sha256": "48b8a91593c5becafb86fe5d6debc71e34cbc70d07f387f7ee18f017322078cf"
+    },
+    "890": {
+      "path": "C:\\Temp\\handshake-target-890-cd6e6d5.json",
+      "sha256": "2cae7072160f8b3202e6dbf4449b04854e11fd911e32f5594ca181ca1711f410"
+    },
+    "891": {
+      "path": "C:\\Temp\\handshake-target-891-cd6e6d5.json",
+      "sha256": "9d26cf31b27ecea69c6627a3633610c0e6cc55ca9a3044ca313d6a857f71826c"
+    },
+    "892": {
+      "path": "C:\\Temp\\handshake-target-892-cd6e6d5.json",
+      "sha256": "b7b9fcf3c0db3220e21a2335775e4eb940ebf06c4ce84236782e45152983b270"
+    },
+    "893": {
+      "path": "C:\\Temp\\handshake-target-893-cd6e6d5.json",
+      "sha256": "4a2c350369a6988c3304ba48cd5c4996bab6a6eef1109e1cd08c71e341f68be2"
+    },
+    "894": {
+      "path": "C:\\Temp\\handshake-target-894-cd6e6d5.json",
+      "sha256": "5951e1948b55dacdacc207d150da5762dddbb7d674a7a19b265a15d2cf05069e"
+    },
+    "895": {
+      "path": "C:\\Temp\\handshake-target-895-cd6e6d5.json",
+      "sha256": "1a2c5da39b92d492a206043a1c0c50bdf92bfa05664ad5ff6fb580f2c3240f0c"
+    },
+    "896": {
+      "path": "C:\\Temp\\handshake-target-896-cd6e6d5.json",
+      "sha256": "73f2d26c2190fc63f48cd21abdeff732ba805a547e6d2929cf10c07afa56dfe5"
+    },
+    "897": {
+      "path": "C:\\Temp\\handshake-target-897-cd6e6d5.json",
+      "sha256": "3c42333ba22c4ee49da9b4e220f70ccca7272ddd9856bb479794b37144928d91"
+    },
+    "898": {
+      "path": "C:\\Temp\\handshake-target-898-cd6e6d5.json",
+      "sha256": "91aee2cb037cd66abae52db5ec5b2f1822eac96ba27676c2283df9a4c25f3256"
+    },
+    "899": {
+      "path": "C:\\Temp\\handshake-target-899-cd6e6d5.json",
+      "sha256": "a4f20548c1a2cb59f54fb3f96d42fca8a54de4655e1c36ae2e2057ba822d2d43"
+    },
+    "900": {
+      "path": "C:\\Temp\\handshake-target-900-cd6e6d5.json",
+      "sha256": "272f6397569076cdc5aff9acf6dec16a41691c149e0ace58f12b8e056808ffd9"
+    },
+    "901": {
+      "path": "C:\\Temp\\handshake-target-901-cd6e6d5.json",
+      "sha256": "b2c0f7afd9e0cd0094c02a3445ab3690c782df2460da3be1c88e40620f478a96"
+    },
+    "902": {
+      "path": "C:\\Temp\\handshake-target-902-cd6e6d5.json",
+      "sha256": "eda63a2d6a23a2821730f38eed1756716d766f2e5dd8a6ace5c4e2d2e6b405e2"
+    }
+  },
+  "dll_exports": {
+    "probe": {
+      "module": "gitee.com/haifengat/goctp@v1.10.17",
+      "dll_sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc",
+      "required_symbols": [
+        "CreateApi",
+        "CreateSpi",
+        "Init",
+        "Release",
+        "SetOnFrontConnected",
+        "SetOnFrontDisconnected",
+        "SetOnRspAuthenticate",
+        "SetOnRspUserLogin",
+        "SetOnRspSettlementInfoConfirm",
+        "SetOnRspError",
+        "ReqAuthenticate",
+        "ReqUserLogin",
+        "ReqSettlementInfoConfirm"
+      ],
+      "all_present": true,
+      "exported_name_count": 225,
+      "limit": "只验证本机DLL实际导出表，不验证柜台回调行为"
+    },
+    "artifact": {
+      "path": "C:\\Temp\\handshake-dll-exports-f4705e8.json",
+      "sha256": "de7c0fcd1aaac205adffdf1a148ba0aff535d7426bf5dd3e660d9d14dc8430dc"
+    }
+  },
+  "earlier_runs": [
+    {
+      "description": "旧Windows源码的阶段/编号/执行器/通用错误接线结构守卫先红；这是结构证据，不冒充实际DLL行为",
+      "log": {
+        "path": "C:\\Temp\\handshake-wiring-before.log",
+        "sha256": "9296beb0aed610ef0456d4f678a79d345f769a60a35a956c24b041ce393d6c24"
+      }
+    },
+    {
+      "description": "首轮诊断事件数量期望写错；改为检查三个发送返回事件与敏感哨兵正反例",
+      "log": {
+        "path": "C:\\Temp\\handshake-first-tests.log",
+        "sha256": "5e71659290d16a9ced43798f4d52caf8f73e8d423b7a1e835f7f829c2ddad761"
+      }
+    },
+    {
+      "description": "首轮模块回归正确拒绝roadmap未登记内部error方法；按原守卫补清单，不关闭测试",
+      "log": {
+        "path": "C:\\Temp\\handshake-oracle-first.log",
+        "sha256": "ae211dabedabad5f3fbb2be487089966666f59a6eb234450643e7b9d4f5f2d92"
+      }
+    },
+    {
+      "description": "worktree布局下gitcache守卫读不到.git/HEAD而跳过，严格入口判失败；最终改独立.git目录克隆完整重跑",
+      "summary": {
+        "path": "C:\\Temp\\handshake-preseal-regression\\summary.json",
+        "sha256": "81867d31bb2288815b93291d7940ceca6c56e409758c3d13d1f5aba3182105dc"
+      },
+      "root_log": {
+        "path": "C:\\Temp\\handshake-preseal-regression\\root.log",
+        "sha256": "59f5220f97df567e3d89dd9e32c3f16742fa0f3cfa2edc41847adaf81a66819e"
+      }
+    },
+    {
+      "description": "初版f4705e8完整815项通过，但新增末步同步成功后发送迟返测试仍先红；不能把初版完整绿当成最终截止性质已验证",
+      "source": "f4705e8dfcc6dcf9b0d8c982a36a80e86b6db706",
+      "summary": {
+        "path": "C:\\Temp\\handshake-full-f4705e8\\summary.json",
+        "sha256": "deae822a895eec6dc89ddbfc1c795731440dda380be91cf0b04d98ec9c91085d"
+      },
+      "report": {
+        "path": "C:\\Temp\\handshake-full-f4705e8\\mutations.json",
+        "sha256": "97d3585c5ca6a05233b5da05a6c05a6e21c934aca6b89c795ba28041a2355cce"
+      },
+      "red_test": {
+        "path": "C:\\Temp\\handshake-late-send-before.log",
+        "sha256": "72f64eb6fec6ca68a41bb27df2a53f5c2af630d4c494ede96209e8e2bfdb85f4"
+      }
+    },
+    {
+      "description": "65be632补最终返回截止后，定向892被第二道守卫掩盖而仍绿；增加独立阶段准备判据后重新整轮，未拼接",
+      "source": "65be632ffc047c7fc31f36505054a5cee7f57791",
+      "targeted_report": {
+        "path": "C:\\Temp\\handshake-target-892-65be632.json",
+        "sha256": "3f504b47017f3dcf09819f58aa1847d96d9edd89da28efcf840a814458f96133"
+      }
+    }
+  ],
+  "late_send_fix": {
+    "green_after_fix": {
+      "path": "C:\\Temp\\handshake-late-send-after.log",
+      "sha256": "a0b78e41416a537afa5c1eee0270de15bcb83dda962680c60a3e1e0095ea8824"
+    },
+    "independent_phase_boundary": "最终cd6e6d5新增过期预算直接prepare下一阶段的反例；与最终返回截止分别由892/902检出"
+  },
+  "boundaries": [
+    "完整816项为本机Windows独立扫描；托管Windows/Linux执行回归/race及三个20秒fuzz",
+    "Windows接线结构守卫和本机DLL真实导出表不替代柜台行为验证",
+    "不提升既有规则证据等级，不把握手修复当成挂单成交价样本",
+    "不自动重新认证、重发或恢复超时Client；原生DLL调用不可由Go定时器强行中断",
+    "日志/错误只含阶段、请求编号、数值码和耗时，不保存柜台自由文本或原始登录结构",
+    "新的一手探针需在本批合main后重新登记具体范围，旧批准与窗口不延用"
+  ]
+}
