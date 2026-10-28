@@ -105,7 +105,7 @@ func TestOwnedOrderReplay(t *testing.T) {
 func TestReplayRestartCannotClaimOwnership(t *testing.T) {
 	f := newFakeRestingProbe()
 	f.held = 1
-	r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261028", Main: ownedOrderOutcome{Ref: "old", Filled: 1}}
+	r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261029", Main: ownedOrderOutcome{Ref: "old", Filled: 1}}
 	raw, err := json.Marshal(r)
 	if err != nil {
 		t.Fatal(err)

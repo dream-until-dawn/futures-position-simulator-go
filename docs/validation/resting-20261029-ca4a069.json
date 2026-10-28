@@ -1,0 +1,358 @@
+{
+  "format": 1,
+  "source_commit": "ca4a069c0d328e5de5ac42ed3b31fef135453eda",
+  "source_tree": "44dbfab73bd14c42a5c782862806ece0947a4c79",
+  "baseline_main": "e22ae079f2d8b6b1cde4b136ca734ef0b65cda90",
+  "registry_sha256": "d3eea82d6387f8a6aef8bf1dfbf1fcffa373b4a7beb82b6b1fc7726d36b2c0e3",
+  "report_sha256": "1a7dd285f16a4aec05a4643d42c2525ed55abfece753ec3587ec7703411232ed",
+  "summary_sha256": "0137df3692178a08e3a8c8d1a9d64963c8e98c49358eb3ddc4deab4c96b7c702",
+  "counts": {
+    "executed": 921,
+    "expected_red": 912,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "raw_directory": "C:\\Temp\\resting-20261029-mutation-ca4a069",
+  "summary": {
+    "path": "C:\\Temp\\resting-20261029-mutation-ca4a069\\summary.json",
+    "sha256": "0137df3692178a08e3a8c8d1a9d64963c8e98c49358eb3ddc4deab4c96b7c702"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\resting-20261029-mutation-ca4a069\\mutation.log",
+    "sha256": "6562d28f3d07dd1d7a66f42fd6e0327eebd7fcc6a4187151f70fd7a358ac2234"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "ff84cc30128429fd8904d5c4bdf9c811a6612437eb78c330933de19e2076c1ab",
+    "index_sha256": "1a48ce3b194571724fbf134391d3654f97ce6cd0f48bf665e827331fd1e21414",
+    "head": "ca4a069c0d328e5de5ac42ed3b31fef135453eda"
+  },
+  "suites": {
+    "regression": {
+      "artifact": {
+        "path": "C:\\Temp\\resting-20261029-regression-ca4a069\\summary.json",
+        "sha256": "f1694d8f99e011eb321a300727a2284cf1cb926d0b74428f7573548fb3641bdb"
+      },
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-regression-ca4a069\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-regression-ca4a069\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-regression-ca4a069\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "ff84cc30128429fd8904d5c4bdf9c811a6612437eb78c330933de19e2076c1ab",
+          "index_sha256": "1a48ce3b194571724fbf134391d3654f97ce6cd0f48bf665e827331fd1e21414",
+          "head": "ca4a069c0d328e5de5ac42ed3b31fef135453eda"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "ff84cc30128429fd8904d5c4bdf9c811a6612437eb78c330933de19e2076c1ab",
+          "index_sha256": "1a48ce3b194571724fbf134391d3654f97ce6cd0f48bf665e827331fd1e21414",
+          "head": "ca4a069c0d328e5de5ac42ed3b31fef135453eda"
+        }
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\resting-20261029-regression-ca4a069\\root.log",
+          "sha256": "de034f43a2172105c43acfac2dae84e958101193fe3ee03e7b685457ad1f597b"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-regression-ca4a069\\oracle.log",
+          "sha256": "7c3579307b45e43a0c55e34301da72d9d08f38f911db2b0005148f114c09e17a"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-regression-ca4a069\\external.log",
+          "sha256": "2f3052908cb92e835e0d604b5c3ba1a086e95bf2de8cdd5c8f11f728591b7efe"
+        }
+      ]
+    },
+    "race": {
+      "artifact": {
+        "path": "C:\\Temp\\resting-20261029-race-ca4a069\\summary.json",
+        "sha256": "a9d757e82dfeff87f5438fa0ecdd260ab31acc81f9e05ef71c54ac5d94ca759b"
+      },
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-race-ca4a069\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\cmd\\oracle",
+            "passed_tests": 390,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-race-ca4a069\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-race-ca4a069\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "ff84cc30128429fd8904d5c4bdf9c811a6612437eb78c330933de19e2076c1ab",
+          "index_sha256": "1a48ce3b194571724fbf134391d3654f97ce6cd0f48bf665e827331fd1e21414",
+          "head": "ca4a069c0d328e5de5ac42ed3b31fef135453eda"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "ff84cc30128429fd8904d5c4bdf9c811a6612437eb78c330933de19e2076c1ab",
+          "index_sha256": "1a48ce3b194571724fbf134391d3654f97ce6cd0f48bf665e827331fd1e21414",
+          "head": "ca4a069c0d328e5de5ac42ed3b31fef135453eda"
+        }
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\resting-20261029-race-ca4a069\\root.log",
+          "sha256": "003044c0ebafa2920bb9d2b8a718159e61f3226b0366db6c91ef77085fc65df0"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-race-ca4a069\\oracle.log",
+          "sha256": "225525f3cc5f6f161e6bdf2c67d246e2ef24fe1463b914da4af48695429931ad"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-race-ca4a069\\external.log",
+          "sha256": "9751c1cdcd650f6e3ce8f0633cfa01f6a0ee8e30c94fe8d92d427d1f87284e06"
+        }
+      ]
+    },
+    "fuzz": {
+      "artifact": {
+        "path": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\summary.json",
+        "sha256": "c1a60018f22c25576fabd7ed1b69eb8199b312a4ac788d785b151d5b5ae3cd60"
+      },
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-20261029-checks-ca4a069\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "ff84cc30128429fd8904d5c4bdf9c811a6612437eb78c330933de19e2076c1ab",
+          "index_sha256": "1a48ce3b194571724fbf134391d3654f97ce6cd0f48bf665e827331fd1e21414",
+          "head": "ca4a069c0d328e5de5ac42ed3b31fef135453eda"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "ff84cc30128429fd8904d5c4bdf9c811a6612437eb78c330933de19e2076c1ab",
+          "index_sha256": "1a48ce3b194571724fbf134391d3654f97ce6cd0f48bf665e827331fd1e21414",
+          "head": "ca4a069c0d328e5de5ac42ed3b31fef135453eda"
+        }
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\state.log",
+          "sha256": "70391be0697a72bf7be44400c24c081c3bbb80445bea26b4acb4c597352e2eb3"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\bundle.log",
+          "sha256": "54d00c30d3ad8e1ba7a114ca2f4a06756d1846d0069f943a11414ddf5e1515be"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\report.log",
+          "sha256": "ff954ccaed99a7141c3af493d710fbdc34cf042bc7da3424e3c3cbd3935f541e"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\risk.log",
+          "sha256": "fd96aac3ae6e4250603a5de122ef0e762f69f40018bb5e67542f0760525a46e1"
+        },
+        {
+          "path": "C:\\Temp\\resting-20261029-fuzz-ca4a069\\lifecycle.log",
+          "sha256": "7778e1487e0246c2e6feaea84e8744c96469d9f2e8e63d07476cf6424a711e16"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\resting-20261029-python-ca4a069.log",
+    "sha256": "89b31ba99b9da9e5b56402b05df6d0d1e35185232b3343e4d9b8e18a7864bfbc"
+  },
+  "new_registration_before_fix": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261029\\before.log",
+    "sha256": "6d7652938a6fa3fe26153444dbb334f5164f6401d8725b2cfd6a7f87178a7d54"
+  },
+  "ci": {
+    "sha": "ca4a069c0d328e5de5ac42ed3b31fef135453eda",
+    "id": 40675019364,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 122771096270,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success"
+      },
+      {
+        "id": 122771096793,
+        "name": "offline (windows-2022)",
+        "conclusion": "success"
+      }
+    ],
+    "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40675019364"
+  },
+  "build": {
+    "binary": {
+      "path": "C:\\Temp\\resting-20261029-ca4a069.exe",
+      "sha256": "0dab25069d97c0ecaa2e8528d410369a359f9ff7616556249766b3673e570509"
+    },
+    "info": "C:\\Temp\\resting-20261029-ca4a069.exe: go1.27.3-X:nojsonv2\n\tpath\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\n\tmod\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\tv0.0.0-20261028104823-ca4a069c0d32\t\n\tdep\tgitee.com/haifengat/goctp\tv1.10.17\th1:8G7T10OlcutHgwTZca/Qb+Dk64yORSB62Sj8D/InIcs=\n\tdep\tgithub.com/coder/websocket\tv1.8.15\th1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=\n\tdep\tgithub.com/dream-until-dawn/futures-position-simulator-go\tv0.0.0\n\t=>\t../..\t(devel)\t\n\t\n\tdep\tgithub.com/shopspring/decimal\tv1.4.0\th1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\tDefaultGODEBUG=containermaxprocs=0,cryptocustomrand=1,decoratemappings=0,gotestjsonbuildtext=1,httpcookiemaxnum=0,httpservecontentmaxranges=1,multipathtcp=0,randseednop=0,rsa1024min=0,tlsmlkem=0,tlssecpmlkem=0,tlssha1=1,tracebacklabels=0,updatemaxprocs=0,urlmaxqueryparams=0,urlstrictcolons=0,x509rsacrt=0,x509sha256skid=0,x509sslcertoverrideplatform=0,x509usepolicies=0\n\tbuild\tCGO_ENABLED=1\n\tbuild\tCGO_CFLAGS=\n\tbuild\tCGO_CPPFLAGS=\n\tbuild\tCGO_CXXFLAGS=\n\tbuild\tCGO_LDFLAGS=\n\tbuild\tGOARCH=amd64\n\tbuild\tGOEXPERIMENT=nojsonv2\n\tbuild\tGOOS=windows\n\tbuild\tGOAMD64=v1\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=ca4a069c0d328e5de5ac42ed3b31fef135453eda\n\tbuild\tvcs.time=2026-10-28T10:48:23Z\n\tbuild\tvcs.modified=false\n"
+  }
+}

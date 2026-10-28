@@ -27,7 +27,7 @@ type fakeRestingProbe struct {
 	priceOffset                                     float64
 }
 
-func (f *fakeRestingProbe) TradingDay() string { return "20261028" }
+func (f *fakeRestingProbe) TradingDay() string { return "20261029" }
 
 func newFakeRestingProbe() *fakeRestingProbe {
 	_, spec, now := restingQuoteFixture()
@@ -49,7 +49,7 @@ func (f *fakeRestingProbe) Positions(time.Duration) (map[string]*def.CThostFtdcI
 // TestFinishRefusesUnknownOrder 即使查询暂时为空，也不能洗掉本次未确认的开仓委托。
 func TestFinishRefusesUnknownOrder(t *testing.T) {
 	f := newFakeRestingProbe()
-	r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261028", Control: ownedOrderOutcome{Ref: "unknown"}}
+	r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261029", Control: ownedOrderOutcome{Ref: "unknown"}}
 	if err := finishRestingExposure(f, r, time.Second, f.clock, func() error { return nil }); err == nil || r.FinalClean {
 		t.Fatal("未知开仓终态被宣布收尾完成")
 	}
@@ -63,7 +63,7 @@ func TestFinishRefusesUnknownOrder(t *testing.T) {
 func TestFinishRefusesExtraExposure(t *testing.T) {
 	f := newFakeRestingProbe()
 	f.held = 2
-	r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261028", Main: ownedOrderOutcome{Ref: "own", Filled: 1, Terminal: true}}
+	r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261029", Main: ownedOrderOutcome{Ref: "own", Filled: 1, Terminal: true}}
 	if err := finishRestingExposure(f, r, time.Second, f.clock, func() error { return nil }); err == nil || f.sent != 0 || r.FinalClean {
 		t.Fatal("额外持仓触发不受允许的平仓")
 	}
@@ -158,7 +158,7 @@ func (f *fakeRestingProbe) fill(ref string) {
 	copy(tr.OrderSysID[:], s.OrderSysID)
 	copy(tr.ExchangeID[:], "SHFE")
 	copy(tr.InstrumentID[:], "rb2701")
-	copy(tr.TradingDay[:], "20261028")
+	copy(tr.TradingDay[:], "20261029")
 	copy(tr.TradeTime[:], f.clock.Now().In(probeShanghai).Format("15:04:05"))
 	f.trades = append(f.trades, tr)
 }

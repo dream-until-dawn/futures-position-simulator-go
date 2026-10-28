@@ -1,5 +1,7 @@
 # 项目状态：唯一来源
 
+**2026-10-29上午一手探针登记已验收、尚未执行**：10月28日两个候选窗口均未执行，原任务已移除；使用者要求改为明早，现登记10:45核验、10:50只读预检、10:55–11:15唯一启动、11:25前收尾。准确源码ca4a069c0d328e5de5ac42ed3b31fef135453eda只更新固定日期与合成夹具，原上午窗口和安全阀不变；新测试在旧程序先红，随后通过。干净独立整轮921项（912红/9预期绿/0异常，exit0）、逐项覆盖/断言与还原指纹、三模块严格回归/race、五个20秒fuzz、Python15项及准确Windows/Linux CI均复核通过。正式构建vcs.revision一致、vcs.modified=false，SHA256为0dab25069d97c0ecaa2e8528d410369a359f9ff7616556249766b3673e570509。见[10月29日登记](./resting-price-20261029.md)及[验收证书](./validation/resting-20261029-ca4a069.json)。原10月28日记录仅为历史，不得补跑；本批未连接柜台或交易，明早须重新核现场全部前提。
+
 **2026-10-27 CI修复与921项完整复验通过**：准确源码f2bbab7固定Go1.27.3以包含上游fuzz截止取消竞态修复，同时显式GOEXPERIMENT=nojsonv2保持原有JSON流解析与收尾守卫。本机三个模块严格回归/race、五项20秒fuzz、Python15项、四项定向及准确Windows/Linux CI全部通过；新的干净独立整轮921项为912红/9预期绿/0异常，退出0，逐项来源/断言、tree、内容/索引指纹和收尾空树均独立复核。旧bb83821完整920项中303红错理由的失败轮单独保留，已核原状态还原，未拼接。证书见 [CI修复完整验收](./validation/offline-ci-f2bbab7.json)。
 
 该修复随本次经dev进入main的合并纳入六批离线交付。除新增测试外，Go/Python运行时代码相对0750635不变；实际主线发布以合并后的严格回归、准确main/dev双平台CI和本地/远端一致核验为准。下方297543c/918项为先前已验证基准，保留历史，不替代本轮。版本仍v0.4.0，不打tag、不把离线结果称为全部市场规则收敛。10月28日已批准的固定df96b43探针及其执行前置独立保留。
@@ -2598,6 +2600,8 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/resting-price-plan.md` | 4 |
 | `docs/resting-price-20261027.md` | 4 |
 | `docs/resting-price-20261028.md` | 4 |
+| `docs/resting-price-20261028-pm.md` | 4 |
+| `docs/resting-price-20261029.md` | 4 |
 | `docs/f9c-design.md` | 5 |
 | `docs/offline-work.md` | 5 |
 | `docs/offline-delivery.md` | 5 |
