@@ -2599,6 +2599,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/resting-price-20261027.md` | 4 |
 | `docs/resting-price-20261028.md` | 4 |
 | `docs/resting-price-20261028-pm.md` | 4 |
+| `docs/resting-price-20261029.md` | 4 |
 | `docs/f9c-design.md` | 5 |
 | `docs/offline-work.md` | 5 |
 | `docs/offline-delivery.md` | 5 |
