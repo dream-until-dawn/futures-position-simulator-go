@@ -10126,5 +10126,181 @@
 		"test": "TestOfflineCIToolchain",
 		"want": "CI工具链必须两处固定已验证的1.27.3",
 		"expect": "red"
+	},
+	{
+		"name": "1008 真实原生握手返回码被清零",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake_windows.go",
+		"old": "return int32(result), nil",
+		"new": "return int32(result) * 0, nil",
+		"test": "TestNativeHandshakeSendCodes",
+		"want": "原生握手发送码被包装清零"
+	},
+	{
+		"name": "1009 结算确认虚表串到登录方法",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake.go",
+		"old": "return 0xe0, nil",
+		"new": "return 0x68, nil",
+		"test": "TestNativeHandshakeMethodBoundary",
+		"want": "固定原生握手偏移错误"
+	},
+	{
+		"name": "1010 未知原生架构仍放行",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake.go",
+		"old": "if arch != \"amd64\" {",
+		"new": "if arch != \"amd64\" && false {",
+		"test": "TestNativeHandshakePinnedDLLs",
+		"want": "未知原生架构被放行"
+	},
+	{
+		"name": "1011 未知DLL绕过原生ABI哈希",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake.go",
+		"old": "if fmt.Sprintf(\"%x\", sha256.Sum256(data)) != file.sha256 {",
+		"new": "if fmt.Sprintf(\"%x\", sha256.Sum256(data)) != file.sha256 && false {",
+		"test": "TestNativeHandshakePinnedDLLs",
+		"want": "篡改原生DLL仍被放行"
+	},
+	{
+		"name": "1012 生产初始化漏接原生ABI校验",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "validateNativeHandshakeDLLs(dir)",
+		"new": "CheckDLLs(dir)",
+		"test": "TestNativeHandshakeLoadGuard",
+		"want": "原生握手ABI校验未在加载和创建之前接线"
+	},
+	{
+		"name": "1013 任意原生方法被握手入口放行",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake.go",
+		"old": "return 0, fmt.Errorf(\"未登记的原生握手方法\")",
+		"new": "return 0, nil",
+		"test": "TestNativeHandshakeMethodBoundary",
+		"want": "未登记原生方法被放行"
+	},
+	{
+		"name": "1014 本地原生绑定错误伪装成功",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "return nativeHandshakeBindingError",
+		"new": "return 0",
+		"test": "TestNativeHandshakeInvalidPointers",
+		"want": "本地绑定失败被当成原生成功"
+	},
+	{
+		"name": "1015 过滤诊断丢失实际回报编号",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "stage, id, last, hasPayload",
+		"new": "stage, 0, last, hasPayload",
+		"test": "TestHandshakeIgnoredDiagnostic",
+		"want": "被过滤握手回报缺少安全诊断"
+	},
+	{
+		"name": "1016 握手过滤诊断丢失原因",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "\"ignored-\"+reason",
+		"new": "\"ignored-\"+reason[:0]",
+		"test": "TestHandshakeIgnoredDiagnostic",
+		"want": "被过滤握手回报缺少安全诊断"
+	},
+	{
+		"name": "1017 成功分片被过滤却不记录原因",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "\"ignored-partial\"",
+		"new": "\"ignored\"",
+		"test": "TestHandshakeIgnoredDiagnostic",
+		"want": "被过滤握手回报缺少安全诊断"
+	},
+	{
+		"name": "1018 回报负载存在标记失真",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "stage, id, last, hasPayload",
+		"new": "stage, id, last, false",
+		"test": "TestHandshakeIgnoredDiagnostic",
+		"want": "被过滤握手回报缺少安全诊断"
+	},
+	{
+		"name": "1019 回调诊断夹入原始登录负载",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/handshake.go",
+		"old": "d.receivedStage, d.receivedID, d.last, d.hasPayload = stage, id, last, hasPayload",
+		"new": "d.receivedStage, d.receivedID, d.last, d.hasPayload = stage+h.result.maxOrderRef, id, last, hasPayload",
+		"test": "TestHandshakeDiagnosticRedaction",
+		"want": "握手诊断泄漏原始业务字段"
+	},
+	{
+		"name": "1020 生产日志省略实际回报编号",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/client_windows.go",
+		"old": "received_request=%d",
+		"new": "received_omitted=%d",
+		"test": "TestNativeHandshakeDiagnosticLog",
+		"want": "生产握手日志缺少过滤元数据"
+	},
+	{
+		"name": "1021 不可执行方法页被当作原生代码",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake_windows.go",
+		"old": "if n != unsafe.Sizeof(region) || region.state != 0x1000 || region.protect&0xf0 == 0 || region.protect&0x101 != 0 {",
+		"new": "if (n != unsafe.Sizeof(region) || region.state != 0x1000 || region.protect&0xf0 == 0 || region.protect&0x101 != 0) && false {",
+		"test": "TestNativeHandshakeExecutablePage",
+		"want": "不可执行原生方法被放行"
+	},
+	{
+		"name": "1022 原生指针读取结果被清零",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake_windows.go",
+		"old": "return value, nil",
+		"new": "return value * 0, nil",
+		"test": "TestNativeHandshakeSendCodes",
+		"want": "原生握手发送码被包装清零"
+	},
+	{
+		"name": "1023 原生方法偏移溢出不明确拒绝",
+		"dir": "cmd/oracle",
+		"pkg": "./ctp",
+		"expect": "red",
+		"file": "cmd/oracle/ctp/native_handshake_windows.go",
+		"old": "if table > ^uintptr(0)-offset {",
+		"new": "if table > ^uintptr(0)-offset && false {",
+		"test": "TestNativeHandshakeInvalidPointers",
+		"want": "溢出原生方法被放行"
 	}
 ]

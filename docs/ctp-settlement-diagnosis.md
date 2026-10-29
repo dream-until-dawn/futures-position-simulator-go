@@ -12,6 +12,8 @@
 
 使用Windows ReadProcessMemory读取本进程API虚表及方法指针，避免uintptr强转解引用和损坏句柄导致进程崩溃；失败返回本客户端保留的绑定错误码，不冒充CTP返回码。原生调用仍经syscall.SyscallN和原请求结构，保持生命周期。只有完整认证、登录、结算确认成功才发布会话。非零即时码优先于同步成功回调，禁止继续下一阶段或自动重发。
 
+内存读取与页结构依据[ReadProcessMemory](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory)及[MEMORY_BASIC_INFORMATION](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information)核验；读取失败、空方法、偏移溢出、非可执行或保护页均拒绝调用。Windows原生测试直接检查页权限，破坏验证不靠跳进数据页崩溃冒充断言检出。
+
 ## 3 回调诊断与隐私
 
 补齐被忽略回报的原因：停止/非活动/重复、阶段或请求编号不符、到达总期限之后、成功分片未结束。固定字段仅记录阶段、编号、数值码、结束标记、是否存在负载与耗时；不记录凭据、登录业务负载或柜台自由文本。原总期限不改变；迟到或分片不能复活已失败握手。无回报与有回报但被过滤可以区分，仍不推测网络或服务器根因。
