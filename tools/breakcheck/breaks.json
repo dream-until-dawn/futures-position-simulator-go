@@ -10333,8 +10333,8 @@
   "file": "cmd/oracle/resting_price_rules.go",
   "old": "local.Format(\"20060102\") != restingProbeDate",
   "new": "false && local.Format(\"20060102\") != restingProbeDate",
-  "test": "TestRestingRegistrationQuoteBoundary",
-  "want": "登记行情边界错误"
+  "test": "TestRestingNightNaturalDateGuard",
+  "want": "自然日未在读取行情前拒绝"
 },
 {
   "name": "1027 夜盘行情误用交易日拼接",

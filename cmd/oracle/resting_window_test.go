@@ -99,7 +99,22 @@ func TestRestingNightReadWindow(t *testing.T) {
 	}
 }
 
-// TestRestingNightQuoteClock 行情日期应是今晚自然日；交易日、午夜及24小时错位均不能代替它。
+// TestRestingNightNaturalDateGuard 自然日必须在读取行情字段之前明确拒绝，不能靠后续年龄检查掩盖。
+func TestRestingNightNaturalDateGuard(t *testing.T) {
+	for _, date := range []string{"20261028", "20261030"} {
+		now, err := time.ParseInLocation("20060102 15:04:05", date+" 21:15:00", probeShanghai)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// 传入空行情/合约，只允许日期守卫先拒绝，不能靠后续年龄或合约校验凑巧过关。
+		err = validateRestingQuote(nil, nil, "20261030", now)
+		if err == nil || !strings.Contains(err.Error(), "夜盘自然日") {
+			t.Fatal("自然日未在读取行情前拒绝", date, err)
+		}
+	}
+}
+
+// TestRestingNightQuoteClock 独立固定自然日解析行情并核5秒边界，不依赖后续报单失败。
 func TestRestingNightQuoteClock(t *testing.T) {
 	for _, tc := range []struct {
 		delta time.Duration
