@@ -18,6 +18,8 @@
 
 三模块严格regression/race、五项20秒fuzz、Python、准确Windows/Linux CI、完整清单及逐项断言/源码tree/内容和索引指纹/还原状态全部通过后封存新构建及证书，按既有授权经dev→main核准发布。源码冻结后仅补文档，不用旧上午或明早构建替代。
 
+准确源码84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1已通过上述验收：939项为930红/9预期绿/0异常，四项定向884/885/1024/1025均检出，14:40/14:50与14:55边界具有独立字面正反例。冻结构建C:/Temp/resting-20261029-afternoon-84954aa.exe，SHA256 e05cee754f9a7c29abd0458968d0f3c8ea3f5ce9bdbc1e5a429655e8f87916d2，vcs.revision一致且vcs.modified=false。证据见[验收证书](./validation/resting-afternoon-20261029-84954aa.json)。原生握手驱动与已现场只读验证的2ec41b9完全相同；本批尚未进入现场。主线合并及双平台CI实际通过才可在截止前写下就绪记录。
+
 ## 4 原子启动、证据与停止
 
 独立执行目录C:/Temp/resting-probe-20261029-afternoon，连接前先检查既有记录和进程，以原子排他round-start、execute-start保证唯一轮次和唯一执行器尝试。未知启动绝不重试。逐阶段私有JSONL同步，保存构建/DLL/env哈希及私有日志；收尾核持仓与未终结委托，resting-verify独立验真。只在排队至少2秒、唯一可归属一手主成交且完整收尾时判价格；无样本或即时成交不判。完成/失败/未知/错过即停止，不自动延至下一个交易时段或日期。本轮不混入lh或其他实验。
