@@ -2593,6 +2593,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/roadmap.md` | 68 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/ctp-handshake.md` | 5 |
+| `docs/ctp-settlement-diagnosis.md` | 5 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 108 |
 | `docs/f9a-design.md` | 5 |
