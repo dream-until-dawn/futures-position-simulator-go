@@ -17,7 +17,13 @@ type commissionRateReader interface {
 
 // reportCTPRates 汇总单次只读查询；连接由原CLI负责，便于独立验证结果与失败传播。
 func reportCTPRates(c commissionRateReader, symbols string, timeout time.Duration, logf func(string, ...any)) error {
-	if strings.TrimSpace(symbols) == "" || timeout <= 0 {
+	var requested []string
+	for _, symbol := range strings.Split(symbols, ",") {
+		if symbol = strings.TrimSpace(symbol); symbol != "" {
+			requested = append(requested, symbol)
+		}
+	}
+	if len(requested) == 0 || timeout <= 0 {
 		return fmt.Errorf("费率查询范围或超时无效")
 	}
 	logf("")
@@ -25,11 +31,7 @@ func reportCTPRates(c commissionRateReader, symbols string, timeout time.Duratio
 		"开仓/按额", "开仓/每手", "平昨/按额", "平昨/每手", "平今/按额", "平今/每手",
 		"适用范围")
 	var interesting []string
-	for _, sym := range strings.Split(symbols, ",") {
-		sym = strings.TrimSpace(sym)
-		if sym == "" {
-			continue
-		}
+	for _, sym := range requested {
 		r, err := c.CommissionRate(sym, timeout)
 		if err != nil {
 			return fmt.Errorf("手续费查询失败 symbol=%s: %w", sym, err)

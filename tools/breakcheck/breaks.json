@@ -10544,5 +10544,16 @@
   "new": "except EvidenceError as error:\n        print('诊断拒绝: '+str(error),file=sys.stderr)\n        return 0",
   "test": "TestPythonHandshakeDiagnosticsBoundary",
   "want": "CLI哈希不匹配仍成功"
+},
+{
+  "name": "1046 空费率范围仍给成功结论",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/rates_report.go",
+  "old": "len(requested) == 0 || timeout <= 0",
+  "new": "len(requested) == 0 && false || timeout <= 0",
+  "test": "TestRatesEmptyRequestDoesNotQuery",
+  "want": "无效费率请求未拒绝或触及查询"
 }
 ]

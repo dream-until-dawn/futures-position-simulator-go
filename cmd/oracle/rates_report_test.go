@@ -109,9 +109,9 @@ func TestRatesEmptyRequestDoesNotQuery(t *testing.T) {
 	for _, tc := range []struct {
 		symbols string
 		timeout time.Duration
-	}{{"", time.Second}, {" ", time.Second}, {"SHFE.rb2701", 0}} {
+	}{{"", time.Second}, {" ", time.Second}, {",,", time.Second}, {" , \t, ", time.Second}, {"SHFE.rb2701", 0}} {
 		if err := reportCTPRates(f, tc.symbols, tc.timeout, func(string, ...any) {}); err == nil || f.calls != 0 {
-			t.Fatal("无效费率请求触及查询", err, f.calls)
+			t.Fatal("无效费率请求未拒绝或触及查询", err, f.calls)
 		}
 	}
 }
