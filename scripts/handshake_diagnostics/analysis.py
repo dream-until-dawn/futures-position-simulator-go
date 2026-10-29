@@ -1,5 +1,6 @@
 """只陈述已记录事实，阶段按编号聚合，打印先后不冒充协议顺序。"""
 from .parsing import EvidenceError
+from .integrity import validate_stage_timing
 
 
 def analyze(events, deadline_ns, process_exit):
@@ -21,6 +22,7 @@ def analyze(events, deadline_ns, process_exit):
         responses = [row for row in rows if row.event == 'response']
         if len(responses) > 1:
             raise EvidenceError('ambiguous-stage-records')
+        validate_stage_timing(rows, deadline_ns)
         for row in responses:
             if row.received_stage is not None and (row.received_stage != stage or row.received_request != request or (row.code == 0 and row.last is not True)):
                 raise EvidenceError('inconsistent-response-metadata')
