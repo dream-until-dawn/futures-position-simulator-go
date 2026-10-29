@@ -1,0 +1,597 @@
+{
+  "format": 1,
+  "source_commit": "a8231e581ba8ed83c71601ed8ef65e65d399e079",
+  "baseline_main": "893992f56720c4814179593c7b8ef966c0ab278f",
+  "source_tree": "0c3bfb9b3baa32f436deb5d3f9aa87688bc5c7ab",
+  "registry_sha256": "e753fdab9d4968532af43cafbd55bc9f782ef4ea587422d34c78f620c1df0778",
+  "report_sha256": "76ff1c6a89e43c2524eec738cec37a163408ee9349422fdbaa7efcd9d2cd133e",
+  "summary_sha256": "4b69b17e274abd5dd79d85b7f03ac6b2d25d6fdbf462fce6af71ae5fc7be3f02",
+  "counts": {
+    "executed": 960,
+    "expected_red": 951,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "raw_directory": "C:\\Temp\\ctp-offline-mutation-a8231e5",
+  "summary": {
+    "path": "C:\\Temp\\ctp-offline-mutation-a8231e5\\summary.json",
+    "sha256": "4b69b17e274abd5dd79d85b7f03ac6b2d25d6fdbf462fce6af71ae5fc7be3f02"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\ctp-offline-mutation-a8231e5\\mutation.log",
+    "sha256": "bb76ed737d8fb288181858abd9c088966a78a62f1b120b5a8748af3208c2da60"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "b9ab1cbe8acbc21b5f456f9cd48ddfa99380cd00a439356f82d3799caaf08a58",
+    "index_sha256": "9d5ac11e888985ad2483c29d922713c53c0f71e6efa8974e7eeef756a629c144",
+    "head": "a8231e581ba8ed83c71601ed8ef65e65d399e079"
+  },
+  "targeted": [
+    {
+      "name": "1032 费率查询失败继续后续合约",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1032.json",
+        "sha256": "44086c5df614e3c5eaa86761456f8a52753f903afd11f4d454eb6c1b8c57dacb"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1032.log",
+        "sha256": "3f3038316be3e6cdc5e5e8726990183679009f03dea3f2ed67a1356877d416bf"
+      }
+    },
+    {
+      "name": "1033 非有限负费率被当成有效值",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1033.json",
+        "sha256": "3a27bd5abf34d99f41411cfc4289a44de1c579a5f3ad1f147912db64a439014f"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1033.log",
+        "sha256": "5ad36ed12f2c85cc2bea26591c40e11b41ce5cfd8c5e92f042fd2fd126683b1a"
+      }
+    },
+    {
+      "name": "1034 未知费率范围被放行",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1034.json",
+        "sha256": "51fe357580ee58eeb906f362b531eeaac40c9ad1c7df57e59640cc171d351ea8"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1034.log",
+        "sha256": "1b6081bd3c97265c0acbc40c01633b64d94431551661ba678af2d8a4b605b556"
+      }
+    },
+    {
+      "name": "1035 费率异合约混入当前结果",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1035.json",
+        "sha256": "042261661b314d300e32fdf18d99eefc304389bf0f9fa5fea93f3a3844762ad3"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1035.log",
+        "sha256": "b2432277bb728fbd81c15cb467fbf02ce8ed75a1e7e33cb0cf687c482c6db793"
+      }
+    },
+    {
+      "name": "1036 费率失败丢失原始错误链",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1036.json",
+        "sha256": "9f2635a371cbdc7197c667667e314306d13cd2eb1ca5fbc63dcdb660a0ca6340"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1036.log",
+        "sha256": "7a340d4273600d936bf77052dd6a755db47263129c36b81ec66cc66b43fd3e33"
+      }
+    },
+    {
+      "name": "1037 握手诊断忽略来源日志哈希",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1037.json",
+        "sha256": "d8974f5c65e6393b120a14f1befc60ef5c8c29d687e4bc2a853043281dad2030"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1037.log",
+        "sha256": "b9fc49feaecaf3f9a3573c35bedc9cd92d6e168abc6469fc60a89bca680a6987"
+      }
+    },
+    {
+      "name": "1038 旧握手字段缺失误当false",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1038.json",
+        "sha256": "d44ce013e66251eb6569d5a338fe4dc3bea924be3f52261d547e28c084c4da46"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1038.log",
+        "sha256": "f039dda5e7d1dc5fb6c3c8e9179ac30d29276517cd605a8aa1ba2260b70e0eab"
+      }
+    },
+    {
+      "name": "1039 日志同步成功掩盖非零发送码",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1039.json",
+        "sha256": "9e9149b8ef8898ff0dbfe0e8959fae42f988160e976ea212716534daa78e541c"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1039.log",
+        "sha256": "557ef729d989c720825e63af09f488ace9942079ff4414c407a389ccfa9ea27b"
+      }
+    },
+    {
+      "name": "1040 握手诊断丢失打印交错标记",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1040.json",
+        "sha256": "8b8056989b7e3f16166778736b80649997334e9c9906140ebfbd8ebfb11d8d5f"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1040.log",
+        "sha256": "02836e861c9143fa193d18461fe0c5667c0158bdd8be6e6d0ed08ad61a6d8760"
+      }
+    },
+    {
+      "name": "1041 握手阶段预算误用整个超时",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1041.json",
+        "sha256": "f3b96f30aa3f592afc52052260e0b68627d0d4fd755ee523686a8225be954dd4"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1041.log",
+        "sha256": "042b190358cf006a9df483edcd4e30f7768b3b57ad070f69d431413259f54a01"
+      }
+    },
+    {
+      "name": "1042 无回调日志误当柜台未回调",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1042.json",
+        "sha256": "c2b45183ad35cf78a41ea6c77201fdacfd7511cbb81657daddcb7871c74548e6"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1042.log",
+        "sha256": "d3cab0ff70ecd9486cf249a7c80f76edb4eb5dd515f133261fed684b8de36eb4"
+      }
+    },
+    {
+      "name": "1043 诊断报告泄漏私有输入路径",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1043.json",
+        "sha256": "9a61cdc99fd0ada88afb07034f2fa18a18f7b1843072da3b9e70e350cfda72e5"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1043.log",
+        "sha256": "27ca4e0943bde0dde1118a6aabc4491dd20a323c6ca3b507b542106f179abf5e"
+      }
+    },
+    {
+      "name": "1044 诊断结果覆盖旧证据",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1044.json",
+        "sha256": "a2ec590c2ba98dc915b4849a4bcc6cc1f43a877b4809b83a6d02d25b10bc8998"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1044.log",
+        "sha256": "4303c1d91e00be55d1868fcb59ba2ae2a5f05013529b327eaf18442f22278199"
+      }
+    },
+    {
+      "name": "1045 诊断CLI校验失败仍退出0",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1045.json",
+        "sha256": "7a1198c6aab8d55deae090af6a83843a115b32618baa6096e344ae283d15a36d"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1045.log",
+        "sha256": "407931551a711ba25e939e4541943b3ebafec4bdf91197d324a273be69c4985e"
+      }
+    },
+    {
+      "name": "1046 空费率范围仍给成功结论",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1046.json",
+        "sha256": "07bdc8c584593bf885eca878a39bfc67042bfd5770090474ba225040a07f4f4c"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a8231e5\\target-1046.log",
+        "sha256": "50929029c8a513861b51eb831dbe8d02d5965390ac268b3a3e3ed1bc3c78aecb"
+      }
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5",
+            "passed_tests": 747,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-regression-a8231e5\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\cmd\\oracle",
+            "passed_tests": 418,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-regression-a8231e5\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-regression-a8231e5\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "b9ab1cbe8acbc21b5f456f9cd48ddfa99380cd00a439356f82d3799caaf08a58",
+          "index_sha256": "9d5ac11e888985ad2483c29d922713c53c0f71e6efa8974e7eeef756a629c144",
+          "head": "a8231e581ba8ed83c71601ed8ef65e65d399e079"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "b9ab1cbe8acbc21b5f456f9cd48ddfa99380cd00a439356f82d3799caaf08a58",
+          "index_sha256": "9d5ac11e888985ad2483c29d922713c53c0f71e6efa8974e7eeef756a629c144",
+          "head": "a8231e581ba8ed83c71601ed8ef65e65d399e079"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-offline-regression-a8231e5\\summary.json",
+        "sha256": "d5d19d684493838cba71dcfd45108dfdd32d13eb53b43f090607a19ee662f690"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-offline-regression-a8231e5\\root.log",
+          "sha256": "52599647fd6bdae1cfc81ccb4034caf343917588ef0af04fbdbb4fee3f54b810"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-regression-a8231e5\\oracle.log",
+          "sha256": "8905c91ef489380bbc758f780242146f6695db7f1d7ad2c3fa0f3d84a7c0ec5a"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-regression-a8231e5\\external.log",
+          "sha256": "52ffeed944d8b46800410fc2db892938f22175d2084705cfba08acbb470e49aa"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5",
+            "passed_tests": 747,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-race-a8231e5\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\cmd\\oracle",
+            "passed_tests": 418,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-race-a8231e5\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-race-a8231e5\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "b9ab1cbe8acbc21b5f456f9cd48ddfa99380cd00a439356f82d3799caaf08a58",
+          "index_sha256": "9d5ac11e888985ad2483c29d922713c53c0f71e6efa8974e7eeef756a629c144",
+          "head": "a8231e581ba8ed83c71601ed8ef65e65d399e079"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "b9ab1cbe8acbc21b5f456f9cd48ddfa99380cd00a439356f82d3799caaf08a58",
+          "index_sha256": "9d5ac11e888985ad2483c29d922713c53c0f71e6efa8974e7eeef756a629c144",
+          "head": "a8231e581ba8ed83c71601ed8ef65e65d399e079"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-offline-race-a8231e5\\summary.json",
+        "sha256": "1cf14a4cbefdc299fe46ee52d2438e957105708069aae15dfadb71ccb682455f"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-offline-race-a8231e5\\root.log",
+          "sha256": "30b031ffe850fdbda30848d5c9333ee3b020f394ca2fedee4fe7baad49d3fd81"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-race-a8231e5\\oracle.log",
+          "sha256": "12cd9d208b067e633f158ed52279601b510a6c8ded1e42aa19ded9e62470b595"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-race-a8231e5\\external.log",
+          "sha256": "7ba480df67426f1a972096446b79528cd2c859e7685d21a6e3921b523d4d914c"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-offline-checks-a8231e5\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "b9ab1cbe8acbc21b5f456f9cd48ddfa99380cd00a439356f82d3799caaf08a58",
+          "index_sha256": "9d5ac11e888985ad2483c29d922713c53c0f71e6efa8974e7eeef756a629c144",
+          "head": "a8231e581ba8ed83c71601ed8ef65e65d399e079"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "b9ab1cbe8acbc21b5f456f9cd48ddfa99380cd00a439356f82d3799caaf08a58",
+          "index_sha256": "9d5ac11e888985ad2483c29d922713c53c0f71e6efa8974e7eeef756a629c144",
+          "head": "a8231e581ba8ed83c71601ed8ef65e65d399e079"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\summary.json",
+        "sha256": "c22ffd750cd547e77919876f1b64aaebebb7a56374af3558c0b5fd4486bb44a8"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\state.log",
+          "sha256": "0bc0c9ee84fa6c27da081242659b87cee992a4b29b8ca1f49c4d95f49a04d847"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\bundle.log",
+          "sha256": "b7f2782f6cbe00d5fe0494e7746cd0a8957f2911206a7d595e84acc06bc8380b"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\report.log",
+          "sha256": "f4ca979c5c12ee47028224509d27afad637c4c4dc7cb86e5ab67b1c55b9a4330"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\risk.log",
+          "sha256": "d220c5f9f44e9aec71377e94cc3cd296879df6df62750427896fc6999ff674b7"
+        },
+        {
+          "path": "C:\\Temp\\ctp-offline-fuzz-a8231e5\\lifecycle.log",
+          "sha256": "bbc9989a12e09f60334d5dc9489fdc884a0d3f5ec1d3be875912c329b73628c6"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\ctp-offline-python-a8231e5.log",
+    "sha256": "ee85841840b80779ac90c9aa5348579d0f0fd6a00d50f8252ed0f009a39e688a"
+  },
+  "before_fix": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\rates-before.log",
+    "sha256": "1198d7761de00501f9422cd1a226581c64ba5e840feddb02c1ae592ad046bd51"
+  },
+  "incomplete_evidence_rejected": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\pending-seal-rejected.log",
+    "sha256": "f62ece659828312e1ae5089df54dff78b7bb4a12d5c1360f9ff0cd6d3100ee32"
+  },
+  "failed_initial_targeted_round": {
+    "source": "154db3c3ced344428df040ccb2e1643f108eb8f5",
+    "report": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\154db3c\\target-1043.json",
+      "sha256": "9303a2e8e71578e99b0b10f3be3859edc4fb75e6bf49e3a4efde8ae769cb54d9"
+    },
+    "log": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\154db3c\\target-1043.log",
+      "sha256": "9162e17a3d0d1a094b9627d7da3ac0f9ec378955230cffd9146de45f015fa7ae"
+    },
+    "reason": "Windows路径JSON转义掩盖泄漏断言，目标1043仍绿；完整扫描未启动，旧轮不拼接"
+  },
+  "empty_csv_before_fix": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\rates-empty-before.log",
+    "sha256": "d87c28fa9ad021816859b8f8b0fb916de1585bfce49438ea211fa03b4a81f53b"
+  },
+  "existing_log_provenance": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-followup-20261029\\provenance-audit.json",
+    "sha256": "adf5345b1b4f98c8eedf867da4aa4bd4e870d8bb9cf717192bd8c0f08059c017"
+  },
+  "native_export_instruction_audit": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-followup-20261029\\export-audit.json",
+    "sha256": "e21ac4b38bef2d869a06108dc2dddc481953c175624f4c3c55e1c3f72bf611e1"
+  },
+  "offline_module_cache_verification": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-followup-20261029\\module-cache-verify.log",
+    "sha256": "acdb6a6a98dc2c297af31bb3538319778be8c8ef263cd0a8c9799de9c4998533"
+  },
+  "initial_sandbox_failure": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\diagnostics-first.log",
+    "sha256": "8acae6d13e3b82c6f96716ea9ebaafb6af5120d4e6024425630510834a1ff192"
+  },
+  "timelines": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\docs\\validation\\ctp-offline-timelines-20261029.json",
+    "sha256": "fec6fc5289c206f154e89155269f41040ffbf187f74821a86b78d2d331d30582"
+  },
+  "regenerated_timelines": {
+    "path": "C:\\Temp\\ctp-offline-timelines-a8231e5.json",
+    "sha256": "fec6fc5289c206f154e89155269f41040ffbf187f74821a86b78d2d331d30582"
+  },
+  "private_input_manifest": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\cases.json",
+    "sha256": "461ca2a9332bac4ad8eac9508141c078554baeeb1666797a64486fa024fc8f37"
+  },
+  "ci": {
+    "sha": "a8231e581ba8ed83c71601ed8ef65e65d399e079",
+    "run": 40844469759,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 123348469304,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success",
+        "completed_at": "2026-10-29T08:49:32Z"
+      },
+      {
+        "id": 123348469562,
+        "name": "offline (windows-2022)",
+        "conclusion": "success",
+        "completed_at": "2026-10-29T08:50:57Z"
+      }
+    ]
+  },
+  "night_freeze_unchanged": {
+    "main_commit": "893992f56720c4814179593c7b8ef966c0ab278f",
+    "before": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-followup-20261029\\frozen-before.json",
+      "sha256": "897b25ea2b10b2904d03a45e6a882ea42c706fb4a5107be3be0148152b8668b3"
+    },
+    "files": [
+      {
+        "role": "night-certificate",
+        "sha256": "8657e04561e560251e15eaf770e895d3410bcd7d1b1d1c05334b15c4854de891"
+      },
+      {
+        "role": "night-ready",
+        "sha256": "c62f225dbcc6f79afd8373cf85b1d088c473900162f2f9f3b14aa596773b5277"
+      },
+      {
+        "role": "night-operator",
+        "sha256": "f5e55805fb8cf5ab6d748350ec9f01a6c51b26d5cccdc8708b5619c8c891cf9c"
+      },
+      {
+        "role": "night-binary",
+        "sha256": "77125e94009425fac381593288d7df8b438d107820eddeaa47eb10c6ecc31e29"
+      },
+      {
+        "role": "night-schedule",
+        "sha256": "d0fc47a27c29b3583318ff9e93abe1d7741ce1e88f43ee85b389b33e800d4e40"
+      }
+    ],
+    "live_round_not_started": true
+  }
+}
