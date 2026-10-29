@@ -1,0 +1,210 @@
+{
+  "format": 1,
+  "kind": "ctp-readonly-validation",
+  "source_commit": "2ec41b97c49aa0c298b4d3254f3abf6433102db0",
+  "binary_sha256": "4e96d53ad91f15e3b7d44baca98f059f4b742e46b9079977de9b178112ed46e2",
+  "date": "20261029",
+  "status": "readonly-handshake-and-rates-passed",
+  "trading_day": "20261029",
+  "attempts": 1,
+  "orders_submitted": 0,
+  "cancels_submitted": 0,
+  "env_unchanged": true,
+  "handshake_finished_elapsed": "4.2250658s",
+  "settlement_response_elapsed": "4.2250658s",
+  "settlement_send_elapsed": "1.2757791s",
+  "rates": {
+    "open_by_money": "0.0001",
+    "open_by_volume": "0",
+    "close_history_by_money": "0.0001",
+    "close_history_by_volume": "0",
+    "close_today_by_money": "0.0001",
+    "close_today_by_volume": "0"
+  },
+  "events": [
+    {
+      "stage": "front",
+      "request": "0",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "74.4018ms",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "front",
+      "request": "0",
+      "event": "finished",
+      "code": "0",
+      "elapsed": "668.1847ms",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "668.1847ms",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "front",
+      "request": "0",
+      "event": "response",
+      "code": "0",
+      "elapsed": "667.6788ms",
+      "received_stage": "front",
+      "received_request": "0",
+      "last": "true",
+      "has_payload": "true"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "send-return",
+      "code": "0",
+      "elapsed": "668.1847ms",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "response",
+      "code": "0",
+      "elapsed": "1.2203212s",
+      "received_stage": "authenticate",
+      "received_request": "1",
+      "last": "true",
+      "has_payload": "true"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "finished",
+      "code": "0",
+      "elapsed": "1.2203212s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "1.2203212s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "send-return",
+      "code": "0",
+      "elapsed": "1.2455848s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "response",
+      "code": "0",
+      "elapsed": "1.2757791s",
+      "received_stage": "login",
+      "received_request": "2",
+      "last": "true",
+      "has_payload": "true"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "finished",
+      "code": "0",
+      "elapsed": "1.2757791s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "settlement-confirm",
+      "request": "3",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "1.2757791s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "settlement-confirm",
+      "request": "3",
+      "event": "send-return",
+      "code": "0",
+      "elapsed": "1.2757791s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "settlement-confirm",
+      "request": "3",
+      "event": "response",
+      "code": "0",
+      "elapsed": "4.2250658s",
+      "received_stage": "settlement-confirm",
+      "received_request": "3",
+      "last": "true",
+      "has_payload": "true"
+    },
+    {
+      "stage": "settlement-confirm",
+      "request": "3",
+      "event": "finished",
+      "code": "0",
+      "elapsed": "4.2250658s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    }
+  ],
+  "private_result": {
+    "path": "C:\\Temp\\ctp-handshake-readonly-20261029-2ec41b9\\result.json",
+    "sha256": "205f9a3446b4e3f9ddec6a045561b7f8d4028d579b0a48451ea85325a053ed57"
+  },
+  "private_artifacts": [
+    {
+      "path": "C:\\Temp\\ctp-handshake-readonly-20261029-2ec41b9\\attempt-start.json",
+      "sha256": "2bd26ab63cefc81446f6c8afb3c23f7e351682020e8ff5597ffe9efe0eda0997"
+    },
+    {
+      "path": "C:\\Temp\\ctp-handshake-readonly-20261029-2ec41b9\\process.json",
+      "sha256": "009a2b93856aeb753d5425a6ccd376311830fddb2d64c1bcbdb58146baae586d"
+    },
+    {
+      "path": "C:\\Temp\\ctp-handshake-readonly-20261029-2ec41b9\\exit.json",
+      "sha256": "2871a926d68acd5c3a611e44efa45b2a44112810ce02eb00891505c005699612"
+    },
+    {
+      "path": "C:\\Temp\\ctp-handshake-readonly-20261029-2ec41b9\\stdout.log",
+      "sha256": "8c17e0e47f3a7cb5b26172980e1b0238db1092046ed2be4ebc399e17d40474fb"
+    },
+    {
+      "path": "C:\\Temp\\ctp-handshake-readonly-20261029-2ec41b9\\stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "limitations": [
+    "单次只读成功不恢复上午真实底层返回码或解释历史超时原因",
+    "不是价格样本，不验证报撤单或收尾，不替代下一交易日现场条件"
+  ]
+}
