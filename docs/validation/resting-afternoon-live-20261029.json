@@ -1,0 +1,190 @@
+{
+  "format": 1,
+  "status": "preflight-failed-before-orders",
+  "reason": "settlement-confirm-timeout-after-real-native-zero",
+  "source_commit": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1",
+  "date": "20261029",
+  "readonly_attempts": 1,
+  "execute_attempts": 0,
+  "orders_submitted": 0,
+  "cancels_submitted": 0,
+  "positions": "unknown-not-queried",
+  "orders": "unknown-not-queried",
+  "trades": "unknown-not-queried",
+  "market_data": "unknown-not-queried",
+  "rates": "not-queried-in-this-round",
+  "verdict": "no-sample-no-verdict",
+  "no_retry": true,
+  "events": [
+    {
+      "stage": "front",
+      "request": "0",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "59.0111ms",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "front",
+      "request": "0",
+      "event": "finished",
+      "code": "0",
+      "elapsed": "1.4964065s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "1.4964065s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "front",
+      "request": "0",
+      "event": "response",
+      "code": "0",
+      "elapsed": "1.4964065s",
+      "received_stage": "front",
+      "received_request": "0",
+      "last": "true",
+      "has_payload": "true"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "send-return",
+      "code": "0",
+      "elapsed": "1.4964065s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "response",
+      "code": "0",
+      "elapsed": "1.5685282s",
+      "received_stage": "authenticate",
+      "received_request": "1",
+      "last": "true",
+      "has_payload": "true"
+    },
+    {
+      "stage": "authenticate",
+      "request": "1",
+      "event": "finished",
+      "code": "0",
+      "elapsed": "1.5685282s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "1.5685282s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "send-return",
+      "code": "0",
+      "elapsed": "1.5871819s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "response",
+      "code": "0",
+      "elapsed": "1.6240503s",
+      "received_stage": "login",
+      "received_request": "2",
+      "last": "true",
+      "has_payload": "true"
+    },
+    {
+      "stage": "login",
+      "request": "2",
+      "event": "finished",
+      "code": "0",
+      "elapsed": "1.6240503s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "settlement-confirm",
+      "request": "3",
+      "event": "begin",
+      "code": "0",
+      "elapsed": "1.6250514s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "settlement-confirm",
+      "request": "3",
+      "event": "send-return",
+      "code": "0",
+      "elapsed": "1.6250514s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    },
+    {
+      "stage": "settlement-confirm",
+      "request": "3",
+      "event": "timeout",
+      "code": "0",
+      "elapsed": "10.0005823s",
+      "received_request": "0",
+      "last": "false",
+      "has_payload": "false"
+    }
+  ],
+  "observed_confirmation_callback_events": [],
+  "artifacts": [
+    {
+      "path": "C:\\Temp\\resting-probe-20261029-afternoon\\round-start.json",
+      "sha256": "5d1bf85e305604a438fe32a1734609641f7c14533c97d24c5b922ce66df7beb9"
+    },
+    {
+      "path": "C:\\Temp\\resting-probe-20261029-afternoon\\check.process.json",
+      "sha256": "9e1f88e965369e954e20691ed91eab02f8287ebe160fb7dd856f982cc2290095"
+    },
+    {
+      "path": "C:\\Temp\\resting-probe-20261029-afternoon\\check.exit.json",
+      "sha256": "b4c8d8aeccd108dd4b5020e519116f42e7d26fbf77282ad613b213709bc8c07a"
+    },
+    {
+      "path": "C:\\Temp\\resting-probe-20261029-afternoon\\check.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "C:\\Temp\\resting-probe-20261029-afternoon\\check.stderr",
+      "sha256": "7c96556ba46373901e7d90d750adda79a61fc2a11b44a61f0f7c6f5d0625aa30"
+    },
+    {
+      "path": "C:\\Temp\\resting-probe-20261029-afternoon\\STOPPED.json",
+      "sha256": "ea53a5e5b5b3f316df7059a6aa552338cb3bee69fa50a51c6f5409124f43c218"
+    }
+  ]
+}

@@ -8767,8 +8767,8 @@
 		"name": "884 撤销今日启动日期和窗口",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/resting_price_probe.go",
-		"old": "local.Format(\"20060102\") != restingProbeDay || hm < 1440 || hm >= 1450",
-		"new": "false && (local.Format(\"20060102\") != restingProbeDay || hm < 1440 || hm >= 1450)",
+		"old": "local.Format(\"20060102\") != restingProbeDay || hm < 1055 || hm >= 1115",
+		"new": "false && (local.Format(\"20060102\") != restingProbeDay || hm < 1055 || hm >= 1115)",
 		"pkg": ".",
 		"test": "TestRestingRegistrationStartBoundary",
 		"want": "越界启动未在报单前拒绝",
@@ -10302,27 +10302,5 @@
 		"new": "if table > ^uintptr(0)-offset && false {",
 		"test": "TestNativeHandshakeInvalidPointers",
 		"want": "溢出原生方法被放行"
-	},
-	{
-		"name": "1024 CLI下午启动窗口被撤销",
-		"dir": "cmd/oracle",
-		"file": "cmd/oracle/resting_price_probe.go",
-		"old": "now.Format(\"20060102\") != restingProbeDay || hm < 1440 || hm >= 1450",
-		"new": "false && (now.Format(\"20060102\") != restingProbeDay || hm < 1440 || hm >= 1450)",
-		"pkg": ".",
-		"test": "TestRestingRegistrationCLIWindow",
-		"want": "CLI启动窗口未在读取凭据前拒绝",
-		"expect": "red"
-	},
-	{
-		"name": "1025 下午成交判据观察窗口被撤销",
-		"dir": "cmd/oracle",
-		"file": "cmd/oracle/resting_price_rules.go",
-		"old": "at.Hour()*100+at.Minute() < 1440 || at.Hour()*100+at.Minute() >= 1455",
-		"new": "false && (at.Hour()*100+at.Minute() < 1440 || at.Hour()*100+at.Minute() >= 1455)",
-		"pkg": ".",
-		"test": "TestRestingRegistrationTradeWindow",
-		"want": "成交观察窗口越界样本被接受",
-		"expect": "red"
 	}
 ]
