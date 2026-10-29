@@ -9,8 +9,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// restingProbeDay 绑定10月30日上午候选登记；取得对应窗口批准后才允许执行，不提供日期覆盖开关。
-const restingProbeDay = "20261030"
+// restingProbeDay 绑定10月29日下午独立登记，不恢复已停止的上午轮次，也不提供日期覆盖开关。
+const restingProbeDay = "20261029"
 
 var probeShanghai = time.FixedZone("Asia/Shanghai", 8*60*60)
 
@@ -21,7 +21,7 @@ const minRestingQueueMillis int64 = 2000
 func validateRestingQuote(md *def.CThostFtdcDepthMarketDataField, spec *def.CThostFtdcInstrumentField, day string, now time.Time) error {
 	local := now.In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()
-	if day != restingProbeDay || local.Format("20060102") != day || hm < 1030 || hm >= 1125 {
+	if day != restingProbeDay || local.Format("20060102") != day || hm < 1330 || hm >= 1459 {
 		return fmt.Errorf("不在本次登记的日盘日期或收尾窗口")
 	}
 	if md == nil || spec == nil || ctp.Text(md.InstrumentID[:]) != "rb2701" || ctp.Text(spec.InstrumentID[:]) != "rb2701" || ctp.Text(spec.ExchangeID[:]) != "SHFE" || spec.IsTrading == 0 || spec.PriceTick != 1 || spec.VolumeMultiple != 10 {
@@ -74,7 +74,7 @@ func restingPriceVerdict(rows []*def.CThostFtdcTradeField, out ownedOrderOutcome
 		return "no-verdict", decimal.Zero, fmt.Errorf("成交身份、方向、手数或交易日不匹配")
 	}
 	at, err := time.Parse("15:04:05", ctp.Text(r.TradeTime[:]))
-	if err != nil || at.Hour()*100+at.Minute() < 1055 || at.Hour()*100+at.Minute() >= 1120 {
+	if err != nil || at.Hour()*100+at.Minute() < 1440 || at.Hour()*100+at.Minute() >= 1455 {
 		return "no-verdict", decimal.Zero, fmt.Errorf("成交不在登记的连续竞价观察窗口")
 	}
 	actual := decimal.NewFromFloat(float64(r.Price))

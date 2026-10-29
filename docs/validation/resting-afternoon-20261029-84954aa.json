@@ -1,0 +1,414 @@
+{
+  "format": 1,
+  "source_commit": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1",
+  "source_tree": "a52d0e26aeea3957aadfa4ff4a901e400dda5b06",
+  "baseline_main": "eec505ae2c0a660c787147b0a54e2ba5e9096bdf",
+  "registry_sha256": "e4199123740219da4b505bca0ed11041e1d8e48e0173c5c90efdb861816113ec",
+  "report_sha256": "1c542ea91295b4d3dc1901a56472deceb2bd943ae607ce3f422fdf4b8405fcc0",
+  "summary_sha256": "095b90c36657fc4cd45860af965689ed582a91c0f766e21bd50fe38c75f3a0bb",
+  "counts": {
+    "executed": 939,
+    "expected_red": 930,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "raw_directory": "C:\\Temp\\resting-pm-mutation-20261029",
+  "summary": {
+    "path": "C:\\Temp\\resting-pm-mutation-20261029\\summary.json",
+    "sha256": "095b90c36657fc4cd45860af965689ed582a91c0f766e21bd50fe38c75f3a0bb"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\resting-pm-mutation-20261029\\mutation.log",
+    "sha256": "2badc96113ad720300eff83e17422642396752c5d99e5277d51e087cbd3be0da"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "1edfa53c6e78c3c2f5f515d7e112eb5623a9b894ecee9b0abaa2d677c75b9113",
+    "index_sha256": "ca13330323ad43ea9852828b04a7343329242908f0b44bee9cb285ebcdec70b5",
+    "head": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1"
+  },
+  "targeted": [
+    {
+      "name": "884 撤销今日启动日期和窗口",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-884.json",
+        "sha256": "6879eea86b5a3a6c07329654aeda049dc730b77bd2df0923d176ff71ab9be601"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-884.log",
+        "sha256": "dfa15a0afb1f5b0b873c2de47c7a3b836f9fe83fb522195b7880e41d05a2995a"
+      }
+    },
+    {
+      "name": "885 陈旧日期行情获准进入今日探针",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-885.json",
+        "sha256": "615d3fde127aaa70fbcdc9ba3f4fe7ee250c53a3f53fb4e35d644973082a7946"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-885.log",
+        "sha256": "7818c9bbd3b06162908fd3097fe8365d81a1b3164eabe25d24ebaf0bd3b66018"
+      }
+    },
+    {
+      "name": "1024 CLI下午启动窗口被撤销",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-1024.json",
+        "sha256": "fa8287a191f87192d9bad7634ac981c9628f9cfbdf9e3708644518694188b3ed"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-1024.log",
+        "sha256": "dfd347c8ad4d19edd811a6085c40a83fa94b8ea070257f3b96345d2599b22d1d"
+      }
+    },
+    {
+      "name": "1025 下午成交判据观察窗口被撤销",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-1025.json",
+        "sha256": "af8c1e59ff6bfac7f88f11f7c712febe47c27defc18366649cd451ec3b91d177"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\target-1025.log",
+        "sha256": "b394d75ff2e8a1ea445534ba988568ec0db47083d298eafb52771633cbfe88eb"
+      }
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-regression-20261029\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\cmd\\oracle",
+            "passed_tests": 409,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-regression-20261029\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-regression-20261029\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "1edfa53c6e78c3c2f5f515d7e112eb5623a9b894ecee9b0abaa2d677c75b9113",
+          "index_sha256": "ca13330323ad43ea9852828b04a7343329242908f0b44bee9cb285ebcdec70b5",
+          "head": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "1edfa53c6e78c3c2f5f515d7e112eb5623a9b894ecee9b0abaa2d677c75b9113",
+          "index_sha256": "ca13330323ad43ea9852828b04a7343329242908f0b44bee9cb285ebcdec70b5",
+          "head": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\resting-pm-regression-20261029\\summary.json",
+        "sha256": "56a3315e82206eff25d9cb14c6b6755b5810de2a279d7ff6ec603eb50acadb48"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\resting-pm-regression-20261029\\root.log",
+          "sha256": "4b52b7dc30a87f99f281aa31bded7d8e3f049a19700a4adcde2a4338c0e98960"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-regression-20261029\\oracle.log",
+          "sha256": "faa496cb500b0b8b116adf4533952026745133ed86411872f5eaaf719d64540f"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-regression-20261029\\external.log",
+          "sha256": "ac39d01a6ee1fdca75a771712b9849dcd3b8c3636094bc33178f42eb52642d0b"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-race-20261029\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\cmd\\oracle",
+            "passed_tests": 409,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-race-20261029\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-race-20261029\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "1edfa53c6e78c3c2f5f515d7e112eb5623a9b894ecee9b0abaa2d677c75b9113",
+          "index_sha256": "ca13330323ad43ea9852828b04a7343329242908f0b44bee9cb285ebcdec70b5",
+          "head": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "1edfa53c6e78c3c2f5f515d7e112eb5623a9b894ecee9b0abaa2d677c75b9113",
+          "index_sha256": "ca13330323ad43ea9852828b04a7343329242908f0b44bee9cb285ebcdec70b5",
+          "head": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\resting-pm-race-20261029\\summary.json",
+        "sha256": "20cafaad291f25c67d901398786398f86793a957fcba5f7135b7fd2dd56e880a"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\resting-pm-race-20261029\\root.log",
+          "sha256": "43687459bfa2aeb0895096235c059c03949161d2c3327befd524f0bf35718c1b"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-race-20261029\\oracle.log",
+          "sha256": "4f2970c24a38110ebf9bd5859ed3be341a93639113f9e661001fbb7d67656fff"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-race-20261029\\external.log",
+          "sha256": "4185f21b5a2bb7491ba31887deb6415ec445429fa74618ccd10eb9a609aad647"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-fuzz-20261029\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-fuzz-20261029\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-fuzz-20261029\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-fuzz-20261029\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\resting-pm-checks-20261029\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\resting-pm-fuzz-20261029\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "1edfa53c6e78c3c2f5f515d7e112eb5623a9b894ecee9b0abaa2d677c75b9113",
+          "index_sha256": "ca13330323ad43ea9852828b04a7343329242908f0b44bee9cb285ebcdec70b5",
+          "head": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "1edfa53c6e78c3c2f5f515d7e112eb5623a9b894ecee9b0abaa2d677c75b9113",
+          "index_sha256": "ca13330323ad43ea9852828b04a7343329242908f0b44bee9cb285ebcdec70b5",
+          "head": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\resting-pm-fuzz-20261029\\summary.json",
+        "sha256": "c09d4c06fb4f68fa12d29f38ca55cebc774df311ff8579321777dfe71777a350"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\resting-pm-fuzz-20261029\\state.log",
+          "sha256": "485eb172858437d46ff46e6a261db6fdddddf4e96cfe114caee8867fba80fe3f"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-fuzz-20261029\\bundle.log",
+          "sha256": "5eec01727c15a48d16c298e99ef2a7d139fd26fd5ae18244c62e7973b0953f53"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-fuzz-20261029\\report.log",
+          "sha256": "69b093a066eae54c3261fdcebd3add2850d8c727f8f15741aaed33fe466b4b3c"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-fuzz-20261029\\risk.log",
+          "sha256": "c84fd1ee3860caebe3c7d6920530e698e86d242ba130139984a0760a3ddd333d"
+        },
+        {
+          "path": "C:\\Temp\\resting-pm-fuzz-20261029\\lifecycle.log",
+          "sha256": "9327b6bec655d30ff436603d36fd308c62de327848c37e4865aeabc931a31a2c"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\resting-pm-python-20261029.log",
+    "sha256": "b6b194684c3efaddaf81ba9b65de41c084ddc19c64d5b6ee717307fbe7c42fba"
+  },
+  "before_fix": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-afternoon-20261029\\before.log",
+    "sha256": "c02e77f5bf3c587ed07d4edc106983f5e6660f87a9ff0b0c317372c3356fec66"
+  },
+  "ci": {
+    "sha": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1",
+    "id": 40825159235,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 123286410955,
+        "name": "offline (windows-2022)",
+        "conclusion": "success"
+      },
+      {
+        "id": 123286411280,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "build": {
+    "binary": {
+      "path": "C:\\Temp\\resting-20261029-afternoon-84954aa.exe",
+      "sha256": "e05cee754f9a7c29abd0458968d0f3c8ea3f5ce9bdbc1e5a429655e8f87916d2"
+    },
+    "info": "C:\\Temp\\resting-20261029-afternoon-84954aa.exe: go1.27.3-X:nojsonv2\n\tpath\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\n\tmod\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\tv0.0.0-20261029054446-84954aac9d3c\t\n\tdep\tgitee.com/haifengat/goctp\tv1.10.17\th1:8G7T10OlcutHgwTZca/Qb+Dk64yORSB62Sj8D/InIcs=\n\tdep\tgithub.com/coder/websocket\tv1.8.15\th1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=\n\tdep\tgithub.com/dream-until-dawn/futures-position-simulator-go\tv0.0.0\n\t=>\t../..\t(devel)\t\n\t\n\tdep\tgithub.com/shopspring/decimal\tv1.4.0\th1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\tDefaultGODEBUG=containermaxprocs=0,cryptocustomrand=1,decoratemappings=0,gotestjsonbuildtext=1,httpcookiemaxnum=0,httpservecontentmaxranges=1,multipathtcp=0,randseednop=0,rsa1024min=0,tlsmlkem=0,tlssecpmlkem=0,tlssha1=1,tracebacklabels=0,updatemaxprocs=0,urlmaxqueryparams=0,urlstrictcolons=0,x509rsacrt=0,x509sha256skid=0,x509sslcertoverrideplatform=0,x509usepolicies=0\n\tbuild\tCGO_ENABLED=1\n\tbuild\tCGO_CFLAGS=\n\tbuild\tCGO_CPPFLAGS=\n\tbuild\tCGO_CXXFLAGS=\n\tbuild\tCGO_LDFLAGS=\n\tbuild\tGOARCH=amd64\n\tbuild\tGOEXPERIMENT=nojsonv2\n\tbuild\tGOOS=windows\n\tbuild\tGOAMD64=v1\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1\n\tbuild\tvcs.time=2026-10-29T05:44:46Z\n\tbuild\tvcs.modified=false\n"
+  },
+  "native_handshake_acceptance": {
+    "source_commit": "2ec41b97c49aa0c298b4d3254f3abf6433102db0",
+    "certificate": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\ctp-settlement-2ec41b9.json",
+      "sha256": "0cea8bd5aac86181f655e843c059da6c53f83c0323ffd0017cf1b1197d26b876"
+    },
+    "readonly": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\ctp-readonly-20261029-2ec41b9.json",
+      "sha256": "b5bc8fd2f7fc7aa44c293c0f2006a2d43b67fd6bb7543cd3752267d08cb5b2fb"
+    }
+  }
+}
