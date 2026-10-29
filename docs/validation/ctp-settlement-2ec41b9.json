@@ -1,0 +1,672 @@
+{
+  "format": 1,
+  "source_commit": "2ec41b97c49aa0c298b4d3254f3abf6433102db0",
+  "source_tree": "967abc93fa7b08593b549fa2a2e51150e6667e76",
+  "baseline_main": "a1a08dee3433b308d6de3f0d5838da96b6db98b3",
+  "registry_sha256": "ecd3a76b52cfe1e4ccc49d068e30f96679bcb1e1232253a72fbfae659276029d",
+  "report_sha256": "ebc128b9b4c2e430c6670e0519e1e06581b621e08c9a21af4611a8b722f5d878",
+  "summary_sha256": "0e690d525155af04162d80c40e8d30daf298b09289a3216995d7e942f18b7841",
+  "counts": {
+    "executed": 937,
+    "expected_red": 928,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "raw_directory": "C:\\Temp\\ctp-settlement-mutation-2ec41b9",
+  "summary": {
+    "path": "C:\\Temp\\ctp-settlement-mutation-2ec41b9\\summary.json",
+    "sha256": "0e690d525155af04162d80c40e8d30daf298b09289a3216995d7e942f18b7841"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\ctp-settlement-mutation-2ec41b9\\mutation.log",
+    "sha256": "14667c4f342de23e9ed8d45a0dfdc5ccb625946c93d64b2ed092acee0dd69d77"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "d77996ee30ed239e8f5d4a1e141999d74e0d7e27929c036bb5118d1d8e2aaaec",
+    "index_sha256": "c238157b2f34d40a48972146f6d9683988b7d9b4e1b024129f6de9656cded1d1",
+    "head": "2ec41b97c49aa0c298b4d3254f3abf6433102db0"
+  },
+  "targeted": [
+    {
+      "name": "888 握手接受其他请求编号",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\888.json",
+        "sha256": "2913b1afd4e52b1cf193d36369cc2318231e10bc34e1ed5430d91af2f93a6cb9"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\888.log",
+        "sha256": "fd2df04539b3c8b4b7eff0ba1a931931fc4a32063aed9794831bebe83e3b6928"
+      }
+    },
+    {
+      "name": "889 握手接受其他阶段回调",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\889.json",
+        "sha256": "48b8a91593c5becafb86fe5d6debc71e34cbc70d07f387f7ee18f017322078cf"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\889.log",
+        "sha256": "75823bc6b93aa28f112471df0164ab09efa186329cdf28b697aa102d39035df0"
+      }
+    },
+    {
+      "name": "890 非最终成功回调完成握手",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\890.json",
+        "sha256": "2cae7072160f8b3202e6dbf4449b04854e11fd911e32f5594ca181ca1711f410"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\890.log",
+        "sha256": "8e788f736228ba58694210ccc4798b78cd517ef18b5ac6dd82d61c1a37b2a9c6"
+      }
+    },
+    {
+      "name": "898 握手诊断泄漏原始字段",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\898.json",
+        "sha256": "91aee2cb037cd66abae52db5ec5b2f1822eac96ba27676c2283df9a4c25f3256"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\898.log",
+        "sha256": "843c0d13d57e99d85bf327c39c49c1f70e590facc2cfc19d34da86499457d06d"
+      }
+    },
+    {
+      "name": "899 原生握手发送总返回零",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\899.json",
+        "sha256": "a4f20548c1a2cb59f54fb3f96d42fca8a54de4655e1c36ae2e2057ba822d2d43"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\899.log",
+        "sha256": "a195f409c9ef35a3195471731451763cc69b9b9c21282f312b28508283265677"
+      }
+    },
+    {
+      "name": "900 截止后回调污染握手收集状态",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\900.json",
+        "sha256": "272f6397569076cdc5aff9acf6dec16a41691c149e0ace58f12b8e056808ffd9"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\900.log",
+        "sha256": "daebad10a3c49c78867b58640a45c694b2a3736fdfc47bb6157903d7fcd5d6a8"
+      }
+    },
+    {
+      "name": "1008 真实原生握手返回码被清零",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1008.json",
+        "sha256": "343d51eb504939f0d1347ff110920068fcf958149c306c0b0df344a37e45ddfb"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1008.log",
+        "sha256": "332cac0bda8f23d38a39484243c66b84e39e3b126ce7be687630c43ada1df4c4"
+      }
+    },
+    {
+      "name": "1009 结算确认虚表串到登录方法",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1009.json",
+        "sha256": "1fc50bdbc0fcb6f9f41c2e3db5effdeafd5bac159ac229dc38e4dbc3cc5084c7"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1009.log",
+        "sha256": "d9ffaf36792664c9ccee048547845e4b0652503c2d0cba677577c9a5fe108201"
+      }
+    },
+    {
+      "name": "1010 未知原生架构仍放行",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1010.json",
+        "sha256": "24a90a3f8daf63a398e755f6a56d9284fe5fc1832fd2f60536fd442ea094f7c3"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1010.log",
+        "sha256": "856fbb8fd5e59677ee45534efd34a784e34cd4b897807fa336cf0d03bad949e7"
+      }
+    },
+    {
+      "name": "1011 未知DLL绕过原生ABI哈希",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1011.json",
+        "sha256": "b02b2cd09c5524e59792894afd58b9507dd4be4ecf35128f1a32ff80b7f69c3f"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1011.log",
+        "sha256": "dbd0dee55b795e29447d14207819bb96c0b8327ddb2a54382d7081e2ec3d9254"
+      }
+    },
+    {
+      "name": "1012 生产初始化漏接原生ABI校验",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1012.json",
+        "sha256": "46265d575ae658416cda94bb01eb6800be6658970fc2de59c4444f73022af3e5"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1012.log",
+        "sha256": "00b90a0070899a49491c19bc0adda146f26aa232b684dc039455026694123824"
+      }
+    },
+    {
+      "name": "1013 任意原生方法被握手入口放行",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1013.json",
+        "sha256": "6d5747bfffc22d2a77217aa0154cc95dcf269cc779220550e17e9d84dd30b5c9"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1013.log",
+        "sha256": "3a5adf8e691fac2ababf1d6685bd037afe24ef195bbd73d6cc2c7003a030ea31"
+      }
+    },
+    {
+      "name": "1014 本地原生绑定错误伪装成功",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1014.json",
+        "sha256": "dd4863b48c6954036107ad48ff7824a46311651538080c69a4495efce544be29"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1014.log",
+        "sha256": "0969d6f5a5282ad4b1f73eb819acf1ea28fe41c8787ef96058549893165fac82"
+      }
+    },
+    {
+      "name": "1015 过滤诊断丢失实际回报编号",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1015.json",
+        "sha256": "13c79f8405d2dae4ac83d8a90541eb1f681ee16635a041fca6c4c054f60899ba"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1015.log",
+        "sha256": "7987e3b1dc95ef3c3db85021ec4ee85100f790be72e4a02a030f4f9b49b45b2f"
+      }
+    },
+    {
+      "name": "1016 握手过滤诊断丢失原因",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1016.json",
+        "sha256": "372f20c019578db5ef5c6b42552a71bf63a7faf8b7f05dd64260bfbc58d39091"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1016.log",
+        "sha256": "247bf4aef2d33b8bdfe105747efd10191927f966e4ee1f1eb3691edeb839bd6a"
+      }
+    },
+    {
+      "name": "1017 成功分片被过滤却不记录原因",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1017.json",
+        "sha256": "3d26b604f7d7f356e3de527eca0597703b7f69d5d56410d16c442280eeeff459"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1017.log",
+        "sha256": "3969589a1a771550ec355ca10c54d81c54665ebb1111215de160862f5c0d512e"
+      }
+    },
+    {
+      "name": "1018 回报负载存在标记失真",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1018.json",
+        "sha256": "ffed2a980a27a7d5492d8a8cd9e5d5ff7adfac37c513d8a693534697e14a91a2"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1018.log",
+        "sha256": "68eefe8039ccd1e3d99ca322fa4df8d3bc30fe9ffe0ac3b2fefcd1f77245b712"
+      }
+    },
+    {
+      "name": "1019 回调诊断夹入原始登录负载",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1019.json",
+        "sha256": "5b47b2f0969780cf33a43727d24b15d46b8ba5cb42fbea98fe6091fb930b20a2"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1019.log",
+        "sha256": "e92e37e76cc577d51e3e690f8478f9a90064d9fd2f071fba62218581616f9378"
+      }
+    },
+    {
+      "name": "1020 生产日志省略实际回报编号",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1020.json",
+        "sha256": "12469639c106563428b0d2b4aeefc358d811785ee99c2fa8181873ca4995bb32"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1020.log",
+        "sha256": "d453b8c06b4464c2e19f2e9fa24208063a850800cc9c742a4909435e515dc064"
+      }
+    },
+    {
+      "name": "1021 不可执行方法页被当作原生代码",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1021.json",
+        "sha256": "ef7edf4b92d5a017d73120690765e03772f8014a397d738741455cdc547c6aa9"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1021.log",
+        "sha256": "075ae2f82baec7ae2e4fb72024a5203b8b862c4525f8b413b078380b4774833e"
+      }
+    },
+    {
+      "name": "1022 原生指针读取结果被清零",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1022.json",
+        "sha256": "690aabfad770ff8a73a2605c4b49dc2b0a1929d5f4b5e8087b5f70d6e329dae6"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1022.log",
+        "sha256": "a12038b9d7dc00f14bf49a501fd0e1708f62985528ff8c4ec2ff5d9e7d7b1222"
+      }
+    },
+    {
+      "name": "1023 原生方法偏移溢出不明确拒绝",
+      "report": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1023.json",
+        "sha256": "ca764d45b50baac2ee5a4f835c19bf55a146e0253001db39ba6c0de331292a96"
+      },
+      "log": {
+        "path": "C:\\Temp\\ctp-settlement-target-results-2ec41b9\\1023.log",
+        "sha256": "c50fae16b42733b5bc910df3a02df125b15381732f5051e2e4d2dca2f08bbe01"
+      }
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-regression-2ec41b9\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\cmd\\oracle",
+            "passed_tests": 407,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-regression-2ec41b9\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-regression-2ec41b9\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "d77996ee30ed239e8f5d4a1e141999d74e0d7e27929c036bb5118d1d8e2aaaec",
+          "index_sha256": "c238157b2f34d40a48972146f6d9683988b7d9b4e1b024129f6de9656cded1d1",
+          "head": "2ec41b97c49aa0c298b4d3254f3abf6433102db0"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "d77996ee30ed239e8f5d4a1e141999d74e0d7e27929c036bb5118d1d8e2aaaec",
+          "index_sha256": "c238157b2f34d40a48972146f6d9683988b7d9b4e1b024129f6de9656cded1d1",
+          "head": "2ec41b97c49aa0c298b4d3254f3abf6433102db0"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-settlement-regression-2ec41b9\\summary.json",
+        "sha256": "75c62193de278efa1ed15f2ebb6481e0619a0b7b036dc94d18aca6ff0084fa31"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-settlement-regression-2ec41b9\\root.log",
+          "sha256": "f41308e34f2c77d8d80db13e2b456d40d24b897ae202b8286c747b2fcf55c96d"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-regression-2ec41b9\\oracle.log",
+          "sha256": "84acb78f727d2f0dbb5792ba56ff750bf8ed7bdbafbf92270330d084db2e5655"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-regression-2ec41b9\\external.log",
+          "sha256": "934353f9b306f7d34220f53ef180adfe77512af63de4fd661ecfcd12cdf6e0e4"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9",
+            "passed_tests": 746,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-race-2ec41b9\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\cmd\\oracle",
+            "passed_tests": 407,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-race-2ec41b9\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-race-2ec41b9\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "d77996ee30ed239e8f5d4a1e141999d74e0d7e27929c036bb5118d1d8e2aaaec",
+          "index_sha256": "c238157b2f34d40a48972146f6d9683988b7d9b4e1b024129f6de9656cded1d1",
+          "head": "2ec41b97c49aa0c298b4d3254f3abf6433102db0"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "d77996ee30ed239e8f5d4a1e141999d74e0d7e27929c036bb5118d1d8e2aaaec",
+          "index_sha256": "c238157b2f34d40a48972146f6d9683988b7d9b4e1b024129f6de9656cded1d1",
+          "head": "2ec41b97c49aa0c298b4d3254f3abf6433102db0"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-settlement-race-2ec41b9\\summary.json",
+        "sha256": "3d4f899029c5942f90efc383c13eee9815011e1232503d0818609f78e8166bd2"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-settlement-race-2ec41b9\\root.log",
+          "sha256": "6d683a9896d8d9aaaa8e665cf3788123d35fc8647403aa21d7c4cf0323a48490"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-race-2ec41b9\\oracle.log",
+          "sha256": "9a0eb371acf11975a6efc42bfb9219cde3d1703ac1254477fef55ffb34773a5a"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-race-2ec41b9\\external.log",
+          "sha256": "e946e429eaa2975f29c8887c2ad5b4492fd5e0305f8b869f66fd1cfed696c1d1"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-settlement-checks-2ec41b9\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "d77996ee30ed239e8f5d4a1e141999d74e0d7e27929c036bb5118d1d8e2aaaec",
+          "index_sha256": "c238157b2f34d40a48972146f6d9683988b7d9b4e1b024129f6de9656cded1d1",
+          "head": "2ec41b97c49aa0c298b4d3254f3abf6433102db0"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "d77996ee30ed239e8f5d4a1e141999d74e0d7e27929c036bb5118d1d8e2aaaec",
+          "index_sha256": "c238157b2f34d40a48972146f6d9683988b7d9b4e1b024129f6de9656cded1d1",
+          "head": "2ec41b97c49aa0c298b4d3254f3abf6433102db0"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\summary.json",
+        "sha256": "454f0a48e5cf08a01390a54fca1109f04b115d4beeea2faeda6586df5bfb090c"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\state.log",
+          "sha256": "5953aec2d0ce4051b9d83e333dafe603b9783b4fdc8c0a93e33ed3f177d1d5f8"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\bundle.log",
+          "sha256": "f5ccf523fffd2e756752d7088547b9675e2e2620f03befc3395f05a8451d731b"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\report.log",
+          "sha256": "b824bff5a7b106edd2df881431ee2cd784bad505ec7c14786377dd4b3d80ba55"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\risk.log",
+          "sha256": "9acfedc2c430d673b1a5503d485b2d36c2e5d00fafd35122de90e62e11f20092"
+        },
+        {
+          "path": "C:\\Temp\\ctp-settlement-fuzz-2ec41b9\\lifecycle.log",
+          "sha256": "d73a3cbb2ffc3ddbdccfe267cab46feee06c3959d6301afd1a75f7695df81bef"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\ctp-settlement-python-2ec41b9.log",
+    "sha256": "3b7ead4616fffa52d3589ad582828e1699d6cced4a7fc2dab80fdcca1c7b5739"
+  },
+  "before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261029\\native-before.log",
+      "sha256": "bdeed96c9774d9a65980d07da5171b483391ac7032456405895216a61419f37b"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261029\\diagnostic-before.log",
+      "sha256": "eec56009f3d7eff9d285957a848a2863730f987b62f940edc6bf0cf8b1701e44"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261029\\next-date-before.log",
+      "sha256": "6acf92a4f80c2481db36e5e37325f8ef5518f797dffbafa5aa617aa0028e8bf6"
+    }
+  ],
+  "ci": {
+    "sha": "2ec41b97c49aa0c298b4d3254f3abf6433102db0",
+    "id": 40810825026,
+    "conclusion": "success",
+    "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/40810825026",
+    "jobs": [
+      {
+        "id": 123240451946,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success"
+      },
+      {
+        "id": 123240452173,
+        "name": "offline (windows-2022)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "build": {
+    "binary": {
+      "path": "C:\\Temp\\resting-20261030-2ec41b9.exe",
+      "sha256": "4e96d53ad91f15e3b7d44baca98f059f4b742e46b9079977de9b178112ed46e2"
+    },
+    "info": "C:\\Temp\\resting-20261030-2ec41b9.exe: go1.27.3-X:nojsonv2\n\tpath\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\n\tmod\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\tv0.0.0-20261029031129-2ec41b97c49a\t\n\tdep\tgitee.com/haifengat/goctp\tv1.10.17\th1:8G7T10OlcutHgwTZca/Qb+Dk64yORSB62Sj8D/InIcs=\n\tdep\tgithub.com/coder/websocket\tv1.8.15\th1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=\n\tdep\tgithub.com/dream-until-dawn/futures-position-simulator-go\tv0.0.0\n\t=>\t../..\t(devel)\t\n\t\n\tdep\tgithub.com/shopspring/decimal\tv1.4.0\th1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\tDefaultGODEBUG=containermaxprocs=0,cryptocustomrand=1,decoratemappings=0,gotestjsonbuildtext=1,httpcookiemaxnum=0,httpservecontentmaxranges=1,multipathtcp=0,randseednop=0,rsa1024min=0,tlsmlkem=0,tlssecpmlkem=0,tlssha1=1,tracebacklabels=0,updatemaxprocs=0,urlmaxqueryparams=0,urlstrictcolons=0,x509rsacrt=0,x509sha256skid=0,x509sslcertoverrideplatform=0,x509usepolicies=0\n\tbuild\tCGO_ENABLED=1\n\tbuild\tCGO_CFLAGS=\n\tbuild\tCGO_CPPFLAGS=\n\tbuild\tCGO_CXXFLAGS=\n\tbuild\tCGO_LDFLAGS=\n\tbuild\tGOARCH=amd64\n\tbuild\tGOEXPERIMENT=nojsonv2\n\tbuild\tGOOS=windows\n\tbuild\tGOAMD64=v1\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=2ec41b97c49aa0c298b4d3254f3abf6433102db0\n\tbuild\tvcs.time=2026-10-29T03:11:29Z\n\tbuild\tvcs.modified=false\n"
+  },
+  "native_abi": {
+    "module": "gitee.com/haifengat/goctp@v1.10.17",
+    "architecture": "windows-amd64",
+    "dlls": [
+      {
+        "name": "ctp_trade.dll",
+        "sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc"
+      },
+      {
+        "name": "thosttraderapi_se.dll",
+        "sha256": "774ca2f3bba3009e72ba1f8a5e7a752d569bbbd999f19017e7cabc5c32c08bdc"
+      }
+    ],
+    "method_offsets": {
+      "ReqAuthenticate": "0x50",
+      "ReqUserLogin": "0x68",
+      "ReqSettlementInfoConfirm": "0xe0"
+    },
+    "disassembly": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261029\\native-disassembly.log",
+      "sha256": "b9e19050fedc8a0579a0c44f65a4646c8768fab79141c31743ee516d2c51e884"
+    },
+    "exports": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261029\\native-exports.log",
+      "sha256": "269cef2bffcef68651434d54d7376b743f916c6b0f577a0f6352c5b8fab1bfa4"
+    }
+  },
+  "incident": {
+    "date": "20261029",
+    "readonly_exit_code": 1,
+    "execute_attempts": 0,
+    "cause": "unknown-because-legacy-wrapper-discarded-native-return",
+    "outcome": {
+      "path": "C:\\Temp\\resting-probe-20261029\\outcome.json",
+      "sha256": "68a32e12cb8204c98f0200c8d9a0031942dcca7a6a46668e8f6530f15398ffb5"
+    },
+    "stopped": {
+      "path": "C:\\Temp\\resting-probe-20261029\\STOPPED.json",
+      "sha256": "86d4b6a7789aa340a08bfc2f865699c7530a54e151f32e8df603c4fe729eda7e"
+    },
+    "private_logs": [
+      {
+        "path": "C:\\Temp\\resting-probe-20261029\\readonly.stdout",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "C:\\Temp\\resting-probe-20261029\\readonly.stderr",
+        "sha256": "a580321278e41de12e17c7c3f7ee2fef4401ed5035a1ba40b629d2f890a63eb5"
+      }
+    ]
+  },
+  "design_history": {
+    "design_commit": "5d116b6df843a62cdc86b64fe1f3906dbdc2d238",
+    "candidate_design_commit": "8a1c7bbada12a5fd054c34b093f56f814f47c5cf"
+  },
+  "pending_seal_rejected": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-settlement-20261029\\seal-pending-rejected.log",
+    "sha256": "7c8f383a9dc63a7df7d9d3d61ac636329311ad6ee1ee59f7f0d31be44354184e",
+    "observed_exit_code": 1
+  }
+}
