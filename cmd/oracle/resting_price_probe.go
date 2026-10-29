@@ -185,7 +185,7 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	}()
 	local := clock.Now().In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()
-	if local.Format("20060102") != restingProbeDay || hm < 1055 || hm >= 1115 || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
+	if local.Format("20060102") != restingProbeDay || hm < 1440 || hm >= 1450 || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
 		return report, fmt.Errorf("本次探针日期、启动窗口或等待上限不成立")
 	}
 	report.Stage = "checking-empty-account"
@@ -300,6 +300,11 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 
 // runCTPRestingPrice 必须显式执行、指定已推送的计划提交及全新报告路径。
 func runCTPRestingPrice(args []string) error {
+	return runCTPRestingPriceAt(args, time.Now())
+}
+
+// runCTPRestingPriceAt 仅为离线边界测试注入时刻；CLI不提供覆盖时钟参数，实际执行器仍使用真实时钟。
+func runCTPRestingPriceAt(args []string, now time.Time) error {
 	fs := flag.NewFlagSet("ctp-resting-price", flag.ContinueOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	plan := fs.String("plan", "", "已推送计划的完整提交号")
@@ -323,9 +328,9 @@ func runCTPRestingPrice(args []string) error {
 	if _, err := hex.DecodeString(*plan); err != nil {
 		return fmt.Errorf("计划提交号无效")
 	}
-	now := time.Now().In(probeShanghai)
+	now = now.In(probeShanghai)
 	hm := now.Hour()*100 + now.Minute()
-	if now.Format("20060102") != restingProbeDay || hm < 1055 || hm >= 1115 || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
+	if now.Format("20060102") != restingProbeDay || hm < 1440 || hm >= 1450 || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
 		return fmt.Errorf("不在登记启动窗口或等待参数无效")
 	}
 	build, ok := debug.ReadBuildInfo()
