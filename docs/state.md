@@ -1,5 +1,7 @@
 # 项目状态：唯一来源
 
+**2026-10-29 结算确认排查与离线验收完成**：当日只读预检在结算确认超时，未报撤单，失败轮和停止记录保留。实际依赖DLL加假API离线复现底层-3被导出清零，故旧send-return code0不能证明CTP入队，本次现场真实底层码仍未知。准确源码2ec41b97c49aa0c298b4d3254f3abf6433102db0仅为三种握手增加固定DLL双哈希/架构保护下的原生返回码适配，并补被过滤回报的白名单诊断；不扩大超时、不重发、不改安全阀，查询/订单包装即时码风险不在本批宣称修复范围。新测试在旧实现实际先红；22项定向与干净独立整轮937项（928红/9预期绿/0异常，exit0）、三模块严格回归/race、五项20秒fuzz、Python15项及准确双平台CI通过。证书见[结算确认诊断验收](./validation/ctp-settlement-2ec41b9.json)，设计见[排查与修复](./ctp-settlement-diagnosis.md)。按授权经dev→main发布，实际合并提交CI及远端一致核对作为最终发布条件，不打tag。本批未重新连接柜台；[10月30日候选](./resting-price-20261030.md)独立等待新窗口批准，10月29日登记已停止，不得恢复执行。
+
 **2026-10-29上午一手探针登记已验收、尚未执行**：10月28日两个候选窗口均未执行，原任务已移除；使用者要求改为明早，现登记10:45核验、10:50只读预检、10:55–11:15唯一启动、11:25前收尾。准确源码ca4a069c0d328e5de5ac42ed3b31fef135453eda只更新固定日期与合成夹具，原上午窗口和安全阀不变；新测试在旧程序先红，随后通过。干净独立整轮921项（912红/9预期绿/0异常，exit0）、逐项覆盖/断言与还原指纹、三模块严格回归/race、五个20秒fuzz、Python15项及准确Windows/Linux CI均复核通过。正式构建vcs.revision一致、vcs.modified=false，SHA256为0dab25069d97c0ecaa2e8528d410369a359f9ff7616556249766b3673e570509。见[10月29日登记](./resting-price-20261029.md)及[验收证书](./validation/resting-20261029-ca4a069.json)。原10月28日记录仅为历史，不得补跑；本批未连接柜台或交易，明早须重新核现场全部前提。
 
 **2026-10-27 CI修复与921项完整复验通过**：准确源码f2bbab7固定Go1.27.3以包含上游fuzz截止取消竞态修复，同时显式GOEXPERIMENT=nojsonv2保持原有JSON流解析与收尾守卫。本机三个模块严格回归/race、五项20秒fuzz、Python15项、四项定向及准确Windows/Linux CI全部通过；新的干净独立整轮921项为912红/9预期绿/0异常，退出0，逐项来源/断言、tree、内容/索引指纹和收尾空树均独立复核。旧bb83821完整920项中303红错理由的失败轮单独保留，已核原状态还原，未拼接。证书见 [CI修复完整验收](./validation/offline-ci-f2bbab7.json)。
@@ -2593,6 +2595,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/roadmap.md` | 68 |
 | `docs/ctp-oracle.md` | 12 |
 | `docs/ctp-handshake.md` | 5 |
+| `docs/ctp-settlement-diagnosis.md` | 5 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 108 |
 | `docs/f9a-design.md` | 5 |
@@ -2602,6 +2605,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/resting-price-20261028.md` | 4 |
 | `docs/resting-price-20261028-pm.md` | 4 |
 | `docs/resting-price-20261029.md` | 4 |
+| `docs/resting-price-20261030.md` | 4 |
 | `docs/f9c-design.md` | 5 |
 | `docs/offline-work.md` | 5 |
 | `docs/offline-delivery.md` | 5 |

@@ -133,7 +133,7 @@ func (c *Client) Connect(timeout time.Duration) error {
 		return fmt.Errorf("连接超时必须为正")
 	}
 	hs := newHandshake(timeout, func(d handshakeDiagnostic) {
-		c.logf("[ctp.handshake] stage=%s request=%d event=%s code=%d elapsed=%s", d.stage, d.id, d.event, d.code, d.elapsed)
+		c.logf("[ctp.handshake] stage=%s request=%d event=%s code=%d elapsed=%s received_stage=%s received_request=%d last=%t has_payload=%t", d.stage, d.id, d.event, d.code, d.elapsed, d.receivedStage, d.receivedID, d.last, d.hasPayload)
 	})
 	c.mu.Lock()
 	if c.closed || c.connectStarted {
@@ -217,6 +217,9 @@ func (c *Client) initializeHandshake(hs *handshakeCollector) error {
 		return err
 	}
 	if err := CheckDLLs(dir); err != nil {
+		return err
+	}
+	if err := validateNativeHandshakeDLLs(dir); err != nil {
 		return err
 	}
 	c.logf("[ctp] DLL 目录 %s（来自 %s）", dir, how)
@@ -352,7 +355,11 @@ func (c *Client) sendHandshake(stage string, id int) int32 {
 	default:
 		return -1
 	}
-	result, _, _ := c.h.MustFindProc(name).Call(c.api, uintptr(pointer), uintptr(id))
+	result, err := invokeNativeHandshake(c.api, name, pointer, id)
+	if err != nil {
+		c.logf("[ctp.handshake.native] event=binding-error")
+		return nativeHandshakeBindingError
+	}
 	runtime.KeepAlive(pointer)
 	return int32(result)
 }

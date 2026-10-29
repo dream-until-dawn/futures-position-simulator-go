@@ -20,7 +20,7 @@ func TestRestingEvidenceWhitelist(t *testing.T) {
 	copy(r.OrderSysID[:], "sys")
 	copy(r.ExchangeID[:], "SHFE")
 	copy(r.InstrumentID[:], "rb2701")
-	copy(r.TradingDay[:], "20261029")
+	copy(r.TradingDay[:], "20261030")
 	copy(r.TradeTime[:], "10:56:00")
 	copy(r.InvestorID[:], "LEAKME")
 	copy(r.BrokerID[:], "LEAKME")
@@ -146,7 +146,7 @@ func TestRestingDeclaredSpecMustMatch(t *testing.T) {
 	for _, change := range []func(*def.CThostFtdcInstrumentField){func(s *def.CThostFtdcInstrumentField) { s.PriceTick = 2 }, func(s *def.CThostFtdcInstrumentField) { s.VolumeMultiple = 11 }} {
 		md, spec, now := restingQuoteFixture()
 		change(spec)
-		if _, err := passiveProbePrice(md, spec, "20261029", now); err == nil {
+		if _, err := passiveProbePrice(md, spec, "20261030", now); err == nil {
 			t.Fatal("声明改变未停止")
 		}
 	}

@@ -38,10 +38,40 @@ func (e *handshakeFailure) Error() string {
 }
 
 type handshakeDiagnostic struct {
-	stage, event string
-	id           int
-	code         int32
-	elapsed      time.Duration
+	stage, event     string
+	id               int
+	code             int32
+	elapsed          time.Duration
+	receivedStage    string
+	receivedID       int
+	last, hasPayload bool
+}
+
+// ignoredHandshakeReason 只描述过滤条件，不携带回调业务负载。
+func ignoredHandshakeReason(stopped, active, complete bool, actualStage, expectedStage string, actualID, expectedID int, withinDeadline bool) string {
+	switch {
+	case stopped:
+		return "stopped"
+	case !active:
+		return "inactive"
+	case complete:
+		return "duplicate"
+	case actualStage != expectedStage:
+		return "stage"
+	case actualID != expectedID:
+		return "request"
+	case !withinDeadline:
+		return "late"
+	default:
+		return "unknown"
+	}
+}
+
+// callbackDiagnostic 必须持有mu；仅复制白名单元数据，不格式化value。
+func (h *handshakeCollector) callbackDiagnostic(event, stage string, id int, code int32, last, hasPayload bool) handshakeDiagnostic {
+	d := h.diagnostic(event, code)
+	d.receivedStage, d.receivedID, d.last, d.hasPayload = stage, id, last, hasPayload
+	return d
 }
 
 // handshakeCollector 一次性、逐阶段收集器。回调只写结果，下一阶段由调用者发送。
@@ -109,11 +139,16 @@ func (h *handshakeCollector) prepare(stage string, id int) error {
 func (h *handshakeCollector) reply(stage string, id int, value *handshakeLoginResult, code int32, last bool) {
 	h.mu.Lock()
 	if h.stopped || !h.active || h.complete || stage != h.stage || id != h.id || !time.Now().Before(h.deadline) {
+		reason := ignoredHandshakeReason(h.stopped, h.active, h.complete, stage, h.stage, id, h.id, time.Now().Before(h.deadline))
+		d := h.callbackDiagnostic("ignored-"+reason, stage, id, code, last, value != nil)
 		h.mu.Unlock()
+		h.trace(d)
 		return
 	}
 	if code == 0 && !last {
+		d := h.callbackDiagnostic("ignored-partial", stage, id, code, last, value != nil)
 		h.mu.Unlock()
+		h.trace(d)
 		return
 	}
 	if code != 0 {
@@ -125,7 +160,7 @@ func (h *handshakeCollector) reply(stage string, id int, value *handshakeLoginRe
 	}
 	h.complete = true
 	close(h.done)
-	d := h.diagnostic("response", code)
+	d := h.callbackDiagnostic("response", stage, id, code, last, value != nil)
 	h.mu.Unlock()
 	h.trace(d)
 }
