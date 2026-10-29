@@ -1,5 +1,7 @@
 # 项目状态：唯一来源
 
+**自然日2026-10-29夜盘轮已停止，正在离线复核**：21:10唯一只读预检认证、登录成功，结算确认原生返回0后在10秒总期限内未取得完整回报，退出1；尚未进入费率、报单或撤单，账户状态未查询仍未知。原始日志已封存，今晚与明早调度均已删除，不重连重试、不自动改期。四轮既有日志对照及时间一致性诊断改进见[排查设计](./ctp-offline-followup.md)和[白名单报告](./validation/ctp-handshake-four-rounds-20261029.json)；候选验收进行中，不宣称超时根因收敛。下方“尚未连接”为执行前历史。
+
 **隔离离线候选验收完成，今晚冻结不变**：a8231e5完整960项（951红/9预期绿/0异常、exit0）、15项定向、三模块严格回归/race、五项20秒fuzz、Python31项及准确Windows/Linux CI通过，三轮既有日志时间线可由准确源码逐字节重算。费率查询失败、无效行、仅分隔符空范围均拒绝；原生查询/报撤单11个清零导出只做静态核证，尚未修复。超时根因仍未知，证据与边界见[离线跟进](./ctp-offline-followup.md)及[候选证书](./validation/ctp-offline-a8231e5.json)。本分支不在今晚探针结束前合并main/dev，不更换8bd89b4构建、证书、ready、操作脚本或调度，也不额外连接柜台。
 
 **离线候选分支隔离说明**：本分支从893992f独立推进既有握手日志分析与ctp-rates失败传播，设计见[离线跟进](./ctp-offline-followup.md)。不读取.env、不额外连接柜台；今晚冻结8bd89b4构建、main/dev及调度保持原样，候选在今晚探针结束前不合并。下方夜盘945项验收属于原冻结方案，不替代本候选的新验收。
@@ -2610,7 +2612,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/ctp-oracle.md` | 12 |
 | `docs/ctp-handshake.md` | 5 |
 | `docs/ctp-settlement-diagnosis.md` | 5 |
-| `docs/ctp-offline-followup.md` | 4 |
+| `docs/ctp-offline-followup.md` | 5 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 108 |
 | `docs/f9a-design.md` | 5 |
