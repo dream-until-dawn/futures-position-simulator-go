@@ -1,0 +1,541 @@
+{
+  "format": 1,
+  "source_commit": "a11b582251423fe52868e5301b813b65f72ab078",
+  "baseline_main": "893992f56720c4814179593c7b8ef966c0ab278f",
+  "source_tree": "e5ecfa3a536d4bb23d182c930c06b28f32978599",
+  "registry_sha256": "7b8295c55dde5c7f847c468ba70b3aba44cb221a5d68a00d7d00764137368704",
+  "report_sha256": "d63bf56f7b80956de860c108a6808595623b57cbe2cc4c7dd9ba4834c704ad7a",
+  "summary_sha256": "8f27c7a385ba1b0f3c721b52f8b8261881f83b5ccf54cbd9d1a9bdcc46a99feb",
+  "counts": {
+    "executed": 968,
+    "expected_red": 959,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "raw_directory": "C:\\Temp\\ctp-night-mutation-a11b582",
+  "summary": {
+    "path": "C:\\Temp\\ctp-night-mutation-a11b582\\summary.json",
+    "sha256": "8f27c7a385ba1b0f3c721b52f8b8261881f83b5ccf54cbd9d1a9bdcc46a99feb"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\ctp-night-mutation-a11b582\\mutation.log",
+    "sha256": "0ebc2449ea512ad4892240469b829588b51586c2d6295c289ddfeb579f03f237"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "99edaf1bf5ec6578571f6566d97bcb13f148459baa97c1827cad9340eea0974b",
+    "index_sha256": "952298fcd5afbb810fff635dcf87d89b0ccd1c87bda77375029d78b5ca5a178b",
+    "head": "a11b582251423fe52868e5301b813b65f72ab078"
+  },
+  "targeted": [
+    {
+      "name": "1047 截止后接受握手响应",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1047.json",
+        "sha256": "c74ffd3a582fb09c44209b73f964c74b1d2bb194f38f567995311de49aa1d6d3"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1047.log",
+        "sha256": "9699464277d8ce4021343826d4b2ab662d973f6193aef87b4e0d78c4390e82ed"
+      }
+    },
+    {
+      "name": "1048 截止后完成握手",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1048.json",
+        "sha256": "b8301e2da5df21e0c25e2244873968296b54ecc5fec70aa2d98c609af031b39a"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1048.log",
+        "sha256": "2fed6ba6b9392e814ff993f6d1cdeb922976650b5b19b168d5c0647a32628b57"
+      }
+    },
+    {
+      "name": "1049 握手提前超时",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1049.json",
+        "sha256": "c09fd68d433defbe92c1780a35fcefcd819affcb48f3cf5045b02baafc94b086"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1049.log",
+        "sha256": "c917c8667ca0f6318f1d0c3952fa2aef9cb0a50c6e2364161d23e5bd3a8a7fdc"
+      }
+    },
+    {
+      "name": "1050 截止后开始握手阶段",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1050.json",
+        "sha256": "fd971aa3398f4a9ad582e7f9fb03ca4f4cfade8071ca15a2781bf1687b0afd0f"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1050.log",
+        "sha256": "3ad27573fc4e031097154b79b29fcba7dced2caf40f21c156841c74f24078b83"
+      }
+    },
+    {
+      "name": "1051 响应早于握手阶段开始",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1051.json",
+        "sha256": "90080f26325c9196a327f7e4f85ff24b5b7625e745208009b9fa75f7b75702ca"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1051.log",
+        "sha256": "d6abacde02dd3884cd145dd860c91d6b1e472d5140b558c6dfabf0658c569696"
+      }
+    },
+    {
+      "name": "1052 发送返回早于握手阶段开始",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1052.json",
+        "sha256": "9ad8284bb2c9b79466ff7f39f6460d33f36b7f366d279ae67d02125dab14dca4"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1052.log",
+        "sha256": "fd8d2ff9cae57c3248dffe248d0fc75b72858bdff2e72c96e9958fb0cdd15e96"
+      }
+    },
+    {
+      "name": "1053 缺少响应却完成握手",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1053.json",
+        "sha256": "0eccccef132888e3c0d706135c7a581ef6358271bc688d321d9ca884b000ec70"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1053.log",
+        "sha256": "4f50bfd396978be2e0532d03d2d4073869c705b296e4df37764bdd9aaf1044a0"
+      }
+    },
+    {
+      "name": "1054 握手完成早于响应",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1054.json",
+        "sha256": "7a9f613e7fa585b174944ebc21b7825cea1bc2a466ab2df3d03ffcf9e084c32e"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\a11b582\\target-1054.log",
+        "sha256": "6a2d2b014ef3d0b649e7aec3a7f5e5b096ae8eb16d6ae1b20abaa6ca00692242"
+      }
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582",
+            "passed_tests": 748,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-regression-a11b582\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\cmd\\oracle",
+            "passed_tests": 418,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-regression-a11b582\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-regression-a11b582\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "99edaf1bf5ec6578571f6566d97bcb13f148459baa97c1827cad9340eea0974b",
+          "index_sha256": "952298fcd5afbb810fff635dcf87d89b0ccd1c87bda77375029d78b5ca5a178b",
+          "head": "a11b582251423fe52868e5301b813b65f72ab078"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "99edaf1bf5ec6578571f6566d97bcb13f148459baa97c1827cad9340eea0974b",
+          "index_sha256": "952298fcd5afbb810fff635dcf87d89b0ccd1c87bda77375029d78b5ca5a178b",
+          "head": "a11b582251423fe52868e5301b813b65f72ab078"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-night-regression-a11b582\\summary.json",
+        "sha256": "89fdff658c1ed141c8f78c7c5d4541f229f88f74ebb0ac5be7add5170312d7cc"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-night-regression-a11b582\\root.log",
+          "sha256": "c37d75aa57099b8a40b973bb04e82850e60fd630e6f884489eb59f347af24a3a"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-regression-a11b582\\oracle.log",
+          "sha256": "0ea6a0471936728f6ab49244d9242b3b4c4cbe9a41b3ff3b417db32ba881cec5"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-regression-a11b582\\external.log",
+          "sha256": "59b9537706203b5452df7463ed596664fa40ece3103bda34b1da1018d25edf64"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582",
+            "passed_tests": 748,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-race-a11b582\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\cmd\\oracle",
+            "passed_tests": 418,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-race-a11b582\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-race-a11b582\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "99edaf1bf5ec6578571f6566d97bcb13f148459baa97c1827cad9340eea0974b",
+          "index_sha256": "952298fcd5afbb810fff635dcf87d89b0ccd1c87bda77375029d78b5ca5a178b",
+          "head": "a11b582251423fe52868e5301b813b65f72ab078"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "99edaf1bf5ec6578571f6566d97bcb13f148459baa97c1827cad9340eea0974b",
+          "index_sha256": "952298fcd5afbb810fff635dcf87d89b0ccd1c87bda77375029d78b5ca5a178b",
+          "head": "a11b582251423fe52868e5301b813b65f72ab078"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-night-race-a11b582\\summary.json",
+        "sha256": "45ab506583a4f1805799ab6b795eb89e1b958e7bb5b9e6131bd0728ffe565b2d"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-night-race-a11b582\\root.log",
+          "sha256": "fde6a3363574ead80a319eb0411182a9d8bf50e473963e53f945bd42c2ced3d1"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-race-a11b582\\oracle.log",
+          "sha256": "e63550e1633cdf673b925d11a0d3865063b3936987e712f3cc7f671ac7cbf932"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-race-a11b582\\external.log",
+          "sha256": "9f7231219c16af314686bed39ffdb43425fc1cc4b32ba6fa25336954cb257fab"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-fuzz-a11b582\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-fuzz-a11b582\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-fuzz-a11b582\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-fuzz-a11b582\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-night-checks-a11b582\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-night-fuzz-a11b582\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "99edaf1bf5ec6578571f6566d97bcb13f148459baa97c1827cad9340eea0974b",
+          "index_sha256": "952298fcd5afbb810fff635dcf87d89b0ccd1c87bda77375029d78b5ca5a178b",
+          "head": "a11b582251423fe52868e5301b813b65f72ab078"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "99edaf1bf5ec6578571f6566d97bcb13f148459baa97c1827cad9340eea0974b",
+          "index_sha256": "952298fcd5afbb810fff635dcf87d89b0ccd1c87bda77375029d78b5ca5a178b",
+          "head": "a11b582251423fe52868e5301b813b65f72ab078"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-night-fuzz-a11b582\\summary.json",
+        "sha256": "1985865af2333be5376446c1565c41a6e7298d52b165b42dc00711696412112f"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-night-fuzz-a11b582\\state.log",
+          "sha256": "36a96183363b49ec472fa84cc7bb9a32dff8e5be2a614874fa35e29a321074e7"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-fuzz-a11b582\\bundle.log",
+          "sha256": "f38aeaf6c3bec3abfe97c733736058e136c4061c238f1d711e45861e504cd03a"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-fuzz-a11b582\\report.log",
+          "sha256": "eb432fadae315e9df1498d13c4e1b7830af990832906db40f2895be294fd0725"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-fuzz-a11b582\\risk.log",
+          "sha256": "17c9fa501046222ee91145ea0f7cae6c3fe077cf5977f73528c45736317349ae"
+        },
+        {
+          "path": "C:\\Temp\\ctp-night-fuzz-a11b582\\lifecycle.log",
+          "sha256": "345589e8c9351a7f2bfbfb7c8f57de50dfc78b6f0455da9026562585550554e3"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\ctp-night-python-a11b582.log",
+    "sha256": "eaedd2d811d104afc73558db38a229426479317fa760f627801973a9bd8cc99d"
+  },
+  "before_fix": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\night-integrity-before.log",
+    "sha256": "52b044712d95b2eab5409dbd679545e481722de9be9631bbffdc7725242d9a23"
+  },
+  "pending_rejection": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\night-pending-seal-rejected.log",
+    "sha256": "3003e00d57df99940802e3102d9db8d3af4c1de14ed0ea0e975e9f62dfbfe526"
+  },
+  "failed_targeted_round": {
+    "source_commit": "b8dcf57d1a1ec5d47dd098d24870f943d11d270f",
+    "report": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\b8dcf57\\target-1047.json",
+      "sha256": "2e0c5ca2a7cf8d522da2f253440506b10c509e3efebd218642d7cb204e26898d"
+    },
+    "log": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\b8dcf57\\target-1047.log",
+      "sha256": "45164f19f409f7051b083ee98a2f10d55708553aa3700dc20b1bf81a13ba84c0"
+    }
+  },
+  "failed_ci_round": {
+    "source_commit": "0e3a5079556fcc5c68f505824cba8f6d8a83e989",
+    "run": 40880788465,
+    "artifacts": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\failed-ci-0e3a507-12900246954.zip",
+        "sha256": "e3ae616a8d231cbe2c57da5c2ee512c0e2de46339865a64d43e8675d0b834a3f"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\failed-ci-0e3a507-12899159880.zip",
+        "sha256": "7abecfc978c2f605e12b928ac5f75de6008b221609d564b9a0d1dac1022bda29"
+      }
+    ],
+    "assertions": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\failed-ci-0e3a507-12900246954-assertions.log",
+        "sha256": "c507fb8a7a6bd6d023423f405bdd128c7acb5bcb6bda22101eee90bc732c554f"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\failed-ci-0e3a507-12899159880-assertions.log",
+        "sha256": "bb16fef0e9b458240b8e0930bbf8a096dc9e4e40aa4d55f2fcc910cf09ea536c"
+      }
+    ],
+    "local_regression": {
+      "path": "C:\\Temp\\ctp-night-regression-0e3a507\\summary.json",
+      "sha256": "7b8ad00bcbd490816fb80af8ae739a52e405c303938094f41b41f1a0ff6e1347"
+    },
+    "local_root_log": {
+      "path": "C:\\Temp\\ctp-night-regression-0e3a507\\root.log",
+      "sha256": "0a46de617cc1fe9c95e88fe32f58c7fd91bd90f166a51039441a3974264302a3"
+    },
+    "reason": "文档小节登记及自然日标题守卫；旧轮不计入新验收"
+  },
+  "earlier_ci_failure": {
+    "source_commit": "b8dcf57d1a1ec5d47dd098d24870f943d11d270f",
+    "run": 40880613019,
+    "artifacts": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\failed-ci-b8dcf57-12900650621.zip",
+        "sha256": "45c93affbcff9cbc7b4e5c6a896e0c36f339068c2663d3aaa0ca08bc778d282c"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\failed-ci-b8dcf57-12900596005.zip",
+        "sha256": "8a2c2333c893238923c9151d4021a0ab88ca0138be5c4c3433122374428bf2c3"
+      }
+    ]
+  },
+  "superseded_mutation": {
+    "summary": {
+      "path": "C:\\Temp\\ctp-night-mutation-0e3a507\\summary.json",
+      "sha256": "47d1328b37a4f710c3651fea707f08b80a06671bf3d97d7a8a0781a38389d479"
+    },
+    "report": {
+      "path": "C:\\Temp\\ctp-night-mutation-0e3a507\\mutations.json",
+      "sha256": "190f99e7cb68327e172439ccf4dcb918b73afe3beb9f8599ebedf00294149563"
+    },
+    "note": "旧源码单独破坏扫描通过不能覆盖该提交回归及双平台CI失败，不计入本轮通过"
+  },
+  "timelines": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\docs\\validation\\ctp-handshake-four-rounds-20261029.json",
+    "sha256": "e66fc992299afb7947f2386d33c82c98e261ebd73ef0beb8bd0339bad825f556"
+  },
+  "regenerated_timelines": {
+    "path": "C:\\Temp\\ctp-night-four-rounds-a11b582.json",
+    "sha256": "e66fc992299afb7947f2386d33c82c98e261ebd73ef0beb8bd0339bad825f556"
+  },
+  "private_manifest": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\offline-results\\followup\\night-cases.json",
+    "sha256": "c90c9b068788e410c87110dce16603d9363fde928a4aff8e8af6814540e35790"
+  },
+  "night_outcome": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-night-20261029\\night-outcome.json",
+    "sha256": "74d768afe9aebcf66234579eca9e593d77debbd822ad7eb0945556801a380319"
+  },
+  "night_freeze_unchanged": {
+    "binary_and_three_admission_files": true,
+    "automation_deleted_after_failed_preflight": true,
+    "broker_connections_in_this_batch": 0,
+    "real_env_reads_in_this_batch": 0
+  },
+  "predecessor_acceptance": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-timeout-offline-893992f\\docs\\validation\\ctp-offline-a8231e5.json",
+    "sha256": "ac253c6eb249ce376e7797cf7dcf7ba4f0aaa2eaef328ba3f706f8856b8833f8"
+  },
+  "ci": {
+    "sha": "a11b582251423fe52868e5301b813b65f72ab078",
+    "run": 40881406808,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 123473581645,
+        "name": "offline (windows-2022)",
+        "conclusion": "success",
+        "completed_at": "2026-10-29T13:28:01Z"
+      },
+      {
+        "id": 123473582351,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success",
+        "completed_at": "2026-10-29T13:26:54Z"
+      }
+    ]
+  }
+}

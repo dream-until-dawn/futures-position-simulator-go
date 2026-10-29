@@ -42,3 +42,11 @@ func runPythonBoundary(t *testing.T, module string) {
 func TestPythonIntegrityBoundary(t *testing.T) { runPythonBoundary(t, "test_integrity") }
 func TestPythonRuntimeBoundary(t *testing.T)   { runPythonBoundary(t, "test_runtime") }
 func TestPythonEvidenceBoundary(t *testing.T)  { runPythonBoundary(t, "test_evidence") }
+func TestPythonHandshakeDiagnosticsBoundary(t *testing.T) {
+	runPythonBoundary(t, "test_handshake_diagnostics")
+}
+
+// TestPythonHandshakeIntegrityBoundary 通过真实Python入口验证矛盾证据不能发布成功报告。
+func TestPythonHandshakeIntegrityBoundary(t *testing.T) {
+	runPythonBoundary(t, "test_handshake_integrity")
+}

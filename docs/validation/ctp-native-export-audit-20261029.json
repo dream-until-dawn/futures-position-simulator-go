@@ -1,0 +1,150 @@
+{
+  "format": 1,
+  "method": "read-only PE exports and disassembly; no execution",
+  "binary_sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc",
+  "wrapper_source_sha256": "e8e1ed4284bd2c24a920f8ad714fab3fb87cd0eaf6ee932ba03256875125ac55",
+  "selected_by": "Req names referenced by production cmd/oracle/ctp Go source at 893992f",
+  "rows": [
+    {
+      "name": "ReqAuthenticate",
+      "export_rva": "0x407f0",
+      "body_rva": "0x52f20",
+      "api_vtable_offset": "0x50",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": true,
+      "disassembly_sha256": "4f1962b10553595adaede18889af45e4eb8de58f11496f5321a5afd7af7db3d1"
+    },
+    {
+      "name": "ReqOrderAction",
+      "export_rva": "0x407a5",
+      "body_rva": "0x535e0",
+      "api_vtable_offset": "0xd0",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "0a139e35eca008624f9940fbd9ef6647bf0b7af855fdc204d179c103be4ecfcf"
+    },
+    {
+      "name": "ReqOrderInsert",
+      "export_rva": "0x3dd48",
+      "body_rva": "0x53670",
+      "api_vtable_offset": "0xb8",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "7247c55aadec3ce0b59ca73f156f3ea1afa376e59da1d26b2d2a12503fb0b19b"
+    },
+    {
+      "name": "ReqQryBrokerTradingParams",
+      "export_rva": "0x3e6f8",
+      "body_rva": "0x53940",
+      "api_vtable_offset": "0x2c0",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "884ecaad95af528bd3bfbba27f093d366c3b44f663fd54df1b8bc9b0e1e57261"
+    },
+    {
+      "name": "ReqQryDepthMarketData",
+      "export_rva": "0x3ecde",
+      "body_rva": "0x53d30",
+      "api_vtable_offset": "0x198",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "b91ed798a6e8fa07fa3b59d0850e89b68b6ed08dc8cd430ea696fa0e06c8ad88"
+    },
+    {
+      "name": "ReqQryInstrument",
+      "export_rva": "0x4072d",
+      "body_rva": "0x541b0",
+      "api_vtable_offset": "0x190",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "5d827077d4cc6020b77a4d76df7d53b19ff285804d41897f1b5ec4c3b6b9410b"
+    },
+    {
+      "name": "ReqQryInstrumentCommissionRate",
+      "export_rva": "0x3d190",
+      "body_rva": "0x54240",
+      "api_vtable_offset": "0x178",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "116f943ce87ecfdf948ee71699c6280cb77fac08d4d730de43b3bdb24e530fca"
+    },
+    {
+      "name": "ReqQryInvestorPosition",
+      "export_rva": "0x40039",
+      "body_rva": "0x54510",
+      "api_vtable_offset": "0x150",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "479aa97b647ccb3d6a5688bfbb37d5a52da4ce614cf0300fa7b88de8682bb3bb"
+    },
+    {
+      "name": "ReqQryOrder",
+      "export_rva": "0x3d848",
+      "body_rva": "0x54b40",
+      "api_vtable_offset": "0x140",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "e10ef950027304f2c0ae706260526e169708b02208ef4776042fdb1891ef0e92"
+    },
+    {
+      "name": "ReqQrySettlementInfo",
+      "export_rva": "0x3f7d8",
+      "body_rva": "0x55170",
+      "api_vtable_offset": "0x1a0",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "72f9a8ebbb2adefb4353438e50513755f1d472d98703c8cb148ef5b0bd8948eb"
+    },
+    {
+      "name": "ReqQryTrade",
+      "export_rva": "0x3d519",
+      "body_rva": "0x55290",
+      "api_vtable_offset": "0x148",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "67e05f14a2e5ddd4935a845be832bd96d4e9fe723b52df9d690ff24a7d0ee6d4"
+    },
+    {
+      "name": "ReqQryTradingAccount",
+      "export_rva": "0x3eb44",
+      "body_rva": "0x55320",
+      "api_vtable_offset": "0x158",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": false,
+      "disassembly_sha256": "871d1ab870fb90e4bb84ee0ea2cbc5f523e26cefa32a8d328a303a36d5985e04"
+    },
+    {
+      "name": "ReqSettlementInfoConfirm",
+      "export_rva": "0x3d456",
+      "body_rva": "0x55950",
+      "api_vtable_offset": "0xe0",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": true,
+      "disassembly_sha256": "299120b3717f1156c69886bf5e544e7da0c3f035c018220f5631e86c11f04d87"
+    },
+    {
+      "name": "ReqUserLogin",
+      "export_rva": "0x3f07b",
+      "body_rva": "0x55b00",
+      "api_vtable_offset": "0x68",
+      "clears_return_register": true,
+      "source_also_returns_zero": true,
+      "production_native_bypass": true,
+      "disassembly_sha256": "a47ee471de806a9e37a5efc0a42743767d006b1e272693aef8db1dbdc72ba8ee"
+    }
+  ],
+  "limitation": "Instruction evidence only; not a live request, not a runtime mock, not server behavior proof. Three handshake methods already bypass these exports; other methods remain a separate candidate task."
+}

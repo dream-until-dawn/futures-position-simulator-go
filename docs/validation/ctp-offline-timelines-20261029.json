@@ -1,0 +1,273 @@
+{
+  "format": 1,
+  "cases": [
+    {
+      "id": "morning-legacy",
+      "source_commit": "ca4a069c0d328e5de5ac42ed3b31fef135453eda",
+      "sha256": "a580321278e41de12e17c7c3f7ee2fef4401ed5035a1ba40b629d2f890a63eb5",
+      "send_code_origin": "wrapper",
+      "analysis": {
+        "status": "timeout",
+        "process_exit": 1,
+        "stages": [
+          {
+            "stage": "front",
+            "request": 0,
+            "start_ns": 297190100,
+            "prepared": true,
+            "send_ns": null,
+            "send_code": null,
+            "response_ns": 651771600,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "authenticate",
+            "request": 1,
+            "start_ns": 651771600,
+            "prepared": true,
+            "send_ns": 651771600,
+            "send_code": 0,
+            "response_ns": 711763100,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "login",
+            "request": 2,
+            "start_ns": 711763100,
+            "prepared": true,
+            "send_ns": 726816700,
+            "send_code": 0,
+            "response_ns": 751106500,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "settlement-confirm",
+            "request": 3,
+            "start_ns": 751106500,
+            "prepared": true,
+            "send_ns": 751106500,
+            "send_code": 0,
+            "response_ns": null,
+            "response_codes": [],
+            "timed_out": true,
+            "finished": false,
+            "ignored_events": []
+          }
+        ],
+        "metadata_complete": false,
+        "confirm_callback_events": 0,
+        "confirm_callback_absence_proven": false,
+        "record_order_differs_from_event_time": false,
+        "deadline_ns": 10000000000,
+        "confirm_send_ns": 751106500,
+        "remaining_at_confirm_send_ns": 9248893500,
+        "confirm_response_wait_ns": null,
+        "confirm_response_before_send_return": false,
+        "response_before_local_timeout": false,
+        "process_failed_after_handshake": false
+      }
+    },
+    {
+      "id": "midday-success",
+      "source_commit": "2ec41b97c49aa0c298b4d3254f3abf6433102db0",
+      "sha256": "8c17e0e47f3a7cb5b26172980e1b0238db1092046ed2be4ebc399e17d40474fb",
+      "send_code_origin": "native",
+      "analysis": {
+        "status": "handshake-complete",
+        "process_exit": 0,
+        "stages": [
+          {
+            "stage": "front",
+            "request": 0,
+            "start_ns": 74401800,
+            "prepared": true,
+            "send_ns": null,
+            "send_code": null,
+            "response_ns": 667678800,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "authenticate",
+            "request": 1,
+            "start_ns": 668184700,
+            "prepared": true,
+            "send_ns": 668184700,
+            "send_code": 0,
+            "response_ns": 1220321200,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "login",
+            "request": 2,
+            "start_ns": 1220321200,
+            "prepared": true,
+            "send_ns": 1245584800,
+            "send_code": 0,
+            "response_ns": 1275779100,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "settlement-confirm",
+            "request": 3,
+            "start_ns": 1275779100,
+            "prepared": true,
+            "send_ns": 1275779100,
+            "send_code": 0,
+            "response_ns": 4225065800,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          }
+        ],
+        "metadata_complete": true,
+        "confirm_callback_events": 1,
+        "confirm_callback_absence_proven": false,
+        "record_order_differs_from_event_time": true,
+        "deadline_ns": 10000000000,
+        "confirm_send_ns": 1275779100,
+        "remaining_at_confirm_send_ns": 8724220900,
+        "confirm_response_wait_ns": 2949286700,
+        "confirm_response_before_send_return": false,
+        "response_before_local_timeout": false,
+        "process_failed_after_handshake": false
+      }
+    },
+    {
+      "id": "afternoon-timeout",
+      "source_commit": "84954aac9d3cfd0f9480f08f9a61f9ebaaaec7f1",
+      "sha256": "7c96556ba46373901e7d90d750adda79a61fc2a11b44a61f0f7c6f5d0625aa30",
+      "send_code_origin": "native",
+      "analysis": {
+        "status": "timeout",
+        "process_exit": 1,
+        "stages": [
+          {
+            "stage": "front",
+            "request": 0,
+            "start_ns": 59011100,
+            "prepared": true,
+            "send_ns": null,
+            "send_code": null,
+            "response_ns": 1496406500,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "authenticate",
+            "request": 1,
+            "start_ns": 1496406500,
+            "prepared": true,
+            "send_ns": 1496406500,
+            "send_code": 0,
+            "response_ns": 1568528200,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "login",
+            "request": 2,
+            "start_ns": 1568528200,
+            "prepared": true,
+            "send_ns": 1587181900,
+            "send_code": 0,
+            "response_ns": 1624050300,
+            "response_codes": [
+              0
+            ],
+            "timed_out": false,
+            "finished": true,
+            "ignored_events": []
+          },
+          {
+            "stage": "settlement-confirm",
+            "request": 3,
+            "start_ns": 1625051400,
+            "prepared": true,
+            "send_ns": 1625051400,
+            "send_code": 0,
+            "response_ns": null,
+            "response_codes": [],
+            "timed_out": true,
+            "finished": false,
+            "ignored_events": []
+          }
+        ],
+        "metadata_complete": true,
+        "confirm_callback_events": 0,
+        "confirm_callback_absence_proven": false,
+        "record_order_differs_from_event_time": false,
+        "deadline_ns": 10000000000,
+        "confirm_send_ns": 1625051400,
+        "remaining_at_confirm_send_ns": 8374948600,
+        "confirm_response_wait_ns": null,
+        "confirm_response_before_send_return": false,
+        "response_before_local_timeout": false,
+        "process_failed_after_handshake": false
+      }
+    }
+  ],
+  "comparison": [
+    {
+      "case_id": "morning-legacy",
+      "remaining_ns": 9248893500,
+      "observed_success_wait_ns": 2949286700,
+      "inference": "budget-not-smaller-than-observed-success",
+      "cause": "undetermined"
+    },
+    {
+      "case_id": "afternoon-timeout",
+      "remaining_ns": 8374948600,
+      "observed_success_wait_ns": 2949286700,
+      "inference": "budget-not-smaller-than-observed-success",
+      "cause": "undetermined"
+    }
+  ],
+  "limitations": [
+    "No new broker connection or credential access.",
+    "Input identity and native-vs-wrapper classification are declared and must be independently audited.",
+    "No recorded callback does not prove no server or SDK callback occurred.",
+    "A successful sample is not a response-time upper bound.",
+    "Heterogeneous samples do not estimate reliability or establish network/server root cause."
+  ]
+}

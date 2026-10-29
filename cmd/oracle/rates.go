@@ -67,51 +67,7 @@ func runCTPRates(args []string) error {
 	if err := c.Connect(*timeout); err != nil {
 		return err
 	}
-	logf("")
-	logf("%-16s %12s %10s %12s %10s %12s %10s  %s", "合约",
-		"开仓/按额", "开仓/每手", "平昨/按额", "平昨/每手", "平今/按额", "平今/每手",
-		"适用范围")
-	var interesting []string
-	for _, sym := range strings.Split(*symbols, ",") {
-		sym = strings.TrimSpace(sym)
-		if sym == "" {
-			continue
-		}
-		r, err := c.CommissionRate(sym, *timeout)
-		if err != nil {
-			logf("%-16s ⚠️ %v", sym, err)
-			continue
-		}
-		logf("%-16s %12.8g %10.8g %12.8g %10.8g %12.8g %10.8g  %s", sym,
-			float64(r.OpenRatioByMoney), float64(r.OpenRatioByVolume),
-			float64(r.CloseRatioByMoney), float64(r.CloseRatioByVolume),
-			float64(r.CloseTodayRatioByMoney), float64(r.CloseTodayRatioByVolume),
-			investorRange(r))
-
-		// ⚠️ 三档是不是同一组数 —— #8 的后半格（平今档仍未测）就挂在这里。
-		if !sameTier(r) {
-			logf("      ⚠️ **三档不同**：#8 的「开仓档 = 平昨档 = 平今档」在这个合约上不成立")
-		}
-		if d := rateDigits(float64(r.OpenRatioByMoney)); d >= 4 {
-			interesting = append(interesting, fmt.Sprintf("%s（按额费率 %g，%d 位有效小数）",
-				sym, float64(r.OpenRatioByMoney), d))
-		}
-	}
-	logf("")
-	if len(interesting) == 0 {
-		logf("⇒ ⚠️ 这一批里**没有**一个合约的按额费率比 1e-4 更细 ——")
-		logf("   #5 的两个残余候选（不取整 / 取到三位或更细）在它们身上仍然同值。")
-		logf("   ⚠️ 这是一条**有信息的空结果**：它说的是「再多测这些合约也分不开」，")
-		logf("   不是「没测出来」。要接着走得换一批合约，或者换一个柜台。")
-	} else {
-		logf("⇒ 这些合约的按额费率够细，**可能**把 #5 的两个候选分开：")
-		for _, s := range interesting {
-			logf("     · %s", s)
-		}
-		logf("   ⚠️ 「够细」只是必要条件：还要 名义金额 × 费率 真的落在三位以外，")
-		logf("   而那取决于当时的价格与乘数 —— 拿 `ctp-fee` 去那个合约上实测才算数。")
-	}
-	return nil
+	return reportCTPRates(c, *symbols, *timeout, logf)
 }
 
 // investorRange 把这条费率记录的**适用范围**翻成人话。
