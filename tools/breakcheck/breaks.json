@@ -10390,5 +10390,159 @@
   "new": "false && local.Format(\"20060102\") != restingProbeDate",
   "test": "TestRestingNightReadWindow",
   "want": "只读越界未在读取凭据前拒绝"
+},
+{
+  "name": "1032 费率查询失败继续后续合约",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/rates_report.go",
+  "old": "return fmt.Errorf(\"手续费查询失败 symbol=%s: %w\", sym, err)",
+  "new": "continue",
+  "test": "TestRatesFailureStopsCollection",
+  "want": "费率查询失败未传播或继续查询"
+},
+{
+  "name": "1033 非有限负费率被当成有效值",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/rates_report.go",
+  "old": "math.IsNaN(value) || math.IsInf(value, 0) || value < 0",
+  "new": "false && (math.IsNaN(value) || math.IsInf(value, 0) || value < 0)",
+  "test": "TestRatesInvalidRowsStopAtFirst",
+  "want": "无效费率记录未拒绝"
+},
+{
+  "name": "1034 未知费率范围被放行",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/rates_report.go",
+  "old": "row.InvestorRange != def.THOST_FTDC_IR_All && row.InvestorRange != def.THOST_FTDC_IR_Group && row.InvestorRange != def.THOST_FTDC_IR_Single",
+  "new": "false && (row.InvestorRange != def.THOST_FTDC_IR_All && row.InvestorRange != def.THOST_FTDC_IR_Group && row.InvestorRange != def.THOST_FTDC_IR_Single)",
+  "test": "TestRatesInvalidRowsStopAtFirst",
+  "want": "无效费率记录未拒绝"
+},
+{
+  "name": "1035 费率异合约混入当前结果",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/rates_report.go",
+  "old": "ctp.Text(row.InstrumentID[:]) != instrument",
+  "new": "false && ctp.Text(row.InstrumentID[:]) != instrument",
+  "test": "TestRatesInvalidRowsStopAtFirst",
+  "want": "无效费率记录未拒绝"
+},
+{
+  "name": "1036 费率失败丢失原始错误链",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/rates_report.go",
+  "old": "手续费查询失败 symbol=%s: %w",
+  "new": "手续费查询失败 symbol=%s: %v",
+  "test": "TestRatesPartialFailureNoConclusion",
+  "want": "部分费率失败仍给整批结论"
+},
+{
+  "name": "1037 握手诊断忽略来源日志哈希",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/reporting.py",
+  "old": "if hashlib.sha256(raw).hexdigest() != item['sha256']:",
+  "new": "if hashlib.sha256(raw).hexdigest() != item['sha256'] and False:",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "日志哈希不匹配未拒绝"
+},
+{
+  "name": "1038 旧握手字段缺失误当false",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/parsing.py",
+  "old": "received = None",
+  "new": "received = dict(received_stage='', received_request=0, last=False, has_payload=False)",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "旧日志缺字段被当成false"
+},
+{
+  "name": "1039 日志同步成功掩盖非零发送码",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/analysis.py",
+  "old": "if rejected:",
+  "new": "if rejected and False:",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "成功回调掩盖发送非零"
+},
+{
+  "name": "1040 握手诊断丢失打印交错标记",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/analysis.py",
+  "old": "record_order_differs_from_event_time=any(",
+  "new": "record_order_differs_from_event_time=False and any(",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "打印交错未被识别"
+},
+{
+  "name": "1041 握手阶段预算误用整个超时",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/analysis.py",
+  "old": "remaining_at_confirm_send_ns=deadline_ns-sent",
+  "new": "remaining_at_confirm_send_ns=deadline_ns",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "总预算计算错误"
+},
+{
+  "name": "1042 无回调日志误当柜台未回调",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/analysis.py",
+  "old": "confirm_callback_absence_proven=False",
+  "new": "confirm_callback_absence_proven=metadata_complete and not callbacks",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "无日志被升格为没有柜台回调"
+},
+{
+  "name": "1043 诊断报告泄漏私有输入路径",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/reporting.py",
+  "old": "cases.append(dict(id=item['id'],source_commit=item['source_commit'],sha256=item['sha256'],",
+  "new": "cases.append(dict(id=item['id'],path=item['path'],source_commit=item['source_commit'],sha256=item['sha256'],",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "报告泄漏私有日志路径"
+},
+{
+  "name": "1044 诊断结果覆盖旧证据",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/handshake_diagnostics/reporting.py",
+  "old": "Path(path).open('xb')",
+  "new": "Path(path).open('wb')",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "旧报告被覆盖"
+},
+{
+  "name": "1045 诊断CLI校验失败仍退出0",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/diagnose_handshake.py",
+  "old": "except EvidenceError as error:\n        print('诊断拒绝: '+str(error),file=sys.stderr)\n        return 1",
+  "new": "except EvidenceError as error:\n        print('诊断拒绝: '+str(error),file=sys.stderr)\n        return 0",
+  "test": "TestPythonHandshakeDiagnosticsBoundary",
+  "want": "CLI哈希不匹配仍成功"
 }
 ]

@@ -42,3 +42,6 @@ func runPythonBoundary(t *testing.T, module string) {
 func TestPythonIntegrityBoundary(t *testing.T) { runPythonBoundary(t, "test_integrity") }
 func TestPythonRuntimeBoundary(t *testing.T)   { runPythonBoundary(t, "test_runtime") }
 func TestPythonEvidenceBoundary(t *testing.T)  { runPythonBoundary(t, "test_evidence") }
+func TestPythonHandshakeDiagnosticsBoundary(t *testing.T) {
+	runPythonBoundary(t, "test_handshake_diagnostics")
+}
