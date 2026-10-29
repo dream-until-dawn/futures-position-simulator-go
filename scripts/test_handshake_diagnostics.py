@@ -45,6 +45,18 @@ def case(path, raw, name='sample'):
         deadline_ns=10000000000,process_exit=0,send_code_origin='native')
 
 
+def string_values(value):
+    """检查JSON解码后的值，Windows反斜杠及Unicode转义不能掩盖路径泄漏。"""
+    if isinstance(value,str):
+        yield value
+    elif isinstance(value,dict):
+        for child in value.values():
+            yield from string_values(child)
+    elif isinstance(value,list):
+        for child in value:
+            yield from string_values(child)
+
+
 class HandshakeDiagnosticsTests(unittest.TestCase):
     def test_duration_exact_boundaries(self):
         self.assertEqual(duration_ns('1.6250514s'),1625051400,'纳秒时刻解析不精确')
@@ -135,8 +147,8 @@ class HandshakeDiagnosticsTests(unittest.TestCase):
             result=build_report([a,b])
             self.assertEqual(result['comparison'][0]['cause'],'undetermined')
             self.assertEqual(result['comparison'][0]['inference'],'budget-not-smaller-than-observed-success')
-            text=json.dumps(result)
-            self.assertNotIn(str(temp),text,'报告泄漏私有日志路径')
+            decoded=json.loads(json.dumps(result))
+            self.assertFalse(any(str(temp) in value for value in string_values(decoded)),'报告泄漏私有日志路径')
             a['sha256']='0'*64
             with self.assertRaisesRegex(EvidenceError,'input-fingerprint-mismatch',msg='日志哈希不匹配未拒绝'):build_report([a])
             a['sha256']=hashlib.sha256(fixture()).hexdigest();a['send_code_origin']='unknown'
