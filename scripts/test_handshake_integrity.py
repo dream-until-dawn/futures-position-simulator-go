@@ -13,7 +13,18 @@ from test_handshake_diagnostics import case, fixture, line
 
 class HandshakeIntegrityTests(unittest.TestCase):
     def reject(self, raw, message):
-        with self.assertRaises(EvidenceError, msg=message):
+        # 相邻守卫可能同时拒绝同一篡改；还必须钉住本守卫原因，避免破坏被后续拒绝掩盖。
+        reasons = {
+            '截止后接受响应未拒绝': 'response-outside-deadline',
+            '响应早于阶段开始未拒绝': 'response-before-begin',
+            '发送返回早于阶段开始未拒绝': 'send-before-begin',
+            '完成早于响应未拒绝': 'finished-before-response',
+            '缺失响应的完成未拒绝': 'finished-without-response',
+            '提前超时未拒绝': 'timeout-before-deadline',
+            '截止后阶段开始未拒绝': 'begin-outside-deadline',
+            '截止后阶段完成未拒绝': 'finished-outside-deadline',
+        }
+        with self.assertRaisesRegex(EvidenceError, '^'+reasons[message]+'$', msg=message):
             analyze(parse_log(raw), 10000000000, 1)
 
     def test_response_deadline_is_exclusive(self):
