@@ -135,6 +135,10 @@ func finishRestingExposure(c restingProbeClient, report *restingProbeReport, tim
 		}
 		report.Stage = "closing-owned-long"
 		persistErr := emit()
+		// 同步落盘可能跨过收尾截止或使行情过期；真正发平仓单前必须再次拒绝。
+		if err = validateRestingQuote(md, spec, report.TradingDay, clock.Now()); err != nil {
+			return errors.Join(persistErr, err)
+		}
 		closeReq := ctp.OrderReq{Exchange: "SHFE", Instrument: "rb2701", Direction: def.THOST_FTDC_D_Sell, Offset: def.THOST_FTDC_OF_CloseToday, Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}
 		report.Close, err = waitOwnedOrder(c, closeReq, 2*time.Second, 10*time.Second, timeout, clock)
 		if err != nil || report.Close.Filled != 1 || !report.Close.Terminal {
@@ -185,7 +189,7 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	}()
 	local := clock.Now().In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()
-	if local.Format("20060102") != restingProbeDay || hm < 1055 || hm >= 1115 || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
+	if local.Format("20060102") != restingProbeDate || hm < 2115 || hm >= 2135 || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
 		return report, fmt.Errorf("本次探针日期、启动窗口或等待上限不成立")
 	}
 	report.Stage = "checking-empty-account"
@@ -300,6 +304,11 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 
 // runCTPRestingPrice 必须显式执行、指定已推送的计划提交及全新报告路径。
 func runCTPRestingPrice(args []string) error {
+	return runCTPRestingPriceAt(args, time.Now())
+}
+
+// runCTPRestingPriceAt 的时刻参数只供离线测试；CLI无覆盖开关，执行器还会重核真实时钟。
+func runCTPRestingPriceAt(args []string, at time.Time) error {
 	fs := flag.NewFlagSet("ctp-resting-price", flag.ContinueOnError)
 	envPath := fs.String("env", ".env", "凭据文件路径")
 	plan := fs.String("plan", "", "已推送计划的完整提交号")
@@ -315,7 +324,7 @@ func runCTPRestingPrice(args []string) error {
 		if *execute || *out != "" || *plan != "" || fs.NArg() != 0 {
 			return fmt.Errorf("只读-check不与执行或报告参数混用")
 		}
-		return runRestingPriceCheck(*envPath, *timeout)
+		return runRestingPriceCheckAt(*envPath, *timeout, at)
 	}
 	if !*execute || *out == "" || len(*plan) != 40 || fs.NArg() != 0 {
 		return fmt.Errorf("必须显式-execute、-out及40位-plan提交号")
@@ -323,9 +332,9 @@ func runCTPRestingPrice(args []string) error {
 	if _, err := hex.DecodeString(*plan); err != nil {
 		return fmt.Errorf("计划提交号无效")
 	}
-	now := time.Now().In(probeShanghai)
+	now := at.In(probeShanghai)
 	hm := now.Hour()*100 + now.Minute()
-	if now.Format("20060102") != restingProbeDay || hm < 1055 || hm >= 1115 || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
+	if now.Format("20060102") != restingProbeDate || hm < 2115 || hm >= 2135 || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
 		return fmt.Errorf("不在登记启动窗口或等待参数无效")
 	}
 	build, ok := debug.ReadBuildInfo()
@@ -381,10 +390,10 @@ func validateRestingBuild(plan string, settings []debug.BuildSetting) (string, e
 	return revision, nil
 }
 
-// validateRestingTarget 本次登记只允许已核对的 SimNow 日盘前置，拒绝误配到其他柜台。
+// validateRestingTarget 固定已登记的 SimNow 第一组前置，拒绝误配到其他柜台。
 func validateRestingTarget(broker, front string) error {
 	if broker != "9999" || front != "tcp://182.254.243.31:30001" {
-		return fmt.Errorf("本次探针仅允许登记的 SimNow 9999 日盘第一组前置")
+		return fmt.Errorf("本次探针仅允许登记的 SimNow 9999 第一组前置")
 	}
 	return nil
 }
