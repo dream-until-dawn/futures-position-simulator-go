@@ -6,25 +6,26 @@ import (
 	"time"
 )
 
-// TestRestingRegistrationQuoteBoundary 用独立字面日期验证新登记，旧日期不能随行情重新变成有效。
+// TestRestingRegistrationQuoteBoundary 独立固定自然日与交易日，拒绝两者混淆和旧轮复用。
 func TestRestingRegistrationQuoteBoundary(t *testing.T) {
 	for _, tc := range []struct {
-		day, at string
-		valid   bool
+		date, day, at string
+		valid         bool
 	}{
-		{"20261030", "10:30:00", true},
-		{"20261030", "10:55:00", true},
-		{"20261030", "11:24:59", true},
-		{"20261030", "10:29:59", false},
-		{"20261030", "11:25:00", false},
-		{"20261030", "13:35:00", false},
-		{"20261027", "10:55:00", false},
-		{"20261028", "10:55:00", false},
-		{"20261029", "10:55:00", false},
-		{"20261031", "10:55:00", false},
+		{"20261029", "20261030", "21:00:00", true},
+		{"20261029", "20261030", "21:15:00", true},
+		{"20261029", "20261030", "21:44:59", true},
+		{"20261029", "20261030", "20:59:59", false},
+		{"20261029", "20261030", "21:45:00", false},
+		{"20261029", "20261030", "14:40:00", false},
+		{"20261029", "20261029", "21:15:00", false},
+		{"20261029", "20261031", "21:15:00", false},
+		{"20261028", "20261030", "21:15:00", false},
+		{"20261030", "20261030", "21:15:00", false},
+		{"20261030", "20261030", "10:55:00", false},
 	} {
 		md, spec, _ := restingQuoteFixture()
-		now, err := time.ParseInLocation("20060102 15:04:05", tc.day+" "+tc.at, probeShanghai)
+		now, err := time.ParseInLocation("20060102 15:04:05", tc.date+" "+tc.at, probeShanghai)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -32,29 +33,24 @@ func TestRestingRegistrationQuoteBoundary(t *testing.T) {
 		copy(md.UpdateTime[:], tc.at)
 		err = validateRestingQuote(md, spec, tc.day, now)
 		if (err == nil) != tc.valid {
-			t.Fatalf("登记行情边界错误 day=%s at=%s valid=%v err=%v", tc.day, tc.at, tc.valid, err)
+			t.Fatalf("登记行情边界错误 date=%s day=%s at=%s valid=%v err=%v", tc.date, tc.day, tc.at, tc.valid, err)
 		}
 	}
 }
 
-// TestRestingRegistrationStartBoundary 两个合法端点间才可执行；越界必须在任何报单之前明确拒绝。
+// TestRestingRegistrationStartBoundary 只有今晚授权时窗可启动，其他时间须在报单之前明确拒绝。
 func TestRestingRegistrationStartBoundary(t *testing.T) {
 	for _, tc := range []struct {
-		day, at string
-		valid   bool
+		date, at string
+		valid    bool
 	}{
-		{"20261030", "10:55:00", true},
-		{"20261030", "11:14:59", true},
-		{"20261030", "10:54:59", false},
-		{"20261030", "11:15:00", false},
-		{"20261030", "13:35:00", false},
-		{"20261027", "10:55:00", false},
-		{"20261028", "10:55:00", false},
-		{"20261029", "10:55:00", false},
-		{"20261031", "10:55:00", false},
+		{"20261029", "21:15:00", true}, {"20261029", "21:34:59", true},
+		{"20261029", "21:14:59", false}, {"20261029", "21:35:00", false},
+		{"20261029", "14:40:00", false}, {"20261030", "10:55:00", false},
+		{"20261028", "21:15:00", false}, {"20261030", "21:15:00", false},
 	} {
 		f := newFakeRestingProbe()
-		now, err := time.ParseInLocation("20060102 15:04:05", tc.day+" "+tc.at, probeShanghai)
+		now, err := time.ParseInLocation("20060102 15:04:05", tc.date+" "+tc.at, probeShanghai)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -65,7 +61,7 @@ func TestRestingRegistrationStartBoundary(t *testing.T) {
 				t.Fatalf("登记启动正例失败 at=%s err=%v sent=%d", tc.at, err, f.sent)
 			}
 		} else if err == nil || !strings.Contains(err.Error(), "本次探针日期") || f.sent != 0 {
-			t.Fatalf("越界启动未在报单前拒绝 day=%s at=%s err=%v sent=%d", tc.day, tc.at, err, f.sent)
+			t.Fatalf("越界启动未在报单前拒绝 date=%s at=%s err=%v sent=%d", tc.date, tc.at, err, f.sent)
 		}
 	}
 }

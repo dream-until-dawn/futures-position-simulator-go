@@ -44,6 +44,16 @@ func collectRestingPricePreview(c restingReadClient, timeout time.Duration, cloc
 }
 
 func runRestingPriceCheck(envPath string, timeout time.Duration) error {
+	return runRestingPriceCheckAt(envPath, timeout, time.Now())
+}
+
+// runRestingPriceCheckAt 在读取凭据和连接之前核本轮时窗，离线测试可证明越界没有触及现场。
+func runRestingPriceCheckAt(envPath string, timeout time.Duration, at time.Time) error {
+	local := at.In(probeShanghai)
+	hm := local.Hour()*100 + local.Minute()
+	if local.Format("20060102") != restingProbeDate || hm < 2100 || hm >= 2145 {
+		return fmt.Errorf("不在登记只读窗口")
+	}
 	if timeout <= 0 || timeout > 15*time.Second {
 		return fmt.Errorf("查询超时必须在15秒以内且为正")
 	}

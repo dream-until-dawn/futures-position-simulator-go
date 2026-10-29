@@ -21,11 +21,11 @@ func TestRestingEvidenceWhitelist(t *testing.T) {
 	copy(r.ExchangeID[:], "SHFE")
 	copy(r.InstrumentID[:], "rb2701")
 	copy(r.TradingDay[:], "20261030")
-	copy(r.TradeTime[:], "10:56:00")
+	copy(r.TradeTime[:], "21:16:00")
 	copy(r.InvestorID[:], "LEAKME")
 	copy(r.BrokerID[:], "LEAKME")
 	got := copyOwnedTradeEvidence([]*def.CThostFtdcTradeField{r}, ownedOrderOutcome{Ref: "own"})
-	if len(got) != 1 || got[0].Price != "2997.25" || got[0].TradeID != "trade" || got[0].TradeTime != "10:56:00" {
+	if len(got) != 1 || got[0].Price != "2997.25" || got[0].TradeID != "trade" || got[0].TradeTime != "21:16:00" {
 		t.Fatal("原始成交证据缺失或价格被改写")
 	}
 	raw, err := json.Marshal(got)

@@ -8767,8 +8767,8 @@
 		"name": "884 撤销今日启动日期和窗口",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/resting_price_probe.go",
-		"old": "local.Format(\"20060102\") != restingProbeDay || hm < 1055 || hm >= 1115",
-		"new": "false && (local.Format(\"20060102\") != restingProbeDay || hm < 1055 || hm >= 1115)",
+		"old": "local.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135",
+		"new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135)",
 		"pkg": ".",
 		"test": "TestRestingRegistrationStartBoundary",
 		"want": "越界启动未在报单前拒绝",
@@ -8778,8 +8778,8 @@
 		"name": "885 陈旧日期行情获准进入今日探针",
 		"dir": "cmd/oracle",
 		"file": "cmd/oracle/resting_price_rules.go",
-		"old": "day != restingProbeDay || local.Format(\"20060102\") != day",
-		"new": "false && day != restingProbeDay || local.Format(\"20060102\") != day",
+		"old": "day != restingProbeDay || local.Format(\"20060102\") != restingProbeDate",
+		"new": "false && day != restingProbeDay || local.Format(\"20060102\") != restingProbeDate",
 		"pkg": ".",
 		"test": "TestRestingRegistrationQuoteBoundary",
 		"want": "登记行情边界错误",
@@ -10302,5 +10302,93 @@
 		"new": "if table > ^uintptr(0)-offset && false {",
 		"test": "TestNativeHandshakeInvalidPointers",
 		"want": "溢出原生方法被放行"
-	}
+	},
+{
+  "name": "1024 撤销夜盘CLI启动窗口",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_probe.go",
+  "old": "now.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135",
+  "new": "false && (now.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135)",
+  "test": "TestRestingRegistrationCLIWindow",
+  "want": "CLI启动窗口未在读取凭据前拒绝"
+},
+{
+  "name": "1025 撤销夜盘成交观察窗口",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_rules.go",
+  "old": "at.Hour()*100+at.Minute() < 2115 || at.Hour()*100+at.Minute() >= 2140",
+  "new": "false && (at.Hour()*100+at.Minute() < 2115 || at.Hour()*100+at.Minute() >= 2140)",
+  "test": "TestRestingRegistrationTradeWindow",
+  "want": "成交观察窗口越界样本被接受"
+},
+{
+  "name": "1026 夜盘忽略自然日",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_rules.go",
+  "old": "local.Format(\"20060102\") != restingProbeDate",
+  "new": "false && local.Format(\"20060102\") != restingProbeDate",
+  "test": "TestRestingRegistrationQuoteBoundary",
+  "want": "登记行情边界错误"
+},
+{
+  "name": "1027 夜盘行情误用交易日拼接",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_rules.go",
+  "old": "restingProbeDate+\" \"+ctp.Text(md.UpdateTime[:])",
+  "new": "restingProbeDay+\" \"+ctp.Text(md.UpdateTime[:])",
+  "test": "TestRestingNightQuoteClock",
+  "want": "夜盘行情日期或新鲜度错误"
+},
+{
+  "name": "1028 只读入口撤销夜盘前置时窗",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_check.go",
+  "old": "local.Format(\"20060102\") != restingProbeDate || hm < 2100 || hm >= 2145",
+  "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < 2100 || hm >= 2145)",
+  "test": "TestRestingNightReadWindow",
+  "want": "只读越界未在读取凭据前拒绝"
+},
+{
+  "name": "1029 落盘跨截止仍发平仓单",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_probe.go",
+  "old": "// 同步落盘可能跨过收尾截止或使行情过期；真正发平仓单前必须再次拒绝。\n\t\tif err = validateRestingQuote(md, spec, report.TradingDay, clock.Now()); err != nil {",
+  "new": "// 同步落盘可能跨过收尾截止或使行情过期；真正发平仓单前必须再次拒绝。\n\t\tif err = validateRestingQuote(md, spec, report.TradingDay, clock.Now()); err != nil && false {",
+  "test": "TestRestingNightCloseDeadline",
+  "want": "落盘后越界或陈旧仍发收尾单"
+},
+{
+  "name": "1030 夜盘行情撤销收尾时窗",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_rules.go",
+  "old": "hm < 2100 || hm >= 2145",
+  "new": "false && (hm < 2100 || hm >= 2145)",
+  "test": "TestRestingRegistrationQuoteBoundary",
+  "want": "登记行情边界错误"
+},
+{
+  "name": "1031 夜盘只读入口忽略自然日",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_check.go",
+  "old": "local.Format(\"20060102\") != restingProbeDate",
+  "new": "false && local.Format(\"20060102\") != restingProbeDate",
+  "test": "TestRestingNightReadWindow",
+  "want": "只读越界未在读取凭据前拒绝"
+}
 ]
