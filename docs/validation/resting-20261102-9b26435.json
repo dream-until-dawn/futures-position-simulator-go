@@ -1,0 +1,658 @@
+{
+  "format": 1,
+  "source_commit": "9b26435d543fda225ad48e1f2b2860aff49c66e1",
+  "baseline_main": "a8131528593f83d990ab6cd91b60a0ccfa9a3db2",
+  "source_tree": "2d5e0f82eeec504bf15092ed281ad67c89ccd841",
+  "registry_sha256": "cf5630b812c876bb6a81765c4b274b2df528a536890c0927dd25b856d6b83b75",
+  "report_sha256": "f634617db770d0b9c5dbf0ad9a5f687b9298277b8f02af0b79955422b90f3904",
+  "summary_sha256": "90b73ede74f7d8da3d0832b5f48bbff8748eb1d4995ef0945cd7c678075e253f",
+  "counts": {
+    "executed": 1062,
+    "expected_red": 1053,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "summary": {
+    "path": "C:\\Temp\\ctp-november-mutation-9b26435\\summary.json",
+    "sha256": "90b73ede74f7d8da3d0832b5f48bbff8748eb1d4995ef0945cd7c678075e253f"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\ctp-november-mutation-9b26435\\mutation.log",
+    "sha256": "57fec31b6f34ec1466d8b4185513d43ff1aa916c8205156e33f81554d20979e5"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "3e38f737ebef2cdc2ba551e0e4129bb7591e8285b3c984184587bfe1d5d2b859",
+    "index_sha256": "77b12f4b03da96634be5543a1b5742875b5c260c45bbba383928a2393a6b2aa3",
+    "head": "9b26435d543fda225ad48e1f2b2860aff49c66e1"
+  },
+  "retained_baseline_properties": {
+    "count": 1055,
+    "anchor_migrations": [
+      {
+        "before": {
+          "name": "884 撤销今日启动日期和窗口",
+          "dir": "cmd/oracle",
+          "file": "cmd/oracle/resting_price_probe.go",
+          "old": "local.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135",
+          "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135)",
+          "pkg": ".",
+          "test": "TestRestingRegistrationStartBoundary",
+          "want": "越界启动未在报单前拒绝",
+          "expect": "red"
+        },
+        "after": {
+          "name": "884 撤销今日启动日期和窗口",
+          "dir": "cmd/oracle",
+          "file": "cmd/oracle/resting_price_probe.go",
+          "old": "local.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd",
+          "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd)",
+          "pkg": ".",
+          "test": "TestRestingRegistrationStartBoundary",
+          "want": "越界启动未在报单前拒绝",
+          "expect": "red"
+        }
+      },
+      {
+        "before": {
+          "name": "1024 撤销夜盘CLI启动窗口",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_probe.go",
+          "old": "now.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135",
+          "new": "false && (now.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135)",
+          "test": "TestRestingRegistrationCLIWindow",
+          "want": "CLI启动窗口未在读取凭据前拒绝"
+        },
+        "after": {
+          "name": "1024 撤销夜盘CLI启动窗口",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_probe.go",
+          "old": "now.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd",
+          "new": "false && (now.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd)",
+          "test": "TestRestingRegistrationCLIWindow",
+          "want": "CLI启动窗口未在读取凭据前拒绝"
+        }
+      },
+      {
+        "before": {
+          "name": "1025 撤销夜盘成交观察窗口",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_rules.go",
+          "old": "at.Hour()*100+at.Minute() < 2115 || at.Hour()*100+at.Minute() >= 2140",
+          "new": "false && (at.Hour()*100+at.Minute() < 2115 || at.Hour()*100+at.Minute() >= 2140)",
+          "test": "TestRestingRegistrationTradeWindow",
+          "want": "成交观察窗口越界样本被接受"
+        },
+        "after": {
+          "name": "1025 撤销夜盘成交观察窗口",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_rules.go",
+          "old": "at.Hour()*100+at.Minute() < restingOpeningStart || at.Hour()*100+at.Minute() >= restingObservationEnd",
+          "new": "false && (at.Hour()*100+at.Minute() < restingOpeningStart || at.Hour()*100+at.Minute() >= restingObservationEnd)",
+          "test": "TestRestingRegistrationTradeWindow",
+          "want": "成交观察窗口越界样本被接受"
+        }
+      },
+      {
+        "before": {
+          "name": "1027 夜盘行情误用交易日拼接",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_rules.go",
+          "old": "restingProbeDate+\" \"+ctp.Text(md.UpdateTime[:])",
+          "new": "restingProbeDay+\" \"+ctp.Text(md.UpdateTime[:])",
+          "test": "TestRestingNightQuoteClock",
+          "want": "夜盘行情日期或新鲜度错误"
+        },
+        "after": {
+          "name": "1027 夜盘行情误用交易日拼接",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_registration.go",
+          "old": "naturalDate+\" \"+clock",
+          "new": "tradingDay+\" \"+clock",
+          "test": "TestRestingNightQuoteClock",
+          "want": "夜盘行情日期或新鲜度错误"
+        }
+      },
+      {
+        "before": {
+          "name": "1028 只读入口撤销夜盘前置时窗",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_check.go",
+          "old": "local.Format(\"20060102\") != restingProbeDate || hm < 2100 || hm >= 2145",
+          "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < 2100 || hm >= 2145)",
+          "test": "TestRestingNightReadWindow",
+          "want": "只读越界未在读取凭据前拒绝"
+        },
+        "after": {
+          "name": "1028 只读入口撤销夜盘前置时窗",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_check.go",
+          "old": "local.Format(\"20060102\") != restingProbeDate || hm < restingCheckStart || hm >= restingCheckEnd",
+          "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < restingCheckStart || hm >= restingCheckEnd)",
+          "test": "TestRestingNightReadWindow",
+          "want": "只读越界未在读取凭据前拒绝"
+        }
+      },
+      {
+        "before": {
+          "name": "1030 夜盘行情撤销收尾时窗",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_rules.go",
+          "old": "hm < 2100 || hm >= 2145",
+          "new": "false && (hm < 2100 || hm >= 2145)",
+          "test": "TestRestingRegistrationQuoteBoundary",
+          "want": "登记行情边界错误"
+        },
+        "after": {
+          "name": "1030 夜盘行情撤销收尾时窗",
+          "dir": "cmd/oracle",
+          "pkg": ".",
+          "expect": "red",
+          "file": "cmd/oracle/resting_price_rules.go",
+          "old": "hm < restingQuoteStart || hm >= restingQuoteEnd",
+          "new": "false && (hm < restingQuoteStart || hm >= restingQuoteEnd)",
+          "test": "TestRestingRegistrationQuoteBoundary",
+          "want": "登记行情边界错误"
+        }
+      }
+    ]
+  },
+  "targeted": [
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\summary.json",
+      "sha256": "01928110cab3f223433ade059f99e4f08039473a9c6414b8f50bbfc9edf4b2c4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\884.json",
+      "sha256": "381c19c694948e7f73b9f2359f16ecd482c205062f4a7cefdb4e805b0731c7e7"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\884.log",
+      "sha256": "495dbaf34112343b02bedd5de765b54305c8571d89ab6712a917ff7d9a1d1abf"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1024.json",
+      "sha256": "df3445c37dc39f8fea9b7a06d21f6f4a1a786e772b6b054f74721479eb431d4e"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1024.log",
+      "sha256": "4521d509495890840643c9eae75b4a76bff6ee6428756c9fcae4150d9d2ca2d5"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1025.json",
+      "sha256": "b6c28bc022fc3f8dc515d357499fd781241140bbc932c8b1bac794a73acefeb4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1025.log",
+      "sha256": "29f811fa5f27447e2b33f1699ae42ead4004114da087160b51c47291dd0cb6b3"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1027.json",
+      "sha256": "779377f279e0c0d277a1a367c8e95612c4ae278dc0bb33903273a83f775f533e"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1027.log",
+      "sha256": "a29c4585d578d9a908040f012a8ae7ac867f0a0fef14b12d32efd312890489cb"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1028.json",
+      "sha256": "33f85f6be6a92cde2f7c83c24869834b9e6084cfe527bee7ec86b5d4b5be920d"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1028.log",
+      "sha256": "78e01ad7815cf63d8349e4e0b1e2395dbf43d8763f90b898650d407417fff894"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1030.json",
+      "sha256": "e44ed68a6d50e196e0c59b7cc66995cf057f86606574848f949330b5c71f97e0"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1030.log",
+      "sha256": "d4eba1ad158ff7bc0cb4c93e4512f948fd0c50215da9961377235e3df6e5d3fd"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1142.json",
+      "sha256": "d707414139dbee5b74958402302882f6974ba8b28d00e5da1f58fe645e152b09"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1142.log",
+      "sha256": "030b8153da9645a845dabd3de4187b3f91136d57be45e3bd2c9970e7b1c8f450"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1143.json",
+      "sha256": "2ebd864397685bd06f75aaee5e17faa811c6889538864dd02687dd15386c36d2"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1143.log",
+      "sha256": "8828647f17932a3d75d9f4cf5d40c0333bee083b1ad7c5e50e27f5ad7975bc2c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1144.json",
+      "sha256": "1574599b893a04830f9df2f5ca9f4a2651bd008cc33dced436081aaa391597be"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1144.log",
+      "sha256": "90523ea7313d2cf201595049f2a031721124bc81e7101c10a4f059367898d9d8"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1145.json",
+      "sha256": "fa2d497369a894ed9b399ca75746160b359c9497988b312ffadc4e445f09cd39"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1145.log",
+      "sha256": "030f15af4017d9ed64f6275cceb3d6267a488537d630c1d5f66b1b6930983f7b"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1146.json",
+      "sha256": "7b125772fd66b5cf0054ca5fab3de526c579076a5ea05c79fb17bc02f6019a41"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1146.log",
+      "sha256": "68c78c33f67d3da029ee5d076d8d5ecf6f75116f4e4147f508e19ef322ca2f54"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1147.json",
+      "sha256": "67e8069f0c83010b16327e680f0862a84eb603e9b1b7a21b2c8ab955edf3612f"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1147.log",
+      "sha256": "0a70d320f287ea3b2a37ba29e9cde0f51f6e6d058cbb3554f91bd3118b2f50f9"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1148.json",
+      "sha256": "5f938470c1dbf4092a349dab748cec4b6ffb6c05ee1bd8169acb8ed11201729d"
+    },
+    {
+      "path": "C:\\Temp\\ctp-november-targets-9b26435\\offline-results\\november-targets\\1148.log",
+      "sha256": "50ba0599c9dcce22e7b5acfdc66f8f07883315027f54dcbee142953b3c503221"
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435",
+            "passed_tests": 749,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-regression-9b26435\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\cmd\\oracle",
+            "passed_tests": 456,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-regression-9b26435\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-regression-9b26435\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3e38f737ebef2cdc2ba551e0e4129bb7591e8285b3c984184587bfe1d5d2b859",
+          "index_sha256": "77b12f4b03da96634be5543a1b5742875b5c260c45bbba383928a2393a6b2aa3",
+          "head": "9b26435d543fda225ad48e1f2b2860aff49c66e1"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3e38f737ebef2cdc2ba551e0e4129bb7591e8285b3c984184587bfe1d5d2b859",
+          "index_sha256": "77b12f4b03da96634be5543a1b5742875b5c260c45bbba383928a2393a6b2aa3",
+          "head": "9b26435d543fda225ad48e1f2b2860aff49c66e1"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-november-regression-9b26435\\summary.json",
+        "sha256": "872e3fc1082ed8bd5518e596e163e6becc5da32ce2ebafbc9e6937220be8485f"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-november-regression-9b26435\\root.log",
+          "sha256": "a06a2fe6a717a100d2d6304621006f1de329311633fd90cfac82118ec4ca700f"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-regression-9b26435\\oracle.log",
+          "sha256": "747f083a5ae9bae03d043832663b5a6bd33d389c2aa2908a246a0b3328fd572e"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-regression-9b26435\\external.log",
+          "sha256": "70c839f9cc96f667d92628c5c81853292a3af8b4ab3cc3dc5b15d00237916761"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435",
+            "passed_tests": 749,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-race-9b26435\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\cmd\\oracle",
+            "passed_tests": 456,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-race-9b26435\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-race-9b26435\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3e38f737ebef2cdc2ba551e0e4129bb7591e8285b3c984184587bfe1d5d2b859",
+          "index_sha256": "77b12f4b03da96634be5543a1b5742875b5c260c45bbba383928a2393a6b2aa3",
+          "head": "9b26435d543fda225ad48e1f2b2860aff49c66e1"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3e38f737ebef2cdc2ba551e0e4129bb7591e8285b3c984184587bfe1d5d2b859",
+          "index_sha256": "77b12f4b03da96634be5543a1b5742875b5c260c45bbba383928a2393a6b2aa3",
+          "head": "9b26435d543fda225ad48e1f2b2860aff49c66e1"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-november-race-9b26435\\summary.json",
+        "sha256": "1303c2a2fe85a91f580e58240b7d480440dd2f6230d160a5d99c5d2098eb96a2"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-november-race-9b26435\\root.log",
+          "sha256": "068ec8a5170c7d486f1b87258f1df1646abadc8de55fe7ec1ae359a88c0d0263"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-race-9b26435\\oracle.log",
+          "sha256": "8662a4b81c9294f2b09070475ef8c3ffd71cb288cf79a14b1ddbefdd06cc12da"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-race-9b26435\\external.log",
+          "sha256": "a4dc86375dfea20a1766b81349a8ef1d18921789eee82ed57eee05fed3f2fc40"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-fuzz-9b26435\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-fuzz-9b26435\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-fuzz-9b26435\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-fuzz-9b26435\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-november-checks-9b26435\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-november-fuzz-9b26435\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3e38f737ebef2cdc2ba551e0e4129bb7591e8285b3c984184587bfe1d5d2b859",
+          "index_sha256": "77b12f4b03da96634be5543a1b5742875b5c260c45bbba383928a2393a6b2aa3",
+          "head": "9b26435d543fda225ad48e1f2b2860aff49c66e1"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3e38f737ebef2cdc2ba551e0e4129bb7591e8285b3c984184587bfe1d5d2b859",
+          "index_sha256": "77b12f4b03da96634be5543a1b5742875b5c260c45bbba383928a2393a6b2aa3",
+          "head": "9b26435d543fda225ad48e1f2b2860aff49c66e1"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-november-fuzz-9b26435\\summary.json",
+        "sha256": "06bdc63fdbfbc490b078a432391520a9918ac849beed28097a606ae751bf6035"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-november-fuzz-9b26435\\state.log",
+          "sha256": "0763223e17ea34376853c91454f9269f358c7e32d2de9e1f0e8b4330c5cac112"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-fuzz-9b26435\\bundle.log",
+          "sha256": "0ee2d3cbc15a91aa39b7268edc4d5e101d20613daa5b5cd887da6505c6c98a2e"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-fuzz-9b26435\\report.log",
+          "sha256": "7fc99329dd8f5b76024c3dd760e3d2c9dc67a38663fad3bd40fa6b97d8d553ff"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-fuzz-9b26435\\risk.log",
+          "sha256": "109f7411de0a6b2272791d9846eb3a640b473378a16314fb5fd036e1491d885c"
+        },
+        {
+          "path": "C:\\Temp\\ctp-november-fuzz-9b26435\\lifecycle.log",
+          "sha256": "8461a498562f52583cfa56f976d8166f75ee52d712aeaf2af8b6b4b4abce8545"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\ctp-november-python-9b26435.log",
+    "sha256": "3d4daca442e3e4e81dbc9b83cf7efde8431c9668377db47d3663415140348a6c"
+  },
+  "ci": {
+    "sha": "9b26435d543fda225ad48e1f2b2860aff49c66e1",
+    "run_id": 41051692482,
+    "conclusion": "success",
+    "url": "https://github.com/dream-until-dawn/futures-position-simulator-go/actions/runs/41051692482",
+    "checked_at_utc": "2026-10-30 12:02:15 UTC",
+    "jobs": [
+      {
+        "id": 124049053174,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:56:43Z",
+        "completed_at": "2026-10-30T12:01:40Z"
+      },
+      {
+        "id": 124049053459,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:56:43Z",
+        "completed_at": "2026-10-30T12:00:20Z"
+      }
+    ]
+  },
+  "before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\november-before.json",
+      "sha256": "1da521fa7688e1247f437077e450a77d964a69a0a9d7bafcdea11cb165f51808"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\november-before-fixture.go.txt",
+      "sha256": "453a1ca3b03d7077b7ecd1a552d55735c9014011b5654d410979d31fcfcab33c"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\november-before.log",
+      "sha256": "43929cf0c3f921015fb2c825d64b085494bb2af17a5f89743fbfcbf75af1b86b"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\old-opening-before.json",
+      "sha256": "b8a1a86f2c5cf81a3f976b46999403cd8b41c0373c11ac7312805ad83dbf01e5"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\old_opening_fixture.go.txt",
+      "sha256": "05f8b67ced867d392f01923a2179d06652cc3ada18d81887c534155a68fd3180"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\old-opening-before.log",
+      "sha256": "cd2a522570f2387e41e9369ec5b8a8c2e7a17ecbac3c6b123e2a9c7cee6fdf8f"
+    }
+  ],
+  "retained_failed_precheck": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\november-regression\\summary.json",
+      "sha256": "286df08db71a663fb932cf5400ab860e7eb1d0b2111ec56afcee5338ec29df58"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261102-prep-8fba96f\\offline-results\\november-regression\\root.log",
+      "sha256": "b586e0b2bc66753c15f4c0fcdf1a2f2158cc3097508e091f25f89e7d3165f5bf"
+    }
+  ],
+  "scope": {
+    "real_env_reads": 0,
+    "broker_connections": 0,
+    "orders": 0,
+    "cancels": 0,
+    "live_acceptance": false,
+    "specific_date_trade_authorized": false,
+    "day": "20261102",
+    "natural_date": "2026-11-02"
+  }
+}
