@@ -51,7 +51,7 @@ class AdmissionTests(unittest.TestCase):
     def test_first_record_precedes_every_check(self):
         def inspect(ctx):
             self.assertTrue((self.directory/'001-start.json').exists(), '检查前未记录独占启动')
-        self.assertEqual(self.run_attempt([('ready', inspect)])['status'], 'COMPLETED')
+        self.assertEqual(self.run_attempt([('ready', inspect)])['status'], 'COMPLETED', '检查前未记录独占启动')
 
     def test_two_distinct_failures_keep_stage_and_original_cause(self):
         for phase in ['remote-git', 'binary']:
@@ -132,8 +132,8 @@ class AdmissionTests(unittest.TestCase):
 
     def test_outside_window_never_creates_or_checks(self):
         result = self.run_attempt([('ready', lambda c: self.fail('outside check ran'))], allowed=lambda: False)
-        self.assertEqual(result['kind'], 'outside-window')
         self.assertFalse(self.directory.exists(), '越窗仍建立准入轮')
+        self.assertEqual(result['kind'], 'outside-window')
         self.assertFalse(self.calls)
 
     def test_window_crossing_after_check_never_executes(self):
