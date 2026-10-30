@@ -15,10 +15,31 @@ func TestHandshakeEntryProductionWiring(t *testing.T) {
 		t.Fatal(err)
 	}
 	registered, published := 0, 0
+	directRegistration := 0
 	for _, decl := range f.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
 			continue
+		}
+		if fn.Name.Name == "initializeHandshake" {
+			for _, statement := range fn.Body.List {
+				expression, ok := statement.(*ast.ExprStmt)
+				if !ok {
+					continue
+				}
+				call, ok := expression.X.(*ast.CallExpr)
+				if !ok || len(call.Args) != 1 {
+					continue
+				}
+				method, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || method.Sel.Name != "registerHandshakeCallbacks" {
+					continue
+				}
+				argument, ok := call.Args[0].(*ast.Ident)
+				if ok && argument.Name == "hs" {
+					directRegistration++
+				}
+			}
 		}
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
 			call, ok := n.(*ast.CallExpr)
@@ -38,7 +59,7 @@ func TestHandshakeEntryProductionWiring(t *testing.T) {
 			return true
 		})
 	}
-	if registered != 1 || published != 1 {
+	if registered != 1 || directRegistration != 1 || published != 1 {
 		t.Fatal("入口日志未在真实初始化和Connect返回接线", registered, published)
 	}
 	f, err = parser.ParseFile(token.NewFileSet(), "handshake_callbacks_windows.go", nil, 0)
