@@ -8764,16 +8764,16 @@
 	"expect": "red"
 },
 	{
-		"name": "884 撤销今日启动日期和窗口",
-		"dir": "cmd/oracle",
-		"file": "cmd/oracle/resting_price_probe.go",
-		"old": "local.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135",
-		"new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135)",
-		"pkg": ".",
-		"test": "TestRestingRegistrationStartBoundary",
-		"want": "越界启动未在报单前拒绝",
-		"expect": "red"
-	},
+  "name": "884 撤销今日启动日期和窗口",
+  "dir": "cmd/oracle",
+  "file": "cmd/oracle/resting_price_probe.go",
+  "old": "local.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd",
+  "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd)",
+  "pkg": ".",
+  "test": "TestRestingRegistrationStartBoundary",
+  "want": "越界启动未在报单前拒绝",
+  "expect": "red"
+},
 	{
 		"name": "885 陈旧日期行情获准进入今日探针",
 		"dir": "cmd/oracle",
@@ -10309,8 +10309,8 @@
   "pkg": ".",
   "expect": "red",
   "file": "cmd/oracle/resting_price_probe.go",
-  "old": "now.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135",
-  "new": "false && (now.Format(\"20060102\") != restingProbeDate || hm < 2115 || hm >= 2135)",
+  "old": "now.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd",
+  "new": "false && (now.Format(\"20060102\") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd)",
   "test": "TestRestingRegistrationCLIWindow",
   "want": "CLI启动窗口未在读取凭据前拒绝"
 },
@@ -10320,8 +10320,8 @@
   "pkg": ".",
   "expect": "red",
   "file": "cmd/oracle/resting_price_rules.go",
-  "old": "at.Hour()*100+at.Minute() < 2115 || at.Hour()*100+at.Minute() >= 2140",
-  "new": "false && (at.Hour()*100+at.Minute() < 2115 || at.Hour()*100+at.Minute() >= 2140)",
+  "old": "at.Hour()*100+at.Minute() < restingOpeningStart || at.Hour()*100+at.Minute() >= restingObservationEnd",
+  "new": "false && (at.Hour()*100+at.Minute() < restingOpeningStart || at.Hour()*100+at.Minute() >= restingObservationEnd)",
   "test": "TestRestingRegistrationTradeWindow",
   "want": "成交观察窗口越界样本被接受"
 },
@@ -10341,9 +10341,9 @@
   "dir": "cmd/oracle",
   "pkg": ".",
   "expect": "red",
-  "file": "cmd/oracle/resting_price_rules.go",
-  "old": "restingProbeDate+\" \"+ctp.Text(md.UpdateTime[:])",
-  "new": "restingProbeDay+\" \"+ctp.Text(md.UpdateTime[:])",
+  "file": "cmd/oracle/resting_registration.go",
+  "old": "naturalDate+\" \"+clock",
+  "new": "tradingDay+\" \"+clock",
   "test": "TestRestingNightQuoteClock",
   "want": "夜盘行情日期或新鲜度错误"
 },
@@ -10353,8 +10353,8 @@
   "pkg": ".",
   "expect": "red",
   "file": "cmd/oracle/resting_price_check.go",
-  "old": "local.Format(\"20060102\") != restingProbeDate || hm < 2100 || hm >= 2145",
-  "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < 2100 || hm >= 2145)",
+  "old": "local.Format(\"20060102\") != restingProbeDate || hm < restingCheckStart || hm >= restingCheckEnd",
+  "new": "false && (local.Format(\"20060102\") != restingProbeDate || hm < restingCheckStart || hm >= restingCheckEnd)",
   "test": "TestRestingNightReadWindow",
   "want": "只读越界未在读取凭据前拒绝"
 },
@@ -10375,8 +10375,8 @@
   "pkg": ".",
   "expect": "red",
   "file": "cmd/oracle/resting_price_rules.go",
-  "old": "hm < 2100 || hm >= 2145",
-  "new": "false && (hm < 2100 || hm >= 2145)",
+  "old": "hm < restingQuoteStart || hm >= restingQuoteEnd",
+  "new": "false && (hm < restingQuoteStart || hm >= restingQuoteEnd)",
   "test": "TestRestingRegistrationQuoteBoundary",
   "want": "登记行情边界错误"
 },
@@ -11600,5 +11600,82 @@
   "new": "if err != nil && false {\n\t\treturn report, err\n\t}\n\tif report.Main.Filled",
   "test": "TestRestingWorkflowKeepsNativeCancelError",
   "want": "完整执行器吞掉原生撤单错误"
+},
+{
+  "name": "1142 落盘后跳过Control开仓截止",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_probe.go",
+  "old": "if err = validateRestingOpeningWindow(clock.Now()); err != nil {\n\t\treturn report, err\n\t}\n\treport.Control, err = waitOwnedOrder",
+  "new": "if err = validateRestingOpeningWindow(clock.Now()); err != nil && false {\n\t\treturn report, err\n\t}\n\treport.Control, err = waitOwnedOrder",
+  "test": "TestNovemberOpeningDeadlineAfterSave",
+  "want": "启动窗口已过但新鲜行情仍触发新开仓"
+},
+{
+  "name": "1143 落盘后跳过Main开仓截止",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_probe.go",
+  "old": "if err = validateRestingOpeningWindow(clock.Now()); err != nil {\n\t\treturn report, err\n\t}\n\treport.Main, err = waitOwnedOrder",
+  "new": "if err = validateRestingOpeningWindow(clock.Now()); err != nil && false {\n\t\treturn report, err\n\t}\n\treport.Main, err = waitOwnedOrder",
+  "test": "TestNovemberOpeningDeadlineAfterSave",
+  "want": "启动窗口已过但新鲜行情仍触发新开仓"
+},
+{
+  "name": "1144 行情生产入口混用交易日",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_rules.go",
+  "old": "parseRestingQuoteClock(restingProbeDate, day,",
+  "new": "parseRestingQuoteClock(day, day,",
+  "test": "TestRestingQuoteClockUsesNaturalDate",
+  "want": "行情时刻未使用登记自然日"
+},
+{
+  "name": "1145 放宽登记端点restingCheckStart",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_registration.go",
+  "old": "\trestingCheckStart     = 1050",
+  "new": "\trestingCheckStart     = 1049",
+  "test": "TestNovemberReadOnlyWindowLiteral",
+  "want": "新登记只读越界触及凭据阶段"
+},
+{
+  "name": "1146 放宽登记端点restingCheckEnd",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_registration.go",
+  "old": "\trestingCheckEnd       = 1055",
+  "new": "\trestingCheckEnd       = 1056",
+  "test": "TestNovemberReadOnlyWindowLiteral",
+  "want": "新登记只读越界触及凭据阶段"
+},
+{
+  "name": "1147 放宽登记端点restingQuoteStart",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_registration.go",
+  "old": "\trestingQuoteStart     = 1030",
+  "new": "\trestingQuoteStart     = 1029",
+  "test": "TestNovemberQuoteRegistrationLiteral",
+  "want": "新登记行情越界仍放行"
+},
+{
+  "name": "1148 放宽登记端点restingQuoteEnd",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_registration.go",
+  "old": "\trestingQuoteEnd       = 1125",
+  "new": "\trestingQuoteEnd       = 1126",
+  "test": "TestNovemberQuoteRegistrationLiteral",
+  "want": "新登记行情越界仍放行"
 }
 ]

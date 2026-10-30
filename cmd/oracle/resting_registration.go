@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// 私有登记值仅由准确源码固定，不提供CLI/环境变量覆盖或自动顺延。
+// 私有登记值均为东八区HHMM，仅由准确源码固定，不提供CLI/环境变量覆盖或自动顺延。
 const (
 	restingQuoteStart     = 1030
 	restingQuoteEnd       = 1125
