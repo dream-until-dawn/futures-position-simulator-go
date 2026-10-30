@@ -11104,7 +11104,7 @@
   "old": "if err != nil {\n\t\tc.logf",
   "new": "if err != nil && false {\n\t\tc.logf",
   "test": "TestNativeInsertUnknownAndLocalFailure",
-  "want": "原生失败或无回报被洗成终态或丢引用"
+  "want": "本地失败与SDK失败混淆"
 },
 {
   "name": "1097 绑定错误冒充SDK失败",
