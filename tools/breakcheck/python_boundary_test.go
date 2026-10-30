@@ -55,3 +55,17 @@ func TestPythonHandshakeEntryBoundary(t *testing.T) {
 func TestPythonHandshakeIntegrityBoundary(t *testing.T) {
 	runPythonBoundary(t, "test_handshake_integrity")
 }
+
+// TestPythonAdmissionBoundary 经真实本地子进程检查准入失败、留证和一次性边界。
+func TestPythonAdmissionBoundary(t *testing.T) { runPythonBoundary(t, "test_admission") }
+
+// TestPythonAdmissionEnvBoundary 仅使用合成文件验证固定目标与共享只读锁。
+func TestPythonAdmissionEnvBoundary(t *testing.T) { runPythonBoundary(t, "test_admission_env") }
+
+// TestPythonAdmissionChecksBoundary 验证冻结构建、源码、远端及完整原始证据均实际接线。
+func TestPythonAdmissionChecksBoundary(t *testing.T) { runPythonBoundary(t, "test_admission_checks") }
+
+// TestPythonAdmissionRegisteredBoundary 以本地假CLI贯穿新登记唯一启动、锁文件和诊断。
+func TestPythonAdmissionRegisteredBoundary(t *testing.T) {
+	runPythonBoundary(t, "test_admission_registered")
+}
