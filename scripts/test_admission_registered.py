@@ -35,6 +35,7 @@ class RegisteredTests(unittest.TestCase):
         self.directory=self.f.root/'registered'
         self.log=successful_log();self.exit=0;self.env_reads=[];self.processes=[]
         self.locked=False;self.process_state=dict(matching_count=0,query_succeeded=True)
+        self.working_directories=[]
         self.env_error=None;self.allowed=True;self.query_error=None;self.expire_at_evidence=False
         self.original_command=Attempt.command
 
@@ -56,6 +57,7 @@ class RegisteredTests(unittest.TestCase):
             self.assertTrue(self.locked,'实际CLI未处于凭据共享锁内')
             self.assertTrue(self.allowed,'越窗仍启动实际CLI')
             self.processes.append(list(argv))
+            self.working_directories.append(Path(cwd))
             code='import sys;sys.stdout.buffer.write('+repr(self.log)+');sys.exit('+str(self.exit)+')'
             return self.original_command(ctx,[sys.executable,'-c',code],cwd,**kwargs)
         result=self.f.fake_command(ctx,argv,cwd,**kwargs)
@@ -142,6 +144,11 @@ class RegisteredTests(unittest.TestCase):
         result=self.run_registered()
         self.assertEqual(result['kind'],'outside-window')
         self.assertFalse(self.directory.exists());self.assertFalse(self.env_reads);self.assertFalse(self.processes)
+
+    def test_execution_uses_private_round_directory(self):
+        result=self.run_registered()
+        self.assertEqual(result['status'],'COMPLETED','私有目录对照执行未通过')
+        self.assertEqual(self.working_directories,[self.directory],'柜台进程未使用本轮私有目录')
 
     def test_offline_diagnosis_of_failed_execution_does_not_reconnect(self):
         raw=fixture(False)+entries().replace(b'stage=settlement-confirm count=1 first_ns=4225065800 last_ns=4225065800',b'stage=settlement-confirm count=0 first_ns=0 last_ns=0').replace(b'request=3 code=0 last=true wrapped_payload=true',b'request=0 code=0 last=false wrapped_payload=false')

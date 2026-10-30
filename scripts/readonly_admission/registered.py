@@ -73,7 +73,8 @@ def execute_readonly(ctx, cfg):
             ctx.journal.event('environment', dict(sha256=fingerprint))
             with ctx.stage('execution'):
                 ctx.check_window()
-                ctx.command(cfg['argv'], cfg['root'], timeout=40)
+                # CTP在cwd写流文件；必须隔离到本轮私有目录，不写主项目log。
+                ctx.command(cfg['argv'], ctx.journal.directory, timeout=40)
                 # 有退出0也必须有完整诊断与真实交易日，才可完成本轮。
                 with ctx.stage('diagnosis'):
                     diagnose(ctx.journal.directory, cfg['source'], cfg['trading_day'])

@@ -12062,5 +12062,16 @@
   "new": "if h.stopped || !h.active || h.complete || stage != h.stage || id != h.id {",
   "test": "TestNativeHandshakeSPIErrorDeadline",
   "want": "真实通用错误的截止边界错误"
+},
+{
+  "name": "1184 柜台流文件不隔离本轮目录",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "scripts/readonly_admission/registered.py",
+  "old": "ctx.command(cfg['argv'], ctx.journal.directory, timeout=40)",
+  "new": "ctx.command(cfg['argv'], cfg['root'], timeout=40)",
+  "test": "TestPythonAdmissionRegisteredBoundary",
+  "want": "柜台进程未使用本轮私有目录"
 }
 ]
