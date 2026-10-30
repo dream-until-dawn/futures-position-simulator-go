@@ -79,7 +79,7 @@ def stop_tree(process):
 
 
 @contextmanager
-def bounded_process(command, cwd, timeout):
+def bounded_process(command, cwd, timeout, *, env=None):
     """墙钟超时独立于输出；调用方异常/中断也清理命令树。"""
     if timeout <= 0:
         raise ValueError("命令超时必须为正")
@@ -90,7 +90,7 @@ def bounded_process(command, cwd, timeout):
     process = subprocess.Popen(launch, cwd=cwd, stdout=subprocess.PIPE,
                                stdin=subprocess.PIPE if os.name == "nt" else subprocess.DEVNULL,
                                stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-                               errors="replace", **options)
+                               errors="replace", env=env, **options)
     try:
         if os.name == "nt":
             from windows_job import ProcessJob

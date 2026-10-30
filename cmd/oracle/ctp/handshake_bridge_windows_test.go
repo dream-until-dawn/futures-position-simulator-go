@@ -43,8 +43,9 @@ func buildSPIBridge(t *testing.T) *syscall.Proc {
 	return dll.MustFindProc("RunFixture")
 }
 
-// nativeSPIClient 仅创建固定包装的SPI，绝不CreateApi/Init/Release。
-func nativeSPIClient(t *testing.T, h *handshakeCollector) *Client {
+// nativeSPIObject 先准备固定包装的SPI，绝不CreateApi/Init/Release。
+// DLL探测和哈希可能在慢宿主上耗时，必须在被测收集器开始计时前完成。
+func nativeSPIObject(t *testing.T) *Client {
 	t.Helper()
 	dir, _, err := DLLDir()
 	if err != nil {
@@ -59,7 +60,6 @@ func nativeSPIClient(t *testing.T, h *handshakeCollector) *Client {
 	if c.spi == 0 {
 		t.Fatal("离线SPI创建失败")
 	}
-	c.registerHandshakeCallbacks(h)
 	// 固定包装没有DestroySpi导出；有限测试对象由进程退出回收。
 	return c
 }
@@ -99,16 +99,18 @@ func TestNativeHandshakeSPIBridge(t *testing.T) {
 		{"late", 7, 0, 4, true, false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			c := nativeSPIObject(t)
+			method := spiMethod(t, c, 0x80)
 			h := newHandshake(10*time.Second, nil)
 			if err := h.prepare(handshakeConfirm, 7); err != nil {
 				t.Fatal(err)
 			}
-			c := nativeSPIClient(t, h)
+			c.registerHandshakeCallbacks(h)
 			if tc.stop {
 				h.seal()
 			}
 			runtime.GC()
-			thread, _, _ := run.Call(spiMethod(t, c, 0x80), c.spi, uintptr(tc.id), uintptr(tc.code), uintptr(tc.flags))
+			thread, _, _ := run.Call(method, c.spi, uintptr(tc.id), uintptr(tc.code), uintptr(tc.flags))
 			if thread == 0 {
 				t.Fatal("外部线程夹具失败")
 			}
@@ -130,12 +132,13 @@ func TestNativeHandshakeSPIBridge(t *testing.T) {
 
 func TestNativeHandshakeSPIGeneralErrorAndConcurrency(t *testing.T) {
 	run := buildSPIBridge(t)
+	c := nativeSPIObject(t)
+	method := spiMethod(t, c, 0x240) // 已核SDK头文件OnRspError第72项。
 	h := newHandshake(10*time.Second, nil)
 	if err := h.prepare(handshakeConfirm, 7); err != nil {
 		t.Fatal(err)
 	}
-	c := nativeSPIClient(t, h)
-	method := spiMethod(t, c, 0x240) // 已核SDK头文件OnRspError第72项。
+	c.registerHandshakeCallbacks(h)
 	var workers sync.WaitGroup
 	for i := 0; i < 24; i++ {
 		workers.Add(1)
@@ -159,15 +162,22 @@ func TestNativeHandshakeSPIGeneralErrorAndConcurrency(t *testing.T) {
 	if complete {
 		t.Fatal("零错误通用回调被伪造为握手完成")
 	}
+	// 并发与GC验证入口，不测试宿主跑完它们需要多少秒。
+	// 最后一笔非零错误使用独立新收集器，不能借用已耗尽的旧期限。
+	response := newHandshake(10*time.Second, nil)
+	if err := response.prepare(handshakeConfirm, 7); err != nil {
+		t.Fatal(err)
+	}
+	c.registerHandshakeCallbacks(response)
 	thread, _, _ := run.Call(method, c.spi, 7, 42, 12)
 	if thread == 0 {
 		t.Fatal("错误线程失败")
 	}
-	h.mu.Lock()
-	complete, failed := h.complete, h.err != nil
-	h.mu.Unlock()
+	response.mu.Lock()
+	complete, failed := response.complete, response.err != nil
+	response.mu.Unlock()
 	if !complete || !failed {
-		t.Fatal("真实通用错误未传入握手")
+		t.Fatalf("真实通用错误未传入握手 elapsed=%s expired=%t entry=%+v", time.Since(response.started), !time.Now().Before(response.deadline), response.entries.stages[4].Load())
 	}
 	runtime.KeepAlive(c)
 }
@@ -186,6 +196,8 @@ func TestNativeHandshakeSPIAllStages(t *testing.T) {
 		{handshakeAuth, 1, 0x18, 7, 42, 4},
 		{handshakeLogin, 2, 0x20, 7, 42, 4},
 	} {
+		c := nativeSPIObject(t)
+		method := spiMethod(t, c, tc.offset)
 		h := newHandshake(10*time.Second, nil)
 		stage := tc.stage
 		if stage == "disconnected" {
@@ -194,8 +206,8 @@ func TestNativeHandshakeSPIAllStages(t *testing.T) {
 		if err := h.prepare(stage, tc.id); err != nil {
 			t.Fatal(err)
 		}
-		c := nativeSPIClient(t, h)
-		thread, _, _ := run.Call(spiMethod(t, c, tc.offset), c.spi, uintptr(tc.id), uintptr(tc.code), uintptr(tc.flags))
+		c.registerHandshakeCallbacks(h)
+		thread, _, _ := run.Call(method, c.spi, uintptr(tc.id), uintptr(tc.code), uintptr(tc.flags))
 		if thread == 0 {
 			t.Fatal("阶段线程夹具失败", tc.stage)
 		}
@@ -208,6 +220,53 @@ func TestNativeHandshakeSPIAllStages(t *testing.T) {
 		h.mu.Unlock()
 		if !complete || (tc.stage == "disconnected" && !aborted) || (tc.stage != handshakeFront && tc.stage != "disconnected" && !failed) {
 			t.Fatal("真实阶段错误未传播", tc.stage, complete, failed, aborted)
+		}
+		runtime.KeepAlive(c)
+	}
+}
+
+// TestNativeHandshakeSPIErrorDeadline 分开验证有效错误传播与真实迟到回调的正确拒绝。
+func TestNativeHandshakeSPIErrorDeadline(t *testing.T) {
+	run := buildSPIBridge(t)
+	for _, expired := range []bool{false, true} {
+		c := nativeSPIObject(t)
+		method := spiMethod(t, c, 0x240)
+		var traceMu sync.Mutex
+		var events []string
+		h := newHandshake(10*time.Second, func(d handshakeDiagnostic) {
+			traceMu.Lock()
+			events = append(events, d.event)
+			traceMu.Unlock()
+		})
+		if err := h.prepare(handshakeConfirm, 7); err != nil {
+			t.Fatal(err)
+		}
+		c.registerHandshakeCallbacks(h)
+		if expired {
+			// 直接构造已耗尽的测试期限，不sleep，不改生产时钟或阀门。
+			h.mu.Lock()
+			h.deadline = time.Now().Add(-time.Nanosecond)
+			h.mu.Unlock()
+		}
+		thread, _, _ := run.Call(method, c.spi, 7, 42, 12)
+		if thread == 0 {
+			t.Fatal("真实截止线程失败")
+		}
+		h.mu.Lock()
+		complete, failed := h.complete, h.err != nil
+		h.mu.Unlock()
+		entry := h.entries.stages[4].Load()
+		if entry == nil || entry.count != 1 || entry.id != 7 || entry.code != 42 {
+			t.Fatal("真实迟到入口记录丢失", entry)
+		}
+		if complete != !expired || failed != !expired {
+			t.Fatal("真实通用错误的截止边界错误", expired, complete, failed)
+		}
+		traceMu.Lock()
+		last := events[len(events)-1]
+		traceMu.Unlock()
+		if (expired && last != "ignored-late") || (!expired && last != "response") {
+			t.Fatal("真实截止过滤原因未留证", expired, last)
 		}
 		runtime.KeepAlive(c)
 	}

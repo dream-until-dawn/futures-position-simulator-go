@@ -1,0 +1,874 @@
+{
+  "format": 1,
+  "source_commit": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d",
+  "baseline_main": "9abd324cc7dacd78a8c7b2c36e2cbb8b940fc8d5",
+  "source_tree": "65309c63873a84bfd4409457ee9f95fbae70a313",
+  "registry_sha256": "74d2f64c7d2909f2839ec364abab7980e7ebd07d7b1f16160d984a5318444021",
+  "report_sha256": "28a24048bdb795bc0aa5a6fe649b7a8417d48d98e4b3df2be9a05781a5d66ba3",
+  "summary_sha256": "e989fe64cf9306567ba617a65dd962c0fd8cf1467ce84e850c69e855133bc91c",
+  "counts": {
+    "executed": 1098,
+    "expected_red": 1089,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "summary": {
+    "path": "C:\\Temp\\admission-mutation-c96822a\\summary.json",
+    "sha256": "e989fe64cf9306567ba617a65dd962c0fd8cf1467ce84e850c69e855133bc91c"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\admission-mutation-c96822a\\mutation.log",
+    "sha256": "ebdbeb78ec3100287635c7cd2b00605376eeb69ca694a2433892bb4d6ce12482"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+    "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+    "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+  },
+  "retained_baseline_properties": {
+    "count": 1062,
+    "changed_rows": 0
+  },
+  "targeted": [
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\summary.json",
+      "sha256": "2c4eea68ef64607cb6e406f8b8805d19ca5dacaa3ba929e2eddcf7d264013fd3"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1149.json",
+      "sha256": "78f27c83b1960ca97e97069663dbc112498a89c92dd5df802ec1b907aeb7063b"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1149.log",
+      "sha256": "40478b0b8c7b6812cc270d9548161be9ad18851104e8e2753a7a1b35820491b4"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1150.json",
+      "sha256": "8b9e4ec7367a966f0c5d254ef7505aeb28661d17ed030dbdb80072d6910115b3"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1150.log",
+      "sha256": "b66cdc891b34be4c48f24d88cc783add7c4c41f23b461d50aca74254abd91df1"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1151.json",
+      "sha256": "b07a17d397c9ff7471eec104418fbb0114889f4963e400e3cc433f6d98572769"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1151.log",
+      "sha256": "8938c843ca85bd583f14ca4dc8506f26c36733b6258c1812fc08880e3330f5fc"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1152.json",
+      "sha256": "ff7913b58e0db939c75e00b6f8e9c20731860b013fbf5c4af99a53c8e58302ad"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1152.log",
+      "sha256": "17816afba765e56eced022802b49eb7eef0e25d083ddd43a811b1738670c8f4a"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1153.json",
+      "sha256": "2c3c6b04f7c6ae4d317d1cba81c6cc7b4c4e975206e8ef23e5157fb3181ce472"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1153.log",
+      "sha256": "4b49ba029e0532dabf8951425d5c1ec81002165480591720b90ff61aae71acda"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1154.json",
+      "sha256": "7bd2e080e634523b199b17d25636d107ce1c346af70e0f6ae790f4e460cbb8e9"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1154.log",
+      "sha256": "75cdae827f41a3fdac90cb642ab3db51015d60a81f66158ff2f53dc79f4f71b3"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1155.json",
+      "sha256": "a083d0151c592e8af3a1240e9749be59a89c101f2b267d8afcea292798ffc65c"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1155.log",
+      "sha256": "8197561c6c35aa75098e136ba6b47947275586427380d06cf7c2297f7e3f28f8"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1156.json",
+      "sha256": "95623ff4faf4605b8d0d15b08aaa5131e8532d883fa6d204f8e649b38a69ab2a"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1156.log",
+      "sha256": "d69db53faa52173a9e5a0d924dac608d9cc42c1d5ea795d93f153a5f5e00b193"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1157.json",
+      "sha256": "f8e17dc7692be2b63af85a04e43528dca58ad40ac3353804fde4c5bf922b1f10"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1157.log",
+      "sha256": "daf8fd90651fbb6fd945f74454c6434838a50d3abea32e96fc490617460c28b9"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1158.json",
+      "sha256": "b0cd8b98ad0534d87babc0938e6803af783f0409451c6297020ac10a3bbacae1"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1158.log",
+      "sha256": "459416d3164419f0bbbdcf66ecca4b2c5420e6409358a9bfc1fa5f6145ba1def"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1159.json",
+      "sha256": "73101081b6386be1441f4ee4458bd3e1073ede945b905bfad3fde83de035dc4a"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1159.log",
+      "sha256": "cf782c515623d543f4a2222d739714f1cdf64ffbb040a661d1a6882051acab0d"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1160.json",
+      "sha256": "bbe1a3c5063b5bd58972b97d38dee6627d35137a9cc271bcbbb7d90684e4fd9b"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1160.log",
+      "sha256": "bfdf0ab3ec7e80fc9cf11bcc2907293fe361f54adb2681278ee6bda0e0d729b7"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1161.json",
+      "sha256": "06d3c37baa60a95b237b0aa4248c87a0a6ce9266845faf75aa0e577b396fc5a9"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1161.log",
+      "sha256": "3c5589288381338348abc0f12565b88e17af1d5869b6e2b4cd9e93b28f6a5cf4"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1162.json",
+      "sha256": "d7109972a09ba9922c1654f146384e2e848b81a774fa61ba7137a0a955849459"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1162.log",
+      "sha256": "3d47af8f19385e039f86e762f0191b7c01a3b0ed870d3f5d5a5208f2db045523"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1163.json",
+      "sha256": "dcb29d5001496d61e9c6c0d4475163ba2fb49ac4a8fcfa077b3f5863d1dd9cc3"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1163.log",
+      "sha256": "48d69c6bb6ff05a126d170e3c240b253a60ee0946646018401073cd1c3bae3bc"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1164.json",
+      "sha256": "38230936b5d658114f92e815061be1d38e26bd2997093e14c982a6329a7b231b"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1164.log",
+      "sha256": "dde9da96d47d76c32b8f89c5818a096f9593f5a36f14f727197e8b7600271003"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1165.json",
+      "sha256": "f00f71cf9cfab826f83641b26ea6f2b8ec4e714fa86adc6c23ca0f9c40fdd0e9"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1165.log",
+      "sha256": "7e927c3ec629b0a859345701b8084c83542f0fb899f3a93eaacb0bf68bcc5e4d"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1166.json",
+      "sha256": "50321211722254c5bd1e994d9ea1f2d9ba3dc1513391934cc16e948863d081e1"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1166.log",
+      "sha256": "ffd18e716f4e588faae8fb5ed3a5cd346a59bd2f4541f5ed95f8fe33a2ec338a"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1167.json",
+      "sha256": "aed1499dd73f89c49112d1379a47da113c59f15c281b833bc5ee1f77ca75946c"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1167.log",
+      "sha256": "70bb20ace435de7762e34e8800b8af6f2d742392d53a7afaa321580cd1951b96"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1168.json",
+      "sha256": "b7b192fc4528783842524af135f67e5ad067f7f3502c91eaa06e4b398bbc3fc7"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1168.log",
+      "sha256": "7557c2dc30cb46a07b5cad933ffe345e97311a7058146c930c4a0c837ccb79b0"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1169.json",
+      "sha256": "37115b01b319e58403dced34e5601ad632b587c516f6472240c308a816b7d168"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1169.log",
+      "sha256": "324f58a769fef05c86a7f801fdb028a1d6132c01464d1b0fcb516f2743b6dc66"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1170.json",
+      "sha256": "2a18ddabcf92a21077214fd55cd0ca225baddff26d5b15fb096993935ac9d2e1"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1170.log",
+      "sha256": "92becbed9efcfa003054ffe3a7039502d13806c7ddb5a7f3499d96fc59b5c3be"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1171.json",
+      "sha256": "7cea570bb63c4ffbb78c66d166863654c429578225869c67427524b914cb1995"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1171.log",
+      "sha256": "76838bbaa28e0a6c712e7607cf2990df90e825c7ff5e016b73049cda89288cd3"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1172.json",
+      "sha256": "10a7623d26f77c9fe240d9d2a5269d1ffbbf6313bc007bd2bcce8f7f23bf9019"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1172.log",
+      "sha256": "f4889afbf470c28acfb9cd0d9320672bfd80a4b8adf981d84875181195c4bf80"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1173.json",
+      "sha256": "14c03a432615718d759da3de330d98e11c8bef9b0dedf7a2f11f11059f25cb46"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1173.log",
+      "sha256": "1be6cebbacae325f6fce1f72ed26cd78ae4fb2ac74a026ec06135af25dcaf52d"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1174.json",
+      "sha256": "6925539bbfea58f5be4020abe6e92e0a41820b244ff7dbb3d6b8ec7cf5905e1d"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1174.log",
+      "sha256": "448bd111d89f674f8413e21697b710a3c9b09917c76fb743e0b97ee08fa1f853"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1175.json",
+      "sha256": "2033bc4441ede9f7151a5c2780ff306a76d691dba58acdb1be6e343bc9cff25f"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1175.log",
+      "sha256": "5f647670ede66d4d1182d89fd83047b9563b4c406a1a1ef07de1dca10d830a97"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1176.json",
+      "sha256": "f04c2144ca86d2ceb561a9c508226a9b09430a0c8923eb311362f1c9416f9d31"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1176.log",
+      "sha256": "0533f9eab9339284ca4b7ff92f3f27302798b29f5b1675b52e94d9a03d621668"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1177.json",
+      "sha256": "576cc410ddfb19a3337ab7e6e6e09373a32face69cb690fed1792b121eecb882"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1177.log",
+      "sha256": "3f45abd3ac13ac8f4588619cf92fb380915cb3e0c6d1646c25631685641b6d3b"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1178.json",
+      "sha256": "927da7056f19eb666045c9b6de6481a222f2f055571c7e8777fee5cc03478dc8"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1178.log",
+      "sha256": "8cde93a6f059695a4f5364feaee535a33fcbae9babc3ba2865dfd94bc394a8c8"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1179.json",
+      "sha256": "4f874769dd322ee041d4af733b67b0fe02e869bb1984eeee27c3244f67ab6710"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1179.log",
+      "sha256": "2870d483164c7bb166943057280753e4dfba8371bef900a3058b0148e9a9c503"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1180.json",
+      "sha256": "b6eaea043d73c0a1ebfe720ed486273ed62549e2a9d5649cea0a8e6651480eff"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1180.log",
+      "sha256": "59707333d230e56adf46649553107e16d7cb66c9c74df61d2bd07265edd3dff3"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1181.json",
+      "sha256": "a866ed69d7aa56937259a20114e1aa7d392bd0699a301872ae7e3b82a66f1848"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1181.log",
+      "sha256": "22e396894e606b2b5c63271795724d232699c911fb4dcd214a6611c3d2f3550a"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1182.json",
+      "sha256": "4835c295bc197352aedf3eeefa62017379b6073997c838ce00a8caef0136c79c"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1182.log",
+      "sha256": "4d8c9e63a599d6448178a134d8512a9b37123afb8defc8ed2473f1712b14b980"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1183.json",
+      "sha256": "e29bf157aac4a0618bd5c56384523f5eb28f91bb92bf7667d632ade488145c36"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1183.log",
+      "sha256": "c8842cb11f96c3f6138a70f60f06c154ec24844e3c9f4ff408b61ba9ac419ea4"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1184.json",
+      "sha256": "6cdf367b29524b44289422473cb9f26e09337874f441c1e38ed050e6f9e19e9c"
+    },
+    {
+      "path": "C:\\Temp\\admission-targets-c96822a\\offline-results\\admission-targets\\1184.log",
+      "sha256": "dda25a52c2153a8b7b8c1229a3a2f0e16734241deace9ee1e9bac6b5b1595e06"
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a",
+            "passed_tests": 753,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-regression-c96822a\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\cmd\\oracle",
+            "passed_tests": 457,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-regression-c96822a\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-regression-c96822a\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+          "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+          "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+          "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+          "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\admission-regression-c96822a\\summary.json",
+        "sha256": "4f96b349b02e1d17e8fa5111803d74a8d0454407e897a621b584168c991dc0c2"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\admission-regression-c96822a\\root.log",
+          "sha256": "0e8a54686fdeaf665b8adc7be4585a4d2fa7794f7319365061b92d2f9c57c1ce"
+        },
+        {
+          "path": "C:\\Temp\\admission-regression-c96822a\\oracle.log",
+          "sha256": "4ee27b2f2917853fbd2959059557cc0c41e8372a5285b47fc0926eb68bff9346"
+        },
+        {
+          "path": "C:\\Temp\\admission-regression-c96822a\\external.log",
+          "sha256": "cf9c0216ade65ef68b863e470a1f35a0292e5b2693273d0993f377f89a7e11fa"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a",
+            "passed_tests": 753,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-race-c96822a\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\cmd\\oracle",
+            "passed_tests": 457,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-race-c96822a\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-race-c96822a\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+          "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+          "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+          "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+          "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\admission-race-c96822a\\summary.json",
+        "sha256": "dd335e2be1064903d100f69f432c21dde759fa7e04ad61b51bb0984e9f97b38b"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\admission-race-c96822a\\root.log",
+          "sha256": "536d9b492f5f260fbd1b68d816ab3e4f4bde8f2b4e66b0492a3662237b5fb877"
+        },
+        {
+          "path": "C:\\Temp\\admission-race-c96822a\\oracle.log",
+          "sha256": "c6a0b571ddb6f77a2f698fd1734c218bbcfc24b647b3e101066d31c20ac43a43"
+        },
+        {
+          "path": "C:\\Temp\\admission-race-c96822a\\external.log",
+          "sha256": "a5791c8affbbf6ec3fadb470495a590ab6fd5f9433f3222a92ed55b71a7de6d4"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-fuzz-c96822a\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-fuzz-c96822a\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-fuzz-c96822a\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-fuzz-c96822a\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\admission-checks-c96822a\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\admission-fuzz-c96822a\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+          "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+          "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+          "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+          "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\admission-fuzz-c96822a\\summary.json",
+        "sha256": "2ba6e31740e1ba762a71e8186eb939cc436129662dbea5503face64f8fc705fd"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\admission-fuzz-c96822a\\state.log",
+          "sha256": "558006c055ccf2cb82747088f2c63061286d5110fafec1a5c4f0f3c32295c8ce"
+        },
+        {
+          "path": "C:\\Temp\\admission-fuzz-c96822a\\bundle.log",
+          "sha256": "fc00de6de9c41dcc43b15b04469be40bcf7c1b099ac8adeda9e9f68a64c00796"
+        },
+        {
+          "path": "C:\\Temp\\admission-fuzz-c96822a\\report.log",
+          "sha256": "4034d03f44d09913ddc910e0d97504ee1a1c15f2cbc2847dde77ecd8a2e17822"
+        },
+        {
+          "path": "C:\\Temp\\admission-fuzz-c96822a\\risk.log",
+          "sha256": "16a3922e65c01a8842c4a2bfec0784bc256ef91110e4768b3fe0c9a0489b4896"
+        },
+        {
+          "path": "C:\\Temp\\admission-fuzz-c96822a\\lifecycle.log",
+          "sha256": "5d185a8150fd5904c910fc55d44f83e1f04d2fff2a55196d6ab3427336b18349"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\admission-python-c96822a.log",
+    "sha256": "a50a0bb2b20b0ba638d321b846272c6d48954ac24c6e5d397b24489825aef27d"
+  },
+  "native_spi_tests": {
+    "named_tests": [
+      "TestNativeHandshakeSPIBridge",
+      "TestNativeHandshakeSPIGeneralErrorAndConcurrency",
+      "TestNativeHandshakeSPIErrorDeadline",
+      "TestNativeHandshakeSPIAllStages"
+    ],
+    "test_helper_spi_objects_per_full_package_process": 13,
+    "create_api_calls": 0,
+    "init_calls": 0,
+    "broker_connections": 0,
+    "production_handshake_deadline_unchanged": true
+  },
+  "before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\admission-before.json",
+      "sha256": "0637d55e28df131a6e6d9a0e339a2337640f35541fe88dbd42c5574af6c42444"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-20261030\\ops\\run_readonly.py",
+      "sha256": "62c1ce3e98c36d1f94ded43fdd916147946e0e18bf440284dffb840aebb68f84"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-20261030\\ops\\verify.py",
+      "sha256": "795497c826a2cfc7cfbf97a55e07625c91ec99e885d8351ff5e255f6fa4dea91"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\before_admission.py",
+      "sha256": "317af2042bdf38f0ef32110f5455e99ae5368cac59ca681843d763908cab58f1"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\before-admission-r3.log",
+      "sha256": "b60a065462e795a63286ea4c51f2c9015aee89f6c318e1c32dba76b420b44aa9"
+    }
+  ],
+  "deadline_rehearsal": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-rehearsal.json",
+      "sha256": "758ead562cba84490bdfacc072bac343e0e659d6b62f6e630edf6db8472125af"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-before-overlay.go.txt",
+      "sha256": "fa8ae60572d2b7229bcff9c5631c03aa99e6a503180fe325564f8b1aa2707bda"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-before-overlay.json",
+      "sha256": "4ebfbabec78409bdb5dd065d8bec2660cc2d9db4ad6432052b1e5ecc4d628139"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-before-metadata.json",
+      "sha256": "d5c8e10c659662e0db7db2d69a80f68053db446c442fcb4dfb43373fef962fce"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-before.log",
+      "sha256": "69bc4e9cbc2981993cceade446166b13d1d2c9f3f316e9a8cec1f40b53b4048e"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-after-overlay.go.txt",
+      "sha256": "16ef52d4210a7380760a17c40adeea533849fa56a51df0aa2c171577403e6d27"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-after-overlay.json",
+      "sha256": "70b52080502f7c72f46100ae8cf9a8c743f75a6939dc6c961184302db6a2c990"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-after-metadata.json",
+      "sha256": "62ad052b9cafb335657c41b7a69177d82442bc62dbe75972e7b81dac3f5fb3e9"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\deadline-after.log",
+      "sha256": "b6cf3cace5ba16dfd649206d166bc6b1302190b3236fce598c558b14555f0440"
+    }
+  ],
+  "failed_rounds": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\admission-failed-target.json",
+      "sha256": "8e3ddf3f96e75c98293fc0ab0b7a43b186639dd41fb3743c4d0876e66f0fe839"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\retired-1fce.json",
+      "sha256": "ee0cf97187a57e3a693dc09f3b7d21b5885b804d8aac5aeeff772839616bfa41"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\retired-a0.json",
+      "sha256": "2458e014f399d2d01c00bcf5e3e90c03e128f05f0a515d946c78c95a87b0b50f"
+    }
+  ],
+  "working_directory_rehearsal": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\working-directory-before.log",
+      "sha256": "1daeef05e43e497ebfb40ee37abe4ef5562bd7b88c2773fa789654fb8455d293"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\working-directory-before.json",
+      "sha256": "92cc9a53d2f5143b924274a2e89dddb597ea6c6743d883f862ac7e4d65c3942b"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\working-directory-before-fixture.py.txt",
+      "sha256": "a41a6d89ed588c87d01eecc904ca0a9559fc374a5a4b1864fb64e6e78d824a9c"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-admission-9abd324\\offline-results\\private-cwd-after.log",
+      "sha256": "cb2723e21e592adfb4dcd181c5b7a6ea415e77d15f01863a885497b68748c110"
+    }
+  ],
+  "ci": {
+    "sha": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d",
+    "run_id": 41075798414,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 124131504644,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "completed_at": "2026-10-30T14:57:52Z"
+      },
+      {
+        "id": 124131505192,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "completed_at": "2026-10-30T15:00:22Z"
+      }
+    ]
+  },
+  "candidate_build": {
+    "source_commit": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d",
+    "path": "C:\\Temp\\ctp-readonly-20261102-c96822a.exe",
+    "sha256": "19d6f24d8805ede358e69b36e4b093980c0ebf3af4486f8de4ec16bef84ac5a1",
+    "build_info": "C:\\Temp\\ctp-readonly-20261102-c96822a.exe: go1.27.3-X:nojsonv2\n\tpath\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\n\tmod\tgithub.com/dream-until-dawn/futures-position-simulator-go/cmd/oracle\tv0.0.0-20261030145420-c96822a13cfa\t\n\tdep\tgitee.com/haifengat/goctp\tv1.10.17\th1:8G7T10OlcutHgwTZca/Qb+Dk64yORSB62Sj8D/InIcs=\n\tdep\tgithub.com/coder/websocket\tv1.8.15\th1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=\n\tdep\tgithub.com/dream-until-dawn/futures-position-simulator-go\tv0.0.0\n\t=>\t../..\t(devel)\t\n\t\n\tdep\tgithub.com/shopspring/decimal\tv1.4.0\th1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\tDefaultGODEBUG=containermaxprocs=0,cryptocustomrand=1,decoratemappings=0,gotestjsonbuildtext=1,httpcookiemaxnum=0,httpservecontentmaxranges=1,multipathtcp=0,randseednop=0,rsa1024min=0,tlsmlkem=0,tlssecpmlkem=0,tlssha1=1,tracebacklabels=0,updatemaxprocs=0,urlmaxqueryparams=0,urlstrictcolons=0,x509rsacrt=0,x509sha256skid=0,x509sslcertoverrideplatform=0,x509usepolicies=0\n\tbuild\tCGO_ENABLED=1\n\tbuild\tCGO_CFLAGS=\n\tbuild\tCGO_CPPFLAGS=\n\tbuild\tCGO_CXXFLAGS=\n\tbuild\tCGO_LDFLAGS=\n\tbuild\tGOARCH=amd64\n\tbuild\tGOEXPERIMENT=nojsonv2\n\tbuild\tGOOS=windows\n\tbuild\tGOAMD64=v1\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d\n\tbuild\tvcs.time=2026-10-30T14:54:20Z\n\tbuild\tvcs.modified=false\n",
+    "post_build_source": {
+      "status": "",
+      "tracked_sha256": "47e5699abe65889e766eaf156cfb284d3a112df421e5c3163a723faa6d9b5522",
+      "index_sha256": "d6632be765ce43c73417fa0e549904704862780dcb068a5a17c2bb2df13b1a57",
+      "head": "c96822a13cfac1dcb8c20ce1d4380df77bdb9c1d"
+    },
+    "recorded_at_bjt": "2026-10-30T23:03:29.782235+08:00",
+    "executed": false
+  },
+  "runtime_files": [
+    {
+      "relative": "scripts/readonly_admission/__init__.py",
+      "sha256": "1ca73765bc4812a91101b44791b6d0750039400e8529a3c5f21cb8de1c0ecaf9"
+    },
+    {
+      "relative": "scripts/readonly_admission/checks.py",
+      "sha256": "9668f1158d0d0d11ea37581a2a3769a8c455d1fa02569376c31103ab0f3951b7"
+    },
+    {
+      "relative": "scripts/readonly_admission/envfile.py",
+      "sha256": "01fa8cfa19d7870d6ce9068238387d12c9c9e85df4cfca32eeb812ff51a4b1d1"
+    },
+    {
+      "relative": "scripts/readonly_admission/errors.py",
+      "sha256": "6654fdd487ece69da7e6a433b4bd283466d662698acc58295d176af4cd4793a5"
+    },
+    {
+      "relative": "scripts/readonly_admission/journal.py",
+      "sha256": "0c53c6effe207b6c1d64e04418716bead05d839e1f260d640828bdfe1b4be1fd"
+    },
+    {
+      "relative": "scripts/readonly_admission/registered.py",
+      "sha256": "c44180d7b5774f08539a2a1608153582c8ae027c1abe73635fa47137e64786aa"
+    },
+    {
+      "relative": "scripts/readonly_admission/runner.py",
+      "sha256": "b782c34290519858331be40d9087d8f2a3e34ce7cabef5fd856be8dff03ed45b"
+    },
+    {
+      "relative": "scripts/validation_runtime.py",
+      "sha256": "60e735cb392c76009a9e0b970f8091803968950d4bdfee4335eaf80450355817"
+    },
+    {
+      "relative": "scripts/process_worker.py",
+      "sha256": "c4db29bd34c15643d302abd86a7b8639ed16d7fd5f1f025c26c369e844cea9d2"
+    },
+    {
+      "relative": "scripts/windows_job.py",
+      "sha256": "bc4d713252dfd2404d024221d18b4241c26f302b5ff0f9855b97cb63648c505b"
+    },
+    {
+      "relative": "scripts/verify_evidence.py",
+      "sha256": "0e951b354db1a78a71eec8363a669d0a2824a8b7b04ab79e89f1fb3dac6c3513"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/__init__.py",
+      "sha256": "cdf921d17f6115624094ad310992f06955ea304e27b9a88fd3b9a0e2b9a12c73"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/analysis.py",
+      "sha256": "af9ac0fd26fe21747070eedfc79177220a2a31644ea32e9c1d1c20aef8ac6b98"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/entries.py",
+      "sha256": "f7694814406361e55750245cd7e654f25ee3c65f967d3d630e547857da9b5ee7"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/integrity.py",
+      "sha256": "18f28cffb9be4988f0b72e5505e996fa947534f0b17447cbeebd9d3ae7b61828"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/parsing.py",
+      "sha256": "fa601990d691b1df44a52a0bf16bbd79df5257015d0a79ac2e8c19bea7e4ccf0"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/reporting.py",
+      "sha256": "1d90643e4414e128fe4e1417a8504fed9979e64b8a76b1f765fca3aeed01e142"
+    }
+  ],
+  "fixed_dlls": [
+    {
+      "name": "ctp_trade.dll",
+      "sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc"
+    },
+    {
+      "name": "thosttraderapi_se.dll",
+      "sha256": "774ca2f3bba3009e72ba1f8a5e7a752d569bbbd999f19017e7cabc5c32c08bdc"
+    }
+  ],
+  "frozen_old_files_unchanged": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\resting-night-20261029-8bd89b4.json",
+      "sha256": "8657e04561e560251e15eaf770e895d3410bcd7d1b1d1c05334b15c4854de891"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-night-20261029\\ready.json",
+      "sha256": "c62f225dbcc6f79afd8373cf85b1d088c473900162f2f9f3b14aa596773b5277"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-night-20261029\\run_registered.py",
+      "sha256": "f5e55805fb8cf5ab6d748350ec9f01a6c51b26d5cccdc8708b5619c8c891cf9c"
+    },
+    {
+      "path": "C:\\Temp\\resting-20261029-night-8bd89b4.exe",
+      "sha256": "77125e94009425fac381593288d7df8b438d107820eddeaa47eb10c6ecc31e29"
+    }
+  ],
+  "scope": {
+    "real_env_reads": 0,
+    "broker_connections": 0,
+    "orders": 0,
+    "cancels": 0,
+    "historical_admission_root_cause": "unknown; old top-level masking discarded the exception",
+    "counterparty_retry": false,
+    "new_window": "2026-11-02 09:05–09:10 BJT",
+    "live_acceptance": false
+  }
+}
