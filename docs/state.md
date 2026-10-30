@@ -2630,6 +2630,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/ctp-handshake-entry.md` | 4 |
 | `docs/resting-price-20261102.md` | 4 |
 | `docs/ctp-readonly-20261030.md` | 4 |
+| `docs/readonly-admission.md` | 4 |
 | `docs/delivery-gates.md` | 4 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 108 |
