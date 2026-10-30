@@ -1,5 +1,7 @@
 # 项目状态：唯一来源
 
+**结算确认Go入口与真实SPI桥已离线验收**：准确冻结源码8fba96f完整1055项（1046预期红/9预期绿/0异常、exit0）、31项定向、三模块严格回归/race、五个20秒fuzz、45项Python及Windows/Linux CI全部通过。真实固定C++ SPI经Windows外部线程回调生产Go接线，六阶段入口计数与快照、零码通用错误可见、并发/GC、错号/部分/迟到/错误和完整一手执行器错误传播均已验证。首轮树内GOTMPDIR环境失败已退役，新轮完整重跑；未还原状态和原始失败证据保留。新版四轮分析与旧结论完全一致，历史缺入口段保持未知；入口0不证明SDK未回调，包装非空不证明原始负载存在。见[完整证书](./validation/ctp-handshake-entry-8fba96f.json)、[诊断设计](./ctp-handshake-entry.md)和[完整交付门槛](./delivery-gates.md)。尚未读取真实.env、CreateApi/Init、连接柜台或执行新探针，偶发超时根因仍未知，F9c和六项规则前置不变。
+
 **原生报撤单与错误传播已验收**：准确源码260cb6b完整1027项（1018预期红/9预期绿/0异常、exit0）、33项定向、三模块严格回归/race、五个20秒fuzz、41项Python及Windows/Linux CI全部通过。报单和两种撤单保留SDK即时int32与本地失败来源，不抹除已见成交/本次引用，不把返回0当终态；一手等待流程保留撤单错误，即使同期观察到成交或已撤也不无错继续。共享内核复用原查询约束、Close互斥及原有安全阀，原1002性质保留。失败环境轮已退役、定向和复演失败原始证据保留，新轮独立从头验收；未读取真实.env、未创建真实API或连接柜台。见[完整证书](./validation/ctp-native-orders-260cb6b.json)。回调桥诊断仍在独立后继批次，不能宣称现场超时修复；下方“报撤单仍在后继批次”为此前历史。
 
 **九种原生查询与关闭生命周期已验收**：准确源码4a7a340完整1002项（993预期红/9预期绿/0异常、exit0）、34项新定向、三模块严格回归/race、五个20秒fuzz、41项Python及Windows/Linux CI全部通过。实际固定DLL+假API逐种验证返回码和生产接线，加载后路径/哈希及SDK方法映像约束、Close互斥/唤醒/首错均成立；原生非零即使遇同步成功也失败，不返回部分结果。未创建真实API/SPI、不读取本机真实.env、不连接柜台；报撤单两种清零及SDK回调诊断仍在独立后继批次，不宣称现场确认超时修复。失败定向1071/1082保留并在新准确整轮修复，证书见[查询验收](./validation/ctp-native-queries-4a7a340.json)。下方“设计中”为此前阶段。
@@ -2624,6 +2626,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/ctp-native-queries.md` | 4 |
 | `docs/ctp-native-orders.md` | 4 |
 | `docs/ctp-handshake-entry.md` | 4 |
+| `docs/ctp-readonly-20261030.md` | 4 |
 | `docs/delivery-gates.md` | 4 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 108 |
