@@ -51,7 +51,7 @@ func runRestingPriceCheck(envPath string, timeout time.Duration) error {
 func runRestingPriceCheckAt(envPath string, timeout time.Duration, at time.Time) error {
 	local := at.In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()
-	if local.Format("20060102") != restingProbeDate || hm < 2100 || hm >= 2145 {
+	if local.Format("20060102") != restingProbeDate || hm < restingCheckStart || hm >= restingCheckEnd {
 		return fmt.Errorf("不在登记只读窗口")
 	}
 	if timeout <= 0 || timeout > 15*time.Second {

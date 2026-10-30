@@ -20,12 +20,12 @@ func TestRestingEvidenceWhitelist(t *testing.T) {
 	copy(r.OrderSysID[:], "sys")
 	copy(r.ExchangeID[:], "SHFE")
 	copy(r.InstrumentID[:], "rb2701")
-	copy(r.TradingDay[:], "20261030")
-	copy(r.TradeTime[:], "21:16:00")
+	copy(r.TradingDay[:], "20261102")
+	copy(r.TradeTime[:], "10:56:00")
 	copy(r.InvestorID[:], "LEAKME")
 	copy(r.BrokerID[:], "LEAKME")
 	got := copyOwnedTradeEvidence([]*def.CThostFtdcTradeField{r}, ownedOrderOutcome{Ref: "own"})
-	if len(got) != 1 || got[0].Price != "2997.25" || got[0].TradeID != "trade" || got[0].TradeTime != "21:16:00" {
+	if len(got) != 1 || got[0].Price != "2997.25" || got[0].TradeID != "trade" || got[0].TradeTime != "10:56:00" {
 		t.Fatal("原始成交证据缺失或价格被改写")
 	}
 	raw, err := json.Marshal(got)
@@ -146,7 +146,7 @@ func TestRestingDeclaredSpecMustMatch(t *testing.T) {
 	for _, change := range []func(*def.CThostFtdcInstrumentField){func(s *def.CThostFtdcInstrumentField) { s.PriceTick = 2 }, func(s *def.CThostFtdcInstrumentField) { s.VolumeMultiple = 11 }} {
 		md, spec, now := restingQuoteFixture()
 		change(spec)
-		if _, err := passiveProbePrice(md, spec, "20261030", now); err == nil {
+		if _, err := passiveProbePrice(md, spec, "20261102", now); err == nil {
 			t.Fatal("声明改变未停止")
 		}
 	}

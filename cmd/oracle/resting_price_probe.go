@@ -189,7 +189,7 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	}()
 	local := clock.Now().In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()
-	if local.Format("20060102") != restingProbeDate || hm < 2115 || hm >= 2135 || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
+	if local.Format("20060102") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
 		return report, fmt.Errorf("本次探针日期、启动窗口或等待上限不成立")
 	}
 	report.Stage = "checking-empty-account"
@@ -334,7 +334,7 @@ func runCTPRestingPriceAt(args []string, at time.Time) error {
 	}
 	now := at.In(probeShanghai)
 	hm := now.Hour()*100 + now.Minute()
-	if now.Format("20060102") != restingProbeDate || hm < 2115 || hm >= 2135 || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
+	if now.Format("20060102") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
 		return fmt.Errorf("不在登记启动窗口或等待参数无效")
 	}
 	build, ok := debug.ReadBuildInfo()

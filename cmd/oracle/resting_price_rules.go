@@ -9,21 +9,21 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// restingProbeDate 与 restingProbeDay 分别绑定今晚自然日和柜台交易日，禁止把夜盘日期混为一谈。
-const restingProbeDate = "20261029"
-const restingProbeDay = "20261030"
+// restingProbeDate 与 restingProbeDay 分别绑定本轮自然日和柜台交易日，日盘同值仍须分别核验。
+const restingProbeDate = "20261102"
+const restingProbeDay = "20261102"
 
 var probeShanghai = time.FixedZone("Asia/Shanghai", 8*60*60)
 
 // 本地短暂排队回报不能排除即时撮合与回调延迟；至少观察两秒才纳入本次样本判据。
 const minRestingQueueMillis int64 = 2000
 
-// validateRestingQuote 仅支持本轮夜盘；行情时刻用自然日拼接，交易日仍由柜台独立核验。
+// validateRestingQuote 仅支持本轮日盘；行情时刻用自然日拼接，交易日仍由柜台独立核验。
 func validateRestingQuote(md *def.CThostFtdcDepthMarketDataField, spec *def.CThostFtdcInstrumentField, day string, now time.Time) error {
 	local := now.In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()
-	if day != restingProbeDay || local.Format("20060102") != restingProbeDate || hm < 2100 || hm >= 2145 {
-		return fmt.Errorf("不在本次登记的夜盘自然日、交易日或收尾窗口")
+	if day != restingProbeDay || local.Format("20060102") != restingProbeDate || hm < restingQuoteStart || hm >= restingQuoteEnd {
+		return fmt.Errorf("不在本次登记自然日、交易日或收尾窗口")
 	}
 	if md == nil || spec == nil || ctp.Text(md.InstrumentID[:]) != "rb2701" || ctp.Text(spec.InstrumentID[:]) != "rb2701" || ctp.Text(spec.ExchangeID[:]) != "SHFE" || spec.IsTrading == 0 || spec.PriceTick != 1 || spec.VolumeMultiple != 10 {
 		return fmt.Errorf("合约或可交易声明不匹配")
@@ -31,7 +31,7 @@ func validateRestingQuote(md *def.CThostFtdcDepthMarketDataField, spec *def.CTho
 	if ctp.Text(md.TradingDay[:]) != day {
 		return fmt.Errorf("行情交易日不匹配")
 	}
-	quoted, err := time.ParseInLocation("20060102 15:04:05", restingProbeDate+" "+ctp.Text(md.UpdateTime[:]), probeShanghai)
+	quoted, err := parseRestingQuoteClock(restingProbeDate, day, ctp.Text(md.UpdateTime[:]))
 	if err != nil || md.UpdateMillisec < 0 || md.UpdateMillisec > 999 {
 		return fmt.Errorf("行情时刻无效")
 	}
@@ -75,7 +75,7 @@ func restingPriceVerdict(rows []*def.CThostFtdcTradeField, out ownedOrderOutcome
 		return "no-verdict", decimal.Zero, fmt.Errorf("成交身份、方向、手数或交易日不匹配")
 	}
 	at, err := time.Parse("15:04:05", ctp.Text(r.TradeTime[:]))
-	if err != nil || at.Hour()*100+at.Minute() < 2115 || at.Hour()*100+at.Minute() >= 2140 {
+	if err != nil || at.Hour()*100+at.Minute() < restingOpeningStart || at.Hour()*100+at.Minute() >= restingObservationEnd {
 		return "no-verdict", decimal.Zero, fmt.Errorf("成交不在登记的连续竞价观察窗口")
 	}
 	actual := decimal.NewFromFloat(float64(r.Price))
