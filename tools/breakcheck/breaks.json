@@ -12051,5 +12051,16 @@
   "new": "if path.read_bytes() != data and False:",
   "test": "TestPythonAdmissionBoundary",
   "want": "读取回核不一致仍推进"
+},
+{
+  "name": "1183 真实SPI错误忽略已过期截止",
+  "dir": "cmd/oracle",
+  "pkg": "./ctp",
+  "expect": "red",
+  "file": "cmd/oracle/ctp/handshake.go",
+  "old": "if h.stopped || !h.active || h.complete || stage != h.stage || id != h.id || !time.Now().Before(h.deadline) {",
+  "new": "if h.stopped || !h.active || h.complete || stage != h.stage || id != h.id {",
+  "test": "TestNativeHandshakeSPIErrorDeadline",
+  "want": "真实通用错误的截止边界错误"
 }
 ]
