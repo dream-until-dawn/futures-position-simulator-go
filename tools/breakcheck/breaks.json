@@ -10829,7 +10829,7 @@
   "old": "\t\tc.setupMu.Lock()\n\t\tdefer c.setupMu.Unlock()",
   "new": "\t\t// 刻意撤销发送生命周期互斥",
   "test": "TestNativeQueriesCloseLifecycle",
-  "want": "Close未等待在途原生发送"
+  "want": "查询发送未持有生命周期锁"
 },
 {
   "name": "1072 关闭未唤醒查询",

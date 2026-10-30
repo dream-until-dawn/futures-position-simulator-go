@@ -206,6 +206,11 @@ func TestNativeQueriesCloseLifecycle(t *testing.T) {
 		result <- err
 	}()
 	<-entered
+	// 在启动Close之前直接检查发送线程持锁，不靠两个goroutine谁先被调度来判定。
+	if c.setupMu.TryLock() {
+		c.setupMu.Unlock()
+		t.Fatal("查询发送未持有生命周期锁")
+	}
 	closed := make(chan struct{})
 	go func() { c.Close(); close(closed) }()
 	deadline := time.After(time.Second)
