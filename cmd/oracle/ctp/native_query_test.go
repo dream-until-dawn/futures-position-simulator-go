@@ -44,8 +44,12 @@ func TestQueryAbortKeepsFailureAndBlocksLateRows(t *testing.T) {
 		}
 		b.abort(errors.New("重复关闭"))
 		b.receive(1, &value, nil, true)
-		if rows, err := b.wait(1, time.Second); !errors.Is(err, errQueryClosed) || rows != nil {
+		rows, err := b.wait(1, time.Second)
+		if rows != nil {
 			t.Fatal("关闭查询发布半截或迟到结果", rows, err)
+		}
+		if !errors.Is(err, errQueryClosed) {
+			t.Fatal("关闭查询覆盖首错", err)
 		}
 	}
 	var b queryBatch[int]
