@@ -11578,5 +11578,27 @@
   "new": "entry_journal=None",
   "test": "TestPythonHandshakeEntryBoundary",
   "want": "残缺入口快照被当成完整证据"
+},
+{
+  "name": "1140 执行器忽略Control原生撤单失败",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_probe.go",
+  "old": "if err != nil {\n\t\treturn report, err\n\t}\n\tif report.Control.Filled",
+  "new": "if err != nil && false {\n\t\treturn report, err\n\t}\n\tif report.Control.Filled",
+  "test": "TestRestingWorkflowKeepsNativeCancelError",
+  "want": "完整执行器吞掉原生撤单错误"
+},
+{
+  "name": "1141 执行器忽略Main原生撤单失败",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_probe.go",
+  "old": "if err != nil {\n\t\treturn report, err\n\t}\n\tif report.Main.Filled",
+  "new": "if err != nil && false {\n\t\treturn report, err\n\t}\n\tif report.Main.Filled",
+  "test": "TestRestingWorkflowKeepsNativeCancelError",
+  "want": "完整执行器吞掉原生撤单错误"
 }
 ]
