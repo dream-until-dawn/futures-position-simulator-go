@@ -1,0 +1,787 @@
+{
+  "format": 1,
+  "source_commit": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856",
+  "baseline_main": "be6f08e31425a9758fdab7e6e8700449dac1a960",
+  "source_tree": "f390882a30ba92b97afcd4b49e154d997f940f59",
+  "registry_sha256": "83f1db9a3b48bea0fcdd1593cca996a7fd4c90d7c60f971f925c07b17b5a4ab4",
+  "report_sha256": "869b053bd4348008159e2246bb270c0eba6baef6a760943c7b6a15d1818556e5",
+  "summary_sha256": "b7af33535df22526c54e3820e7010dbb45e5031d1fcf58f84215efffd88d98b9",
+  "counts": {
+    "executed": 1002,
+    "expected_red": 993,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "raw_directory": "C:\\Temp\\ctp-query-mutation-4a7a340",
+  "summary": {
+    "path": "C:\\Temp\\ctp-query-mutation-4a7a340\\summary.json",
+    "sha256": "b7af33535df22526c54e3820e7010dbb45e5031d1fcf58f84215efffd88d98b9"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\ctp-query-mutation-4a7a340\\mutation.log",
+    "sha256": "99c02eae264f007a8e391c18114b5c72cd452786d2b09311f266b485b506f828"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "52735a69fd0e8d5c8fcff02bad27fa2c91b8c9c429bed5b9a95e491065cb2de1",
+    "index_sha256": "c9b7a18c495e64d349870c2f4283ecb8ee9bb7fd8bdfbae23d97e1609a39a451",
+    "head": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856"
+  },
+  "targeted": [
+    {
+      "name": "1055 原生查询偏移串位 ReqQryOrder",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1055.json",
+        "sha256": "3972177e1b1b7363470c361d7fb85958895b524ad68aaaf0c438aa107a46e563"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1055.log",
+        "sha256": "e6b014f2fbe17e9322b4ab71336c84aefe874398405b264bee6b2cf62c3281f5"
+      }
+    },
+    {
+      "name": "1056 原生查询偏移串位 ReqQryTrade",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1056.json",
+        "sha256": "3c087e999347b8572a115cf5c0811357a92e37e2e8ce0863ffefc88dbe0bc1d2"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1056.log",
+        "sha256": "eed9f29407402bdda13f4d2e8bed8e8a982eec5d95e6d33f824f1d6bda29808c"
+      }
+    },
+    {
+      "name": "1057 原生查询偏移串位 ReqQryInvestorPosition",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1057.json",
+        "sha256": "d0f7b381398c25d3e94142ab89046bd256b280dd01f23f09c276daae58bd545b"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1057.log",
+        "sha256": "7dad203a66fd5d19d81144331be469df0edd19cf21f93857fefe45e0f7f1596c"
+      }
+    },
+    {
+      "name": "1058 原生查询偏移串位 ReqQryTradingAccount",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1058.json",
+        "sha256": "f246a57a9e35fded98ff1f094586f3506722c9c8e1c4b2b55d0e6ea53c2ddafe"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1058.log",
+        "sha256": "7aad4358936b6d3739a57c996543106cf0f037718cb33f02545fb5f125f10365"
+      }
+    },
+    {
+      "name": "1059 原生查询偏移串位 ReqQryInstrumentCommissionRate",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1059.json",
+        "sha256": "cedf59db571299497de21e48c55a59ea2de056b3abd29d3046d0b3f93072654c"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1059.log",
+        "sha256": "1ca34b43da7dbe11e77ecc59120f8ee94426ebb666a853d5c79b28923292e89d"
+      }
+    },
+    {
+      "name": "1060 原生查询偏移串位 ReqQryInstrument",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1060.json",
+        "sha256": "bb2f28970bbbf1d417912225b3107524a001b4a446e47ff7c9e41f2ef7aa50e9"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1060.log",
+        "sha256": "e1b64f74382925df4474a89f5654c9ff9485bc5c892828c0ee4086ae84a6e80c"
+      }
+    },
+    {
+      "name": "1061 原生查询偏移串位 ReqQryDepthMarketData",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1061.json",
+        "sha256": "42f0c7c3c56492501987cd896d4685a0da48f575b7d28d0dec6b4359921e30c9"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1061.log",
+        "sha256": "70f6301b7c8a7d721634d1f4bdc396c113726206810c8a9187cf5461df9ef318"
+      }
+    },
+    {
+      "name": "1062 原生查询偏移串位 ReqQrySettlementInfo",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1062.json",
+        "sha256": "c14174e11bb6bceec6247112014d1d76a2ff98c5bc9219b44501f4ca78853c1d"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1062.log",
+        "sha256": "30f4718407792220c17f498cd1022348d991b85ce24f6ba174f12a56828ca927"
+      }
+    },
+    {
+      "name": "1063 原生查询偏移串位 ReqQryBrokerTradingParams",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1063.json",
+        "sha256": "11748e5d8e1e61cc77add6cfa2518e139329799f9e4c697a5b6ee7758d25ae62"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1063.log",
+        "sha256": "fbe01edc8c314b4d74ec4e15592ff21634760cccf14a3af4a181d9d9bcde4ef3"
+      }
+    },
+    {
+      "name": "1064 原生查询未知方法放行",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1064.json",
+        "sha256": "ed593a51f40a4844b79e88487fdda06001956adea271ecda5030e2197aaaac30"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1064.log",
+        "sha256": "de7c3ad1f86eadf7cbf07e81bda8082100bb3e16e8b7a31fcc9ab630d51b00e1"
+      }
+    },
+    {
+      "name": "1065 原生查询真实返回码再清零",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1065.json",
+        "sha256": "669de580ff1f9a1c01d15bc1375356083c8ae244b7686a4ed83c603aa5fe6279"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1065.log",
+        "sha256": "4e0c18e27eddd462f30e778581087c06d52742eb3667b67861a85a690355a3f3"
+      }
+    },
+    {
+      "name": "1066 原生查询空模块未前置拒绝",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1066.json",
+        "sha256": "acf310151902e4f9cb3c219f1c5f12437deeb2bf4dc15e9e59fcf0b577abb174"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1066.log",
+        "sha256": "89d4b520caa4b9176593f4f61e9c1749ed3b2dfc87d20a5acb1639f1f3f27cb4"
+      }
+    },
+    {
+      "name": "1067 原生查询跨映像方法放行",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1067.json",
+        "sha256": "d022057c78bd6578007a5bcb2f96e19c87788d7e0d90c42e6dd1f3ec3851af47"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1067.log",
+        "sha256": "9a44126c98a7f47a97613f22fe2b08d591cf341ee1132e6d2cb7a5b49812cdc0"
+      }
+    },
+    {
+      "name": "1068 原生查询跳过执行页验证",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1068.json",
+        "sha256": "f201df099c25b6631c23ef54b1ae00245bcf02179eb8173340ec23cae5598ab2"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1068.log",
+        "sha256": "8e32ad5e9afd0282ffb2f607fa13fcdcef21c0a7a6974672a6bfd0b38a2194d5"
+      }
+    },
+    {
+      "name": "1069 原生查询偏移溢出缺失",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1069.json",
+        "sha256": "9336c2ead4e63895a3d8b0721540d9cd243fa3e73820ab09926561b7e907def6"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1069.log",
+        "sha256": "3d0ce3409b2ee3dd944592bb9e602580a47ad7edb58bcfeff8464507530889ed"
+      }
+    },
+    {
+      "name": "1070 关闭后仍发原生查询",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1070.json",
+        "sha256": "6e16129d4bbe04e76039843bbf5f1fd1f55aa44dd2583b8db616991e4a6917be"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1070.log",
+        "sha256": "518dbd0480e139756e6d113d9a005b47c7fcb6808376157b50765a08241715b5"
+      }
+    },
+    {
+      "name": "1071 查询发送不再与释放互斥",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1071.json",
+        "sha256": "0503deb510eb7ebbdf3726603d21fe9a6582da6559ef363c99e36e9e20d19862"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1071.log",
+        "sha256": "3ff30f33e5d292053085e4eab29869edf931bdcb493fd1d3a607ee74ad6eb04c"
+      }
+    },
+    {
+      "name": "1072 关闭未唤醒查询",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1072.json",
+        "sha256": "354027ddcfc774da2ca3d91085fb0e5e81cbe7b027867b0286118a020c33bd0a"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1072.log",
+        "sha256": "8529941b6d0c8fd0282c7d49fdbc86cf0ccce7e2beec4bd74a35939dc89a563d"
+      }
+    },
+    {
+      "name": "1073 关闭漏掉查询 positionRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1073.json",
+        "sha256": "e203b08fc98147a64dff36e90deb1bbba189c155c489c71c132df67484b94f44"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1073.log",
+        "sha256": "cdc847c8935862e4d73997ea078fc1021c36f46ca1be1ccf1e2f266ec92d58f6"
+      }
+    },
+    {
+      "name": "1074 关闭漏掉查询 orderRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1074.json",
+        "sha256": "48a9f160fbb751b25e53f759fabe3098d759f76c7e3be3e23ebac127b342d36c"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1074.log",
+        "sha256": "dfb30a27418f5cda8532f45a010d52cddf7fa0f741cd2fb883fdaece5946f6af"
+      }
+    },
+    {
+      "name": "1075 关闭漏掉查询 tradeRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1075.json",
+        "sha256": "bc2335ec7a4d750311503278539d2634540458b5ef5447dba56cfe8a638b7979"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1075.log",
+        "sha256": "8f81ad561bd90ab535461edb549118a40c32432bdbeddbb2cf4cd4daf87daaf3"
+      }
+    },
+    {
+      "name": "1076 关闭漏掉查询 settlementRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1076.json",
+        "sha256": "f34df44805956feee6d42d17a04698c6c5f82c056d62f2c9772a7aabd0cf18a5"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1076.log",
+        "sha256": "9856866a314405b245d302de41a5cd8203a61f37e47d707d491b85ff8d5905b5"
+      }
+    },
+    {
+      "name": "1077 关闭漏掉查询 accountRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1077.json",
+        "sha256": "67128685a177ad0ca16332abcd4e15e9cda005239b09111d458700f5ac80eb39"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1077.log",
+        "sha256": "ea84135fa059c0120d7f2c58e907b2b2c04070b79af0ae8dcb8533888d6a85d0"
+      }
+    },
+    {
+      "name": "1078 关闭漏掉查询 commissionRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1078.json",
+        "sha256": "1c5b0559213172a3888b5c5f9fe8f50ecf527ed427a4c8af5923351cba9fec54"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1078.log",
+        "sha256": "e292d10e75ec0ec118baf5d5fcf42943bb1d67a8560277226fd3511e132033fa"
+      }
+    },
+    {
+      "name": "1079 关闭漏掉查询 instrumentRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1079.json",
+        "sha256": "f0e6593c6079a603bd9c202df02965a300b980d39db537fdc493ea2b8c9b0d74"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1079.log",
+        "sha256": "3022b5297d9279cf4f8cc287b21a83d9c2388e0535640ecea513f4a132cc0f92"
+      }
+    },
+    {
+      "name": "1080 关闭漏掉查询 marketRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1080.json",
+        "sha256": "3346499f8191be238a9b31f29acee1a058a3b20b8705a69a83ed455803bb8793"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1080.log",
+        "sha256": "080a77d07e4c1c9912dac1114e6c2aeaecbaceedfb37899d132ee519407c7647"
+      }
+    },
+    {
+      "name": "1081 关闭漏掉查询 brokerRows",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1081.json",
+        "sha256": "daba9bdb03ef4b716f79b830a26d210a073e59a2701b54b23ded86080c66ffdb"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1081.log",
+        "sha256": "038438a7e9ab1185558741d403f3708d1fe456f8f86398cabd7cfaf5c30932b2"
+      }
+    },
+    {
+      "name": "1082 关闭清掉首个查询错误",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1082.json",
+        "sha256": "58485233d55ba1be162b3e1d0343bc4a8c4cba665ebd66a484d1e91dfcb8c609"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1082.log",
+        "sha256": "89e4e9a8e7c08c08ad14ba053033adb47581ac9e5c2b9d7f5d626380fb3d228a"
+      }
+    },
+    {
+      "name": "1083 关闭未清除查询半截缓存",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1083.json",
+        "sha256": "a1154b6cad8a1e28099cf97cefe85ae57ef754aabc1ea684d166d7ee67b36d20"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1083.log",
+        "sha256": "33b2d4155941a2be521a483f99f94be49412f8317e9f699980cfb3461117247d"
+      }
+    },
+    {
+      "name": "1084 关闭未通知查询完成信号",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1084.json",
+        "sha256": "254eb7369026ee18764c309091f2ecb58e51a2d9a175ab2679c69ae95863e41b"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1084.log",
+        "sha256": "b007b27e392b328f677f8e78e5edb098cc183cb1649e5fea96a4474e4a7bb245"
+      }
+    },
+    {
+      "name": "1085 实际加载路径错配未拒绝",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1085.json",
+        "sha256": "19228de8c4bb2f02ac1aba00baa7844b8a6a8b6523fb1e360cab0260e3824c5d"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1085.log",
+        "sha256": "fdc40dc29c58ebd91a78a3a2e7dd9c4ca33f9d93c7820bbeca376696bad27438"
+      }
+    },
+    {
+      "name": "1086 加载后未复核实际文件哈希",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1086.json",
+        "sha256": "e41bb064fa3f7ce9ab4ffcd15b9a030be247b1fc8f979d8f368801d17a21eff0"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1086.log",
+        "sha256": "34243942974ff6917e44741590f98e5a4ba677806733b1faa85a1bea281e8f05"
+      }
+    },
+    {
+      "name": "1087 模块零句柄误当当前EXE",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1087.json",
+        "sha256": "d95375ff3d2cf95f397fd1a709830c00663f48a395242c9e7b3de1fdfb7b106f"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1087.log",
+        "sha256": "9cf5d1e0b73e49e86a70dfa078a27324cd7421537cd7c5afc3157a3e358b55ff"
+      }
+    },
+    {
+      "name": "1088 实际加载守卫未接线",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1088.json",
+        "sha256": "8b9c9d8a86d15b56098a2b973426cf573155d1219eee6d2ce0db2cc814051517"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\4a7a340\\target-1088.log",
+        "sha256": "dc7084f8611afac1291678496e5dd4040a2392a4386351119a0956648803a66c"
+      }
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340",
+            "passed_tests": 748,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-regression-4a7a340\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\cmd\\oracle",
+            "passed_tests": 427,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-regression-4a7a340\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-regression-4a7a340\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "52735a69fd0e8d5c8fcff02bad27fa2c91b8c9c429bed5b9a95e491065cb2de1",
+          "index_sha256": "c9b7a18c495e64d349870c2f4283ecb8ee9bb7fd8bdfbae23d97e1609a39a451",
+          "head": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "52735a69fd0e8d5c8fcff02bad27fa2c91b8c9c429bed5b9a95e491065cb2de1",
+          "index_sha256": "c9b7a18c495e64d349870c2f4283ecb8ee9bb7fd8bdfbae23d97e1609a39a451",
+          "head": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-query-regression-4a7a340\\summary.json",
+        "sha256": "2ed1f5ead27c8e09d1ed2d17a3d0ad8b19d1740c502db903f27c59b5c84d5175"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-query-regression-4a7a340\\root.log",
+          "sha256": "2f60e97e76fd3d68eb715cdc7976b0d549ef410ae56440cd2848a5c10e594014"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-regression-4a7a340\\oracle.log",
+          "sha256": "203d03c136b70af5795bfd5be5387fe22ff916d39232e77eaffa0328dde684a7"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-regression-4a7a340\\external.log",
+          "sha256": "c2e149c2259a0b41eda938ffbd1737aa86244d454edbcd5181dc7909d044c325"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340",
+            "passed_tests": 748,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-race-4a7a340\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\cmd\\oracle",
+            "passed_tests": 427,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-race-4a7a340\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-race-4a7a340\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "52735a69fd0e8d5c8fcff02bad27fa2c91b8c9c429bed5b9a95e491065cb2de1",
+          "index_sha256": "c9b7a18c495e64d349870c2f4283ecb8ee9bb7fd8bdfbae23d97e1609a39a451",
+          "head": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "52735a69fd0e8d5c8fcff02bad27fa2c91b8c9c429bed5b9a95e491065cb2de1",
+          "index_sha256": "c9b7a18c495e64d349870c2f4283ecb8ee9bb7fd8bdfbae23d97e1609a39a451",
+          "head": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-query-race-4a7a340\\summary.json",
+        "sha256": "ef9ca788a35cb306a8efdf9ae2efbcea79eda03a22145322deef235c750b4069"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-query-race-4a7a340\\root.log",
+          "sha256": "ff8c04c379b2c98e31e05b42b6ede2a14fcb432b49b3a3546e58cf5ea0f99dd2"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-race-4a7a340\\oracle.log",
+          "sha256": "2d6c11978265a51b0b2043d897dc5b7c2d3523315e94a45e333bc44f7f380a9d"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-race-4a7a340\\external.log",
+          "sha256": "61aab64e519ea174e4ff50f04e75363068e49e3f0f974f2a82177c96951bbe3f"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-fuzz-4a7a340\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-fuzz-4a7a340\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-fuzz-4a7a340\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-fuzz-4a7a340\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-query-checks-4a7a340\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-query-fuzz-4a7a340\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "52735a69fd0e8d5c8fcff02bad27fa2c91b8c9c429bed5b9a95e491065cb2de1",
+          "index_sha256": "c9b7a18c495e64d349870c2f4283ecb8ee9bb7fd8bdfbae23d97e1609a39a451",
+          "head": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "52735a69fd0e8d5c8fcff02bad27fa2c91b8c9c429bed5b9a95e491065cb2de1",
+          "index_sha256": "c9b7a18c495e64d349870c2f4283ecb8ee9bb7fd8bdfbae23d97e1609a39a451",
+          "head": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-query-fuzz-4a7a340\\summary.json",
+        "sha256": "b20f19d37b7b49d967bfb9667ec09eaed0bfa164150194b87b81d5c460c1360a"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-query-fuzz-4a7a340\\state.log",
+          "sha256": "ea39612e17f8006cb28ca6594c31fbdbcb5f6de8cbf1eb55e2a9c7854260fce5"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-fuzz-4a7a340\\bundle.log",
+          "sha256": "0d8f7172f30f0d7c7694880a0cdec0d49d7f810f7e9eb7f720433021246dbddf"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-fuzz-4a7a340\\report.log",
+          "sha256": "13baebcde3d4d1383e1150874dba20570af8fc071952183570a41f93fe904563"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-fuzz-4a7a340\\risk.log",
+          "sha256": "a46bb3924f4ceacda4d5022196228421d594863142ea9d05946760a32654f8a3"
+        },
+        {
+          "path": "C:\\Temp\\ctp-query-fuzz-4a7a340\\lifecycle.log",
+          "sha256": "ae7125a9947022a75ddabf247b218972845f7d5a0c1dca0c4f7be0c5f54408fc"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\ctp-query-python-4a7a340.log",
+    "sha256": "510a64db0f243029d7470e1e53a49004994050bf44c2eff77cc385c670b3d945"
+  },
+  "before_fix": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\before.log",
+    "sha256": "1b591868515a443ff0ed36535ea691c75028dc22577d0d10601cd37358e204a0"
+  },
+  "pending_rejection": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\pending-seal-rejected.log",
+    "sha256": "1043b63a373836de66da19c3ffdea1f35418f75ff8edf0aef54cf8c7046d4e56"
+  },
+  "failed_targeted_rounds": [
+    {
+      "source": "3c108da",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\3c108da\\target-1071.json",
+        "sha256": "2e385285583ce6d64c1e18d4355db541acafdb49033e0594e9f929352665b448"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\3c108da\\target-1071.log",
+        "sha256": "6833d34d8c7de2132b26f569576ec2ae439206c832585db26c3a85f94d4c7bb0"
+      }
+    },
+    {
+      "source": "87e1ae8",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\87e1ae8\\target-1082.json",
+        "sha256": "de4696dce24524d6cbe255c5e1b980683c731154f5dde084c628fda60c68d305"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\offline-results\\native-query\\87e1ae8\\target-1082.log",
+        "sha256": "b91ce81d8d834623d6b6b0acf1de0b498039e29422ee59223c47d8316a80d797"
+      }
+    }
+  ],
+  "native_tests": {
+    "platform": "Windows amd64",
+    "real_fixed_wrapper": true,
+    "fake_api_only": true,
+    "create_api_calls": 0,
+    "create_spi_calls": 0,
+    "broker_connections": 0,
+    "real_env_reads": 0,
+    "named_tests": [
+      "TestNativeQueryRowsKeepActualCodes",
+      "TestNativeQueryLegacyClearing",
+      "TestNativeQueryModuleAndPointerGuards",
+      "TestLoadedNativeSDKPaths",
+      "TestNativeQueriesCloseLifecycle",
+      "TestCloseAbortsAllNineQueries"
+    ]
+  },
+  "fixed_dlls": [
+    {
+      "name": "ctp_trade.dll",
+      "sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc"
+    },
+    {
+      "name": "thosttraderapi_se.dll",
+      "sha256": "774ca2f3bba3009e72ba1f8a5e7a752d569bbbd999f19017e7cabc5c32c08bdc"
+    }
+  ],
+  "slot_source": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-native-followup-be6f08e\\docs\\validation\\ctp-native-export-audit-20261029.json",
+    "sha256": "e21ac4b38bef2d869a06108dc2dddc481953c175624f4c3c55e1c3f72bf611e1"
+  },
+  "ci": {
+    "sha": "4a7a340a65a189f6cc00e0c2263fd9b45e64e856",
+    "run": 41025713400,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 123963230581,
+        "name": "offline (ubuntu-24.04)",
+        "conclusion": "success",
+        "completed_at": "2026-10-30T08:23:16Z"
+      },
+      {
+        "id": 123963230745,
+        "name": "offline (windows-2022)",
+        "conclusion": "success",
+        "completed_at": "2026-10-30T08:25:02Z"
+      }
+    ]
+  }
+}

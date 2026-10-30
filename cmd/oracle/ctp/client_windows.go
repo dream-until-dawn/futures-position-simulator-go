@@ -39,6 +39,8 @@ type Client struct {
 
 	h        *syscall.DLL
 	api, spi uintptr
+	// nativeQueryModule 只在真实加载路径及双DLL哈希复核后设置。
+	nativeQueryModule uintptr
 
 	mu     sync.Mutex
 	nReq   int
@@ -245,6 +247,10 @@ func (c *Client) initializeHandshake(hs *handshakeCollector) error {
 		return fmt.Errorf("加载 ctp_trade.dll 失败（目录 %s）：%w", dir, lerr)
 	}
 	c.h = h
+	c.nativeQueryModule, err = loadedNativeSDK(dir, uintptr(h.Handle))
+	if err != nil {
+		return err
+	}
 	c.api = c.call("CreateApi")
 	c.spi = c.call("CreateSpi")
 	if c.api == 0 || c.spi == 0 {
@@ -394,6 +400,7 @@ func (c *Client) Close() {
 	if hs != nil {
 		hs.abort("closed", 0)
 	}
+	c.abortQueries()
 	c.setupMu.Lock()
 	defer c.setupMu.Unlock()
 	if c.h == nil || c.api == 0 {

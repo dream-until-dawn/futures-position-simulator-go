@@ -308,14 +308,39 @@ func (c *Client) registerQueryCallbacks() {
 func queryRows[T any](c *Client, b *queryBatch[T], name string, p unsafe.Pointer, timeout time.Duration) ([]T, error) {
 	id := c.nextRequestID()
 	rows, err := runQuery(b, id, timeout, func(requestID int) int32 {
+		c.setupMu.Lock()
+		defer c.setupMu.Unlock()
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+		if closed {
+			return nativeHandshakeBindingError
+		}
 		if c.querySend != nil {
 			return c.querySend(name, p, requestID)
 		}
-		result, _, _ := c.h.MustFindProc(name).Call(c.api, uintptr(p), uintptr(requestID))
-		return int32(result)
+		result, err := invokeNativeQuery(c.api, name, p, requestID, c.nativeQueryModule)
+		if err != nil {
+			c.logf("[ctp.query.native] event=binding-error")
+			return nativeHandshakeBindingError
+		}
+		return result
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s 没有完整成功：%w", name, err)
 	}
 	return rows, nil
+}
+
+// abortQueries 在释放API前唤醒全部活跃查询；关闭不能把部分回报包装为成功。
+func (c *Client) abortQueries() {
+	c.positionRows.abort(errQueryClosed)
+	c.orderRows.abort(errQueryClosed)
+	c.tradeRows.abort(errQueryClosed)
+	c.settlementRows.abort(errQueryClosed)
+	c.accountRows.abort(errQueryClosed)
+	c.commissionRows.abort(errQueryClosed)
+	c.instrumentRows.abort(errQueryClosed)
+	c.marketRows.abort(errQueryClosed)
+	c.brokerRows.abort(errQueryClosed)
 }
