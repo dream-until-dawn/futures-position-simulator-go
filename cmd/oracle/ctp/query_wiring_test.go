@@ -26,7 +26,7 @@ func TestQueryCallbacksKeepRequestIdentity(t *testing.T) {
 	}
 	callbacks := make(map[string]*ast.FuncLit)
 	set := token.NewFileSet()
-	for _, path := range []string{"client_windows.go", "query_windows.go", "marketdata_windows.go"} {
+	for _, path := range []string{"client_windows.go", "handshake_callbacks_windows.go", "query_windows.go", "marketdata_windows.go"} {
 		file, err := parser.ParseFile(set, path, nil, 0)
 		if err != nil {
 			t.Fatal(err)

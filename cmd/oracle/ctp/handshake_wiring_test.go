@@ -10,9 +10,13 @@ import (
 
 // TestHandshakeWindowsWiring 是实际Windows源的结构守卫，不代替DLL行为实测。
 func TestHandshakeWindowsWiring(t *testing.T) {
-	f, err := parser.ParseFile(token.NewFileSet(), "client_windows.go", nil, 0)
-	if err != nil {
-		t.Fatal(err)
+	f := &ast.Package{Files: map[string]*ast.File{}}
+	for _, path := range []string{"client_windows.go", "handshake_callbacks_windows.go"} {
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Files[path] = file
 	}
 	wanted := map[string]string{"SetOnRspAuthenticate": handshakeAuth, "SetOnRspUserLogin": handshakeLogin, "SetOnRspSettlementInfoConfirm": handshakeConfirm}
 	found := map[string]bool{}

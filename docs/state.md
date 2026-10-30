@@ -2621,6 +2621,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/ctp-offline-followup.md` | 5 |
 | `docs/ctp-native-queries.md` | 4 |
 | `docs/ctp-native-orders.md` | 4 |
+| `docs/ctp-handshake-entry.md` | 4 |
 | `docs/silent-risks.md` | 14 |
 | `docs/state.md` | 108 |
 | `docs/f9a-design.md` | 5 |

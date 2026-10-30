@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 from .parsing import EvidenceError, parse_log
 from .analysis import analyze, compare
+from .entries import parse_entries
 
 
 def build_report(manifest):
@@ -36,10 +37,12 @@ def build_report(manifest):
             raise EvidenceError('input-fingerprint-mismatch')
         result = analyze(parse_log(raw),item['deadline_ns'],item['process_exit'])
         cases.append(dict(id=item['id'],source_commit=item['source_commit'],sha256=item['sha256'],
-            send_code_origin=item['send_code_origin'],analysis=result))
-    return dict(format=1,cases=cases,comparison=compare(cases),
+            send_code_origin=item['send_code_origin'],analysis=result,entry_journal=parse_entries(raw)))
+    return dict(format=2,cases=cases,comparison=compare(cases),
         limitations=['No new broker connection or credential access.','Input identity and native-vs-wrapper classification are declared and must be independently audited.',
             'No recorded callback does not prove no server or SDK callback occurred.','A successful sample is not a response-time upper bound.',
+            'Entry counts are committed Go-entry observations at separate per-stage snapshots; zero is not absence of an SDK/server event.',
+            'Wrapped non-null payload does not prove an original SDK payload; the fixed C++ bridge substitutes zero-valued rows for null.',
             'Heterogeneous samples do not estimate reliability or establish network/server root cause.'])
 
 

@@ -139,7 +139,7 @@ func (c *Client) Connect(timeout time.Duration) error {
 	}
 	c.connectStarted, c.hs = true, hs
 	c.mu.Unlock()
-	defer hs.seal()
+	defer func() { hs.seal(); hs.logEntries(c.logf) }()
 	// 初始化、发送及Release互斥，Close先唤醒握手，再等待原生调用退出。
 	c.setupMu.Lock()
 	c.mu.Lock()
@@ -257,55 +257,7 @@ func (c *Client) initializeHandshake(hs *handshakeCollector) error {
 	// **而有噪声的检查最后一定会被忽略**。
 	c.call("RegisterSpi", c.api, c.spi)
 
-	c.on("SetOnFrontConnected", func() uintptr {
-		hs.reply(handshakeFront, 0, &handshakeLoginResult{}, 0, true)
-		return 0
-	})
-	c.on("SetOnFrontDisconnected", func(reason int) uintptr {
-		hs.abort("disconnected", int32(reason))
-		return 0
-	})
-	c.on("SetOnRspAuthenticate", func(row *def.CThostFtdcRspAuthenticateField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
-		var payload *handshakeLoginResult
-		if row != nil {
-			payload = &handshakeLoginResult{}
-		}
-		hs.reply(handshakeAuth, id, payload, handshakeErrorID(info), last)
-		return 0
-	})
-	c.on("SetOnRspUserLogin", func(row *def.CThostFtdcRspUserLoginField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
-		var payload *handshakeLoginResult
-		if row != nil {
-			payload = &handshakeLoginResult{day: text(row.TradingDay[:]), maxOrderRef: text(row.MaxOrderRef[:]), frontID: int(row.FrontID), sessionID: int(row.SessionID)}
-		}
-		hs.reply(handshakeLogin, id, payload, handshakeErrorID(info), last)
-		return 0
-	})
-	c.on("SetOnRspSettlementInfoConfirm", func(row *def.CThostFtdcSettlementInfoConfirmField, info *def.CThostFtdcRspInfoField, id int, last bool) uintptr {
-		var payload *handshakeLoginResult
-		if row != nil {
-			payload = &handshakeLoginResult{}
-		}
-		hs.reply(handshakeConfirm, id, payload, handshakeErrorID(info), last)
-		return 0
-	})
-	c.on("SetOnRspError", func(info *def.CThostFtdcRspInfoField, id int, _ bool) uintptr {
-		if err := errOf(info); err != nil {
-			c.logf("[ctp] OnRspError request=%d code=%d", id, info.ErrorID)
-			hs.generalError(id, int32(info.ErrorID))
-			// 通用错误回调也带请求编号；不能只打印后让调用方误读为空成功。
-			c.positionRows.receive(id, nil, err, true)
-			c.orderRows.receive(id, nil, err, true)
-			c.tradeRows.receive(id, nil, err, true)
-			c.settlementRows.receive(id, nil, err, true)
-			c.accountRows.receive(id, nil, err, true)
-			c.commissionRows.receive(id, nil, err, true)
-			c.instrumentRows.receive(id, nil, err, true)
-			c.marketRows.receive(id, nil, err, true)
-			c.brokerRows.receive(id, nil, err, true)
-		}
-		return 0
-	})
+	c.registerHandshakeCallbacks(hs)
 
 	c.registerQueryCallbacks()
 	c.registerOrderCallbacks()

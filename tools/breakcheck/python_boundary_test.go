@@ -46,6 +46,11 @@ func TestPythonHandshakeDiagnosticsBoundary(t *testing.T) {
 	runPythonBoundary(t, "test_handshake_diagnostics")
 }
 
+// TestPythonHandshakeEntryBoundary 验证入口快照缺失、残缺与零值的不同含义。
+func TestPythonHandshakeEntryBoundary(t *testing.T) {
+	runPythonBoundary(t, "test_handshake_entry")
+}
+
 // TestPythonHandshakeIntegrityBoundary 通过真实Python入口验证矛盾证据不能发布成功报告。
 func TestPythonHandshakeIntegrityBoundary(t *testing.T) {
 	runPythonBoundary(t, "test_handshake_integrity")
