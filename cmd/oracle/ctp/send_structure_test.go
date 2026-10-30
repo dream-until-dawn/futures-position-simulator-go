@@ -1,6 +1,9 @@
 package ctp
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,6 +36,38 @@ func TestSendIsTheOnlyPathToInsert(t *testing.T) {
 	}
 	if len(files) < 5 {
 		t.Fatalf("⚠️ 只扫到 %d 个源文件 —— 太少，本条在空转", len(files))
+	}
+	// 原方法名标签仍需唯一，另外核真实类型化调用；保留标签不能掩盖派发已被删掉。
+	nativeCalls := 0
+	for _, path := range files {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok || len(call.Args) == 0 {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "sendNativeOrder" {
+				return true
+			}
+			kind, ok := call.Args[0].(*ast.Ident)
+			if ok && kind.Name == "nativeOrderInsert" {
+				nativeCalls++
+			}
+			return true
+		})
+	}
+	if nativeCalls == 0 {
+		t.Fatal("报单路径不见了：缺少真实类型化派发")
+	}
+	if nativeCalls != 1 {
+		t.Fatal("只许有一条到达柜台报单接口的路径：真实类型化派发数", nativeCalls)
 	}
 	fn := regexp.MustCompile(`(?m)^func .*\{`)
 	var hits []string

@@ -108,15 +108,15 @@ func waitOwnedOrder(c ownedOrderClient, req ctp.OrderReq, wait, cancelWait, requ
 			if err := observe(st); err != nil {
 				out.SubmissionUncertain = true
 				out.Terminal = false
-				return out, err
+				return out, errors.Join(submitErr, cancelErr, err)
 			}
 			if out.Terminal {
-				return out, submitErr
+				return out, errors.Join(submitErr, cancelErr)
 			}
 		}
 		clock.Sleep(250 * time.Millisecond)
 	}
-	return out, fmt.Errorf("本次委托 %s 撤单后终态未知，不能继续发单（撤单调用错误：%v）", out.Ref, cancelErr)
+	return out, errors.Join(submitErr, cancelErr, fmt.Errorf("本次委托 %s 撤单后终态未知，不能继续发单（撤单调用错误：%v）", out.Ref, cancelErr))
 }
 
 func ownedTerminal(status byte) bool {
