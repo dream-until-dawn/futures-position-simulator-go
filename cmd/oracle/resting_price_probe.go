@@ -189,7 +189,7 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	}()
 	local := clock.Now().In(probeShanghai)
 	hm := local.Hour()*100 + local.Minute()
-	if local.Format("20060102") != restingProbeDate || hm < 2115 || hm >= 2135 || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
+	if local.Format("20060102") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd || cfg.Wait <= 0 || cfg.Wait > 90*time.Second || cfg.Timeout <= 0 || cfg.Timeout > 15*time.Second {
 		return report, fmt.Errorf("本次探针日期、启动窗口或等待上限不成立")
 	}
 	report.Stage = "checking-empty-account"
@@ -230,6 +230,10 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 		return report, err
 	}
 	controlReq := ctp.OrderReq{Exchange: "SHFE", Instrument: "rb2701", Direction: def.THOST_FTDC_D_Buy, Offset: def.THOST_FTDC_OF_Open, Volume: 1, LimitPrice: float64(md.LowerLimitPrice)}
+	// 查询和落盘后还须核新开仓截止，较晚的收尾窗口不能授权开仓。
+	if err = validateRestingOpeningWindow(clock.Now()); err != nil {
+		return report, err
+	}
 	report.Control, err = waitOwnedOrder(c, controlReq, 500*time.Millisecond, 10*time.Second, cfg.Timeout, clock)
 	report.Stage = "control-after-order"
 	if persistErr := emit(); persistErr != nil {
@@ -269,6 +273,9 @@ func executeRestingPrice(c restingProbeClient, cfg restingProbeConfig, clock pro
 	limit, _ := price.Float64()
 	mainReq := controlReq
 	mainReq.LimitPrice = limit
+	if err = validateRestingOpeningWindow(clock.Now()); err != nil {
+		return report, err
+	}
 	report.Main, err = waitOwnedOrder(c, mainReq, cfg.Wait, 10*time.Second, cfg.Timeout, clock)
 	report.Stage = "main-after-order"
 	if persistErr := emit(); persistErr != nil {
@@ -334,7 +341,7 @@ func runCTPRestingPriceAt(args []string, at time.Time) error {
 	}
 	now := at.In(probeShanghai)
 	hm := now.Hour()*100 + now.Minute()
-	if now.Format("20060102") != restingProbeDate || hm < 2115 || hm >= 2135 || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
+	if now.Format("20060102") != restingProbeDate || hm < restingOpeningStart || hm >= restingOpeningEnd || *wait <= 0 || *wait > 90*time.Second || *timeout <= 0 || *timeout > 15*time.Second {
 		return fmt.Errorf("不在登记启动窗口或等待参数无效")
 	}
 	build, ok := debug.ReadBuildInfo()
