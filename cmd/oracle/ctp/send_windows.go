@@ -39,6 +39,7 @@ func (c *Client) send(r OrderReq) (string, error) {
 	if err := c.Check(r); err != nil {
 		return "", err
 	}
+	const method = "ReqOrderInsert" // 标签之外另核真实类型化派发路径，不能靠标签自证安全阀。
 	// ⚠️ **OrderRef 必须是纯数字，并且从登录应答的 `MaxOrderRef` 往后续。**
 	//
 	// 这一行改过两次，前两版都是**照着一个错的理由**改的：
@@ -94,7 +95,9 @@ func (c *Client) send(r OrderReq) (string, error) {
 	// ⚠️ 已删除。守卫 `TestNoOrderRefSeedKnob`。
 	c.book.reset(ref, r.Volume)
 	c.logf("[ctp] 报单 %s  ref=%s", r, ref)
-	c.req("ReqOrderInsert", unsafe.Pointer(&f))
+	if err := c.sendNativeOrder(nativeOrderInsert, unsafe.Pointer(&f)); err != nil {
+		return ref, fmt.Errorf("%s: %w", method, err)
+	}
 	return ref, nil
 }
 
@@ -105,7 +108,15 @@ func (c *Client) send(r OrderReq) (string, error) {
 func (c *Client) Insert(r OrderReq, timeout time.Duration) (OrderState, error) {
 	ref, err := c.send(r)
 	if err != nil {
-		return OrderState{}, err
+		if ref == "" {
+			return OrderState{}, err
+		}
+		// 即时失败不能抹掉同步回报中的成交、系统号或本次引用。
+		state, _ := c.book.get(ref)
+		if state.OrderRef == "" {
+			state.OrderRef = ref
+		}
+		return state, err
 	}
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
@@ -150,8 +161,7 @@ func (c *Client) Cancel(ref string, r OrderReq) error {
 	f.FrontID = def.TThostFtdcFrontIDType(c.frontID)
 	f.SessionID = def.TThostFtdcSessionIDType(c.sessionID)
 	c.logf("[ctp] 撤单 ref=%s", ref)
-	c.req("ReqOrderAction", unsafe.Pointer(&f))
-	return nil
+	return c.sendNativeOrder(nativeOrderCancel, unsafe.Pointer(&f))
 }
 
 // CancelByOrder 按**交易所的 `OrderSysID`** 撤单，而不是按本地 `OrderRef`。
@@ -185,8 +195,7 @@ func (c *Client) CancelByOrder(o *def.CThostFtdcOrderField) error {
 	copy(f.InstrumentID[:], text(o.InstrumentID[:]))
 	copy(f.OrderSysID[:], sysID)
 	c.logf("[ctp] 撤单 OrderSysID=%s（按交易所编号，与会话无关）", sysID)
-	c.req("ReqOrderAction", unsafe.Pointer(&f))
-	return nil
+	return c.sendNativeOrder(nativeOrderCancel, unsafe.Pointer(&f))
 }
 
 // registerOrderCallbacks 注册委托回报。由 Connect 调用。
@@ -292,7 +301,7 @@ func (c *Client) registerOrderCallbacks() {
 	c.on("SetOnErrRtnOrderAction", func(_ *def.CThostFtdcOrderActionField,
 		info *def.CThostFtdcRspInfoField) uintptr {
 		if err := errOf(info); err != nil {
-			c.logf("[ctp] ⚠️ **交易所**拒绝撤单：%v", err)
+			c.logf("[ctp] ⚠️ 撤单错误回报（ErrRtn，来源未判定）：%v", err)
 		}
 		return 0
 	})

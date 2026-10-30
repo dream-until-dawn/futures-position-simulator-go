@@ -3,6 +3,8 @@
 范围与决策依据见 [design.md](./design.md)，规则依据见 [cn-futures-rules.md](./cn-futures-rules.md)，
 可行性依据见 [probes.md](./probes.md)。
 
+2026-10-30 原生订单后继设计增加CTP工具导出 `NativeOrderError`：`Operation string`、`Code int32`、`Local bool`，实现 `Error() string`，可由errors.As取得。Code保留SDK即时码或本地保留码，Local区分来源，不能覆盖OrderState.ErrorID或清除已见成交；Insert/Cancel/CancelByOrder签名不变。设计与当前准确验收/发布状态分别见[原生订单](./ctp-native-orders.md)和[state顶部](./state.md)，本段导出面登记不代替主线已发布的证明。
+
 2026-10-24 离线交付分期：新增 `replay` 包及 `cmd/replay`，复用现有规则快照与内核State/Restore；包依赖方向为replay → futsim/refdata，不改变内核存档格式。按业务重放、自包含包、首差异与账单、长周期/耐久、独立模块接入推进，设计与验收见 [离线重放](./offline-replay.md)。F9c仍保留实测前置。
 
 2026-10-27 全部离线交付目标：六批范围见 [总设计](./offline-delivery.md)。O1新增主模块导出面 `refdata.NightCoverage`（Exchange、First、Last、Suspended、Source）及 `NewCalendarWithNightCoverage(days []types.TradingDay, tables []SessionTable, coverage []NightCoverage) (*Calendar, error)`。旧NewCalendar签名不改，nil夜盘名单改为未知；查询夜盘时明确失败，日盘照常。非nil空名单表示调用者明确确认本范围内没有停盘；按所分开请用新入口。Snapshot保留未知/已知空/按所覆盖，旧文件缺字段不升格；不抬Simulator.StateFormat，不改探针源码。新增903–917逐项验证这些门槛可被检出，完整验收结果另记。
@@ -612,7 +614,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
 
     常量   Source / GoctpModule / DLLDirEnv / QueryGap
     变量   RequiredDLLs
-    类型   Client / Credentials / Fixture / OrderReq / OrderState
+    类型   Client / Credentials / Fixture / OrderReq / OrderState / NativeOrderError
     内部error实现   handshakeFailure.Error（20261027：返回阶段/编号/数值码/耗时；接收类型未导出，不新增可构造的公共类型，按现有方法清单守卫列入）
     字段   Client.Valve
            Credentials.Front / BrokerID / UserID / Password / AppID / AuthCode
@@ -620,6 +622,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
                    Account / Positions / Quotes / Dropped
            OrderReq.Exchange / Instrument / Direction / Offset / Volume / LimitPrice
            OrderState.OrderRef / Status / StatusMsg / VolumeTraded / VolumeTotal / ErrorID
+           NativeOrderError.Operation / Code / Local
     函数   New / DLLDir / CheckDLLs / Scrubbed / BlindSpots /
            Text / SplitSymbol / FarPrice
     方法   Client.Connect / TradingDay / BrokerParams / Account / Positions /
@@ -646,7 +649,7 @@ D+1 日 baseline-full / close-order / yd-vs-his
            ⚠️ 抬头带投资者代码与姓名 —— 调用方只许取白名单（`ctp-settle-trades`：成交记录的日期 / 合约 / 价 / 手数 / 成交额 / 手续费 / 平仓盈亏，资金摘要的几个数），
            不许原样打印或落盘）/
            MarketData / Capture / AttachQuote / Check / Insert / Cancel / Order / Close；
-           Fixture.Write；OrderReq.Symbol / String；OrderState.Alive
+           Fixture.Write；OrderReq.Symbol / String；OrderState.Alive；NativeOrderError.Error
 
 ⚠️ **这份清单在 20260910 之前停在 P2**：`Insert` / `Cancel` / `Order` /
 `MarketData` / `SplitSymbol` / `FarPrice` / `OrderState` 七项**一个都没记** ——

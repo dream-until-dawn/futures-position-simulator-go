@@ -61,7 +61,7 @@ func TestNativeQueryRowsKeepActualCodes(t *testing.T) {
 				batch.receive(id, &answer, nil, true)
 				return code
 			})
-			c := &Client{h: dll, api: f.address(), nativeQueryModule: queryFixtureModule(t, f.table[queryFixtureSlots[name]/8])}
+			c := &Client{h: dll, api: f.address(), nativeSDKModule: queryFixtureModule(t, f.table[queryFixtureSlots[name]/8])}
 			c.logf = func(string, ...any) {}
 			rows, err := queryRows(c, &batch, name, unsafe.Pointer(&request), time.Second)
 			runtime.KeepAlive(f)

@@ -39,8 +39,8 @@ type Client struct {
 
 	h        *syscall.DLL
 	api, spi uintptr
-	// nativeQueryModule 只在真实加载路径及双DLL哈希复核后设置。
-	nativeQueryModule uintptr
+	// nativeSDKModule 只在真实加载路径及双DLL哈希复核后设置。
+	nativeSDKModule uintptr
 
 	mu     sync.Mutex
 	nReq   int
@@ -97,11 +97,6 @@ func (c *Client) TradingDay() string { c.mu.Lock(); defer c.mu.Unlock(); return 
 func (c *Client) call(name string, args ...uintptr) uintptr {
 	r, _, _ := c.h.MustFindProc(name).Call(args...)
 	return r
-}
-
-// req 发一笔请求，自增 RequestID。
-func (c *Client) req(name string, p unsafe.Pointer) {
-	c.h.MustFindProc(name).Call(c.api, uintptr(p), uintptr(c.nextRequestID()))
 }
 
 // nextRequestID 在发送前分配编号，使收集器先就位再等待可能立即到来的回调。
@@ -247,7 +242,7 @@ func (c *Client) initializeHandshake(hs *handshakeCollector) error {
 		return fmt.Errorf("加载 ctp_trade.dll 失败（目录 %s）：%w", dir, lerr)
 	}
 	c.h = h
-	c.nativeQueryModule, err = loadedNativeSDK(dir, uintptr(h.Handle))
+	c.nativeSDKModule, err = loadedNativeSDK(dir, uintptr(h.Handle))
 	if err != nil {
 		return err
 	}

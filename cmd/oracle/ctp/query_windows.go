@@ -319,7 +319,7 @@ func queryRows[T any](c *Client, b *queryBatch[T], name string, p unsafe.Pointer
 		if c.querySend != nil {
 			return c.querySend(name, p, requestID)
 		}
-		result, err := invokeNativeQuery(c.api, name, p, requestID, c.nativeQueryModule)
+		result, err := invokeNativeQuery(c.api, name, p, requestID, c.nativeSDKModule)
 		if err != nil {
 			c.logf("[ctp.query.native] event=binding-error")
 			return nativeHandshakeBindingError
