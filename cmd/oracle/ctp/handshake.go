@@ -76,6 +76,7 @@ func (h *handshakeCollector) callbackDiagnostic(event, stage string, id int, cod
 
 // handshakeCollector 一次性、逐阶段收集器。回调只写结果，下一阶段由调用者发送。
 type handshakeCollector struct {
+	entries                   handshakeEntryJournal
 	mu                        sync.Mutex
 	started, deadline         time.Time
 	stage                     string

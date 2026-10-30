@@ -1,0 +1,928 @@
+{
+  "format": 1,
+  "source_commit": "8fba96f65f13312f2203169645be1c71de357cd7",
+  "baseline_at_start": "d73032eed7910799d6973425031a40c19d67a185",
+  "dependency_source": "260cb6b117a9a4c54bfcacc24485fdb4344af3fc",
+  "dependency_main": "f1cef1de05e3e92d0e4d5203a8946fcba80c8de0",
+  "source_tree": "254a00dee68fe34cf63671d2043fab3c5dd66d99",
+  "registry_sha256": "f2106dfd0412e7d1017aecfde29b2d3ab110a5515beb23e1f9760e9c2c8023ed",
+  "report_sha256": "df6dd828522eabf0fa166e2e700a6450b81c0dae7a6d447ca2f5f15ad2b5da43",
+  "summary_sha256": "f1774239cd7bd0a3c55aefe4071c6141d408bb850d9cf075eb8565bd825d31cd",
+  "counts": {
+    "executed": 1055,
+    "expected_red": 1046,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "summary": {
+    "path": "C:\\Temp\\ctp-entry-mutation-8fba96f-r2\\summary.json",
+    "sha256": "f1774239cd7bd0a3c55aefe4071c6141d408bb850d9cf075eb8565bd825d31cd"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\ctp-entry-mutation-8fba96f-r2\\mutation.log",
+    "sha256": "44f3da14f123752e161ff2462030d5b3abac19b8a0bc6c6b63fbefdff7b956e6"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "85d33a6903c95e21648bfdd633f5aa5dfe22a7ebc023db3acbf62e51f973d5c8",
+    "index_sha256": "3305d0b5c4ed8e28b99442329c37ba923b399c48cf80dc0c3d85757ab783dd85",
+    "head": "8fba96f65f13312f2203169645be1c71de357cd7"
+  },
+  "retained_baseline_properties": {
+    "count": 1027,
+    "registration_anchor_migrations": [
+      {
+        "before": {
+          "name": "832 通用错误遗漏行情请求编号",
+          "file": "cmd/oracle/ctp/client_windows.go",
+          "old": "c.marketRows.receive(id, nil, err, true)",
+          "new": "c.marketRows.receive(0, nil, err, true)",
+          "dir": "cmd/oracle",
+          "pkg": "./ctp",
+          "test": "TestQueryCallbacksKeepRequestIdentity",
+          "expect": "red",
+          "want": "通用错误遗漏查询批次"
+        },
+        "after": {
+          "name": "832 通用错误遗漏行情请求编号",
+          "file": "cmd/oracle/ctp/handshake_callbacks_windows.go",
+          "old": "c.marketRows.receive(id, nil, err, true)",
+          "new": "c.marketRows.receive(0, nil, err, true)",
+          "dir": "cmd/oracle",
+          "pkg": "./ctp",
+          "test": "TestQueryCallbacksKeepRequestIdentity",
+          "expect": "red",
+          "want": "通用错误遗漏查询批次"
+        }
+      },
+      {
+        "before": {
+          "name": "894 断开回调不终止握手",
+          "dir": "cmd/oracle",
+          "file": "cmd/oracle/ctp/client_windows.go",
+          "old": "hs.abort(\"disconnected\", int32(reason))",
+          "new": "_ = reason",
+          "pkg": "./ctp",
+          "test": "TestHandshakeWindowsWiring",
+          "want": "前置断开未终止握手",
+          "expect": "red"
+        },
+        "after": {
+          "name": "894 断开回调不终止握手",
+          "dir": "cmd/oracle",
+          "file": "cmd/oracle/ctp/handshake_callbacks_windows.go",
+          "old": "hs.abort(\"disconnected\", int32(reason))",
+          "new": "_ = reason",
+          "pkg": "./ctp",
+          "test": "TestHandshakeWindowsWiring",
+          "want": "前置断开未终止握手",
+          "expect": "red"
+        }
+      },
+      {
+        "before": {
+          "name": "895 结算确认回调丢失请求编号",
+          "dir": "cmd/oracle",
+          "file": "cmd/oracle/ctp/client_windows.go",
+          "old": "hs.reply(handshakeConfirm, id, payload, handshakeErrorID(info), last)",
+          "new": "hs.reply(handshakeConfirm, 0, payload, handshakeErrorID(info), last)",
+          "pkg": "./ctp",
+          "test": "TestHandshakeWindowsWiring",
+          "want": "握手回调编号或阶段丢失",
+          "expect": "red"
+        },
+        "after": {
+          "name": "895 结算确认回调丢失请求编号",
+          "dir": "cmd/oracle",
+          "file": "cmd/oracle/ctp/handshake_callbacks_windows.go",
+          "old": "hs.reply(handshakeConfirm, id, payload, handshakeErrorID(info), last)",
+          "new": "hs.reply(handshakeConfirm, 0, payload, handshakeErrorID(info), last)",
+          "pkg": "./ctp",
+          "test": "TestHandshakeWindowsWiring",
+          "want": "握手回调编号或阶段丢失",
+          "expect": "red"
+        }
+      }
+    ]
+  },
+  "targeted": [
+    {
+      "name": "832 通用错误遗漏行情请求编号",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-832.json",
+        "sha256": "b63ec5ed988ea2ddf03c7d564f2a91db5b9830048ce5f26267a8a9cab45b5b51"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-832.log",
+        "sha256": "30125b6d5ac79c0f6c7058d3e599a0037abeacb59e3c651e2f1076ad50dc47ee"
+      }
+    },
+    {
+      "name": "894 断开回调不终止握手",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-894.json",
+        "sha256": "8bb4bcfa05ec38983f139369beb2872e3107516535a7cb50d414c7535030e693"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-894.log",
+        "sha256": "ca25b87d76a3cc11446b208c755b8b641629bf43a29d17972734721bba97f25f"
+      }
+    },
+    {
+      "name": "895 结算确认回调丢失请求编号",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-895.json",
+        "sha256": "6ae3981d8821909835ed65c1a6260a44bddc8f459c248d9873e351869706a076"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-895.log",
+        "sha256": "e8226a227e121a28295cc8e5efd8de5a46652fcf1cc9f533c23715de1b8267eb"
+      }
+    },
+    {
+      "name": "1114 前置回调漏记入口",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1114.json",
+        "sha256": "a3c8546885a706f11b95c673afb3194edbb081827822a21cd6efb97517660b38"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1114.log",
+        "sha256": "841f581347874f61ae5beac4361750bebad0b527c905f9b46d0ce8bebc8b63c0"
+      }
+    },
+    {
+      "name": "1115 认证回调漏记入口",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1115.json",
+        "sha256": "a8dff2282ca18cbf84c2d7737533445e03e76830debaff8f539d16dae7f43f9f"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1115.log",
+        "sha256": "c4d836a0e6f027286c7c48c9852d9537773cb08117e6232fe5f55e9b6a869ac6"
+      }
+    },
+    {
+      "name": "1116 登录回调漏记入口",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1116.json",
+        "sha256": "42616b0163346efe93c2bc8643d914e7a8336beae7b86eecfd3c045d131bd2e1"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1116.log",
+        "sha256": "abc09ea2d92c02a4c0c5f0a9f5cc725c9955a1e674fe86f1a96c0a11e143cd25"
+      }
+    },
+    {
+      "name": "1117 确认回调漏记入口",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1117.json",
+        "sha256": "521140dd743b201eb15c67466f2268bced7557cf4fb33b8619e41f6ad1abbdc3"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1117.log",
+        "sha256": "b6657579d35153d7f6dd4fb0f97248d35e03cf76b7760a83d7abbc01f4c61409"
+      }
+    },
+    {
+      "name": "1118 断开回调漏记入口",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1118.json",
+        "sha256": "6cec8d4ed2dd6efe64d82fba5596bf92f87780f2fc08ff4e7f3b86bb66bb19cb"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1118.log",
+        "sha256": "857760be7aa6928ac6c65b4019cc9978b9d8b36b9f8d13b21e5f2ef4fc3de8a6"
+      }
+    },
+    {
+      "name": "1119 零错误通用回调不可见",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1119.json",
+        "sha256": "7fd22bab38673f64e9ac5f93374a6264001fa1cfb3087d03d1967f6777dc5e7e"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1119.log",
+        "sha256": "4899ca9e54a8d2a67e159f037c243820bb1e6839238ee8ae1d1fb502ea36ee1a"
+      }
+    },
+    {
+      "name": "1120 确认入口请求号丢失",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1120.json",
+        "sha256": "80676f72911729cd57a10d7b02f296a8c3bb5aeda6ee1c8457c5bac1294cd746"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1120.log",
+        "sha256": "1d9426f0c3e39b2b4848004635cfe009219786197fa30333e98ecb15542db646"
+      }
+    },
+    {
+      "name": "1121 确认入口错误码清零",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1121.json",
+        "sha256": "4a394eadd866b24f379f54a49ca58d79a57affee1f90266cab0807d4e926e606"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1121.log",
+        "sha256": "c87c76546de70dbaaa507a5b5b3da7ed6d3ae0f3e33e6777d8eb3b2e7b36ff18"
+      }
+    },
+    {
+      "name": "1122 确认入口结束位伪造",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1122.json",
+        "sha256": "aa82b9b441a9b1cb23dd12ded394c341f70468c9871591533362942415827bf0"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1122.log",
+        "sha256": "a3d9c33d861dbe7d4250415f5ecf00ee018890ff968eb01dfd735968a08f7134"
+      }
+    },
+    {
+      "name": "1123 确认入口负载位丢失",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1123.json",
+        "sha256": "ad56dd89f41ba2514905aaf31e7140e71d85d585e24ec3d05e6ab29b033a1e65"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1123.log",
+        "sha256": "e932d956bc7115fec7955a68dc21fb39f80b36d56ea0ba684f0d28fe80293e69"
+      }
+    },
+    {
+      "name": "1124 实际初始化漏接入口注册",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1124.json",
+        "sha256": "f40d81126aac118391b6f4c565b5c1eef133aae25759ccef71bcc4b17946e86c"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1124.log",
+        "sha256": "ea11215f5ee74a523653f8c82e42cf9cd1e07890e602305e2629b713ec405b65"
+      }
+    },
+    {
+      "name": "1125 Connect未输出入口证据",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1125.json",
+        "sha256": "e08e00012dba49a4f71e730670efb5640adb4248d67317631d87dadc1fe932e1"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1125.log",
+        "sha256": "fafbe64d12b5fe1d4b86b213a202a61bea600dba6076f46b63b426a3f648a90b"
+      }
+    },
+    {
+      "name": "1126 入口计数未递增",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1126.json",
+        "sha256": "8d017f0dfca3c561f9abfe80f7d41b5f510f8d2c730e344627817aaa810997ef"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1126.log",
+        "sha256": "e7f698bdce95a526f8235ae82e6f2cf91c0e37c0085431ac7d5d9475c24ce915"
+      }
+    },
+    {
+      "name": "1127 入口首次计数从零开始",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1127.json",
+        "sha256": "ee8993556dd9f2bc29add0cd90120a038b4f3564e5cde8781bc4703f338b74d3"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1127.log",
+        "sha256": "0a8f35dcd9f1b53e05e568fe535a8713a37f9f0d120209f6d37d8f8faa9f4901"
+      }
+    },
+    {
+      "name": "1128 入口溢出归零",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1128.json",
+        "sha256": "42a40cdd3cca38eca622bff5dc3127357d6885e59cb9709840ef37ff78bd9be1"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1128.log",
+        "sha256": "44c1b2bcba753cc621db6e4e92153a8949d3b0801e4cddd266738b775e0488bf"
+      }
+    },
+    {
+      "name": "1129 入口只输出五阶段",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1129.json",
+        "sha256": "b1a2cc7cd680afcf83148db6f7d17c360de6572bf1fcb377893316a715e63483"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1129.log",
+        "sha256": "2894cfbc2800ad2db7195c35a2bd0ce214903a0ff5b3e873536d18e1f1ce0542"
+      }
+    },
+    {
+      "name": "1130 已提交入口被输出为零",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1130.json",
+        "sha256": "8dd2eda23fe974e90ddc3ccc56b2d5c6fd152bbad5e56fe2e96f61588648d3c2"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1130.log",
+        "sha256": "b83987e6e1b2666284d08e7682125cd7cc659921acda5ddcf4f56634bc8b30a3"
+      }
+    },
+    {
+      "name": "1131 入口段残缺仍发布",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1131.json",
+        "sha256": "fe14665b1ce4fb53db14b371dfd608a636be258e7f1076da7d5157dc3e80c5f7"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1131.log",
+        "sha256": "4e2d6b498024b64de94b9c5f2c3fad03ce25b4ecb7bce10a7dae99ca6064df9e"
+      }
+    },
+    {
+      "name": "1132 重复入口阶段被覆盖",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1132.json",
+        "sha256": "6aa321878b37f1a250713582c2ab2db5d84b07e7834a7b690142c161cb15d833"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1132.log",
+        "sha256": "907dae73e585d06fe75a2ac55fb4d9a829711780373f2560871962b66fd2a314"
+      }
+    },
+    {
+      "name": "1133 入口阶段仅按数量验收",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1133.json",
+        "sha256": "52a4ed3f7c9472dd60aecdb472145c2fb57d57e3be3bbeb335b93ed38fbf8350"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1133.log",
+        "sha256": "4eccf981eaa096162b133f79eadcce6a21ffc1f5a36250f8893e06b88fea897e"
+      }
+    },
+    {
+      "name": "1134 负入口计数接受",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1134.json",
+        "sha256": "42be0e7aee5fa3cf8d3140a574b9c22984e6f28e6048dc6dfa419b92a5b1c4a3"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1134.log",
+        "sha256": "908087fa8985505372025d7ef3a8fff86defd9c98eb1fe8067daf68366ce5c9a"
+      }
+    },
+    {
+      "name": "1135 入口大整数越界接受",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1135.json",
+        "sha256": "d53f2b0d8c93626a529372dab87f7cf0f09ac9d92010dd3967ac1f6258a18dff"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1135.log",
+        "sha256": "55099d0b6c9f8b5b0b93739a6afcb72c93223f51180bf6849115b406a73fb824"
+      }
+    },
+    {
+      "name": "1136 零入口元数据被伪造",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1136.json",
+        "sha256": "cd5bb95510235a811962c3e6690357bad04e10f6456c802d79b8a62a9732e2dd"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1136.log",
+        "sha256": "557728a4921a719709ecb7d4010d3b458faf7e078efe1091542284ab214aec47"
+      }
+    },
+    {
+      "name": "1137 入口时间矛盾未拒绝",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1137.json",
+        "sha256": "fdc393ad69dd7dcd2488962f517ea1194a5f52442b5e0f8ef8dfbf501cb59b74"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1137.log",
+        "sha256": "66fe38ae02f56f4052f373896a5823825216f70362fa260c38cb01374dcfc617"
+      }
+    },
+    {
+      "name": "1138 旧日志入口未知被补零",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1138.json",
+        "sha256": "a5b3201d90f6ccb22024dfebff814aac6d4cc09412b4b93523c33a6016bfce87"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1138.log",
+        "sha256": "a3b157cd9640b8d5b095319bc5daff55552ee5edaf2123e53d4adf0b558622a4"
+      }
+    },
+    {
+      "name": "1139 报告忽略完整入口段",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1139.json",
+        "sha256": "391d55d7955fcb0614a29b7e541706d391c843c712f954732fea8f017c948b00"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1139.log",
+        "sha256": "1edc6b340ebbe1477f11706b5c65fc89e7d98463c5e785d057af8055de5b4883"
+      }
+    },
+    {
+      "name": "1140 执行器忽略Control原生撤单失败",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1140.json",
+        "sha256": "2f3b10ba6ef975c5cd8c64a0b69e0e6a25c7c810e25b1a1a928c07a796565d89"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1140.log",
+        "sha256": "23af54bf2c841f3cb3eab81fb08cc443c7cf68683942c29cfec981965d583977"
+      }
+    },
+    {
+      "name": "1141 执行器忽略Main原生撤单失败",
+      "report": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1141.json",
+        "sha256": "14b6320b2204beb84e4a1d747d0f020ca8f6afc7e05b2ec8ed0a90e0b6aef857"
+      },
+      "log": {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-targets\\8fba96f\\target-1141.log",
+        "sha256": "d5f1a25c38129d0a1749073e6d596738dd961269657a8c6044fd908a6de4ee95"
+      }
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f",
+            "passed_tests": 749,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-regression-8fba96f-r2\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\cmd\\oracle",
+            "passed_tests": 451,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-regression-8fba96f-r2\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-regression-8fba96f-r2\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "85d33a6903c95e21648bfdd633f5aa5dfe22a7ebc023db3acbf62e51f973d5c8",
+          "index_sha256": "3305d0b5c4ed8e28b99442329c37ba923b399c48cf80dc0c3d85757ab783dd85",
+          "head": "8fba96f65f13312f2203169645be1c71de357cd7"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "85d33a6903c95e21648bfdd633f5aa5dfe22a7ebc023db3acbf62e51f973d5c8",
+          "index_sha256": "3305d0b5c4ed8e28b99442329c37ba923b399c48cf80dc0c3d85757ab783dd85",
+          "head": "8fba96f65f13312f2203169645be1c71de357cd7"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-entry-regression-8fba96f-r2\\summary.json",
+        "sha256": "7526d879e58f4771b1ae999e6522a5dfe5f73bf299576eac3d87888a171d2059"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-entry-regression-8fba96f-r2\\root.log",
+          "sha256": "14f4b5eeb689b103581bd4471bfded197c62872b63ebc535dd80df5f6bc4ea55"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-regression-8fba96f-r2\\oracle.log",
+          "sha256": "888c62c6b7641952b05571f1f6d7dbfbf3d37968266c7d69ff10d1f1ef06ec12"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-regression-8fba96f-r2\\external.log",
+          "sha256": "6694e8d17a320e46e9e45a7f5dd2c1d765b4772b14ddfb4f38362deee8b9104d"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f",
+            "passed_tests": 749,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-race-8fba96f-r2\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\cmd\\oracle",
+            "passed_tests": 451,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-race-8fba96f-r2\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-race-8fba96f-r2\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "85d33a6903c95e21648bfdd633f5aa5dfe22a7ebc023db3acbf62e51f973d5c8",
+          "index_sha256": "3305d0b5c4ed8e28b99442329c37ba923b399c48cf80dc0c3d85757ab783dd85",
+          "head": "8fba96f65f13312f2203169645be1c71de357cd7"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "85d33a6903c95e21648bfdd633f5aa5dfe22a7ebc023db3acbf62e51f973d5c8",
+          "index_sha256": "3305d0b5c4ed8e28b99442329c37ba923b399c48cf80dc0c3d85757ab783dd85",
+          "head": "8fba96f65f13312f2203169645be1c71de357cd7"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-entry-race-8fba96f-r2\\summary.json",
+        "sha256": "2734d44d66eb371bbb7d8ad8f09e051c5ee7632e20cf1f6b1734d65bbe96b5ad"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-entry-race-8fba96f-r2\\root.log",
+          "sha256": "fd3cad3ba3329527782d8d167853da35584db1f491af2f0d7a29f16feff124df"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-race-8fba96f-r2\\oracle.log",
+          "sha256": "945dfcc39b53befca6b2ab17aaceb5d7cf8e58e3e578a74849f0108a53053bc6"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-race-8fba96f-r2\\external.log",
+          "sha256": "151ac25ebae3280e68536a4f64ddc02f89cf607034ab9ea6682cd4f8bed23516"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\ctp-entry-checks-8fba96f\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "85d33a6903c95e21648bfdd633f5aa5dfe22a7ebc023db3acbf62e51f973d5c8",
+          "index_sha256": "3305d0b5c4ed8e28b99442329c37ba923b399c48cf80dc0c3d85757ab783dd85",
+          "head": "8fba96f65f13312f2203169645be1c71de357cd7"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "85d33a6903c95e21648bfdd633f5aa5dfe22a7ebc023db3acbf62e51f973d5c8",
+          "index_sha256": "3305d0b5c4ed8e28b99442329c37ba923b399c48cf80dc0c3d85757ab783dd85",
+          "head": "8fba96f65f13312f2203169645be1c71de357cd7"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\summary.json",
+        "sha256": "7f0d4fe79eebc72a91600e7b2f1d16670a2298e4472f755c1f05214c8c882669"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\state.log",
+          "sha256": "1815d49427a77b12087008d9c5e4eb4aeb9abc5be26bf4abb2d3a019c73483bd"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\bundle.log",
+          "sha256": "624e757019d2a0c98b485b122ce10e9fb7189b4400cc6d0dbb727d5b3cf677e9"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\report.log",
+          "sha256": "c2b57edf657e811bec78376117d093faf44f5edc455ff483743b609313259c06"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\risk.log",
+          "sha256": "77540c5f49039366a1830a05fc53e42aa76c4c198c5cd71e80ca7d392ad84d6b"
+        },
+        {
+          "path": "C:\\Temp\\ctp-entry-fuzz-8fba96f-r2\\lifecycle.log",
+          "sha256": "7331175c5450186f3a985bb4262dffbd9408818715c53f666844e710ea727d20"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\ctp-entry-python-8fba96f.log",
+    "sha256": "22797b992c6db5b7a8aff0961a5e2748e0f13a0ba29812e8fbac361bb0a2c387"
+  },
+  "native_tests": {
+    "named_tests": [
+      "TestNativeHandshakeSPIBridge",
+      "TestNativeHandshakeSPIGeneralErrorAndConcurrency",
+      "TestNativeHandshakeSPIAllStages",
+      "TestHandshakeEntryJournalIndependentAndConcurrent",
+      "TestHandshakeEntryCounterSaturates",
+      "TestHandshakeEntryConnectSnapshot",
+      "TestHandshakeEntryProductionWiring",
+      "TestRestingWorkflowKeepsNativeCancelError",
+      "TestNativeQueryRowsKeepActualCodes",
+      "TestNativeInsertPreservesErrorsAndObservedState"
+    ],
+    "real_fixed_wrapper": true,
+    "real_spi_only": true,
+    "foreign_windows_thread": true,
+    "test_only_spi_objects_per_full_package_process": 11,
+    "spi_lifetime": "bounded test allocations reclaimed on process exit; no exported destructor",
+    "create_api_calls": 0,
+    "init_calls": 0,
+    "broker_connections": 0,
+    "real_env_reads": 0,
+    "original_null_payload_substitution_confirmed": true
+  },
+  "before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-parser-old-source.json",
+      "sha256": "c480b43bbed173bdcfb8461ab880416f1b301220ab437caf9e3f09ab8efb1952"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-parser-old-source.log",
+      "sha256": "54f055f2c629f19a38948d4f79deafe95f6c0fc3f8b6438d9203caddcb23ca1d"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-parser-rehearsal-fixture.py.txt",
+      "sha256": "d4c2cd44a95bcf3fcad5937cd20ebb8c7283dae79645684433d24bbf6f4d6d29"
+    }
+  ],
+  "failed_rounds": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\invalid-entry-first-round.json",
+      "sha256": "36c1b362c618865e45baa254beb117477ca5ab8e699983faec46bef3df7313d3"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\retired-entry-first-round-state.json",
+      "sha256": "984476138b457c2194322e704b8612127d8c4ca80dffc8972c539e5ad6ed3204"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\retired-entry-first-round.patch",
+      "sha256": "d72f07de834985561559bc76546b7bd8ed1eaed096adceb3d1fee7e46ccbe33f"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\entry-parser-before.log",
+      "sha256": "e4d03b0e854870417152c18e2ce7b5e355b6caf656109e87d24fbfceebf62b2d"
+    }
+  ],
+  "ci": {
+    "run_id": 41039608272,
+    "sha": "8fba96f65f13312f2203169645be1c71de357cd7",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 124008872234,
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 124008872536,
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "dependency_published_ci": {
+    "sha": "f1cef1de05e3e92d0e4d5203a8946fcba80c8de0",
+    "runs": {
+      "main": 41040159746,
+      "dev": 41040159964
+    },
+    "branches": {
+      "main": [
+        {
+          "id": 124010701215,
+          "name": "offline (windows-2022)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 124010701532,
+          "name": "offline (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "dev": [
+        {
+          "id": 124010701844,
+          "name": "offline (windows-2022)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 124010702181,
+          "name": "offline (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  },
+  "fixed_dlls": [
+    {
+      "name": "ctp_trade.dll",
+      "sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc"
+    },
+    {
+      "name": "thosttraderapi_se.dll",
+      "sha256": "774ca2f3bba3009e72ba1f8a5e7a752d569bbbd999f19017e7cabc5c32c08bdc"
+    }
+  ],
+  "spi_header": {
+    "path": "C:\\Users\\沁心\\go\\pkg\\mod\\gitee.com\\haifengat\\goctp@v1.10.17\\v6.5.1_20200908\\ThostFtdcTraderApi.h",
+    "sha256": "69390268a8de8aca8820e7d11c645aeeb640771537ef1717c4b9cc063af5ad65"
+  },
+  "spi_wrapper_header": {
+    "path": "C:\\Users\\沁心\\go\\pkg\\mod\\gitee.com\\haifengat\\goctp@v1.10.17\\generate\\trade.h",
+    "sha256": "bb121f9dede8e8282c8c958d5032993a1fdc830f7a92e38ffe3a7bb883936e71"
+  },
+  "spi_fixture": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\cmd\\oracle\\ctp\\testdata\\spi_bridge.c",
+    "sha256": "68a9805d805f50a27bb3fea00f18ec3d7ec9e5899609b8db642cdb195f55207a"
+  },
+  "historical_recheck": {
+    "metadata": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\offline-results\\historical-recheck.json",
+      "sha256": "ff2e6f49669dba5c3cc953dc23fd48de6bcef7249e4047bec0010d3b035c68bc"
+    },
+    "report": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\ctp-callback-followup-1d05374\\docs\\validation\\ctp-handshake-four-rounds-entry-v2.json",
+      "sha256": "72d2d9858c64399efa029ce265c5cb4578456db822c9ebe8822c3c32e23d8594"
+    }
+  },
+  "frozen_files_unchanged": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\resting-night-20261029-8bd89b4.json",
+      "sha256": "8657e04561e560251e15eaf770e895d3410bcd7d1b1d1c05334b15c4854de891"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-night-20261029\\ready.json",
+      "sha256": "c62f225dbcc6f79afd8373cf85b1d088c473900162f2f9f3b14aa596773b5277"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-night-20261029\\run_registered.py",
+      "sha256": "f5e55805fb8cf5ab6d748350ec9f01a6c51b26d5cccdc8708b5619c8c891cf9c"
+    },
+    {
+      "path": "C:\\Temp\\resting-20261029-night-8bd89b4.exe",
+      "sha256": "77125e94009425fac381593288d7df8b438d107820eddeaa47eb10c6ecc31e29"
+    }
+  ],
+  "candidate_build": {
+    "purpose": "candidate-read-only-handshake-diagnostics-not-a-new-trade-registration",
+    "source_commit": "8fba96f65f13312f2203169645be1c71de357cd7",
+    "path": "C:/Temp/ctp-readonly-20261030-8fba96f.exe",
+    "sha256": "5403364cee89fa09b4df8cd383c8c51c9ff3753043ab760b6181b7746999e126",
+    "go_version": "go1.27.3",
+    "GOEXPERIMENT": "nojsonv2",
+    "vcs_revision": "8fba96f65f13312f2203169645be1c71de357cd7",
+    "vcs_modified": false,
+    "executed": false,
+    "real_env_reads": 0,
+    "broker_connections": 0,
+    "ready": false
+  },
+  "owner_head_at_seal": "340a405bc2659d119a6725a37c24e78117db2b0e"
+}
