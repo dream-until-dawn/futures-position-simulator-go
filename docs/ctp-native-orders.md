@@ -14,6 +14,8 @@ send仍先执行原安全阀，再唯一分配引用、清理本次格子、调�
 
 新增明确的原生发送错误信息，区分本地绑定失败与SDK即时非零，不把它们塞进柜台ErrorID，也不伪装成交易所拒单。Insert若已分配引用，即使发送报错也同时返回本次引用与已观察状态；不能返回零OrderState抹除一手成交。Cancel/CancelByOrder返回真实调用错误，不改写订单簿为已撤、不清除成交/系统编号、不自动重试。未知仍未知，只有真实回报能改变业务终态。
 
+错误导出为ctp.NativeOrderError，实现error，字段Operation string、Code int32、Local bool；Operation固定insert/cancel，Local明确本地闭锁/绑定失败，Code保留实际SDK int32或本地保留码。使用者可errors.As取得错误，不能用Code覆盖OrderState.ErrorID或据它推断未成交。既有方法签名保持，存档/回放格式不变。
+
 waitOwnedOrder继续只处理本次引用、原有界收尾；撤单调用出错后即使恰好观察到终态，也须把撤单错误传播给上层，保留成交和终态供归属收尾，而不能让流程无错继续开下一单。原价格判据不能在提交不确定时成立。其他历史工具不由本批自动执行，也不借此扩大任何清理范围。
 
 ## 3 正反例与破坏验证
