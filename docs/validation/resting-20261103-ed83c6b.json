@@ -1,0 +1,924 @@
+{
+  "format": 1,
+  "source_commit": "ed83c6bb3a8e880086616680ad39cde64a3ff301",
+  "baseline_main": "be681ba117e008f283551ab0b7b0ff691b55e9b8",
+  "source_tree": "62da7d120555c7ef987c57f1146f1985c79e634d",
+  "registry_sha256": "ab68e7317fb74eb3d417a5684fcfac0c151d1e14bd6c518a5ffd5f47df8eb7d4",
+  "report_sha256": "2cd5294bf811969ec3d517cb8ad8c545addce0ac8d8a3b58dabcaaecb907d4ee",
+  "summary_sha256": "328b05850b0f5fee6728e69464f0faf202b64c35d9f916b0f32acfe9123bc15b",
+  "counts": {
+    "executed": 1147,
+    "expected_red": 1138,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "summary": {
+    "path": "C:\\Temp\\tuesday-mutation-ed83c6b\\summary.json",
+    "sha256": "328b05850b0f5fee6728e69464f0faf202b64c35d9f916b0f32acfe9123bc15b"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\tuesday-mutation-ed83c6b\\mutation.log",
+    "sha256": "0673e53827d5e93bd26b64295cd129f9466c93999143d7a6593d4005f43ed9fc"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "3028d2d8c7ce4c3ea54ca5f664190fb88ec3e609571f88e83a08741c03d57194",
+    "index_sha256": "3fdee8b8a4447f1d8411fbd8e45cce4d97690c2664131b7e7c3ef67acd15904c",
+    "head": "ed83c6bb3a8e880086616680ad39cde64a3ff301"
+  },
+  "retained_baseline_properties": {
+    "count": 1143,
+    "changed_rows": 0
+  },
+  "retained_failed_registry": {
+    "count": 1145,
+    "changed_rows": 0
+  },
+  "targeted": [
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\summary.json",
+      "sha256": "0c19a589ab1c37167f28218fbe0c9b39a9d94bad1d553446c2745153899beb01"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\884.json",
+      "sha256": "979fc616e11cd660993c374da1141c4d4ae914c18fdffe0ea9ce07dd444b713f"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\884.log",
+      "sha256": "01b277280e0786cc1288fd1f991ec6e648da91f92ed7411e924f25c19a18c17a"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1024.json",
+      "sha256": "df3445c37dc39f8fea9b7a06d21f6f4a1a786e772b6b054f74721479eb431d4e"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1024.log",
+      "sha256": "ef736e0b53d920ed0ae344b7a13a8f841399aeeceb9f33e710130abb660e52ec"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1025.json",
+      "sha256": "b6c28bc022fc3f8dc515d357499fd781241140bbc932c8b1bac794a73acefeb4"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1025.log",
+      "sha256": "144a38b66ae07e0e618a062f904f4f7c0482aac7c9c5edd82addc6185478cd1f"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1027.json",
+      "sha256": "779377f279e0c0d277a1a367c8e95612c4ae278dc0bb33903273a83f775f533e"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1027.log",
+      "sha256": "d695bb03c624cb5de179f278c4a1adc3d7de16c197f19ec31f86b34dfcd33a79"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1028.json",
+      "sha256": "a048d69ab4cf452bc93b394b5178ea4299a16f11547d02b6d252b90eb35cde0c"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1028.log",
+      "sha256": "c564442291515f34b6596f334ab9a000546f3c08c0a003ab62cdd74c0fb94fb0"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1030.json",
+      "sha256": "e8771d047da7ed34ca91b97c1934d45b50debef4a5f553fff943118e0696a8ad"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1030.log",
+      "sha256": "11c384c6b1eaf6d800d659373ad7303c23d68c255f87f568c938b8293a868cdf"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1142.json",
+      "sha256": "d707414139dbee5b74958402302882f6974ba8b28d00e5da1f58fe645e152b09"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1142.log",
+      "sha256": "b70dcfba787212b5c2994275202e16468b713e436459e290c69b3f87e82aaf75"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1143.json",
+      "sha256": "2ebd864397685bd06f75aaee5e17faa811c6889538864dd02687dd15386c36d2"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1143.log",
+      "sha256": "1850e6983403cee2e8e73f76756a3e488d8acdebbd2b1d560ea087f87cb84818"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1144.json",
+      "sha256": "1574599b893a04830f9df2f5ca9f4a2651bd008cc33dced436081aaa391597be"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1144.log",
+      "sha256": "5dcda9b877c080bda8ca2f1380056fe5c6bffc3762df2e441db086aced03099e"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1145.json",
+      "sha256": "31af3ca467ce18890e77f69535f2dc04d5fc573fbf1389251ba020cf769faffc"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1145.log",
+      "sha256": "31b191f5222eec1f7914bd11df299ee12ed4af12f3b19507974670c82d3c5987"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1146.json",
+      "sha256": "afbccbe669aab88b7c602b70fc7d91321a9d46b8d096e5233f9c983ba516577a"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1146.log",
+      "sha256": "b6bb1267ac6a57838932773e317c9057d85ea2489813a75d75dcd09ce39d9f96"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1147.json",
+      "sha256": "eefc889aacdeb70216e5d8645216f3e145f17eaf49bd7aad45ec5672ec176a36"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1147.log",
+      "sha256": "4383e4f27a444248210cce9a1d7aeb00337dab756857ef8a496e8a078b3888da"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1148.json",
+      "sha256": "7bdfd45bf5b49e7ad8fb1ea1dd0d90b5444486ffc2add8e9724f731c9500f55e"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1148.log",
+      "sha256": "c7a33fc5dd1da2d8f963936a71b45c62ac69186d3f4f4056cb90d5ced5553280"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1231.json",
+      "sha256": "dd36037cdeacaaa970a17c83922109bf7f909ce1d7a30c4143e10e40c3d4599e"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1231.log",
+      "sha256": "84b057fac5433436684a6d67e8e377007e4961cc05ce7e7bab52a825c1a3e2b7"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1232.json",
+      "sha256": "954df15dd34f34cb733de91e89549e5f1ff4c128a7792284fc7dca51bf9b0f34"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1232.log",
+      "sha256": "cc9cb8a320fdb963f49445f05727de01c5b7a85ecb0eff1291031415d3d45ff8"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1047.json",
+      "sha256": "c74ffd3a582fb09c44209b73f964c74b1d2bb194f38f567995311de49aa1d6d3"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1047.log",
+      "sha256": "f83d090fb0f149bfc3ddb8f884004d72e3e83455559dcd4cd87ae523b55c1782"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1048.json",
+      "sha256": "b8301e2da5df21e0c25e2244873968296b54ecc5fec70aa2d98c609af031b39a"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1048.log",
+      "sha256": "31178de5ed0f5adc52ac8ba920df9f957c3ff40d8cbcb9a4dec40c7837cc2d04"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1049.json",
+      "sha256": "c09fd68d433defbe92c1780a35fcefcd819affcb48f3cf5045b02baafc94b086"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1049.log",
+      "sha256": "e9b1a3bccebbaae86ff148fbc61161c97c4daeab68ece4eda3c0d5f372ee99cb"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1050.json",
+      "sha256": "fd971aa3398f4a9ad582e7f9fb03ca4f4cfade8071ca15a2781bf1687b0afd0f"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1050.log",
+      "sha256": "26760a43fa2580ad8f60dc975680a3c648167ce94322b8518891fefe3dce1361"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1051.json",
+      "sha256": "90080f26325c9196a327f7e4f85ff24b5b7625e745208009b9fa75f7b75702ca"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1051.log",
+      "sha256": "b4bb804732a834df665e75afac770cddb84e969f63dd4ea63f2e706a73e92d16"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1052.json",
+      "sha256": "9ad8284bb2c9b79466ff7f39f6460d33f36b7f366d279ae67d02125dab14dca4"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1052.log",
+      "sha256": "7dbcf0a18d75ff8a44c7177791c374c0c89b0a2245422e32ff1d8ed9fc09273f"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1053.json",
+      "sha256": "0eccccef132888e3c0d706135c7a581ef6358271bc688d321d9ca884b000ec70"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1053.log",
+      "sha256": "b1d0bd8bad207d9f7fc4e39905d6c56a2d20ac35ade5292a92b4270157d85fe0"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1054.json",
+      "sha256": "7a9f613e7fa585b174944ebc21b7825cea1bc2a466ab2df3d03ffcf9e084c32e"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1054.log",
+      "sha256": "d00619ad153fecdcd7526d9cf32916ee8b1bbb61b10a9dcc4e1a24498fbb46dd"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1233.json",
+      "sha256": "e55509c1ce11e011b461de908ef3a10d5e45beaa97cff06fd256b46a7db2ef51"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1233.log",
+      "sha256": "3bcd1a28015a4221dd75b0a8e9eda33f31e4a62416123be4c0806552bdce0cfe"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1234.json",
+      "sha256": "5bccdf7bd9ff24846aad066b839e31b098bad0d40dde3b77c0e7ce399d6c4964"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-targets-results-ed83c6b\\1234.log",
+      "sha256": "47339b6cff3beba9ebee883c84b3e1c25cce703d8c707a4ecada0efb82a55961"
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b",
+            "passed_tests": 757,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-regression-ed83c6b\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\cmd\\oracle",
+            "passed_tests": 459,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-regression-ed83c6b\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-regression-ed83c6b\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3028d2d8c7ce4c3ea54ca5f664190fb88ec3e609571f88e83a08741c03d57194",
+          "index_sha256": "3fdee8b8a4447f1d8411fbd8e45cce4d97690c2664131b7e7c3ef67acd15904c",
+          "head": "ed83c6bb3a8e880086616680ad39cde64a3ff301"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3028d2d8c7ce4c3ea54ca5f664190fb88ec3e609571f88e83a08741c03d57194",
+          "index_sha256": "3fdee8b8a4447f1d8411fbd8e45cce4d97690c2664131b7e7c3ef67acd15904c",
+          "head": "ed83c6bb3a8e880086616680ad39cde64a3ff301"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\tuesday-regression-ed83c6b\\summary.json",
+        "sha256": "39ed1bed16b93fc52abc4ab7dafb5e7173a213b95d3ec97e6911baa9a7718e53"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\tuesday-regression-ed83c6b\\root.log",
+          "sha256": "454c61f3e1043915fe914578b52a557ee3411a661f29fcfcb60f1dadd66eee54"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-regression-ed83c6b\\oracle.log",
+          "sha256": "d50f1a09ef639ed87f28b6d2211dff26faa66abffbbd0cf8bd97b6f54e1782f3"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-regression-ed83c6b\\external.log",
+          "sha256": "17ffc0ca86655fd8c7ae965029366eba9f59b9ea1a921fb19f16f4b92acded5b"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b",
+            "passed_tests": 757,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-race-ed83c6b\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\cmd\\oracle",
+            "passed_tests": 459,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-race-ed83c6b\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-race-ed83c6b\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3028d2d8c7ce4c3ea54ca5f664190fb88ec3e609571f88e83a08741c03d57194",
+          "index_sha256": "3fdee8b8a4447f1d8411fbd8e45cce4d97690c2664131b7e7c3ef67acd15904c",
+          "head": "ed83c6bb3a8e880086616680ad39cde64a3ff301"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3028d2d8c7ce4c3ea54ca5f664190fb88ec3e609571f88e83a08741c03d57194",
+          "index_sha256": "3fdee8b8a4447f1d8411fbd8e45cce4d97690c2664131b7e7c3ef67acd15904c",
+          "head": "ed83c6bb3a8e880086616680ad39cde64a3ff301"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\tuesday-race-ed83c6b\\summary.json",
+        "sha256": "4fb9da976a46438cd7e63adb7b2da270d1e1659a9d09ee5ca10237677015cb5f"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\tuesday-race-ed83c6b\\root.log",
+          "sha256": "54d8474d496e7a0ececcb7656fd8895e7a17a278bede671d37e8b6bb82dfa09d"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-race-ed83c6b\\oracle.log",
+          "sha256": "0a26465913e3839529f83a485c1252529741e56b94d6ad104e0c798ed30beb59"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-race-ed83c6b\\external.log",
+          "sha256": "5734da359b487dc3298f29b05ba4d54689c8c63595a77deda79f67ad94d3a7d2"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-fuzz-ed83c6b\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-fuzz-ed83c6b\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-fuzz-ed83c6b\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-fuzz-ed83c6b\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\tuesday-checks-ed83c6b\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\tuesday-fuzz-ed83c6b\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "3028d2d8c7ce4c3ea54ca5f664190fb88ec3e609571f88e83a08741c03d57194",
+          "index_sha256": "3fdee8b8a4447f1d8411fbd8e45cce4d97690c2664131b7e7c3ef67acd15904c",
+          "head": "ed83c6bb3a8e880086616680ad39cde64a3ff301"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "3028d2d8c7ce4c3ea54ca5f664190fb88ec3e609571f88e83a08741c03d57194",
+          "index_sha256": "3fdee8b8a4447f1d8411fbd8e45cce4d97690c2664131b7e7c3ef67acd15904c",
+          "head": "ed83c6bb3a8e880086616680ad39cde64a3ff301"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\tuesday-fuzz-ed83c6b\\summary.json",
+        "sha256": "029c2f7a0db9c9f522fc2e35be68f4a7c03bb6ca5541132bfde7fc472ab87869"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\tuesday-fuzz-ed83c6b\\state.log",
+          "sha256": "9bbb14366aca7155f23e2601c07481b06d0008560d6ed9bd67f1bf9228d5eb2b"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-fuzz-ed83c6b\\bundle.log",
+          "sha256": "aaa569a501c2908db9d265fdfbf7497e72c94a4998ed8e4d754b4d6d3b180570"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-fuzz-ed83c6b\\report.log",
+          "sha256": "a1fd65c385d9628f76d291612569cf271331d181e8d2b80da507f67cd806463e"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-fuzz-ed83c6b\\risk.log",
+          "sha256": "adafaec473fe4189b6765d3f0ce66e62a1f7f32adf576f79d7711504bd026b73"
+        },
+        {
+          "path": "C:\\Temp\\tuesday-fuzz-ed83c6b\\lifecycle.log",
+          "sha256": "7320b6eb7813647edf4e27e8c3f86b287ec7dc62e32ff38a320a3b04b3ebfabb"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\tuesday-python-ed83c6b.log",
+    "sha256": "f236a2a4866c28810dfbe4cacd04022ab83d121246c48bf73bc185c85df8335d"
+  },
+  "ci": {
+    "sha": "ed83c6bb3a8e880086616680ad39cde64a3ff301",
+    "run": 41472988450,
+    "branch": "codex/resting-20261103",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "date_before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\before-clean.json",
+      "sha256": "4d0c3b410c356ee41ef5d4ce337a68dccb1409b171a3b65e16521d8d850174da"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\before-clean.log",
+      "sha256": "584255ca75537fa598071e0967627ab37088d0c1b0ee0ff8a90c86876c037c80"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\before-fixture.go.txt",
+      "sha256": "29fe7ea8b370a318be4347cf028e0905babd0dd211429f6593c694bbc84db5e4"
+    }
+  ],
+  "cache_before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\cache-before-clean.json",
+      "sha256": "a8564169ec41b9788a964176974d7bd06ad8c723ecd6e85674185d9d30597897"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\cache-before-clean.log",
+      "sha256": "4620077e2922716c2c128824cdef7fb27c99c1f50158958bca0d485b5c97feda"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\cache-before-fixture.go.txt",
+      "sha256": "223dceb45eaa5caf3126a7a9a2e2130b230b48fa2eb55efcbb706741f1b16a08"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\cache-before.log",
+      "sha256": "45c9751cb06a6c6028271639dad2eb39a71272e553ca0f730e59c5ec35777ffe"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\cache-after.log",
+      "sha256": "21d6a30ab5326a81ee7e7728bfa01d437a0f8387225fc8691e394040ad6fb327"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\cache-final-precheck.log",
+      "sha256": "cf5cc443319302410288db53cd845265f3d211fa4aff9b5e3ec86b479465cb03"
+    }
+  ],
+  "retained_failed_round": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\failed-d32abea.json",
+      "sha256": "bb2b73a7a3ae8baa3852e6636e457870511b2a87eb06f79bb18a759b9f2719f0"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-mutation-d32abea\\summary.json",
+      "sha256": "1614a0d2dbfb32bb3e640f5b256fdb458eb8217e672b71f63d2446af70445460"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-mutation-d32abea\\mutations.json",
+      "sha256": "cdbfbb5ef7090991be400209608e63e348a82e810c2ba5e168a779ec409c639d"
+    },
+    {
+      "path": "C:\\Temp\\tuesday-mutation-d32abea\\mutation.log",
+      "sha256": "4ad7efbc6dfbadffda9ff087d8a32db0503a45d580f593b40ad8fab2f5181243"
+    }
+  ],
+  "operator_template_qualification": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\certificate.json",
+      "sha256": "e5eb4340d804af1019e36501585ba3c9f21ab73a083bd13a4942e53064410a8a"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\mutations.json",
+      "sha256": "a9099a98a7e78961ee0412406dd889af8ea26332ed2efb42db3380b7a7264bd3"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\baseline.log",
+      "sha256": "803b05807f382c8c41daa758c52014416675efe92652d0955e7f8b85e0201e2d"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator_runtime.py",
+      "sha256": "2d29461b4a922fb74c571b2e308089358676828eafefeff1d4b6e34be1810186"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator_template.py.txt",
+      "sha256": "7c80bfc1c3c59150c057de8dce692e87264a70dd71132fa2b977224068546c61"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\test_operator.py",
+      "sha256": "b6ffdb5b9e68a0b36b8f88bc7587f075a52f1c7c3cd0ff8edb18cb2c61c44b19"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\qualify_operator.py",
+      "sha256": "878c3b838aed7824ea5e76ddb73b23ead34c3ce02d636eae601591c95b84d215"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\scope.log",
+      "sha256": "8cd2bd0f1986d766467a3343744f28e6ad9b28fcb33a6771d0599676a9dcda61"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\commands.log",
+      "sha256": "cf177430ab634ba81ecdf4bd3171b844036b4591e231267ce9f2afcf239bb6c0"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\publication-hash.log",
+      "sha256": "f5a8ffda4bc128f62cda3b661acc2d283ce39483e1a33f8e9e6620285011ea0c"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\publication-scope.log",
+      "sha256": "2bac453d145ba241cf8ef958d52a2369e520df9cd15346d78c680553f6450644"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\publication-ci-sha.log",
+      "sha256": "f4c23f7649ab1336849eb23fb36ecb35530bcc0500e6ff76643276500f472ab2"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\publication-ci-jobs.log",
+      "sha256": "2f66fdd1c9c8f420cf982cb23c71644f19eb2e6b48f7cfde66f6c51591a3413e"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\safety-switch.log",
+      "sha256": "ed3794a3f94786747a28f735e02c92b312cff1aec80b25d01da66bca3ca1ae9d"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\safety-volume.log",
+      "sha256": "65e97c4f46feec42a842aa3511127c6284dd2cde9d8a7fdff052afbffa463eb8"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\native-exit.log",
+      "sha256": "e172fcd584d4e659bdf144c64ec80ae4e47dede45ef833f01bf4472e522472c2"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\preview-day.log",
+      "sha256": "8cbd4af0ed3e5fd3e01bec403cae25ad8d7245f9dac8cc659d747045c99ff82e"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\preview-readonly.log",
+      "sha256": "d1336a9d6d28cf1cc56a883dfa22bf782d382a9021874f02b06bff6149dd7fb9"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\preview-notional.log",
+      "sha256": "265619a94569c533b51affa14dfd57b10691d1326c780f71a0e733d0f7077457"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\rates-unique.log",
+      "sha256": "1b9aeacd79b27a538e0559f202219e9db694dd218a18c053f4367c5ba86d981f"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\rates-finite.log",
+      "sha256": "2822df67c192039d8c609de94b6d52db1f9c4ce128088b9ccce9c7d9ed716867"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\rates-scope.log",
+      "sha256": "ca0b3cbe97cfbd0e1f036237afc3b620df515d7ab19cf85e420ffe11f016ea61"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\rates-day.log",
+      "sha256": "b4dfd8249778a845fca69a34a1a56e1375109a20812d8d31f18e68863d2188a6"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\final-start-window.log",
+      "sha256": "0d88326615095a2bfffb9130f51acd47cea4e740ec1a09d4b4fa7309a0d5b7f9"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\unknown-child.log",
+      "sha256": "2f17e410843e365d49113375227f404c9369a0c08d611f69554b88eb12d2b097"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\kill-unknown.log",
+      "sha256": "b179fe9eede33bb347e1ae4c3b4a7a73d8ff4ff7140687ca2764c6a251df7c49"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\args.log",
+      "sha256": "a2347f66be535e49b2838a1e130f51af7a5aaf42513bc48efed21874527f3891"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\date.log",
+      "sha256": "e096e8265f21f7720c16151831c40acb4242d063f69ee016174a7b5ea9a38780"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\end.log",
+      "sha256": "807a818cfdf63aed62b83092bd7d96b7aea268fc3c363e101cc3a6f22cc489c2"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\exclusive-bootstrap.log",
+      "sha256": "4c5f470de9593a3fb9c79e6e38472080adfb2171501f135c45bdee8723af5ce9"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\configuration-hash.log",
+      "sha256": "d9cd533ef7c3b4e18e68107fcb073daf8052c466198d5209f40f13ca3c915e5a"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\configuration-source.log",
+      "sha256": "3e18455ed61a5c307dfa201c321057a2f33b87e419373ccbf115dcf507d28343"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\private-module-hash.log",
+      "sha256": "c749f3ec0ed45b5978675a7ec160e24c8f77137737023464fe1beb419b92726f"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\source-module-hash.log",
+      "sha256": "936b67f57c51562fc3abdaebf55c6abb3a6900793bbbaf6486673f25fdcd1cbd"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\private-module-identity.log",
+      "sha256": "049c03090aadc8e4aae39aa8e4d924372500f538203ae0c1796a065a637c9c8b"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\post-load-window.log",
+      "sha256": "da0a5c88227761cea9f8f35d5d23cac099e545e14781d4846213b7e47713801b"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\post-start-window.log",
+      "sha256": "1f441ff56800abe7ae7e606e2d4446720286ed62e669c83284a51e8173d5de58"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\phase-result.log",
+      "sha256": "3dc4aaad857985df199ff5fe7346cf980714e499661b379b8881e1b057bb536e"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\stopped.log",
+      "sha256": "ed6340ef5fe6613ee31b1c18922f04762288e6b42c20b18127078ee2010158fa"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\private-error-chain.log",
+      "sha256": "df85139fc95d776bc61635887e87012c6f858003104b247da2ee0a75626a0e87"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\unknown-unstarted.log",
+      "sha256": "e5a84bea4a731cf2d6664c5b69cc294ead351c8b48ff4f609a40a9eee5875cd3"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\exclusive-evidence.log",
+      "sha256": "97a60c7abaab8216f70bdce1845726ee6c7014bf4b93d40a2483d110ef361fc1"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\fsync.log",
+      "sha256": "a8da1c8567291b1064bede264706c36dfa8147b6a986749fe8f7bc84f696cdfe"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\final-state.log",
+      "sha256": "2014dd1e01a5f9147ae4a3b4fb30c6dbe2256a8b94a06a1315ae2cb55a8669f9"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\entry-cache.log",
+      "sha256": "48c2e4f031f2037c6edf1c1ca9e4150201db4dd7e04b12702090ed74374e4fe8"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\native-process-wiring.log",
+      "sha256": "f7cb48e3b0b59a7f2454618bc6e456f0e6676fe52095320957754affc0ca54d1"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\operator-template-qa4\\native-process-unknown.log",
+      "sha256": "f4bb38823dcd4dbfd14aba455861c0f9fac005dcbcba48f22d91c2ed27963556"
+    }
+  ],
+  "candidate_build": {
+    "source_commit": "ed83c6bb3a8e880086616680ad39cde64a3ff301",
+    "path": "C:\\Temp\\resting-20261103-ed83c6b.exe",
+    "sha256": "c3f2e9b3db6c4a204a2ca200262afc58d11bba5138f58c785a528c7688fe9b07",
+    "verified_at_bjt": "2026-11-02T23:43:21.233676+08:00",
+    "build_info": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\resting-20261103\\build-info-ed83c6b.txt",
+      "sha256": "304c6f95f8ea5abeabcd54f7e288aab2d4398bbc56d9938c04774d68b6d91abb"
+    },
+    "actual_exe_executions": 0
+  },
+  "fixed_dlls": [
+    {
+      "name": "ctp_trade.dll",
+      "sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc"
+    },
+    {
+      "name": "thosttraderapi_se.dll",
+      "sha256": "774ca2f3bba3009e72ba1f8a5e7a752d569bbbd999f19017e7cabc5c32c08bdc"
+    }
+  ],
+  "runtime_files": [
+    {
+      "relative": "scripts/readonly_admission/__init__.py",
+      "sha256": "1ca73765bc4812a91101b44791b6d0750039400e8529a3c5f21cb8de1c0ecaf9"
+    },
+    {
+      "relative": "scripts/readonly_admission/checks.py",
+      "sha256": "973d5c078eb708bb877fbeedc37e7b90a4fbbd926aebf7870b782ed071048777"
+    },
+    {
+      "relative": "scripts/readonly_admission/envfile.py",
+      "sha256": "01fa8cfa19d7870d6ce9068238387d12c9c9e85df4cfca32eeb812ff51a4b1d1"
+    },
+    {
+      "relative": "scripts/readonly_admission/errors.py",
+      "sha256": "b88489813d8861c88d9770952f5505f193e803aaa7c085cbe2bb22b89aae96ac"
+    },
+    {
+      "relative": "scripts/readonly_admission/journal.py",
+      "sha256": "0c53c6effe207b6c1d64e04418716bead05d839e1f260d640828bdfe1b4be1fd"
+    },
+    {
+      "relative": "scripts/readonly_admission/processes.py",
+      "sha256": "a279f26579871a804c1eb340e41d4946bdfbc679e440727830dd339b8e887574"
+    },
+    {
+      "relative": "scripts/readonly_admission/registered.py",
+      "sha256": "144e5a3a70038270bf8354263958895808c2caf64f16060ab44efc54cfebb526"
+    },
+    {
+      "relative": "scripts/readonly_admission/release.py",
+      "sha256": "8881d9a0f3fc9dcf1c56d31c24b7fbbe3ef8a9eb3082ef5285fb5d6a5b445295"
+    },
+    {
+      "relative": "scripts/readonly_admission/runner.py",
+      "sha256": "6f8294f767822986db6af8f9f4bf80e6029c33107da259ec91d8a646457015a4"
+    },
+    {
+      "relative": "scripts/validation_runtime.py",
+      "sha256": "60e735cb392c76009a9e0b970f8091803968950d4bdfee4335eaf80450355817"
+    },
+    {
+      "relative": "scripts/process_worker.py",
+      "sha256": "c4db29bd34c15643d302abd86a7b8639ed16d7fd5f1f025c26c369e844cea9d2"
+    },
+    {
+      "relative": "scripts/windows_job.py",
+      "sha256": "bc4d713252dfd2404d024221d18b4241c26f302b5ff0f9855b97cb63648c505b"
+    },
+    {
+      "relative": "scripts/verify_evidence.py",
+      "sha256": "0e951b354db1a78a71eec8363a669d0a2824a8b7b04ab79e89f1fb3dac6c3513"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/__init__.py",
+      "sha256": "cdf921d17f6115624094ad310992f06955ea304e27b9a88fd3b9a0e2b9a12c73"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/analysis.py",
+      "sha256": "af9ac0fd26fe21747070eedfc79177220a2a31644ea32e9c1d1c20aef8ac6b98"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/entries.py",
+      "sha256": "f7694814406361e55750245cd7e654f25ee3c65f967d3d630e547857da9b5ee7"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/integrity.py",
+      "sha256": "18f28cffb9be4988f0b72e5505e996fa947534f0b17447cbeebd9d3ae7b61828"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/parsing.py",
+      "sha256": "fa601990d691b1df44a52a0bf16bbd79df5257015d0a79ac2e8c19bea7e4ccf0"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/reporting.py",
+      "sha256": "1d90643e4414e128fe4e1417a8504fed9979e64b8a76b1f765fca3aeed01e142"
+    }
+  ],
+  "prior_live_readonly": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\docs\\validation\\ctp-readonly-live-20261102.json",
+    "sha256": "ee95e5c117318b9ca14aec767fae5a40f9d7fffa705a7a78d9e6d7ad3c961432"
+  },
+  "scope": {
+    "batch_real_env_reads": 0,
+    "batch_broker_connections": 0,
+    "orders": 0,
+    "cancels": 0,
+    "private_operator_tests": 61,
+    "private_operator_faults": 40,
+    "next_probe_date": "2026-11-03",
+    "human_trade_authorization": "one-lot SimNow order and closeout, only if all conditions meet",
+    "live_one_lot_sample": false,
+    "failed_round_not_reused": true,
+    "tag_created": false
+  }
+}

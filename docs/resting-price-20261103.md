@@ -31,3 +31,7 @@
 新轮目录C:/Temp/resting-probe-20261103，启动记录/进程/日志/报告存在或未知绝不再次启动，不删除重建。预检与执行分别原子独占，启动请求无响应先查原状态，不重复调用。共享只读锁.env至各子进程结束，哈希各阶段一致；实际cwd为私有轮目录，不在项目根留下SDK流文件。执行器正常收尾后同会话核持仓与未终结委托，再离线resting-verify验真，不能为收尾补证据重连。
 
 全部验收、发布、准确新构建与实际封装资格及真实就绪落盘完成后，创建11月3日10:45单次同会话任务，并核实际任务配置及无重复旧任务。仅开始、完成、失败、未知、未就绪或需用户处理时通知，无变化安静。终态/错窗/未执行后删除本跟进，不自动次日执行，不打tag。F9c与六项真实规则仍各有前置，不擅自扩大到lh两手、跨结算或出金。
+
+最终准确源码ed83c6bb3a8e880086616680ad39cde64a3ff301已完成独立1147项（1138预期红/9预期绿/0异常、exit0）、25定向、三模块严格regression/race、五个20秒fuzz、166Python及Windows/Linux源码CI run41472988450，源码tree/内容/索引及原始引用已独立验真，见[完整证书](./validation/resting-20261103-ed83c6b.json)。原1143条保留，d32首轮2条红错理由与真实还原、旧日期及缓存业务先红均保留，不拼接。私有操作模板61正反向/40破坏通过，最终配置绑定后的实际文件还须重新资格验证。
+
+不可变候选C:\Temp\resting-20261103-ed83c6b.exe，SHA256 c3f2e9b3db6c4a204a2ca200262afc58d11bba5138f58c785a528c7688fe9b07；实际完整revision=准确源码、modified=false、Go1.27.3/nojsonv2，未运行。准确文档/main/dev双平台CI和实际就绪/任务回执尚须核验，不因本页写明候选就提前下单。新启动层另核Python查询树与resting/ctp-readonly/oracle原生执行器，未知不当0；哈希核验后的模块用本轮独立空缓存加载。CPython缓存行为依据[缓存失效规则](https://docs.python.org/3.14/reference/import.html#cached-bytecode-invalidation)及[sys.pycache_prefix](https://docs.python.org/3.14/library/sys.html#sys.pycache_prefix)，本机旧pyc复现才是本批实际机制证据。
