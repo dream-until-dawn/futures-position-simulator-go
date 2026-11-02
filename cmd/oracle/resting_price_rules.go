@@ -10,8 +10,8 @@ import (
 )
 
 // restingProbeDate 与 restingProbeDay 分别绑定本轮自然日和柜台交易日，日盘同值仍须分别核验。
-const restingProbeDate = "20261102"
-const restingProbeDay = "20261102"
+const restingProbeDate = "20261103"
+const restingProbeDay = "20261103"
 
 var probeShanghai = time.FixedZone("Asia/Shanghai", 8*60*60)
 

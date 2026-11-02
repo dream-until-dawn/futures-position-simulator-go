@@ -1,0 +1,412 @@
+{
+  "format": 1,
+  "kind": "single-readonly-live-observation",
+  "source_commit": "63829d5dea6109765b01a81d06b755e7d6e0878a",
+  "published_main": "be681ba117e008f283551ab0b7b0ff691b55e9b8",
+  "closeout_recorded_at_bjt": "2026-11-02T22:38:55.196112+08:00",
+  "natural_day": "20261102",
+  "trading_day": "20261103",
+  "window_bjt": "2026-11-02 22:36 inclusive to 22:41 exclusive",
+  "process_exit": 0,
+  "entry_counts": {
+    "front": 1,
+    "authenticate": 1,
+    "login": 1,
+    "settlement-confirm": 1
+  },
+  "confirm_response_wait_ns": 6336388100,
+  "broker_parameters": "unique known declarations independently validated",
+  "broker_connections": 1,
+  "reconnects": 0,
+  "retries": 0,
+  "orders": 0,
+  "cancels": 0,
+  "processes_remaining": 0,
+  "private_closeout": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-now-20261102-ops\\live-closeout.json",
+    "sha256": "b620310e256243e5bf49ab888aa38f5b893b31c6af4f348e498c9943a913a24b"
+  },
+  "binary": {
+    "path": "C:\\Temp\\ctp-readonly-release-63829d5.exe",
+    "sha256": "c30077a7de6dceca766883379ffd9f710ac6c499fdc050c710bdd9ecdf9109e7"
+  },
+  "plan": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-now-20261102-ops\\amendment.md",
+    "sha256": "7d217f177c26e2a7855544d04f772222a3f854b17762128f71b3cfae33df5431"
+  },
+  "seal": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-release-20261102-now\\final-seal.json",
+    "sha256": "264dfc014e1706f00848d904f432101eae1ec7350dea4d122726aee35defaf45"
+  },
+  "raw_artifacts": [
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\001-start.json",
+      "sha256": "b73420d4ba2579679804abbafba40ca9e4c64caeb7141231d1461fb2dba1a710"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\002-begin.json",
+      "sha256": "10c0306b1afcb67a396a0da5e9a1420278351cdd1acc4723eb6c2c850529d998"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\003-process.json",
+      "sha256": "6bfb8d0309d5639efe948477a019eb34d2015297b14c96c483cfd40d02ab62e3"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\004-command.json",
+      "sha256": "495c122f4461226d879851647a23b6e6e5a6f1a41ff8096021e03a1b183fcb58"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\005-private-process-identities.json",
+      "sha256": "8d2288a4b1a5b3f9309fd0839bb36a9684fc6bd3f907416bc7795129e0003ff4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\006-passed.json",
+      "sha256": "160164a9c72f509b91987efd0d0cb194f9ac91ead97351ff0499fd281651c789"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\007-begin.json",
+      "sha256": "9d158ac62b88e0c53b72433a525fe14a8589a392cd701e754ac2f04cda84169f"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\008-passed.json",
+      "sha256": "28e44032dd1ae47550fb2c3a8ba73f6e9e8c721242ea85b1eabe4c2622fc9b6e"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\009-begin.json",
+      "sha256": "abababbe3c06a0a2db545d136a798858bbe8813a7b95ffd69c35fa0662228be6"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\010-passed.json",
+      "sha256": "5944c608c592615b8ff4973bc008bf7e52f76d519bcd3ed3779407cbc219cd94"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\011-begin.json",
+      "sha256": "34cf9e3bf6c279cb360c979aa63616d9e1537ac5ccf0759c604dd14c621c19fa"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\012-passed.json",
+      "sha256": "f211f79d716d1c26896c7662cddb3381b6ab970c7b53dd13d0c76188ae95789e"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\013-begin.json",
+      "sha256": "f1daf89c007e46461e76858ee243ee2d6bf36a83eb7fc93f97e09dfaa81583a4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\014-process.json",
+      "sha256": "bf6591a34ee2747058012439a1f4a3c9c6bec8050a4a77681098b9fc10edeeff"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\015-command.json",
+      "sha256": "4b690801acfc7363668a80b5913c7a2dbc776f970ce5b08e53ddbcc5df52d937"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\016-process.json",
+      "sha256": "40c60c0f993410db0a0389b11db39987db24fc1199bae317347512bb2fef2463"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\017-command.json",
+      "sha256": "5f09b4684f0cf5ea17e28697aff39574b059e2d758cf69324a3b151a69a723e3"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\018-process.json",
+      "sha256": "95062dd17193f7503a76645e13c64b357577f5150e4934e37ea7559aea3edbac"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\019-command.json",
+      "sha256": "cad3d083a4aec46bd6d7ed11eeb494cc95271ea282d19cc0fc96db9b5899fd4d"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\020-process.json",
+      "sha256": "dc4a4952fe1ecc715a56148d95f186e0440e9e7d9c2f0db371ddd2f03d8e0384"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\021-command.json",
+      "sha256": "f7ed8b3e8e20b18520346101e1eb064dd7a597e03559c110731a40f08edde21e"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\022-process.json",
+      "sha256": "505a0df2a9b7410f70dcc3489aaa043bddb118ca4fa56122322d4ca8085912f3"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\023-command.json",
+      "sha256": "91031ac1512ed1928bcb0cfe198f2e901270098b9a002259120f2a64d14091b1"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\024-process.json",
+      "sha256": "e842af3427fdd2925720fe506768eab976de3543ce994a5e996cb8cf0e71dfbb"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\025-command.json",
+      "sha256": "eb088664ac696e4c5b50100b113fcbdbd27092e1b18a0a04c7e4afff8a4f54ab"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\026-process.json",
+      "sha256": "3e013dd4b673b52791ad21fd9df516a51e45a0fb807e94c0bcef82675acd1fe6"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\027-command.json",
+      "sha256": "aaa9606d42c62fb0e3e81fd3145dad0c1198a2e45ca13860f1776df77ab9a684"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\028-process.json",
+      "sha256": "f485f04664e8f321a7e3046fec24222d85868acbf48669faf14b52de20b7b708"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\029-command.json",
+      "sha256": "43280d5d33229bef0e3683a705ceea6c11004588c95c71149cc0b8050e505365"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\030-passed.json",
+      "sha256": "bd3f51080211a28ad53a0239c463e9aef7f6053585706f202ff666a88bfea484"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\031-begin.json",
+      "sha256": "f05e8ab9447f700a6c462b0a34d9621b936dc7f6e59449062b88f15c187bde70"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\032-release-binding.json",
+      "sha256": "6a59124f6f4581cb548a3ca1167c65b16fea2112d960ee12755ebbe43994d81f"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\033-passed.json",
+      "sha256": "786f295033266dc078a3c8d2dbc0f039d2a92bd22d974735c726a68f54d0e0b4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\034-begin.json",
+      "sha256": "220439a5d0048c67a0d774fdeacc3b4a882777b144b166d355b381ef2b058435"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\035-process.json",
+      "sha256": "85918fd0059d4372cd8f974ce89b5e21d1551112064467e0685315fad7ef48c9"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\036-command.json",
+      "sha256": "6a9804fc24b22a243e283df7b8bf2644cea7094ffc8e93324b6630c20fc40cd2"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\037-passed.json",
+      "sha256": "f6e4b4dda892d209e64110d351d875c6c7c060de0ce260689939a386aac1ebbe"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\038-begin.json",
+      "sha256": "a80419ee4efa6571383d772f81845b3771e21a4bbfd8a95e7dfc1b540002c9c7"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\039-process.json",
+      "sha256": "e9a882137d8868ba55a005c74557d0281e89965b0e0e168ef9ddccb0bc004f91"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\040-command.json",
+      "sha256": "a28939272fdffeba951799d020896e379b44776805d3b9e6cfb8e6c7ba60d3d6"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\041-passed.json",
+      "sha256": "ca5af7187520f863b4bb5ed3a3240f088b354068654a1dd657f5f30b8482dfc8"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\042-begin.json",
+      "sha256": "f6daed1552452551ade775c967ca72a180245144750880831e45aec6b65f02fe"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\043-passed.json",
+      "sha256": "8c0d80a2df226c0c2269af8a692b422e4e17e727adfd25397b9f11d38b752d36"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\044-begin.json",
+      "sha256": "95b616edd5438e9a5dabfe094eefdb1a53ed836501136cd63b10562042715c83"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\045-process.json",
+      "sha256": "6a0c64e6cd058afffb4ad7ecdbd450de5c7d5140bc6628e6b76377e36c7e2d21"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\046-command.json",
+      "sha256": "d16050ef571d61d077459d0af5de7de88be72499cefe7c23bcd06204894e8743"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\047-passed.json",
+      "sha256": "adbe4e42c318040063a9329a095d76e7ca2293d4c68d1ecdd18f38f591ae2dea"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\048-begin.json",
+      "sha256": "b67d9344ac0c5ade76505d15e86b10ec17085ffac682b3cbc7c275690cf1c0a4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\049-process.json",
+      "sha256": "4c09415f59b5f04617513b6b5be333b6905ebf332c9f6763eee6d5d4c9aaaa3c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\050-command.json",
+      "sha256": "3fbe7e1c464ea028e2f140653ece8a47af36588aeb4be0cb2f98c7ebf1c3513e"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\051-process.json",
+      "sha256": "c0354fa761cbe9a1cc1c9ece5a937c9611af7ab7d807c678fd8611617c7b68a9"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\052-command.json",
+      "sha256": "6364ce618e1d734e2d589afc3a0517ae4d463d8a6d7b2d23ec2aa1d8df6759d4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\053-process.json",
+      "sha256": "6f8787448b0ca18365d3b4ab11187fe5f9a97b771f58125d788024faf92cfd4a"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\054-command.json",
+      "sha256": "ae3999e10b0af0bf2582e6c94aabfee99490d5f893567c42611ce653e5a7d3a5"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\055-process.json",
+      "sha256": "16c2330fb45eeecca46c86547cd6fb14488e58b4190ff6150655bbcc1583365d"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\056-command.json",
+      "sha256": "56d3fd119e57bf701477ea0cedb902ccba9afc3b6dc6b5f7882296c886cc2e2b"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\057-process.json",
+      "sha256": "e9aafb8a679f61b00b41ceed4b6e5c11bb5bede69060a7c0cf52a83c51da71bd"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\058-command.json",
+      "sha256": "eebc78dba6f3d5e71e70de3b8a21ad93ebac7f5b8f12457a8531f222653e4d32"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\059-passed.json",
+      "sha256": "4d12ed0e340e7164d0b5c9ce5f0c6486ef78f58684817cd3894b7d7455f664f0"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\060-begin.json",
+      "sha256": "cce4e34999ab922164513ca1c91f1d370fbb35273f14613d0b20fc39fd2b64d2"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\061-begin.json",
+      "sha256": "938b48c81085da4e2aa2027e08eb573327baa98f1674e50153af9e158a9ce075"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\062-environment.json",
+      "sha256": "1c39af8ac53bd7fae26219e4ff3a561d718c0c2140503b8adcaf92f0287d5dd8"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\063-begin.json",
+      "sha256": "cce4e34999ab922164513ca1c91f1d370fbb35273f14613d0b20fc39fd2b64d2"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\064-process.json",
+      "sha256": "37c9c10d040177ff12856cdf92c4289e7e0d85afb50400aacdfa7960f22c186e"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\065-command.json",
+      "sha256": "589ed86102f266e779452c44b663c40d33f58a16efc2ea9288c4ecc18b8f5487"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\066-begin.json",
+      "sha256": "8aaaee7e4a0fa2fedcfdc9dbfe66cd3a0983ae19ce9ac0859d709050cd1142b1"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\067-passed.json",
+      "sha256": "0f4a06d3ce5550f2d7261515dad65e771b9df44d463a5afb321b1c64923c9895"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\068-passed.json",
+      "sha256": "aacba2fd0b69a0c3566ec50c8adba0b0a4a2cd67b7a22c3d961915d7372d56fd"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\069-passed.json",
+      "sha256": "d0f5b6fae201f026dbd667c69441dd6bcbdd488f9179a3ef60939f0ee60c869b"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\070-passed.json",
+      "sha256": "e6f24b205ef9ddfd391206d49fbe09ff03078ccf33cc9d5717a32303b7b3d975"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\071-outcome.json",
+      "sha256": "71a3f979427cf203327bae6bc4bf7bf48ddc7c9d0f294bdf1ddd36d4eb25cf50"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-001-private-combined.bin",
+      "sha256": "8c230c521729ae306a098e34df8d557912601a8203a0e03d6039c9009940b3de"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-002-private-combined.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-003-private-combined.bin",
+      "sha256": "b5362faad2b6c0b65d95dc744d7fe4b95b96c2947c69f76c510daed28914376c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-004-private-combined.bin",
+      "sha256": "b5362faad2b6c0b65d95dc744d7fe4b95b96c2947c69f76c510daed28914376c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-005-private-combined.bin",
+      "sha256": "b5362faad2b6c0b65d95dc744d7fe4b95b96c2947c69f76c510daed28914376c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-006-private-combined.bin",
+      "sha256": "b5362faad2b6c0b65d95dc744d7fe4b95b96c2947c69f76c510daed28914376c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-007-private-combined.bin",
+      "sha256": "b5362faad2b6c0b65d95dc744d7fe4b95b96c2947c69f76c510daed28914376c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-008-private-combined.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-009-private-combined.bin",
+      "sha256": "2c1074ae9c9f9ed74ffddba72cf127cbef7a05504373943ff82a28d65cc6bf43"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-010-private-combined.bin",
+      "sha256": "680644e246015d38881d7e6f412fc7128c730b845c9bde4890809c1edca4bf5a"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-011-private-combined.bin",
+      "sha256": "cc722ec872d0961a9f325e583e415016f3421d53e6bcbfb3d68d5090a30dc52f"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-012-private-combined.bin",
+      "sha256": "93ac5c3541e01ec2bdee2c90bc4907d6b70d9eaf66c240a37d25070e90d0abef"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-013-private-combined.bin",
+      "sha256": "70a014cab75f5471c8b6fc29bc175b63f5f44528806511e765d6bfc85c40f463"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-014-private-combined.bin",
+      "sha256": "fea4c7f5a3d4e544998bababc4f806a3ff775e70fbf54445be28bed02aeefe6c"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-015-private-combined.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-016-private-combined.bin",
+      "sha256": "439ca1566836cf4912b8f4fb526dd614ba0086fe0684cc171436e57d8a82017b"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-017-private-combined.bin",
+      "sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\command-018-private-combined.bin",
+      "sha256": "11334b89143b23911fc8aef1453a8e30b84a54e03c741dd562ef5c8ce6c1734d"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now\\handshake-diagnosis.json",
+      "sha256": "2343620bdf53258c7fff501e9e0c67d8142c85ddaa589aa4d594f05214a751d4"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now-bootstrap\\outcome.json",
+      "sha256": "71a3f979427cf203327bae6bc4bf7bf48ddc7c9d0f294bdf1ddd36d4eb25cf50"
+    },
+    {
+      "path": "C:\\Temp\\ctp-readonly-release-20261102-now-bootstrap\\start.json",
+      "sha256": "39b26f927a829934adf113360f3b5b521772e8027cac75ba1b98a6ec50a80197"
+    }
+  ],
+  "scope": "当次认证/登录/结算确认/经纪商参数成功；非一手成交样本，不证明偶发超时根治，不替代次日现场"
+}

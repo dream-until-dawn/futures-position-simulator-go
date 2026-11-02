@@ -23,7 +23,7 @@ func novemberTime(t *testing.T, text string) time.Time {
 func novemberQuote(at time.Time) (*def.CThostFtdcDepthMarketDataField, *def.CThostFtdcInstrumentField) {
 	md := &def.CThostFtdcDepthMarketDataField{LastPrice: 3000, BidPrice1: 2999, AskPrice1: 3001, BidVolume1: 10, AskVolume1: 10, LowerLimitPrice: 2700, UpperLimitPrice: 3300}
 	copy(md.InstrumentID[:], "rb2701")
-	copy(md.TradingDay[:], "20261102")
+	copy(md.TradingDay[:], "20261103")
 	copy(md.UpdateTime[:], at.In(probeShanghai).Format("15:04:05"))
 	spec := &def.CThostFtdcInstrumentField{IsTrading: 1, PriceTick: 1, VolumeMultiple: 10}
 	copy(spec.InstrumentID[:], "rb2701")
@@ -36,12 +36,12 @@ func TestNovemberQuoteRegistrationLiteral(t *testing.T) {
 		when  string
 		valid bool
 	}{
-		{"20261102 10:30:00", true}, {"20261102 10:55:00", true}, {"20261102 11:24:59", true},
-		{"20261102 10:29:59", false}, {"20261102 11:25:00", false}, {"20261101 10:55:00", false}, {"20261029 21:15:00", false},
+		{"20261103 10:30:00", true}, {"20261103 10:55:00", true}, {"20261103 11:24:59", true},
+		{"20261103 10:29:59", false}, {"20261103 11:25:00", false}, {"20261101 10:55:00", false}, {"20261029 21:15:00", false},
 	} {
 		at := novemberTime(t, tc.when)
 		md, spec := novemberQuote(at)
-		price, err := passiveProbePrice(md, spec, "20261102", at)
+		price, err := passiveProbePrice(md, spec, "20261103", at)
 		if tc.valid && (err != nil || price.String() != "2997") {
 			t.Fatal("新登记合法日盘行情被拒或改变定价", tc.when, price, err)
 		}
@@ -56,8 +56,8 @@ func TestNovemberReadOnlyWindowLiteral(t *testing.T) {
 		when  string
 		valid bool
 	}{
-		{"20261102 10:50:00", true}, {"20261102 10:54:59", true},
-		{"20261102 10:49:59", false}, {"20261102 10:55:00", false}, {"20261102 11:00:00", false}, {"20261029 21:10:00", false},
+		{"20261103 10:50:00", true}, {"20261103 10:54:59", true},
+		{"20261103 10:49:59", false}, {"20261103 10:55:00", false}, {"20261103 11:00:00", false}, {"20261029 21:10:00", false},
 	} {
 		missing := filepath.Join(t.TempDir(), "missing.env")
 		err := runRestingPriceCheckAt(missing, time.Second, novemberTime(t, tc.when))
@@ -75,8 +75,8 @@ func TestNovemberExecutionWindowLiteral(t *testing.T) {
 		when  string
 		valid bool
 	}{
-		{"20261102 10:55:00", true}, {"20261102 11:14:59", true},
-		{"20261102 10:54:59", false}, {"20261102 11:15:00", false}, {"20261029 21:15:00", false},
+		{"20261103 10:55:00", true}, {"20261103 11:14:59", true},
+		{"20261103 10:54:59", false}, {"20261103 11:15:00", false}, {"20261029 21:15:00", false},
 	} {
 		f := newFakeRestingProbe()
 		f.clock.now = novemberTime(t, tc.when)
@@ -98,7 +98,7 @@ func TestNovemberExecutionWindowLiteral(t *testing.T) {
 
 type novemberProbe struct{ *fakeRestingProbe }
 
-func (*novemberProbe) TradingDay() string { return "20261102" }
+func (*novemberProbe) TradingDay() string { return "20261103" }
 func (f *novemberProbe) MarketData(string, time.Duration) (*def.CThostFtdcDepthMarketDataField, error) {
 	md, _ := novemberQuote(f.clock.Now())
 	return md, nil
@@ -109,7 +109,7 @@ func TestNovemberOpeningDeadlineAfterSave(t *testing.T) {
 	for _, stage := range []string{"control-before-insert", "main-before-insert"} {
 		f := &novemberProbe{newFakeRestingProbe()}
 		f.fillMain = false
-		f.clock.now = novemberTime(t, "20261102 11:14:59.5")
+		f.clock.now = novemberTime(t, "20261103 11:14:59.5")
 		visited := false
 		report, err := executeRestingPrice(f, restingProbeConfig{Wait: 3 * time.Second, Timeout: time.Second}, f.clock, func(r *restingProbeReport) error {
 			if r.Stage == stage {

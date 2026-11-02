@@ -12568,5 +12568,27 @@
   "new": "    try:\n        return ctx.journal.raw('release-snapshot.json', raw)\n    except OSError:\n        return {}",
   "test": "TestPythonReleaseAdmissionBoundary",
   "want": "发布落盘失败仍成功"
+},
+{
+  "name": "1231 11月3日Date回退旧轮",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_rules.go",
+  "old": "const restingProbeDate = \"20261103\"",
+  "new": "const restingProbeDate = \"20261102\"",
+  "test": "TestTuesdayExecutionDateBinding",
+  "want": "11月3日启动日期绑定错误"
+},
+{
+  "name": "1232 11月3日Day回退旧轮",
+  "dir": "cmd/oracle",
+  "pkg": ".",
+  "expect": "red",
+  "file": "cmd/oracle/resting_price_rules.go",
+  "old": "const restingProbeDay = \"20261103\"",
+  "new": "const restingProbeDay = \"20261102\"",
+  "test": "TestTuesdayQuoteDateBinding",
+  "want": "11月3日行情双日期绑定错误"
 }
 ]
