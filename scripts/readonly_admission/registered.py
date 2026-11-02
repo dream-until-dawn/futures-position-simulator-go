@@ -78,7 +78,7 @@ def execute_readonly(ctx, cfg):
 def run_registered(cfg, directory, allowed):
     """具体日期/目标由经核验的封装固定；没有命令行绕过或内部重试。"""
     checks = Checks(cfg)
-    steps = [('process', lambda ctx: inspect_processes(ctx, cfg)), *checks.steps()]
+    steps = [('process', lambda ctx: inspect_processes(ctx, cfg)), *checks.execution_steps()]
     identity = dict(source_commit=cfg['source'], published_main=cfg['main'],
                     argv_sha256=hashlib.sha256(json.dumps(cfg['argv'], ensure_ascii=True).encode()).hexdigest())
     return run_once(directory, identity, steps, allowed,

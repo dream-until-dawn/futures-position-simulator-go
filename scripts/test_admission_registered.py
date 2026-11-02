@@ -1,5 +1,6 @@
 """真实登记编排+本地假CLI贯穿测试；不启动CTP或访问任何真实凭据。"""
 from contextlib import contextmanager
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ from unittest.mock import patch
 import test_admission_checks as fixtures
 from test_handshake_diagnostics import fixture
 from readonly_admission import registered
+from readonly_admission import release
 from readonly_admission.errors import Rejected
 from readonly_admission.runner import Attempt, run_once
 
@@ -66,7 +68,7 @@ class RegisteredTests(unittest.TestCase):
 
     def run_registered(self):
         # 完整身份判别在test_process_admission独立覆盖；本组保持原编排的计数/查询失败注入。
-        with patch.object(registered,'inspect',lambda ctx,cfg:json.loads(ctx.command(['powershell'],cfg['root']))),patch.object(Attempt,'command',lambda ctx,*a,**kw:self.command(ctx,*a,**kw)),patch.object(registered,'locked_env',self.synthetic_env),patch.object(registered,'os',types.SimpleNamespace(name='nt',getpid=os.getpid)),patch.dict(os.environ,{'CTP_DLL_DIR':str(self.f.dll)}):
+        with patch.object(release,'now',lambda:datetime.fromisoformat('2026-11-02T09:05:00+08:00')),patch.object(registered,'inspect',lambda ctx,cfg:json.loads(ctx.command(['powershell'],cfg['root']))),patch.object(Attempt,'command',lambda ctx,*a,**kw:self.command(ctx,*a,**kw)),patch.object(registered,'locked_env',self.synthetic_env),patch.object(registered,'os',types.SimpleNamespace(name='nt',getpid=os.getpid)),patch.dict(os.environ,{'CTP_DLL_DIR':str(self.f.dll)}):
             return registered.run_registered(self.cfg,self.directory,lambda:self.allowed)
 
     def test_full_registered_path_and_unique_execution(self):
