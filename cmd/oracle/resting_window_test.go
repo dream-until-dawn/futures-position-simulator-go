@@ -17,9 +17,9 @@ func TestRestingRegistrationCLIWindow(t *testing.T) {
 		day, at string
 		valid   bool
 	}{
-		{"20261102", "10:55:00", true}, {"20261102", "11:14:59", true},
-		{"20261102", "10:54:59", false}, {"20261102", "11:15:00", false},
-		{"20261029", "21:15:00", false}, {"20261103", "10:55:00", false},
+		{"20261103", "10:55:00", true}, {"20261103", "11:14:59", true},
+		{"20261103", "10:54:59", false}, {"20261103", "11:15:00", false},
+		{"20261029", "21:15:00", false}, {"20261104", "10:55:00", false},
 	} {
 		dir := t.TempDir()
 		out := filepath.Join(dir, "never.jsonl")
@@ -58,10 +58,10 @@ func TestRestingRegistrationTradeWindow(t *testing.T) {
 		copy(r.OrderSysID[:], "sys")
 		copy(r.ExchangeID[:], "SHFE")
 		copy(r.InstrumentID[:], "rb2701")
-		copy(r.TradingDay[:], "20261102")
+		copy(r.TradingDay[:], "20261103")
 		copy(r.TradeTime[:], tc.at)
 		out := ownedOrderOutcome{Ref: "own", SysID: "sys", QueueObserved: true, LocalQueueMillis: 2000}
-		verdict, _, err := restingPriceVerdict([]*def.CThostFtdcTradeField{r}, out, decimal.NewFromInt(2997), "20261102")
+		verdict, _, err := restingPriceVerdict([]*def.CThostFtdcTradeField{r}, out, decimal.NewFromInt(2997), "20261103")
 		if tc.valid {
 			if err != nil || verdict != "supports-order-price" {
 				t.Fatal("成交观察窗口合法样本被拒绝", tc.at, err)
@@ -78,9 +78,9 @@ func TestRestingNightReadWindow(t *testing.T) {
 		date, at string
 		valid    bool
 	}{
-		{"20261102", "10:50:00", true}, {"20261102", "10:54:59", true},
-		{"20261102", "10:49:59", false}, {"20261102", "10:55:00", false},
-		{"20261102", "14:40:00", false}, {"20261103", "10:50:00", false},
+		{"20261103", "10:50:00", true}, {"20261103", "10:54:59", true},
+		{"20261103", "10:49:59", false}, {"20261103", "10:55:00", false},
+		{"20261103", "14:40:00", false}, {"20261104", "10:50:00", false},
 		{"20261029", "21:10:00", false}, {"20261101", "10:50:00", false},
 	} {
 		dir := t.TempDir()
@@ -101,13 +101,13 @@ func TestRestingNightReadWindow(t *testing.T) {
 
 // TestRestingNightNaturalDateGuard 自然日必须在读取行情字段之前明确拒绝，不能靠后续年龄检查掩盖。
 func TestRestingNightNaturalDateGuard(t *testing.T) {
-	for _, date := range []string{"20261101", "20261103", "20261029"} {
+	for _, date := range []string{"20261101", "20261104", "20261029"} {
 		now, err := time.ParseInLocation("20060102 15:04:05", date+" 10:55:00", probeShanghai)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// 传入空行情/合约，只允许日期守卫先拒绝，不能靠后续年龄或合约校验凑巧过关。
-		err = validateRestingQuote(nil, nil, "20261102", now)
+		err = validateRestingQuote(nil, nil, "20261103", now)
 		if err == nil || !strings.Contains(err.Error(), "登记自然日") {
 			t.Fatal("自然日未在读取行情前拒绝", date, err)
 		}
@@ -132,7 +132,7 @@ func TestRestingNightQuoteClock(t *testing.T) {
 		quoted := now.Add(-tc.delta)
 		copy(md.UpdateTime[:], quoted.Format("15:04:05"))
 		md.UpdateMillisec = def.TThostFtdcMillisecType(quoted.Nanosecond() / int(time.Millisecond))
-		if err := validateRestingQuote(md, spec, "20261102", now); (err == nil) != tc.valid {
+		if err := validateRestingQuote(md, spec, "20261103", now); (err == nil) != tc.valid {
 			t.Fatalf("夜盘行情日期或新鲜度错误 delta=%s err=%v", tc.delta, err)
 		}
 	}
@@ -150,13 +150,13 @@ func TestRestingNightCloseDeadline(t *testing.T) {
 		{"11:00:00", 6 * time.Second, false},
 	} {
 		f := newFakeRestingProbe()
-		now, err := time.ParseInLocation("20060102 15:04:05", "20261102 "+tc.at, probeShanghai)
+		now, err := time.ParseInLocation("20060102 15:04:05", "20261103 "+tc.at, probeShanghai)
 		if err != nil {
 			t.Fatal(err)
 		}
 		f.clock.now = now
 		f.held = 1
-		r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261102", Main: ownedOrderOutcome{Ref: "own", Filled: 1, Terminal: true}}
+		r := &restingProbeReport{Symbol: "SHFE.rb2701", TradingDay: "20261103", Main: ownedOrderOutcome{Ref: "own", Filled: 1, Terminal: true}}
 		err = finishRestingExposure(f, r, time.Second, f.clock, func() error { f.clock.now = f.clock.now.Add(tc.delay); return nil })
 		if tc.valid {
 			if err != nil || f.sent != 1 || f.held != 0 {
