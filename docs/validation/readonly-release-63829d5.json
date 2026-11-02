@@ -1,0 +1,781 @@
+{
+  "format": 1,
+  "source_commit": "63829d5dea6109765b01a81d06b755e7d6e0878a",
+  "baseline_main": "1eefd792ffbbd5461b3d81284b6a399a17d41f6c",
+  "source_tree": "79c11de8fb9a7533bc21b243f1119c20d4ea7538",
+  "registry_sha256": "70a014cab75f5471c8b6fc29bc175b63f5f44528806511e765d6bfc85c40f463",
+  "report_sha256": "f9e3efe92b49316f00c573b798de491da9d7a4a6c5a9545805bfd3f388aae2fa",
+  "summary_sha256": "a68730ee3b93080528d88367c7e49edfa0aef6962fc81646c3252049dc8e1884",
+  "counts": {
+    "executed": 1143,
+    "expected_red": 1134,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "summary": {
+    "path": "C:\\Temp\\release-mutation-63829d5\\summary.json",
+    "sha256": "a68730ee3b93080528d88367c7e49edfa0aef6962fc81646c3252049dc8e1884"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\release-mutation-63829d5\\mutation.log",
+    "sha256": "36a2adf05972c49c72a6cb128722a33e0b252180ba6e2b6dc2c903895d275cbc"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "5a55cb14a61bc0986bf98f5bd4f0769b7de2bd29f11bffaa87d6a6628f58fa58",
+    "index_sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b",
+    "head": "63829d5dea6109765b01a81d06b755e7d6e0878a"
+  },
+  "retained_baseline_properties": {
+    "count": 1118,
+    "changed_rows": 0
+  },
+  "targeted": [
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\summary.json",
+      "sha256": "cc1f13e03d9de4056007aa46070b146aab85305110a6965c5ad7a42d304f531b"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1205.json",
+      "sha256": "0beb6f5155fbcc718afdad6278d201caa117586e0c1d3d3af488cef533d23702"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1205.log",
+      "sha256": "617373afb7854bba219006da83d3f1b28e6ffdd11d62db18d8fb234cf78aaf30"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1206.json",
+      "sha256": "7c5005e0055879641584a2d0458ed6eefa94fe5e4539460d82eeb4cb68550ca5"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1206.log",
+      "sha256": "d831c84e1648d1489ea0c718cd8be15c411aeaa8954f00dfe9d475f65da1d930"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1207.json",
+      "sha256": "da2ad86e0a24710aeff96a078dc15b50437e4308bfbb690b1d6ceba6a6254692"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1207.log",
+      "sha256": "9fc56d5f39a55d488e90fa7566e17dd22bcb4e3b426f32cab88c5fff6e79fe58"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1208.json",
+      "sha256": "c2587d6ad58023e351b8915784f44b74946f28a346a39d3f40733bc5fc3591eb"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1208.log",
+      "sha256": "ca6c95601865cf8d6b7587c4f4521552271ef8c329de494c658aa59f3941be7f"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1209.json",
+      "sha256": "c61c5270ab0e2d7a3e940c6ae05773e382ab92ba363955c2d9eac2e600a2559a"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1209.log",
+      "sha256": "3433c358645d025b1ca9f458312afc8ed66b32e8eff6dee5f9e50cbe79eca7f9"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1210.json",
+      "sha256": "24e4905550e098781e1abc4e12f4ec9195cde11c2a9cec55095b70098c362ba2"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1210.log",
+      "sha256": "5b5b9608133246cdaf55a3bd28b231ce1329811da34effc76e7e10882cfcdb00"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1211.json",
+      "sha256": "4899b3e03c18dbe5e90d3f1cd28ed313590142b09389a13d1828da37d0f48e78"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1211.log",
+      "sha256": "2fc79dec0ae395c97ae9626d3fda57d2800c4593421598f74176ad0ec6d513bf"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1212.json",
+      "sha256": "3f5115d4a94f8ae739ce27e5825f77f94e2927ae3060593bdd6ef40d5cdc1598"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1212.log",
+      "sha256": "8b2c11c2b6749356554abba96859b0156e72613c48881a255d5ae5c227d114f8"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1213.json",
+      "sha256": "ec55fc34bdce2a04e22a9acb41433afa29c7cd76d507aba075bafc176c7a6cb9"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1213.log",
+      "sha256": "83467b72af4f781b97a6752d277043431ac1c46d525d64c8cf8f55a7c63ad56c"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1214.json",
+      "sha256": "ff3a21e9a028f235b98ac96af38f2c3ae1ad1434b77ab5a43b45a0732034069b"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1214.log",
+      "sha256": "c54aec8917305418acdf610eac86d97c45c8317161ccad37d27cbbd7ab57cdef"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1215.json",
+      "sha256": "40f3df2e5663cb7ffdec84a7e7c6a8ec69c52d6513fe9f983f7c727a3ed17036"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1215.log",
+      "sha256": "667cec8df74cf2f9048b481ce4637a17d2ca3923df3b1e00b04d3b0452022d0c"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1216.json",
+      "sha256": "6e50c1c04d0921e358e6ece78faca79b05bf3e3b08581618e4afe4b8d5eb1b22"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1216.log",
+      "sha256": "3041e6e83f1af63ffb06d81305540603a903d594e8e7d91f9cb058be1b5ff732"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1217.json",
+      "sha256": "ef9f590653fac932e781da6855c2b21c137738aeeb4fc4022fba776b21f2139a"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1217.log",
+      "sha256": "976c2d079c2eee8dfbdc1df74f643cad927dc448760b84616f9c74d65671ddf1"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1218.json",
+      "sha256": "20ae8204bce17b15724a5d9626cf35ac372c12aaeddc02151e33407ba0149917"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1218.log",
+      "sha256": "3610d3d48db34f3973ae3ed3708158ad612ef9bcd256ea49e67279d7ba2f4ffc"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1219.json",
+      "sha256": "f5d2387ae7fbf3d1d1699cda1d1efb85f13c30e75e2c31931ed2aa407320e81e"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1219.log",
+      "sha256": "71312b0146fa3d85866dcd916bf278ce911ffb08e5345552bdb42c07ba7d8dc4"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1220.json",
+      "sha256": "aa72fb7972244658488b310b8ec0921f436d8125fdd4929709f88fca1968bab2"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1220.log",
+      "sha256": "6c64a82849925d72e3a0a0769637733e03ff3077647a78382e84f331e8f99d76"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1221.json",
+      "sha256": "fb2ac63d0927179430aed8744458739a3eb93f6d33e2f29a79b8742cb8dd6e1a"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1221.log",
+      "sha256": "473cd2c310ceb29bcd1910689cc8d0963d7c7593e898b4bc027b8f690bd57518"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1222.json",
+      "sha256": "616f765500979a1fa6e66aa9d3dfa97a6ea91de9bd034aa768f2dae689cdacfe"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1222.log",
+      "sha256": "a707d6349a27cb87f2e2dbb9032dad9d8cca9ad8a8d40f395454936e6396a065"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1223.json",
+      "sha256": "e1986f53c128c8f9f07a34df194045b2a98b7932034af27025e2c5b19fb4b05d"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1223.log",
+      "sha256": "90a487fdbbe9589e1475a978d2f936e9c6f3f96bdc263cb12d93f67a910066f6"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1224.json",
+      "sha256": "d9da5176d9c58a965a533eb40988905fece762c2f6dcac96f5458e57c1c38cbf"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1224.log",
+      "sha256": "c931d26fb60bccb7fe465d7002cf7b94ae19fbb4904dc11008bf4e09f8a6d42c"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1225.json",
+      "sha256": "83acf8e49e7ca7995589fc84b0e1037df0eec0ca4ccc4655cd20e560edf409c4"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1225.log",
+      "sha256": "c25f52f05acf7031632f18cc770c02e5b0a35d7d96cee549dd9a9f2446e819e1"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1227.json",
+      "sha256": "d56cd5e22391d045ba173a6908757c228f44b38d827d22c61ddba3b925d4db20"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1227.log",
+      "sha256": "b41462faa7eda1f23c6fdcebee0f31f8fd55ca2dbcf166b307216b47de59ca87"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1228.json",
+      "sha256": "94e086927429a74b777b7fa2b7ddc7bab06cbbe56c922e6c2e69d4c34185a456"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1228.log",
+      "sha256": "a7ef145d6e6379acb3c5537e05854b4fa8491551949ddce439797e5f08707c34"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1229.json",
+      "sha256": "345b48e59c7691cb00612e31ea44bcb3b1c920ac07f0464ca8a28013e8593f78"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1229.log",
+      "sha256": "9b57d704e248455ee8b4794950fe2ad76a85b060fdb72a66787bef116cde22e1"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1230.json",
+      "sha256": "8860c121c956656a9c5bc0d33cb59a79cef5db016c991960755a1a42deef6122"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-63829d5\\1230.log",
+      "sha256": "9c3e70abdffb5226e93c51c5b1e37ce6b75a72965c19e30951e0e1f5099ebc0d"
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5",
+            "passed_tests": 755,
+            "skipped": [],
+            "log": "C:\\Temp\\release-regression-63829d5\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\cmd\\oracle",
+            "passed_tests": 457,
+            "skipped": [],
+            "log": "C:\\Temp\\release-regression-63829d5\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\release-regression-63829d5\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "5a55cb14a61bc0986bf98f5bd4f0769b7de2bd29f11bffaa87d6a6628f58fa58",
+          "index_sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b",
+          "head": "63829d5dea6109765b01a81d06b755e7d6e0878a"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "5a55cb14a61bc0986bf98f5bd4f0769b7de2bd29f11bffaa87d6a6628f58fa58",
+          "index_sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b",
+          "head": "63829d5dea6109765b01a81d06b755e7d6e0878a"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\release-regression-63829d5\\summary.json",
+        "sha256": "597d0d6b4b5034742f344e5fbfbd521ddcd613c89de1d5a7347cd4e32f0ee042"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\release-regression-63829d5\\root.log",
+          "sha256": "97b9e307d39713b38ab31e75909d845ee4e5ea966e1a4a97ba10ccb4816de7c1"
+        },
+        {
+          "path": "C:\\Temp\\release-regression-63829d5\\oracle.log",
+          "sha256": "272ce9bc55775ed5e8d785cd97efef14fcb21e974966526107b83d2d6fc10f49"
+        },
+        {
+          "path": "C:\\Temp\\release-regression-63829d5\\external.log",
+          "sha256": "17549a41e7735cf098edf99737bd5f4a3d72cc7962d9cb3767717f21fd0cd2c1"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5",
+            "passed_tests": 755,
+            "skipped": [],
+            "log": "C:\\Temp\\release-race-63829d5\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\cmd\\oracle",
+            "passed_tests": 457,
+            "skipped": [],
+            "log": "C:\\Temp\\release-race-63829d5\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\release-race-63829d5\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "5a55cb14a61bc0986bf98f5bd4f0769b7de2bd29f11bffaa87d6a6628f58fa58",
+          "index_sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b",
+          "head": "63829d5dea6109765b01a81d06b755e7d6e0878a"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "5a55cb14a61bc0986bf98f5bd4f0769b7de2bd29f11bffaa87d6a6628f58fa58",
+          "index_sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b",
+          "head": "63829d5dea6109765b01a81d06b755e7d6e0878a"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\release-race-63829d5\\summary.json",
+        "sha256": "f649a8609e0b412963783d2c52d918f37847b5d1881d857af1495d18f6958be4"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\release-race-63829d5\\root.log",
+          "sha256": "b38a11f301bc8aa2da3b81b555c9059a3671a34d52a6e0f2fa35fd54111b8369"
+        },
+        {
+          "path": "C:\\Temp\\release-race-63829d5\\oracle.log",
+          "sha256": "8839d16ead954a2d42291347dee3beca4ff2c94877d0c15dfcb31491c535048c"
+        },
+        {
+          "path": "C:\\Temp\\release-race-63829d5\\external.log",
+          "sha256": "9d4f527e5811bee1ea473cdd4a0e1474b66c2cad59736a0f1afc2ed697a436da"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\release-fuzz-63829d5\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\release-fuzz-63829d5\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\release-fuzz-63829d5\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\release-fuzz-63829d5\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\release-checks-63829d5\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\release-fuzz-63829d5\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "5a55cb14a61bc0986bf98f5bd4f0769b7de2bd29f11bffaa87d6a6628f58fa58",
+          "index_sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b",
+          "head": "63829d5dea6109765b01a81d06b755e7d6e0878a"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "5a55cb14a61bc0986bf98f5bd4f0769b7de2bd29f11bffaa87d6a6628f58fa58",
+          "index_sha256": "e134064e5e5d3890c66e41fd1115c0fdab65371dc505cf8bd88336a4d5b4fd0b",
+          "head": "63829d5dea6109765b01a81d06b755e7d6e0878a"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\release-fuzz-63829d5\\summary.json",
+        "sha256": "73ce8d347338bf5073f680eb9911efadec25afc52aebbb04ae94ea46f672982b"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\release-fuzz-63829d5\\state.log",
+          "sha256": "51bb7c69367462c2aa150de1e9be6001c1c352c1a64d6899b726a4f5ea6a90e2"
+        },
+        {
+          "path": "C:\\Temp\\release-fuzz-63829d5\\bundle.log",
+          "sha256": "aad6ee7fb6b51705fdc803e7a6057416fc09b0b97ebc3da60ba6c17374901c17"
+        },
+        {
+          "path": "C:\\Temp\\release-fuzz-63829d5\\report.log",
+          "sha256": "9b81cb74c3352ce02d20706a2297d426b84e181c31259fd98b2cb37996545ced"
+        },
+        {
+          "path": "C:\\Temp\\release-fuzz-63829d5\\risk.log",
+          "sha256": "99dccae7b1f7ce01783cbb17c0595df963ecd9bd7954bb616e25f010ec734db1"
+        },
+        {
+          "path": "C:\\Temp\\release-fuzz-63829d5\\lifecycle.log",
+          "sha256": "8cf4a1fd3e694af7ab96c1f71243fb0dacce4790af822be1ba6f90d5855e3abd"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\release-python-63829d5.log",
+    "sha256": "adcd44ebb7b5ba8d8387ef75f989dbe4080b993580eb58e2bf2412aae0169c38"
+  },
+  "ci": {
+    "sha": "63829d5dea6109765b01a81d06b755e7d6e0878a",
+    "run": 41452752170,
+    "branch": "codex/readonly-release-evidence",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\release-evidence\\before.json",
+      "sha256": "87045b85d6bcc90a0ab2a6444a9d0f6b845bd0330c708749d262909ee272e79a"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\release-evidence\\before.log",
+      "sha256": "715965f676ccde9955a14622ea284a6db04f70f4dd69e248688d51a0d27ba3f6"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\release-evidence\\old-registered-function.py.txt",
+      "sha256": "0582ab755528302e00921bda16e16db3796823b9dcfc1b329714d2e8494f0e31"
+    }
+  ],
+  "retained_failure": [
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1205.json",
+      "sha256": "0beb6f5155fbcc718afdad6278d201caa117586e0c1d3d3af488cef533d23702"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1205.log",
+      "sha256": "d8c0975d7e51c22409012f38558058749eee8936b73534cd18ddf54cce899e35"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1206.json",
+      "sha256": "7c5005e0055879641584a2d0458ed6eefa94fe5e4539460d82eeb4cb68550ca5"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1206.log",
+      "sha256": "8495930601921871b55d58275968334d3f0617b481d02e7459d2f49c4bd1f3a4"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1207.json",
+      "sha256": "da2ad86e0a24710aeff96a078dc15b50437e4308bfbb690b1d6ceba6a6254692"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1207.log",
+      "sha256": "bee04ddc5c05e3af49d297d15b2d9fe2011be019fbc58e339a6a12767ac0c4da"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1208.json",
+      "sha256": "c2587d6ad58023e351b8915784f44b74946f28a346a39d3f40733bc5fc3591eb"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1208.log",
+      "sha256": "b7bc853d480e6030f03a1f9e2ef09430a0642654e5e64f6ed71d5e90fd566e86"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1209.json",
+      "sha256": "c61c5270ab0e2d7a3e940c6ae05773e382ab92ba363955c2d9eac2e600a2559a"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1209.log",
+      "sha256": "17c8134fff3113feb1b018ad580793afd6b10a7b48a4d432d15b7e452d7dd32f"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1210.json",
+      "sha256": "24e4905550e098781e1abc4e12f4ec9195cde11c2a9cec55095b70098c362ba2"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1210.log",
+      "sha256": "da231ca692d44b76018acae0b4573bc8c938554bff3dc1f49eafdecb84651847"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1211.json",
+      "sha256": "4899b3e03c18dbe5e90d3f1cd28ed313590142b09389a13d1828da37d0f48e78"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1211.log",
+      "sha256": "11afd609e219ec9e4a6ce409a97c7bcb17c30d28256a349595ffbd08f7791378"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1212.json",
+      "sha256": "3f5115d4a94f8ae739ce27e5825f77f94e2927ae3060593bdd6ef40d5cdc1598"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1212.log",
+      "sha256": "89a29d1a06a1c01fe65f06ac7044bee6fda9578ad2af5d9504e6302fb65c5512"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1213.json",
+      "sha256": "ec55fc34bdce2a04e22a9acb41433afa29c7cd76d507aba075bafc176c7a6cb9"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1213.log",
+      "sha256": "9ec1c021a2ef3186c562b1f9615e04b24a633ae6d8b5bbc5ef0bb41964052171"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1214.json",
+      "sha256": "b83c6cfb18c2b368523f5108df7de2a5ff604271d0f5112ebf0a60b774ce92df"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\1214.log",
+      "sha256": "e8fff61547f06a0eb26cb1072bef60276d8e43100b99252fac9bafc09eed5090"
+    },
+    {
+      "path": "C:\\Temp\\release-targets-results-a00b229\\summary.json",
+      "sha256": "81145b157cbdd58c52c81d29602feb111599658e8293f40385aa5deb2bc022a9"
+    }
+  ],
+  "candidate_build": {
+    "source_commit": "63829d5dea6109765b01a81d06b755e7d6e0878a",
+    "path": "C:\\Temp\\ctp-readonly-release-63829d5.exe",
+    "sha256": "c30077a7de6dceca766883379ffd9f710ac6c499fdc050c710bdd9ecdf9109e7",
+    "verified_at_bjt": "2026-11-02T21:27:44.711991+08:00",
+    "build_info": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\release-evidence\\build-info.txt",
+      "sha256": "680644e246015d38881d7e6f412fc7128c730b845c9bde4890809c1edca4bf5a"
+    },
+    "actual_exe_executions": 0
+  },
+  "fixed_dlls": [
+    {
+      "name": "ctp_trade.dll",
+      "sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc"
+    },
+    {
+      "name": "thosttraderapi_se.dll",
+      "sha256": "774ca2f3bba3009e72ba1f8a5e7a752d569bbbd999f19017e7cabc5c32c08bdc"
+    }
+  ],
+  "runtime_files": [
+    {
+      "relative": "scripts/readonly_admission/__init__.py",
+      "sha256": "1ca73765bc4812a91101b44791b6d0750039400e8529a3c5f21cb8de1c0ecaf9"
+    },
+    {
+      "relative": "scripts/readonly_admission/checks.py",
+      "sha256": "973d5c078eb708bb877fbeedc37e7b90a4fbbd926aebf7870b782ed071048777"
+    },
+    {
+      "relative": "scripts/readonly_admission/envfile.py",
+      "sha256": "01fa8cfa19d7870d6ce9068238387d12c9c9e85df4cfca32eeb812ff51a4b1d1"
+    },
+    {
+      "relative": "scripts/readonly_admission/errors.py",
+      "sha256": "b88489813d8861c88d9770952f5505f193e803aaa7c085cbe2bb22b89aae96ac"
+    },
+    {
+      "relative": "scripts/readonly_admission/journal.py",
+      "sha256": "0c53c6effe207b6c1d64e04418716bead05d839e1f260d640828bdfe1b4be1fd"
+    },
+    {
+      "relative": "scripts/readonly_admission/processes.py",
+      "sha256": "a279f26579871a804c1eb340e41d4946bdfbc679e440727830dd339b8e887574"
+    },
+    {
+      "relative": "scripts/readonly_admission/registered.py",
+      "sha256": "144e5a3a70038270bf8354263958895808c2caf64f16060ab44efc54cfebb526"
+    },
+    {
+      "relative": "scripts/readonly_admission/release.py",
+      "sha256": "8881d9a0f3fc9dcf1c56d31c24b7fbbe3ef8a9eb3082ef5285fb5d6a5b445295"
+    },
+    {
+      "relative": "scripts/readonly_admission/runner.py",
+      "sha256": "6f8294f767822986db6af8f9f4bf80e6029c33107da259ec91d8a646457015a4"
+    },
+    {
+      "relative": "scripts/validation_runtime.py",
+      "sha256": "60e735cb392c76009a9e0b970f8091803968950d4bdfee4335eaf80450355817"
+    },
+    {
+      "relative": "scripts/process_worker.py",
+      "sha256": "c4db29bd34c15643d302abd86a7b8639ed16d7fd5f1f025c26c369e844cea9d2"
+    },
+    {
+      "relative": "scripts/windows_job.py",
+      "sha256": "bc4d713252dfd2404d024221d18b4241c26f302b5ff0f9855b97cb63648c505b"
+    },
+    {
+      "relative": "scripts/verify_evidence.py",
+      "sha256": "0e951b354db1a78a71eec8363a669d0a2824a8b7b04ab79e89f1fb3dac6c3513"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/__init__.py",
+      "sha256": "cdf921d17f6115624094ad310992f06955ea304e27b9a88fd3b9a0e2b9a12c73"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/analysis.py",
+      "sha256": "af9ac0fd26fe21747070eedfc79177220a2a31644ea32e9c1d1c20aef8ac6b98"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/entries.py",
+      "sha256": "f7694814406361e55750245cd7e654f25ee3c65f967d3d630e547857da9b5ee7"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/integrity.py",
+      "sha256": "18f28cffb9be4988f0b72e5505e996fa947534f0b17447cbeebd9d3ae7b61828"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/parsing.py",
+      "sha256": "fa601990d691b1df44a52a0bf16bbd79df5257015d0a79ac2e8c19bea7e4ccf0"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/reporting.py",
+      "sha256": "1d90643e4414e128fe4e1417a8504fed9979e64b8a76b1f765fca3aeed01e142"
+    }
+  ],
+  "admission_failure": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-night-20261102-ops\\stopped-before-connection.json",
+      "sha256": "6388b8e9d5c9c1b5d5b7fe9d7b3f0c12779d39790bcc09b7c53d9b1a340f68a7"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-night-20261102\\preparation-20261102T210915936726\\audit-result.json",
+      "sha256": "4746849b82022894abe4a7370ed1f7f75743c9404a5ab6ddb27209aba397da03"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-night-20261102\\preparation-20261102T210915936726\\audit\\command-009-private-combined.bin",
+      "sha256": "dfa52d1d37f37c70ff5fca77c1ccc8dfe70e99ce7250f8dce681bae044b41415"
+    }
+  ],
+  "scope": {
+    "real_env_reads": 0,
+    "broker_connections": 0,
+    "orders": 0,
+    "cancels": 0,
+    "live_acceptance": false,
+    "publisher_uses_live_remote": true,
+    "execution_uses_pinned_release": true,
+    "maximum_receipt_lifetime_seconds": 1800,
+    "remote_current_after_seal": "not asserted",
+    "historical_settlement_timeout": "unresolved"
+  }
+}
