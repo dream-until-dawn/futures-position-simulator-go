@@ -13,6 +13,7 @@ class Attempt:
         self.allowed = allowed
         self.current_stage = 'window'
         self.command_count = 0
+        self.last_command_pid = None
         self.primary = None
 
     def check_window(self):
@@ -57,6 +58,7 @@ class Attempt:
             raise ValueError('invalid bounded command budget')
         self.check_window()
         self.command_count += 1
+        self.last_command_pid = None
         index = self.command_count
         env = dict(os.environ, GIT_TERMINAL_PROMPT='0', GCM_INTERACTIVE='Never')
         raw = bytearray()
@@ -64,6 +66,7 @@ class Attempt:
         failure = None
         try:
             with bounded_process(argv, cwd, timeout, env=env) as process:
+                self.last_command_pid = process.pid
                 self.journal.event('process', dict(stage=self.current_stage, index=index, pid=process.pid))
                 stream = getattr(process.stdout, 'buffer', process.stdout)
                 while True:

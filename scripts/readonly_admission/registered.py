@@ -8,6 +8,7 @@ from handshake_diagnostics.reporting import build_report, write_report
 from .checks import Checks
 from .envfile import locked_env
 from .runner import run_once
+from .processes import inspect
 
 
 def diagnose(folder, source, trading_day):
@@ -55,13 +56,7 @@ def diagnose(folder, source, trading_day):
 def inspect_processes(ctx, cfg):
     """查询未知即拒绝，不把权限错误当作没有进程；排除本次封装自己。"""
     ctx.require(os.name == 'nt', 'registered target requires Windows')
-    # 仅返回计数，不把其他应用命令行或身份写入本轮证据。
-    script = ("[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false);"
-        "$ErrorActionPreference='Stop';$p=@(Get-CimInstance Win32_Process | Where-Object {"
-        "$_.Name -like '*ctp-readonly*' -or ($_.Name -like '*python*' -and "
-        "$_.CommandLine -like '*"+cfg['operator_path'].replace("'", "''")+"*' -and $_.ProcessId -ne "+str(os.getpid())+")});"
-        "@{matching_count=$p.Count;query_succeeded=$true}|ConvertTo-Json -Compress")
-    state = json.loads(ctx.command(['powershell', '-NoProfile', '-Command', script], cfg['root']))
+    state = inspect(ctx, cfg)
     ctx.require(state == dict(matching_count=0, query_succeeded=True), 'unknown or existing process')
 
 

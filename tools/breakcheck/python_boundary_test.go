@@ -69,3 +69,8 @@ func TestPythonAdmissionChecksBoundary(t *testing.T) { runPythonBoundary(t, "tes
 func TestPythonAdmissionRegisteredBoundary(t *testing.T) {
 	runPythonBoundary(t, "test_admission_registered")
 }
+
+// TestPythonProcessIdentityBoundary 通过真实Python验证身份树、私有落盘与未知拒绝。
+func TestPythonProcessIdentityBoundary(t *testing.T) {
+	runPythonBoundary(t, "test_process_admission")
+}

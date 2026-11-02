@@ -1,0 +1,866 @@
+{
+  "format": 1,
+  "source_commit": "679e2e9d3d21740257cb36e76800323ce342bacb",
+  "baseline_main": "a6d09e241f63fe4226596e5d795c57a6b65666d0",
+  "source_tree": "744d034602e42041c5a0552442ccba1c656a4b4d",
+  "registry_sha256": "043a0a7a44d472ec1a1608f4e645a0322c892f65c9e2a267b02412c70b630966",
+  "report_sha256": "e7299f03ec95f284dc2b16c32ed8790af33c8aa0bf5d19bb06a87c87b2aec8c5",
+  "summary_sha256": "2138dce36119c9106eccc9b79ebeec5c55d8c0081ae315af2d1a0996261e396f",
+  "counts": {
+    "executed": 1118,
+    "expected_red": 1109,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "summary": {
+    "path": "C:\\Temp\\process-mutation-679e2e9\\summary.json",
+    "sha256": "2138dce36119c9106eccc9b79ebeec5c55d8c0081ae315af2d1a0996261e396f"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\process-mutation-679e2e9\\mutation.log",
+    "sha256": "7603782777d257a976e2bd608263c9050be8aeda2eac37d1020396b0a45c42fb"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "7cd2f1a3cc0dc2d2c0d6630d230fb579e8ae99f1efada29e436c8f39a958dc43",
+    "index_sha256": "279ab3c43a8d6fd16a451c5d4334374508a849d2f9d61cb94bd22fe429d8cbec",
+    "head": "679e2e9d3d21740257cb36e76800323ce342bacb"
+  },
+  "retained_baseline_properties": {
+    "count": 1098,
+    "changed_rows": 0
+  },
+  "targeted": [
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\summary.json",
+      "sha256": "e5a6e33265e119cd688f31c51f5ac857639b156e1f18b21c55f5e8885f69fe68"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1177.json",
+      "sha256": "576cc410ddfb19a3337ab7e6e6e09373a32face69cb690fed1792b121eecb882"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1177.log",
+      "sha256": "98a98022dab8ca148ce6296a1fe024c0066e86314831a914a41376c5e5cd5586"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1185.json",
+      "sha256": "dc18d70d3b5a79ded7b0602b6b00dff4c529babdbcb575a3ca0b862f315af387"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1185.log",
+      "sha256": "9d1ce51ab465d5b4f08f6ba16df5d65f7ff837fcd91266e49198fd23e03a5883"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1186.json",
+      "sha256": "291dca9326a41aa37a040b7e452063e4a4e06deb2350d3c4bf829934425803ff"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1186.log",
+      "sha256": "e4aad9c4171102583668f9fd39fd163b4c3a93d0d85019d7da532b85d71b9e16"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1187.json",
+      "sha256": "450696a3a966b9b782b1cd7869f7718ad2c0d963cd6b9d7f0f2bff27fdaf0556"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1187.log",
+      "sha256": "558ec3bd99bd6e95df36571767b5b03f3f49cb5a81c5b52ed27f869a1e592ca2"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1188.json",
+      "sha256": "f0d6594086b653cea761167806bd1e72760aa7db41a70e6793723597824acb34"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1188.log",
+      "sha256": "7da27a5a7c04a0bc5d13b102e612ee55d8c32b74ec7e8e748b2decb78cca6607"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1189.json",
+      "sha256": "75e894da408348e5f38dfb61871d759072294d6dfd3c52fbfc1fdd8a858d89a2"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1189.log",
+      "sha256": "f7706eab7d248d9ecd458c33a01744f4b69d04980cecaec318509bd54f58bf04"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1190.json",
+      "sha256": "bbc7620832f1c49161d2b9a2678c4dd3ab10a14da25c076a33995bc67646ee07"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1190.log",
+      "sha256": "8c3ac0a376b4d06d0c8164f352a7a7d8f5ba1ca84fa57057bbc5630c9cc22444"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1191.json",
+      "sha256": "a67088f74957dbf4a86b950413910bc11a94af9c99a09b3d871a0af190f3a166"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1191.log",
+      "sha256": "ad50d887cfb615118479e8e750bc2eda559c1250e48f34485f5725ea5eb6fe77"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1192.json",
+      "sha256": "81890b4a64979efb38cec11e57b888b94317995241caddb3c464fe547c9ddb18"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1192.log",
+      "sha256": "0dfc5bbd02ada149e1ea1800b11815dffe088ff1f846925f185fad5097b52bf9"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1193.json",
+      "sha256": "7941c68ee294d861dde56428f62bf67c10d835c586f81d058fd493e2f5f8c2fa"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1193.log",
+      "sha256": "8886ed8b6db75b3a47f8619c03a254a4b0eac225abff4a897368ebff574e4b77"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1194.json",
+      "sha256": "98eceb167f43905e43b55883fcbc0e19cd0a3cc2e113c1451075d5e8c6b47774"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1194.log",
+      "sha256": "d5f9743323511a210335cc9f0bcf70c685b59717330f66db2120063945bb03b2"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1195.json",
+      "sha256": "31775dc5b9614b0ab397a65e0704c93cb90e02093287c1faff5da4b36bbabc95"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1195.log",
+      "sha256": "46afb55519f4b019eabc95302cc18781a5d03b30109af7e9616b191e86196dba"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1196.json",
+      "sha256": "62c760da73268d658ad75bc7aff116215b2142dbfa95dd19977da8404c40e36d"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1196.log",
+      "sha256": "f7b0048de8ef13371d3ff72df481a94ac21341522c33f3c72c040d3e99241fa0"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1197.json",
+      "sha256": "82502189945422b3e30456decd2b8ed856c30ff8e80135c03684f0a6a7f73b2b"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1197.log",
+      "sha256": "0d660e5646537f3686567026750932e60c36b7148c409c5fe024f76c62c5d1f8"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1198.json",
+      "sha256": "080ce042a73a81b917af67241d157cad59f433e1c286ffdabde76506192a5a69"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1198.log",
+      "sha256": "b771bf329e938b62f705b8acb4907d28025f79041063cb97344c0e319eed80f8"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1199.json",
+      "sha256": "e7b231c3e51a7faa8c80f3c43d00f263338134393c818d22a8506f7d8a1d4a44"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1199.log",
+      "sha256": "305358f297b26b3f79c6af240f7e726b4da61222e8a1a9d70f00f6747c074c88"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1200.json",
+      "sha256": "01d494bc866ae0aa0ebe3dd44f3b1fa91d455425bb933c62784bc2c3a797727e"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1200.log",
+      "sha256": "373ccdf278d27c790452a28d094dbdd9193f5546c50d05d5ebff0f571450aca0"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1201.json",
+      "sha256": "3c5642c6c4359f1c7436c890d935e78aa8ba06f7edcccc1111fa713060da658b"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1201.log",
+      "sha256": "70af1b2e75c61c0d4ba5c0aaf233cc8ef440280f7fe62ad14066042223f60772"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1202.json",
+      "sha256": "7ddfa2e2743888456a73a7fcf28b9e53cb6d537aae4d7cdb24b7b1fc7ccaa97c"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1202.log",
+      "sha256": "9a8f4a17e0566aeba34f4986f5cbaf5c8b7dbe9a46f29814112fb6dcfc6050e8"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1203.json",
+      "sha256": "8ac2e24d51c386b63716597b4511ed3f16c167f3ca1ec09c7ce9e37c42d0dfbd"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1203.log",
+      "sha256": "434dd0d5843f701957db814236ac8195944f66c59a2487cd4b416e74dcfcef0f"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1204.json",
+      "sha256": "ab70f848a839d8fd8565182ca6a527be1803f74d1d91cef9c6a9955b1f17fc15"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-679e2e9\\1204.log",
+      "sha256": "61ebf952e0bf389b41555be559507973a12187e12c23d6e2111368a140e4bf55"
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9",
+            "passed_tests": 754,
+            "skipped": [],
+            "log": "C:\\Temp\\process-regression-679e2e9\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\cmd\\oracle",
+            "passed_tests": 457,
+            "skipped": [],
+            "log": "C:\\Temp\\process-regression-679e2e9\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\process-regression-679e2e9\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "7cd2f1a3cc0dc2d2c0d6630d230fb579e8ae99f1efada29e436c8f39a958dc43",
+          "index_sha256": "279ab3c43a8d6fd16a451c5d4334374508a849d2f9d61cb94bd22fe429d8cbec",
+          "head": "679e2e9d3d21740257cb36e76800323ce342bacb"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "7cd2f1a3cc0dc2d2c0d6630d230fb579e8ae99f1efada29e436c8f39a958dc43",
+          "index_sha256": "279ab3c43a8d6fd16a451c5d4334374508a849d2f9d61cb94bd22fe429d8cbec",
+          "head": "679e2e9d3d21740257cb36e76800323ce342bacb"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\process-regression-679e2e9\\summary.json",
+        "sha256": "a09923fef9c35f37b8430eacc05716abd1dfdd08f4031080d418daaf69b9b812"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\process-regression-679e2e9\\root.log",
+          "sha256": "3a42ceb4c48db5052885c9ba92bb5e0a4de2ae200be4a1dbdf2ee7440e805597"
+        },
+        {
+          "path": "C:\\Temp\\process-regression-679e2e9\\oracle.log",
+          "sha256": "f4e8480a9df3f94ec67522e469d2e7fb13aa00f17c5d62f4f0a09e6c09b5c705"
+        },
+        {
+          "path": "C:\\Temp\\process-regression-679e2e9\\external.log",
+          "sha256": "fcae8d504f3c99d3956de9afba343ee44787466d69f8517ff2551febf380dc60"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9",
+            "passed_tests": 754,
+            "skipped": [],
+            "log": "C:\\Temp\\process-race-679e2e9\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\cmd\\oracle",
+            "passed_tests": 457,
+            "skipped": [],
+            "log": "C:\\Temp\\process-race-679e2e9\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\process-race-679e2e9\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "7cd2f1a3cc0dc2d2c0d6630d230fb579e8ae99f1efada29e436c8f39a958dc43",
+          "index_sha256": "279ab3c43a8d6fd16a451c5d4334374508a849d2f9d61cb94bd22fe429d8cbec",
+          "head": "679e2e9d3d21740257cb36e76800323ce342bacb"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "7cd2f1a3cc0dc2d2c0d6630d230fb579e8ae99f1efada29e436c8f39a958dc43",
+          "index_sha256": "279ab3c43a8d6fd16a451c5d4334374508a849d2f9d61cb94bd22fe429d8cbec",
+          "head": "679e2e9d3d21740257cb36e76800323ce342bacb"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\process-race-679e2e9\\summary.json",
+        "sha256": "a2fff689051e0ccd4d5248598bf92d14d2891fa6edbaf70c8fe74793db1642af"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\process-race-679e2e9\\root.log",
+          "sha256": "b70bdfcb693d7d48dc8ebe8871ecee3fdfdfaabdec9f4a64932574fbbdfa88ac"
+        },
+        {
+          "path": "C:\\Temp\\process-race-679e2e9\\oracle.log",
+          "sha256": "89f6d168781b458cc928d67ed2cf2b89dfc1b27c630b27ce296c85d053b3a3e8"
+        },
+        {
+          "path": "C:\\Temp\\process-race-679e2e9\\external.log",
+          "sha256": "996f6933e450f77868ea8b738fa0d35308a9efea6b95267a6b9f25841ab440f5"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\process-fuzz-679e2e9\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\process-fuzz-679e2e9\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\process-fuzz-679e2e9\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\process-fuzz-679e2e9\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\process-checks-679e2e9\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\process-fuzz-679e2e9\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "7cd2f1a3cc0dc2d2c0d6630d230fb579e8ae99f1efada29e436c8f39a958dc43",
+          "index_sha256": "279ab3c43a8d6fd16a451c5d4334374508a849d2f9d61cb94bd22fe429d8cbec",
+          "head": "679e2e9d3d21740257cb36e76800323ce342bacb"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "7cd2f1a3cc0dc2d2c0d6630d230fb579e8ae99f1efada29e436c8f39a958dc43",
+          "index_sha256": "279ab3c43a8d6fd16a451c5d4334374508a849d2f9d61cb94bd22fe429d8cbec",
+          "head": "679e2e9d3d21740257cb36e76800323ce342bacb"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\process-fuzz-679e2e9\\summary.json",
+        "sha256": "30431e0b4927c4c9acce2c672003d7d2378de4fc63a0578a740f23962f98fd1f"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\process-fuzz-679e2e9\\state.log",
+          "sha256": "364ad1d49321f09b88f4cbe134dda74eb00a042920d27dd859587a3d7baed99f"
+        },
+        {
+          "path": "C:\\Temp\\process-fuzz-679e2e9\\bundle.log",
+          "sha256": "84cd44abed59278fee4c85c030ab098859c58ed3c994a5f0e89a7e95b793b617"
+        },
+        {
+          "path": "C:\\Temp\\process-fuzz-679e2e9\\report.log",
+          "sha256": "875543352b4d70347cdb6c7e07f6f88330afaa00d54a9bcb7c2b99a7fac9c4f8"
+        },
+        {
+          "path": "C:\\Temp\\process-fuzz-679e2e9\\risk.log",
+          "sha256": "ad0fd05aa4879596274e3f915a3ee09855b272eb475140d633865da04c2492e0"
+        },
+        {
+          "path": "C:\\Temp\\process-fuzz-679e2e9\\lifecycle.log",
+          "sha256": "a6ac1a2cb673df6ec4f9c844bbc5f0e5d46d125a3c54d60b550eb81cb2a50467"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\process-python-679e2e9.log",
+    "sha256": "9aa4d70cb6a428943681c3031df7b6470940b415747150fc1033d6f97404c59e"
+  },
+  "ci": {
+    "sha": "679e2e9d3d21740257cb36e76800323ce342bacb",
+    "run": 41437482893,
+    "branch": "codex/process-admission-20261102",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "before_fix": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red.json",
+      "sha256": "a993bca4946dbc66788d8eb5265434a4088c19cedcd776a1ec5514670ee6fd24"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-registered.py.txt",
+      "sha256": "c44180d7b5774f08539a2a1608153582c8ae027c1abe73635fa47137e64786aa"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-fixture.py",
+      "sha256": "e27a6eb04d42c7dca02feef6ac901547988cf432b7b277f3f67f265dc541e3d8"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red.log",
+      "sha256": "1af0eaba9bcb98b5bb69e95631813b997225503d47f2aa62f742d3634ce13d11"
+    },
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-observation.json",
+      "sha256": "4fc4d1a9f4c78c66a4c6215bbb2c4d1a18dc58b3e89701dbea75c8bd0ba9124b"
+    }
+  ],
+  "private_process_rehearsals": {
+    "old-real-query": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\001-start.json",
+        "sha256": "a11b968c0d5a0a926dde12b2f15bf45b53d2777326f7a10d62c79bd8d9869873"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\002-begin.json",
+        "sha256": "10c0306b1afcb67a396a0da5e9a1420278351cdd1acc4723eb6c2c850529d998"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\003-process.json",
+        "sha256": "e62ad3852d0a67c4ec64405c6e68b983b4ca6ba38abdf7bed6f99bee8cf7d000"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\004-command.json",
+        "sha256": "8c8f942de19644ca387eeca8b6083d50a2232cfef4c7aeb0f99232bc5c4cb2a7"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\005-private-error.txt",
+        "sha256": "e0c1c5f0af8c6273468acc062e30d32f830516e240df10458b1816181fc12e93"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\006-failed.json",
+        "sha256": "2d42aed20aecf25180a3769a886a7bd7248246085eb42b7d2999c55a05ef6552"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\007-outcome.json",
+        "sha256": "0f06bdb876e7fb097f90900365d806b87f3924f14aeb18dee18afc25e712d226"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-real-query\\command-001-private-combined.bin",
+        "sha256": "bd2f65af531aed39adcab5262670a46ef56612a416220ee8c7bc49b1cefc5f40"
+      }
+    ],
+    "old-red-query": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\001-start.json",
+        "sha256": "1a4e72d90ced63bffa90e298d58e24dd95f0b87e840bfca6ea5f04fc6e2589f2"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\002-begin.json",
+        "sha256": "10c0306b1afcb67a396a0da5e9a1420278351cdd1acc4723eb6c2c850529d998"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\003-process.json",
+        "sha256": "0d7a3da16054bf2ceda4a9b43e013c495c045e1312858e3a5be12c32e96d8686"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\004-command.json",
+        "sha256": "a96461e7a2e70009b6c935df1079ee8cf3a6f057dde9676c00a3d339f778ea2a"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\005-private-error.txt",
+        "sha256": "4a745bc307fd8914b9c3ebfce5a263242f9ae49e1a6331734848ae49c8fb0eef"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\006-failed.json",
+        "sha256": "1053b19fcbee7c371966b8643b1296e559a99453676890bf7742680584bf8cba"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\007-outcome.json",
+        "sha256": "4e2070f9784acc459623018445e83288bc2dae8cd9ec6b619ded3e1984cf2dff"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\old-red-query\\command-001-private-combined.bin",
+        "sha256": "f9b7266faa70d2231f84591065e4a07b5b667a82ee0125cdc048111977663f40"
+      }
+    ],
+    "new-probe-1": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\001-start.json",
+        "sha256": "9533c2ca29c209bef9f34df85b3fd95b488aeefdda058cc8b437be8773a64d03"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\002-begin.json",
+        "sha256": "10c0306b1afcb67a396a0da5e9a1420278351cdd1acc4723eb6c2c850529d998"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\003-process.json",
+        "sha256": "79ce251a6364756c84d53e59b06dd12b2ef865e23c169333ac228efb1869941a"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\004-command.json",
+        "sha256": "5ba6eb583d9bc1bbdaa13b20ccdcc57db530c58ef6b70af1bd6668918c59fbb1"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\005-private-process-identities.json",
+        "sha256": "c0a83b9228b93cd5236acd0bb7e123bd8654f515f5136eb5d5db7bf361d4a88f"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\006-private-error.txt",
+        "sha256": "a080ee41f83b65841d9989d059945d7b9a3ce314de7d4021463ddc3347d664ba"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\007-failed.json",
+        "sha256": "8b0924392a590166d5c35e7125646d77a2e59f0aafd90aade9b6af43e90e452f"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\008-outcome.json",
+        "sha256": "3ddf426cf762db2853b40e670854703485382ea762a5a02f1b7819512e6e674b"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-probe-1\\command-001-private-combined.bin",
+        "sha256": "bae076bffec354aef5c964226267fc4b4a29dc1c8b1d2a1809bc2e732cba3913"
+      }
+    ],
+    "new-real-query": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\001-start.json",
+        "sha256": "74b1c2cab89c0afddefeea114151ef84feb9aab8a9da9214504160a884888d77"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\002-begin.json",
+        "sha256": "10c0306b1afcb67a396a0da5e9a1420278351cdd1acc4723eb6c2c850529d998"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\003-process.json",
+        "sha256": "3571b4f424115cf00cb9efafee93411eb9575ee1ce4325b1e9a66e69a90653d2"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\004-command.json",
+        "sha256": "d6c00f50f49ae3cf2d525066ed0bcb9d14f57c26f4964548c63cc7c96af34c07"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\005-private-process-identities.json",
+        "sha256": "a91cd120f71d81df287b37918783447f8ebd8933a6eda331f5cb0afdd7346af3"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\006-passed.json",
+        "sha256": "ce8977ae80aa79a0441f40012a208ac2f8cb75873ecd2363f2a0f992679b53e2"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\007-begin.json",
+        "sha256": "c00d008a4978539a0b8919c06b0916555012d9ab127c76b1fa48927b06490cd6"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\008-passed.json",
+        "sha256": "ef8d17a23fb4369d4e303340fa3ce335ddfb86690a6bd728430120abb08787cf"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\009-outcome.json",
+        "sha256": "b13f98d3833bbdcf4b7f70c14537ce063acdddaa17dcb970d25094a7fa6f27ae"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-real-query\\command-001-private-combined.bin",
+        "sha256": "746be19d65327e946207f663f333e220dc60909bcd016a6b74c667b68128a5ad"
+      }
+    ],
+    "new-source-real-query": [
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\001-start.json",
+        "sha256": "e84644b7c5b3ee071ab1393d2eb6814196c5545c21dce47f7d6a4ac5895dad3a"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\002-begin.json",
+        "sha256": "10c0306b1afcb67a396a0da5e9a1420278351cdd1acc4723eb6c2c850529d998"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\003-process.json",
+        "sha256": "1ac22f9fc672c4288ba52e1b703fc5de7bc67f348620ebd131344905686dec72"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\004-command.json",
+        "sha256": "8bbd46f87b1916dcb6d688aa19fac7b7f4cbc6900e7bedd1e83d1051a57dc229"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\005-private-process-identities.json",
+        "sha256": "28e456342703b5d038a818cf9b8b429f7cf1c032581cd90ec950cbfe2d2eb82a"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\006-passed.json",
+        "sha256": "4fca1ce13cdc0cce4a312e65457e4c6c843deb5d0b96046287a388bcea71d8c6"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\007-begin.json",
+        "sha256": "c00d008a4978539a0b8919c06b0916555012d9ab127c76b1fa48927b06490cd6"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\008-passed.json",
+        "sha256": "6afdd3f5fe2bb7bd6a842c10c0c5949c8f9afd3727c82f4fce42a97112de5d5f"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\009-outcome.json",
+        "sha256": "b13f98d3833bbdcf4b7f70c14537ce063acdddaa17dcb970d25094a7fa6f27ae"
+      },
+      {
+        "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query\\command-001-private-combined.bin",
+        "sha256": "6e8d5ad34cc3a855cb37665a983fda2531c6fe4269da4c29841feb9d52900b8e"
+      }
+    ]
+  },
+  "accurate_source_process_probe": {
+    "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\new-source-real-query.json",
+    "sha256": "44b1d5adb86ed57b3bf1fc37536d7f1c06ea2975293a1a22410ef988172802ba"
+  },
+  "retained_failure": [
+    {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\failed-target-0eddcbb.json",
+      "sha256": "b5bae0f8ced3ebcc626ea3d1cdf475c158ed9bcec68d67f69e18f4664448ef0e"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-0eddcbb\\summary.json",
+      "sha256": "518d8de7e7f33ed9daea1ac99602016031c2866976b32f28b5552b1eecf456fe"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-0eddcbb\\1192.json",
+      "sha256": "27f47135b548b545cd22381f2a88b26369f78facee2376455f7fa1e8d8bb6b09"
+    },
+    {
+      "path": "C:\\Temp\\process-targets-results-0eddcbb\\1192.log",
+      "sha256": "a68016950df139fcb371ead6a35bb3d24113cf7b5d5cbf4995ca9917710e74b7"
+    }
+  ],
+  "candidate_build": {
+    "source_commit": "679e2e9d3d21740257cb36e76800323ce342bacb",
+    "path": "C:\\Temp\\ctp-readonly-20261103-679e2e9.exe",
+    "sha256": "1d798925b867db6cd21d76e455d5368b5965121fd2d5f7cb57e8ce125acc75b9",
+    "verified_at_bjt": "2026-11-02T19:36:08.959397+08:00",
+    "build_info": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\process-guard-20261102\\build-info.txt",
+      "sha256": "9e2612419f77aa35bacaf3915d2c6d3ddfc6cabb81590e1247a33f18b9270a86"
+    },
+    "actual_exe_executions": 0
+  },
+  "fixed_dlls": [
+    {
+      "name": "ctp_trade.dll",
+      "sha256": "18bf025ceb86b8886dcba4091bb4410ee4cad8ae851e707183159d5bd0245abc"
+    },
+    {
+      "name": "thosttraderapi_se.dll",
+      "sha256": "774ca2f3bba3009e72ba1f8a5e7a752d569bbbd999f19017e7cabc5c32c08bdc"
+    }
+  ],
+  "runtime_files": [
+    {
+      "relative": "scripts/readonly_admission/__init__.py",
+      "sha256": "1ca73765bc4812a91101b44791b6d0750039400e8529a3c5f21cb8de1c0ecaf9"
+    },
+    {
+      "relative": "scripts/readonly_admission/checks.py",
+      "sha256": "9668f1158d0d0d11ea37581a2a3769a8c455d1fa02569376c31103ab0f3951b7"
+    },
+    {
+      "relative": "scripts/readonly_admission/envfile.py",
+      "sha256": "01fa8cfa19d7870d6ce9068238387d12c9c9e85df4cfca32eeb812ff51a4b1d1"
+    },
+    {
+      "relative": "scripts/readonly_admission/errors.py",
+      "sha256": "6654fdd487ece69da7e6a433b4bd283466d662698acc58295d176af4cd4793a5"
+    },
+    {
+      "relative": "scripts/readonly_admission/journal.py",
+      "sha256": "0c53c6effe207b6c1d64e04418716bead05d839e1f260d640828bdfe1b4be1fd"
+    },
+    {
+      "relative": "scripts/readonly_admission/processes.py",
+      "sha256": "a279f26579871a804c1eb340e41d4946bdfbc679e440727830dd339b8e887574"
+    },
+    {
+      "relative": "scripts/readonly_admission/registered.py",
+      "sha256": "51c7bbf37e7588c262e42ad12518174d3767a155c83cfdee20e52697e5b4af89"
+    },
+    {
+      "relative": "scripts/readonly_admission/runner.py",
+      "sha256": "6f8294f767822986db6af8f9f4bf80e6029c33107da259ec91d8a646457015a4"
+    },
+    {
+      "relative": "scripts/validation_runtime.py",
+      "sha256": "60e735cb392c76009a9e0b970f8091803968950d4bdfee4335eaf80450355817"
+    },
+    {
+      "relative": "scripts/process_worker.py",
+      "sha256": "c4db29bd34c15643d302abd86a7b8639ed16d7fd5f1f025c26c369e844cea9d2"
+    },
+    {
+      "relative": "scripts/windows_job.py",
+      "sha256": "bc4d713252dfd2404d024221d18b4241c26f302b5ff0f9855b97cb63648c505b"
+    },
+    {
+      "relative": "scripts/verify_evidence.py",
+      "sha256": "0e951b354db1a78a71eec8363a669d0a2824a8b7b04ab79e89f1fb3dac6c3513"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/__init__.py",
+      "sha256": "cdf921d17f6115624094ad310992f06955ea304e27b9a88fd3b9a0e2b9a12c73"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/analysis.py",
+      "sha256": "af9ac0fd26fe21747070eedfc79177220a2a31644ea32e9c1d1c20aef8ac6b98"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/entries.py",
+      "sha256": "f7694814406361e55750245cd7e654f25ee3c65f967d3d630e547857da9b5ee7"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/integrity.py",
+      "sha256": "18f28cffb9be4988f0b72e5505e996fa947534f0b17447cbeebd9d3ae7b61828"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/parsing.py",
+      "sha256": "fa601990d691b1df44a52a0bf16bbd79df5257015d0a79ac2e8c19bea7e4ccf0"
+    },
+    {
+      "relative": "scripts/handshake_diagnostics/reporting.py",
+      "sha256": "1d90643e4414e128fe4e1417a8504fed9979e64b8a76b1f765fca3aeed01e142"
+    }
+  ],
+  "scope": {
+    "real_env_reads": 0,
+    "broker_connections": 0,
+    "orders": 0,
+    "cancels": 0,
+    "historical_matching_identity": "not captured; not retrospectively attributed",
+    "reproduced_mechanism": "old query worker matched its own embedded operator path",
+    "counterparty_retry": false,
+    "live_acceptance": false,
+    "next_readonly_candidate": "2026-11-03 09:05–09:10 BJT"
+  }
+}
