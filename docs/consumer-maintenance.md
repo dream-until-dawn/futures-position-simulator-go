@@ -271,6 +271,8 @@ go run . -scenario frozen -invalid
 
 这组结果是该准确源码的历史验收，不是本手册新增文档后又执行过整轮的声明。9项预期绿也不是9个普通测试失败：8项是刻意保留的判据/边界演示，另1项涉及真实种子归属与方向的独立核对。不能按“全绿”或数量换算完整交付百分比。
 
+本批完整1118项破坏为本机Windows上的独立整轮；Windows/Linux CI通过指各平台的常规测试、race、fuzz和Python验证，不能据此声称Linux也跑过完整1118项。CI中的完整mutation任务默认未执行。平台专属用例按各自构建标签或显式平台分支执行；Linux通过不代表Windows CTP桥或CIM查询已在Linux实际运行，CIM只读身份探针也不等于柜台连接实测。
+
 证书入口：[最新进程准入验收](./validation/process-admission-679e2e9.json)、[离线最终交付](./validation/offline-final-delivery-297543c.json)、[离线范围审计](./offline-acceptance.md)。完整破坏原始大文件主要保存在本机路径，克隆仓库不保证自动获得它们。需要独立审计时应取得证书引用文件并核哈希；无法获取应记录为无法复核，不可当已复核。CTP与快期私有日志可能含身份信息，不能直接作为公开附件。
 
 维护者可使用现有 scripts/validate.py 的 regression、race、fuzz、mutation 套件；完整命令与前置看 [开发手册](./development.md)。mutation 会修改源码，必须在准确且干净的独立副本执行，不能与真实现场冻结运行共用源码树。任何还原失败/未知运行都不能继续拼接验证。
