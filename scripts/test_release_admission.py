@@ -118,6 +118,8 @@ class ReleaseAdmissionTests(unittest.TestCase):
         self.record['verified_at_bjt']='2026-11-02T08:39:59+08:00';self.write();self.refused('过旧发布凭据未拒绝')
 
     def test_capture_after_window_start_is_rejected(self):
+        # 当前时刻已过签发时刻；不能让“未来凭据”守卫遮蔽迟发性质。
+        self.at=datetime.fromisoformat('2026-11-02T09:06:00+08:00')
         self.record['verified_at_bjt']='2026-11-02T09:05:01+08:00';self.write();self.refused('迟发发布凭据未拒绝')
 
     def test_unqualified_timezone_is_rejected(self):
