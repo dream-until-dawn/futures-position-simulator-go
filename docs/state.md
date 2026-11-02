@@ -2620,6 +2620,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `README.md` | 6 |
 | `docs/consumer-maintenance.md` | 15 |
 | `docs/process-admission.md` | 5 |
+| `docs/ctp-readonly-20261103.md` | 4 |
 | `docs/design.md` | 31 |
 | `docs/cn-futures-rules.md` | 43 |
 | `docs/fidelity.md` | 21 |

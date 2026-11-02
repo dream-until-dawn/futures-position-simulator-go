@@ -18,6 +18,8 @@
 
 Windows参数用CommandLineToArgvW解析并正确LocalFree，不用空格切分或POSIX shlex猜测。非Windows不提供真实CIM执行，仍可运行合成判别正反例。
 
+首个真实新探针正确拒绝了主映像不一致：本机Python安装管理器使当前OS映像为bin/python.exe，而sys.executable指向pythoncore运行时。修订为GetModuleFileNameW读取当前实际映像，worker仍独立绑定sys.executable；不能为了兼容shim放开两者任意同名。该差异另有合成正例/伪装worker反例；原失败快照保留。
+
 ## 3 证据与失败原则
 
 开始记录先于进程查询；查询原始字节经现有有界命令留证。身份评估在准入决定前排他写入、fsync及读回，缺失/失败不继续。记录包括已识别查询树、阻断者/未知项及创建时间、命令行/映像摘要和指向私有原始输出的绑定。不得把空列表、查询退出0或仅计数0等同于已核完整身份。
@@ -39,3 +41,5 @@ Windows参数用CommandLineToArgvW解析并正确LocalFree，不用空格切分�
 Windows进程身份与父PID复用限制见[Win32_Process官方定义](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process)；命令行解析/内存释放见[CommandLineToArgvW官方定义](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-commandlinetoargvw)。这些API定义不是本项目实际判别正确的证据，仍需上述真实与合成测试。
 
 本页先登记设计与待证假设。复现、准确源码、计数、证书、发布和新窗口仅补真实已完成结果，不提前声称今天的身份已还原或现场握手已成功。
+
+已完成离线旧接线复现：唯一命中为本轮受监管查询worker，PID/父PID/原始命令及摘要均有私有原始证据，未读.env或连接柜台。此结果证明可复现机制，不恢复上午缺失的历史身份。实际OS映像定义补充见[GetModuleFileNameW](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew)。
