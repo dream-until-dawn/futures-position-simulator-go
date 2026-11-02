@@ -88,14 +88,14 @@ class ProcessIdentityTests(unittest.TestCase):
         self.snapshot['rows'][1]['executable']='C:/evil/python.exe';self.refused('伪装worker映像被放行')
 
     def test_worker_arguments_must_be_exact(self):
-        self.snapshot['rows'][1]['command_line']=json.dumps([self.options['executable'],self.options['worker_path'],'-c','unrelated'])
+        self.snapshot['rows'][1]['command_line']=json.dumps([self.options['executable'],self.options['worker_path'],*p.QUERY_ARGV[:-1],'unrelated'])
         self.refused('伪装worker参数被放行')
 
     def test_worker_pid_must_be_actual_supervised_pid(self):
         self.options['worker_pid']=500;self.refused('未核实际监管PID')
 
     def test_collector_parent_image_and_command_are_verified(self):
-        for key,value in [('parent_pid',100),('executable','C:/evil/powershell.exe'),('command_line',json.dumps(['powershell','-Command','different']))]:
+        for key,value in [('parent_pid',100),('executable','C:/evil/powershell.exe'),('command_line',json.dumps([*p.QUERY_ARGV[:-1],'different']))]:
             with self.subTest(key=key):
                 self.snapshot,self.options=sample();self.snapshot['rows'][2][key]=value
                 self.refused('采集器身份被伪装')
