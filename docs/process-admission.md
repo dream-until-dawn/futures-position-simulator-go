@@ -43,3 +43,5 @@ Windows进程身份与父PID复用限制见[Win32_Process官方定义](https://l
 本页先登记设计与待证假设。复现、准确源码、计数、证书、发布和新窗口仅补真实已完成结果，不提前声称今天的身份已还原或现场握手已成功。
 
 已完成离线旧接线复现：唯一命中为本轮受监管查询worker，PID/父PID/原始命令及摘要均有私有原始证据，未读.env或连接柜台。此结果证明可复现机制，不恢复上午缺失的历史身份。实际OS映像定义补充见[GetModuleFileNameW](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew)。
+
+最终离线验收：准确源码679e2e9完整1118项（1109预期红/9预期绿/0异常、exit0）、21项定向、三模块严格regression/race、五个20秒fuzz、132项Python与准确Windows/Linux CI run41437482893全部通过。原1098条不删改，全部want、源码tree/内容/索引和实际还原独立验真，见[证书](./validation/process-admission-679e2e9.json)。首轮1192被长度守卫遮蔽的反例不足已真实检出并完整保留，改为等参数数量反例后以新准确提交从头验收，不拼接。最终准确源码真实CIM探针也留存完整身份及前后干净指纹，未读.env、未连接柜台。
