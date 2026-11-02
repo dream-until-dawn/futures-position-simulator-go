@@ -50,7 +50,17 @@ class AdmissionChecksTests(unittest.TestCase):
             binary=self.artifact(self.exe),plan=self.artifact(self.plan),dlls=dlls)
         self.recorded='2026-10-30T20:00:01+08:00'
         self.refresh_certificate()
+        self.cfg.update(release=str(self.root/'release.json'),
+            release_window_start_bjt='2026-11-02T09:05:00+08:00',
+            release_window_end_bjt='2026-11-02T09:10:00+08:00')
+        self.refresh_release()
         self.calls=[];self.overrides={};self.serial=0
+
+    def refresh_release(self):
+        from readonly_admission.release import bindings
+        self.release_record=dict(bindings(self.cfg), verified_at_bjt='2026-11-02T09:00:00+08:00')
+        path=Path(self.cfg['release']);path.write_text(json.dumps(self.release_record),encoding='utf-8')
+        self.cfg['release_sha256']=sha(path.read_bytes())
 
     def artifact(self,path):return dict(path=str(path),sha256=sha(path.read_bytes()))
 

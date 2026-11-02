@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 from verify_evidence import verify_bundle
+from .release import verify as verify_release
 
 
 def digest(path):
@@ -157,3 +158,9 @@ class Checks:
             ('remote-git', self.remote_check), ('binary', self.binary_check),
             ('certificate', self.certificate_check), ('plan', self.plan_check),
             ('dll', self.dll_check), ('evidence', self.evidence_check)]]
+
+    def execution_steps(self):
+        """执行只接受短期发布凭据；保留其他全部本地准入及证据重核。"""
+        return [('release', lambda ctx: verify_release(ctx, self.cfg))
+                if name == 'remote-git' else (name, check)
+                for name, check in self.steps()]

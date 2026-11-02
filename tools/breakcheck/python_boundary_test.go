@@ -74,3 +74,8 @@ func TestPythonAdmissionRegisteredBoundary(t *testing.T) {
 func TestPythonProcessIdentityBoundary(t *testing.T) {
 	runPythonBoundary(t, "test_process_admission")
 }
+
+// TestPythonReleaseAdmissionBoundary 验证发布联网与现场离线准入分期且失败仍停止。
+func TestPythonReleaseAdmissionBoundary(t *testing.T) {
+	runPythonBoundary(t, "test_release_admission")
+}

@@ -2,7 +2,7 @@
 import subprocess
 
 STAGES = frozenset({'journal', 'process', 'window', 'ready', 'receipt', 'source', 'local-git',
-                    'remote-git', 'binary', 'certificate', 'plan', 'dll',
+                    'remote-git', 'release', 'binary', 'certificate', 'plan', 'dll',
                     'evidence', 'env', 'execution', 'diagnosis', 'final'})
 
 
