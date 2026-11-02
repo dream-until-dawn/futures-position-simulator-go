@@ -8,10 +8,13 @@ import (
 )
 
 // pythonBoundaryCommand 统一Go与Python边界的启动配置。
-func pythonBoundaryCommand(args ...string) *exec.Cmd {
+func pythonBoundaryCommand(t *testing.T, args ...string) *exec.Cmd {
+	t.Helper()
 	cmd := exec.Command("python", args...)
 	// Go按UTF-8读取诊断；覆盖父进程的本地编码及显式ASCII设置。
 	cmd.Env = append(os.Environ(), "PYTHONUTF8=1", "PYTHONIOENCODING=utf-8")
+	// 同一秒内同尺寸的不同破坏可命中旧pyc；只用-B不能阻止读取已有缓存。
+	cmd.Env = append(cmd.Env, "PYTHONPYCACHEPREFIX="+t.TempDir(), "PYTHONDONTWRITEBYTECODE=1")
 	return cmd
 }
 
@@ -19,7 +22,7 @@ func pythonBoundaryCommand(args ...string) *exec.Cmd {
 func TestPythonBoundaryOutputUTF8(t *testing.T) {
 	t.Setenv("PYTHONUTF8", "0")
 	t.Setenv("PYTHONIOENCODING", "ascii")
-	cmd := pythonBoundaryCommand("-c", "import sys;sys.stdout.write('stdout:命令超时|');sys.stdout.flush();sys.stderr.write('stderr:命令超时')")
+	cmd := pythonBoundaryCommand(t, "-c", "import sys;sys.stdout.write('stdout:命令超时|');sys.stdout.flush();sys.stderr.write('stderr:命令超时')")
 	output, err := cmd.CombinedOutput()
 	if err != nil || string(output) != "stdout:命令超时|stderr:命令超时" {
 		t.Fatalf("Python中文输出不是UTF-8: %v %q", err, output)
@@ -33,7 +36,7 @@ func runPythonBoundary(t *testing.T, module string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := pythonBoundaryCommand("-m", "unittest", module)
+	cmd := pythonBoundaryCommand(t, "-m", "unittest", module)
 	cmd.Dir = filepath.Join(root, "scripts")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Python边界验证失败: %s %v\n%s", module, err, output)

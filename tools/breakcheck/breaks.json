@@ -12590,5 +12590,27 @@
   "new": "const restingProbeDay = \"20261102\"",
   "test": "TestTuesdayQuoteDateBinding",
   "want": "11月3日行情双日期绑定错误"
+},
+{
+  "name": "1233 Python子进程读取旧缓存",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "tools/breakcheck/python_boundary_test.go",
+  "old": "cmd.Env = append(cmd.Env, \"PYTHONPYCACHEPREFIX=\"+t.TempDir(), \"PYTHONDONTWRITEBYTECODE=1\")",
+  "new": "cmd.Env = append(cmd.Env, \"PYTHONPYCACHEPREFIX=\", \"PYTHONDONTWRITEBYTECODE=1\")",
+  "test": "TestPythonBoundaryIgnoresStaleBytecode",
+  "want": "Python边界读取旧字节码"
+},
+{
+  "name": "1234 Python边界重新写入缓存",
+  "dir": "",
+  "pkg": "./tools/breakcheck",
+  "expect": "red",
+  "file": "tools/breakcheck/python_boundary_test.go",
+  "old": "cmd.Env = append(cmd.Env, \"PYTHONPYCACHEPREFIX=\"+t.TempDir(), \"PYTHONDONTWRITEBYTECODE=1\")",
+  "new": "cmd.Env = append(cmd.Env, \"PYTHONPYCACHEPREFIX=\"+t.TempDir(), \"PYTHONDONTWRITEBYTECODE=\")",
+  "test": "TestPythonBoundaryCachePerInvocation",
+  "want": "Python边界缓存写入未禁用"
 }
 ]
