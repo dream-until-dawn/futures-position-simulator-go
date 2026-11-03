@@ -12814,7 +12814,7 @@
     "expect": "red",
     "file": "refdata/calendar_first_open.go",
     "old": "if !suspended {",
-    "new": "if true {",
+    "new": "if suspended || !suspended {",
     "test": "TestFirstOpenExplicitSuspensionAndOrder",
     "want": "停夜盘未切到最早日盘"
   },
