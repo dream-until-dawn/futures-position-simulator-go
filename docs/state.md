@@ -1,5 +1,9 @@
 # 项目状态：唯一来源
 
+**FirstOpen已完成准确源码独立验收**：6510552完整1175项（1166预期红/9预期绿/0异常、exit0）、13定向、三模块严格regression/race、五个20秒fuzz、166Python及准确Windows/Linux源码CI全部通过，源码内容/索引还原已独立核验。新增只读交易日首开，不改旧API、规则、存档和交易程序；夜盘未知不默认日盘。见[设计](./calendar-first-open.md)及[证书](./validation/first-open-6510552.json)。本段记录离线验收，实际发布以main/dev准确引用和CI为准，不提前声称已合入。
+
+**11月3日下午准确55acbf3只读核验已失败收尾**：13:37登记入口启动，全部离线准入通过；三次均认证登录完成、结算确认发送0后超时，Go确认入口均0，程序退出1，未完成参数查询。只记录Go入口，不是本轮C++代理证据，也不能证明SDK/柜台无事件；根因仍未知。有界恢复在本批未成功。已核相关进程0、报撤单0，本轮跟进已删除且不恢复旧一手。见[白名单现场结果](./validation/readonly-live-20261103-afternoon.json)。现场轮终结后，按用户授权独立办理本批离线验收发布；不把现场失败抹成成功。
+
 **只读确认超时有界恢复已完成准确源码独立验收**：55acbf3完整1162项（1153预期红/9预期绿/0异常、exit0）、17定向、三模块严格regression/race、五个20秒fuzz、166Python和准确Windows/Linux源码CI已通过；完整内容/索引还原已核。新接口与独立命令只查询经纪商参数，只有单一确认超时可关闭后退避重连，最多三次；复合未知错误已业务先红并修正。原型实测前两次超时、第三次完整成功，但不是最终准确源码的现场验收。SDK代理失败样本未记录到C++确认入口，具体根因未知。正式证书见[验收](./validation/readonly-retry-55acbf3.json)，能力边界见[设计](./ctp-readonly-retry.md)。本段记录离线验收，发布以真实main/dev与准确CI为准；旧一手任务保持终止，未取得新成交样本、不打tag。
 
 **11月3日只读有界重连正在完整验收**：本日定时准入已通过，10:50确认超时后按旧约停止、未下单。新授权下已做独立原生SPI与C++入口转发对照；确认故障在失败样本的已观测C++入口之前，具体根因仍未知。新增仅参数查询的有界重连已合成验证，并在11:20原型中前两次失败、第三次完整成功；不复活旧交易轮。见[设计及边界](./ctp-readonly-retry.md)。正式完整扫描与准确CI尚待通过，下方旧轮状态保持历史范围。
@@ -2656,6 +2660,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/readonly-release-evidence.md` | 4 |
 | `docs/resting-price-20261103.md` | 4 |
 | `docs/ctp-readonly-retry.md` | 4 |
+| `docs/calendar-first-open.md` | 4 |
 | `docs/ctp-readonly-release-20261102-night.md` | 4 |
 | `docs/ctp-readonly-20261102.md` | 4 |
 | `docs/delivery-gates.md` | 4 |

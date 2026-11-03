@@ -1,5 +1,7 @@
 # 版本排期
 
+2026-11-03 开发分支新增只读 `(*refdata.Calendar).FirstOpen(day types.TradingDay, ex types.Exchange, product string) (time.Time, error)`：查完整已声明日历/时段/按所夜盘覆盖返回北京时间首开；有夜盘且缺前锚或夜盘未知拒绝，不默认日盘。旧SessionAt/存档/核算/交易逻辑不变，详见[首开设计](./calendar-first-open.md)。分支定向验证和准确CI不代表完整扫描或main发布，下午冻结现场轮不改动。
+
 范围与决策依据见 [design.md](./design.md)，规则依据见 [cn-futures-rules.md](./cn-futures-rules.md)，
 可行性依据见 [probes.md](./probes.md)。
 
