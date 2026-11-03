@@ -12854,7 +12854,7 @@
     "expect": "red",
     "file": "refdata/calendar_first_open.go",
     "old": "if span.TradingDay != day || span.Night != night || span.Anchor != int32(anchor) {",
-    "new": "if span.TradingDay == 0 {",
+    "new": "if span.TradingDay == 0 && (span.Night != night || span.Anchor != int32(anchor)) {",
     "test": "TestFirstOpenMissingAndContradictoryInputs",
     "want": "候选日夜盘归属矛盾仍给首开"
   },
