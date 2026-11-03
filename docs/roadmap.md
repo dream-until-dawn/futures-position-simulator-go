@@ -612,6 +612,12 @@ D+1 日 baseline-full / close-order / yd-vs-his
 
 #### `cmd/oracle/ctp`（新包，SimNow 取证客户端）
 
+    ParamsRetryPolicy { Attempts int; Timeout, Backoff, Total time.Duration; ExpectedTradingDay string }
+    ParamsRetryPolicy.Validate() error：仅验证显式有界只读策略，不连接
+    QueryBrokerParamsReadOnly(context.Context, Credentials, ParamsRetryPolicy, logf) (*BrokerTradingParamsField, error)
+
+仅限登记SimNow参数查询：单一结算确认超时才允许关闭后退避重连，不返回可报单客户端；具体边界见[只读重连设计](./ctp-readonly-retry.md)。
+
     常量   Source / GoctpModule / DLLDirEnv / QueryGap
     变量   RequiredDLLs
     类型   Client / Credentials / Fixture / OrderReq / OrderState / NativeOrderError
