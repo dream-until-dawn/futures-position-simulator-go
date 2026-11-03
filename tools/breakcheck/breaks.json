@@ -12777,5 +12777,135 @@
   "new": "\tif err = json.NewEncoder(d.out).Encode(map[string]string{\"status\": \"complete\", \"trading_day\": *day, \"margin_price_type\": string(params.MarginPriceType), \"algorithm\": string(params.Algorithm), \"include_close_profit\": string(params.AvailIncludeCloseProfit)}); err != nil {\n\t\treturn 0\n\t}",
   "test": "TestReadonlyCommandFailureAndPersistence",
   "want": "只读失败或落盘错误被当成功"
-}
+},
+  {
+    "name": "1250 首开nil日历不拒绝",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "if c == nil",
+    "new": "if false",
+    "test": "TestFirstOpenNilReturnsError",
+    "want": "nil日历未正常返回错误"
+  },
+  {
+    "name": "1251 首开前锚用自然日减一",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "previous := c.days[index-1]",
+    "new": "previous := types.NewTradingDay(day.Year(), day.Month(), day.Day()-1)",
+    "test": "TestFirstOpenKnownSessions",
+    "want": "首开时刻或北京时间错误"
+  },
+  {
+    "name": "1252 首开未知夜盘回退日盘",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "if err != nil {\n\t\t\treturn time.Time{}, fmt.Errorf(\"首开查询夜盘状态未知：%w\", err)\n\t\t}",
+    "new": "if err != nil { suspended = true }",
+    "test": "TestFirstOpenUnknownNeverBecomesDayOpen",
+    "want": "未知夜盘被默认日盘或已知休市"
+  },
+  {
+    "name": "1253 首开忽略停夜盘",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "if !suspended {",
+    "new": "if true {",
+    "test": "TestFirstOpenExplicitSuspensionAndOrder",
+    "want": "停夜盘未切到最早日盘"
+  },
+  {
+    "name": "1254 首开缺前锚补造九点",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "return time.Time{}, fmt.Errorf(\"首开查询缺少前一交易日锚，不能默认日盘\")",
+    "new": "return time.Date(day.Year(),time.Month(day.Month()),day.Day(),9,0,0,0,cnZone),nil",
+    "test": "TestFirstOpenMissingAndContradictoryInputs",
+    "want": "缺锚/缺表/无效日期仍给首开"
+  },
+  {
+    "name": "1255 首开取最晚时段",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "if session.Start < start {",
+    "new": "if session.Start > start {",
+    "test": "TestFirstOpenExplicitSuspensionAndOrder",
+    "want": "停夜盘未切到最早日盘"
+  },
+  {
+    "name": "1256 首开依赖数组第一项",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "if session.Start < start {",
+    "new": "if session.Start < 0 {",
+    "test": "TestFirstOpenExplicitSuspensionAndOrder",
+    "want": "停夜盘未切到最早日盘"
+  },
+  {
+    "name": "1257 首开跳过候选归属核验",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "if span.TradingDay != day || span.Night != night || span.Anchor != int32(anchor) {",
+    "new": "if span.TradingDay == 0 {",
+    "test": "TestFirstOpenMissingAndContradictoryInputs",
+    "want": "候选日夜盘归属矛盾仍给首开"
+  },
+  {
+    "name": "1258 首开误用UTC日期",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "0, 0, 0, 0, cnZone).Add",
+    "new": "0, 0, 0, 0, time.UTC).Add",
+    "test": "TestFirstOpenKnownSessions",
+    "want": "首开时刻或北京时间错误"
+  },
+  {
+    "name": "1259 首开夜盘误用目标自然日",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "time.Date(anchor.Year(), time.Month(anchor.Month()), anchor.Day(),",
+    "new": "time.Date(day.Year(), time.Month(day.Month()), day.Day(),",
+    "test": "TestFirstOpenKnownSessions",
+    "want": "首开时刻或北京时间错误"
+  },
+  {
+    "name": "1260 首开夜盘覆盖跨所借用",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/night_coverage.go",
+    "old": "entry.Exchange == exchange && anchor >= entry.First && anchor <= entry.Last",
+    "new": "anchor >= entry.First && anchor <= entry.Last",
+    "test": "TestFirstOpenUnknownNeverBecomesDayOpen",
+    "want": "夜盘覆盖跨锚日或跨所外推"
+  },
+  {
+    "name": "1261 首开夜盘覆盖忽略日期",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/night_coverage.go",
+    "old": "entry.Exchange == exchange && anchor >= entry.First && anchor <= entry.Last",
+    "new": "entry.Exchange == exchange",
+    "test": "TestFirstOpenUnknownNeverBecomesDayOpen",
+    "want": "夜盘覆盖跨锚日或跨所外推"
+  },
+  {
+    "name": "1262 首开查询原地排序输入",
+    "pkg": "./refdata",
+    "expect": "red",
+    "file": "refdata/calendar_first_open.go",
+    "old": "start := sessions[0].Start",
+    "new": "sort.Slice(sessions,func(i,j int)bool{return sessions[i].Start<sessions[j].Start}); start := sessions[0].Start",
+    "test": "TestFirstOpenExplicitSuspensionAndOrder",
+    "want": "只读首开查询修改时段表"
+  }
 ]
