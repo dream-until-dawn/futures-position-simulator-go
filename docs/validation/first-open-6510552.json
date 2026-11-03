@@ -1,0 +1,514 @@
+{
+  "format": 1,
+  "source_commit": "651055265ba984ee326ac1bca6e14e27a4582b7f",
+  "baseline_main": "e422cebb408b9e75eeaf2a9aba93e8fa7b0cf9da",
+  "source_tree": "d11ed9176221cd0f691308ec77467b5a17ff14da",
+  "registry_sha256": "a1ca767b5dd0189ee1c4bb0f444a341150b50e496abe19fcdcee2d6a54c94db9",
+  "report_sha256": "5de2e22b1ddf39e64d77c7bec63f3f82d70c722ca3e3d1448d9ccfeb132a352c",
+  "summary_sha256": "bb6258e93bddf266e28fcdfa9256beca28315d2a0f8b92891cdb21df1cb08768",
+  "counts": {
+    "executed": 1175,
+    "expected_red": 1166,
+    "expected_green": 9,
+    "unexpected": 0,
+    "exit_code": 0
+  },
+  "summary": {
+    "path": "C:\\Temp\\firstopen-mutation-6510552\\summary.json",
+    "sha256": "bb6258e93bddf266e28fcdfa9256beca28315d2a0f8b92891cdb21df1cb08768"
+  },
+  "mutation_log": {
+    "path": "C:\\Temp\\firstopen-mutation-6510552\\mutation.log",
+    "sha256": "0b1f40985cca1692a4eb367c08003c66e020c2ea8bae3cf66772953f31d31965"
+  },
+  "independent_post_run": {
+    "status": "",
+    "tracked_sha256": "bdc3436e20612000f649210150fdd2b5bc894fcc444502ab889d9ce95847b26e",
+    "index_sha256": "6b3897b9efa43d1c6de161c5ac8c8e9f52205e1157616243886bf8c11aba82ef",
+    "head": "651055265ba984ee326ac1bca6e14e27a4582b7f"
+  },
+  "preserved_prior_registry": {
+    "total": 1162,
+    "changed_rows": 0
+  },
+  "targeted": [
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\summary.json",
+      "sha256": "d0d97e6dac29f3a76fce300b1e9c1c5f23c4f84c03ae554d6fa878f51dc1290a"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1250.json",
+      "sha256": "08b3ab9dd493f6a53961d72065c0f550cc9fed7197393ca1ebcf40ecac0e23f0"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1250.log",
+      "sha256": "d8c19bb35ac9fe471a7e1875ba6c20f4d68d89bb7b9c148edc9a49bc70187fe9"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1251.json",
+      "sha256": "0232b8a645f8481ad06ecca3beb2ab97919fe1ccdc01b6d4ed883b5aecc52f60"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1251.log",
+      "sha256": "34e3d9d190c9e3360a0420c8d80af7a7372fe59951b301a95ff95873d0919c34"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1252.json",
+      "sha256": "b622316944582ddc38f595006d7411b575a2bcb68fa7dfdd2989fe8937753d73"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1252.log",
+      "sha256": "3541f96b401400c1a5df10b2647f98417e9449d116eb9324c327e9a0414d8f26"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1253.json",
+      "sha256": "d1c398513508dae8a8635f28ec1269be382ff56139b2a2c7519d6475b241028f"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1253.log",
+      "sha256": "b80bc8572adb182a100b5cce7cfc682ee4c60f1ad680100c046a91e7eb272bf6"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1254.json",
+      "sha256": "81e1a09ae1b083ad6c6ce712ac805cb407ab89fd7670a223fe8c2297e382f340"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1254.log",
+      "sha256": "336b8e28c93497dd2854f5ba9934a132e5cdcaf20430e1cae668807d54329f3c"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1255.json",
+      "sha256": "bda5f7399e717e0cb42122d6d65358308b4524427b9703ac62a2bc6b6c492772"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1255.log",
+      "sha256": "2e2cef3e8fd40070e82618475e273e10b8c947a25c23f8ed43b6d4f74165c90d"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1256.json",
+      "sha256": "266db3e4ad869d0e3e7bbe5fb6bd24b6e4b24b08e6a011b768c3ff37c85cc5f2"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1256.log",
+      "sha256": "13fd9cc04128c35ea40d801f888e0001a56813a8c3b5a5941cc13a8ccd8b1de7"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1257.json",
+      "sha256": "84f44e88938b886a6d6a717b29c9991d3f44bd34dc3093d4519bcaf011b4f622"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1257.log",
+      "sha256": "5ce792bfb5f67c086f5265c62582b58dfab4da2bc55d1888af8c319a16847f3e"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1258.json",
+      "sha256": "4097e964a5202a7a270877525d5ae9081772156e6204d363e6cd35cce798ccec"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1258.log",
+      "sha256": "6885d6a2ada76f180209f9cd7c78052a4ab9e30e522f0f7779982b09510ffdf6"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1259.json",
+      "sha256": "bbe904ee5ec6d3c4149a59d1d6cdad627bf9d70037a18aeed315347ffd2f60f5"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1259.log",
+      "sha256": "e6f44e56a4fbc0dbe6f20ad2f878b8b99a5e9a8e05cde1c41bdc191c8b72882f"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1260.json",
+      "sha256": "6b7fe753d1f7dac0966b9428f122509e3a448e81fdd2687444f39a97faa6de41"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1260.log",
+      "sha256": "aa70187a70106c7bf93dc9ffc6fd80473db5335c4348ba90d151a40efdb80178"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1261.json",
+      "sha256": "2541874c1a1d8b7706c0ee002f54efe8aa7e71e942ae086c8dffe5ab7401838f"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1261.log",
+      "sha256": "3e166ba0bb2bb717962af9f3018077d2e6d1d58184f787b8d2e6070bb1a00218"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1262.json",
+      "sha256": "7eb42b4cd1c2e41d849dcc2c89e8a3858a09c4678b349dad796751b3d2095978"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-docs-fixed\\1262.log",
+      "sha256": "b32113669ac30146632845ac92a9ca349dca3bf0cbd66dc72dbe455c4e7ac206"
+    }
+  ],
+  "suites": {
+    "regression": {
+      "summary": {
+        "suite": "regression",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552",
+            "passed_tests": 764,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-regression-6510552\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\cmd\\oracle",
+            "passed_tests": 472,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-regression-6510552\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-regression-6510552\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "bdc3436e20612000f649210150fdd2b5bc894fcc444502ab889d9ce95847b26e",
+          "index_sha256": "6b3897b9efa43d1c6de161c5ac8c8e9f52205e1157616243886bf8c11aba82ef",
+          "head": "651055265ba984ee326ac1bca6e14e27a4582b7f"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "bdc3436e20612000f649210150fdd2b5bc894fcc444502ab889d9ce95847b26e",
+          "index_sha256": "6b3897b9efa43d1c6de161c5ac8c8e9f52205e1157616243886bf8c11aba82ef",
+          "head": "651055265ba984ee326ac1bca6e14e27a4582b7f"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\firstopen-regression-6510552\\summary.json",
+        "sha256": "21c446a74e74fb84fdf14f2b8b6cfe1f07e0f21dede5b3d200a10ee4392bd62a"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\firstopen-regression-6510552\\root.log",
+          "sha256": "a7ff0c4c83d98ef8c44051a1bca004202217b48fbd1fe78bdff57163f1629352"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-regression-6510552\\oracle.log",
+          "sha256": "4707d32c522b191fc3a87755b6e0fce120a2950b3782255e587d022c1fde849c"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-regression-6510552\\external.log",
+          "sha256": "58449adff9315df4a77d72b0c6485ebd86c79a21fb6c625336018eb27af23932"
+        }
+      ]
+    },
+    "race": {
+      "summary": {
+        "suite": "race",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552",
+            "passed_tests": 764,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-race-6510552\\root.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\cmd\\oracle",
+            "passed_tests": 472,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-race-6510552\\oracle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              "-json",
+              "-count=1",
+              "-race",
+              "./..."
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\examples\\offline-replay",
+            "passed_tests": 3,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-race-6510552\\external.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "bdc3436e20612000f649210150fdd2b5bc894fcc444502ab889d9ce95847b26e",
+          "index_sha256": "6b3897b9efa43d1c6de161c5ac8c8e9f52205e1157616243886bf8c11aba82ef",
+          "head": "651055265ba984ee326ac1bca6e14e27a4582b7f"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "bdc3436e20612000f649210150fdd2b5bc894fcc444502ab889d9ce95847b26e",
+          "index_sha256": "6b3897b9efa43d1c6de161c5ac8c8e9f52205e1157616243886bf8c11aba82ef",
+          "head": "651055265ba984ee326ac1bca6e14e27a4582b7f"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\firstopen-race-6510552\\summary.json",
+        "sha256": "92aaa0f7b5f90f97aa9d3d4447b31e976136ef5632782348f8fc1229ae04a230"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\firstopen-race-6510552\\root.log",
+          "sha256": "9faa6dea457709e5c19f3734bd8229fe785e916b1629fbfa7a45d3df103cbab0"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-race-6510552\\oracle.log",
+          "sha256": "676b85a0062b642861f67ea9883182f0e33c8d63f287e97766d90377203efaa3"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-race-6510552\\external.log",
+          "sha256": "ebf75b9b2eafcccee466b8d6eca1d484bdcff47a5325faa667eb904bc06f4078"
+        }
+      ]
+    },
+    "fuzz": {
+      "summary": {
+        "suite": "fuzz",
+        "status": "passed",
+        "failure": null,
+        "completed": [
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzStateSequence$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-fuzz-6510552\\state.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzDecodeBundle$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\replay",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-fuzz-6510552\\bundle.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzReadRestingReport$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\cmd\\oracle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-fuzz-6510552\\report.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzRiskDeposit$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\risk",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-fuzz-6510552\\risk.log",
+            "exit_code": 0
+          },
+          {
+            "command": [
+              "go",
+              "test",
+              ".",
+              "-run=^$",
+              "-fuzz=^FuzzLifecycleRules$",
+              "-fuzztime=20s",
+              "-parallel=2"
+            ],
+            "cwd": "C:\\Temp\\firstopen-checks-6510552\\lifecycle",
+            "passed_tests": 0,
+            "skipped": [],
+            "log": "C:\\Temp\\firstopen-fuzz-6510552\\lifecycle.log",
+            "exit_code": 0
+          }
+        ],
+        "before": {
+          "status": "",
+          "tracked_sha256": "bdc3436e20612000f649210150fdd2b5bc894fcc444502ab889d9ce95847b26e",
+          "index_sha256": "6b3897b9efa43d1c6de161c5ac8c8e9f52205e1157616243886bf8c11aba82ef",
+          "head": "651055265ba984ee326ac1bca6e14e27a4582b7f"
+        },
+        "after": {
+          "status": "",
+          "tracked_sha256": "bdc3436e20612000f649210150fdd2b5bc894fcc444502ab889d9ce95847b26e",
+          "index_sha256": "6b3897b9efa43d1c6de161c5ac8c8e9f52205e1157616243886bf8c11aba82ef",
+          "head": "651055265ba984ee326ac1bca6e14e27a4582b7f"
+        }
+      },
+      "artifact": {
+        "path": "C:\\Temp\\firstopen-fuzz-6510552\\summary.json",
+        "sha256": "eb4a1453c52272482512f28c7836ce68a21aea8136ac901ed3245adf7dcd0ea0"
+      },
+      "logs": [
+        {
+          "path": "C:\\Temp\\firstopen-fuzz-6510552\\state.log",
+          "sha256": "860eddc88c5b3bebc559b417d40371fad9665e84effa7d967c88fd9792a084b4"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-fuzz-6510552\\bundle.log",
+          "sha256": "1965212bc32364e38b44b02c372499f4c51c50cfbb2ef8a053ce617b1146b1a7"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-fuzz-6510552\\report.log",
+          "sha256": "a7ffd900c11930977d3834b081abc86a18a1ddbabd7c64ce6b8fd3c46438ce3a"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-fuzz-6510552\\risk.log",
+          "sha256": "d342866c3a465caaa4cb48ebf56caf2a455b8483333c510e10c3889d672aa1f6"
+        },
+        {
+          "path": "C:\\Temp\\firstopen-fuzz-6510552\\lifecycle.log",
+          "sha256": "25a7cbfa620c6162569c411f3993724a32d7692dd9c70e3b44a7aa72e77c8ae3"
+        }
+      ]
+    }
+  },
+  "python_tests": {
+    "path": "C:\\Temp\\firstopen-python-6510552.log",
+    "sha256": "3570176fc1dd5ce293c56c3b183b09aa3f4e811553a3a905694800eca7eaae13"
+  },
+  "ci": {
+    "sha": "651055265ba984ee326ac1bca6e14e27a4582b7f",
+    "run": 41584146124,
+    "branch": "codex/calendar-first-open-20261103",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "offline (windows-2022)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "prior_readonly_round": {
+    "artifact": {
+      "path": "C:\\VScodeProject\\futures-position-simulator-go\\offline-results\\readonly-afternoon-20261103\\live-closeout.json",
+      "sha256": "f6f112fe2e1c78d5bba2f167b552a0996f10e7091c43346135eadbf6f4366293"
+    },
+    "source_commit": "55acbf33d4e8467afd5376331997d3c8cfefcb67",
+    "status": "FAILED_CONFIRMATION_TIMEOUT",
+    "recovery_success": false,
+    "remaining_processes": {
+      "query_succeeded": true,
+      "matching_count": 0
+    },
+    "root_cause": "undetermined",
+    "not_firstopen_runtime_validation": true
+  },
+  "retained_failed_qualification": [
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets\\1253.json",
+      "sha256": "60ff8e622c8eba54f14892813580a412a1fbd9ef73a9c92d6b445f2d1f370b31"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets\\1253.log",
+      "sha256": "0e8cc6dceb8ff04418ea5ece4cfcc523485c41162f05326ec344aaba03ea9921"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-final\\1257.json",
+      "sha256": "a933dccb14cf7d80011cdb4ed97da7af46f53c106d2eb8c8d5edbe6705e6339c"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\targets-final\\1257.log",
+      "sha256": "0376b694e8ee6b6aeb28d41c310bd59250a8c04d6022fd8e0d7373bc2750f4e0"
+    },
+    {
+      "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\root-regression.log",
+      "sha256": "d0b048cf03fa0ef0fe3f4ab800a222b0b8ceeb9ca5b3dbf62dd26ad5c98c261e"
+    }
+  ],
+  "first_red_probe": {
+    "path": "C:\\Temp\\calendar-firstopen-e422ceb\\offline-results\\first-open\\before.log",
+    "sha256": "de063aa0f02b4dbec2b4d1964fc19dcbd01ac326af08be0924a90dc8977eeec5"
+  },
+  "scope": {
+    "additive_readonly_calendar_query": true,
+    "original_production_go_modified": false,
+    "old_registry_rows_changed": 0,
+    "new_mutations": 13,
+    "state_format_unchanged": true,
+    "no_trading_calls": true,
+    "readonly_probe_succeeded": false,
+    "live_f9c_sample": false,
+    "readonly_terminal_not_success_was_release_gate": true,
+    "no_tag": true
+  },
+  "recorded_at_bjt": "2026-11-03T14:08:15.165375+08:00"
+}

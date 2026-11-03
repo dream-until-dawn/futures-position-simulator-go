@@ -1,0 +1,45 @@
+{
+  "format": 1,
+  "scope": "readonly-afternoon-20261103",
+  "status": "FAILED_CONFIRMATION_TIMEOUT",
+  "source_commit": "55acbf33d4e8467afd5376331997d3c8cfefcb67",
+  "published_main": "e422cebb408b9e75eeaf2a9aba93e8fa7b0cf9da",
+  "started_at_bjt": "2026-11-03T13:37:34.926616+08:00",
+  "process_exit": 1,
+  "admission_passed": true,
+  "connections": 3,
+  "authentication_login_complete_each": true,
+  "confirmation_timeouts": 3,
+  "confirmation_send_codes": [
+    0,
+    0,
+    0
+  ],
+  "go_confirmation_entry_counts": [
+    0,
+    0,
+    0
+  ],
+  "sdk_callback_absence_proven": false,
+  "broker_parameters_query_completed": false,
+  "readonly_recovery_success": false,
+  "raw_sha256": "5671396bc3ba02ac7f0159e6900d5c33773ac58e1034383067a7670e5b9b89ae",
+  "remaining_processes": {
+    "query_succeeded": true,
+    "matching_count": 0
+  },
+  "orders": 0,
+  "cancels": 0,
+  "f9c_sample": false,
+  "no_new_batch": true,
+  "automation_deleted": "11-03",
+  "root_cause": "undetermined",
+  "closed_at_bjt": "2026-11-03T13:40:19.248809+08:00",
+  "limitations": [
+    "本轮只观测Go入口，不是新增C++代理样本",
+    "Go入口0不证明SDK或柜台没有回调",
+    "未完成参数查询，不是只读恢复成功或一手成交样本",
+    "orders/cancels只指本批请求数；本轮未查询账户持仓/委托/成交/费率/行情",
+    "本轮任务已删除，未新建连接补证据"
+  ]
+}
