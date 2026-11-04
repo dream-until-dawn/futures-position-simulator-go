@@ -2661,6 +2661,7 @@ CTP 对拍里 `Balance − 占用 − 冻结 == Available` 自 20260910 起一�
 | `docs/resting-price-20261103.md` | 4 |
 | `docs/ctp-readonly-retry.md` | 4 |
 | `docs/calendar-first-open.md` | 4 |
+| `docs/tick-outward.md` | 2 |
 | `docs/ctp-readonly-release-20261102-night.md` | 4 |
 | `docs/ctp-readonly-20261102.md` | 4 |
 | `docs/delivery-gates.md` | 4 |
