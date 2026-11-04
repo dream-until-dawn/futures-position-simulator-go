@@ -200,12 +200,16 @@ const (
 	// 只有往里收的可行区间含整 6%。拿到独立的比例来源之前这是假设（silent-risks 101）。
 	// ⚠️ 追加在末尾：不改已有取值。
 	TickInward
+	// TickOutward 往外扩：涨停向上、跌停向下对齐最小变动价位。
+	// 仅提供通用算术能力，不代表任何交易所已实测；调用方须凭规则证据显式选择。
+	// 追加为 6，保留所有既有枚举数值与行为。
+	TickOutward
 )
 
 // Valid 报告 r 是不是本库认得的取整方式（未指定与越界取值都返回 false）。
 func (r TickRounding) Valid() bool {
 	switch r {
-	case TickFloor, TickCeil, TickHalfUp, TickNone, TickInward:
+	case TickFloor, TickCeil, TickHalfUp, TickNone, TickInward, TickOutward:
 		return true
 	}
 	return false
@@ -223,6 +227,8 @@ func (r TickRounding) String() string {
 		return "不取整"
 	case TickInward:
 		return "往里收"
+	case TickOutward:
+		return "往外扩"
 	}
 	return "未指定"
 }
@@ -275,9 +281,20 @@ func (i Instrument) PriceLimits(preSettlement decimal.Decimal, hasPreSettlement 
 // ⚠️ 向下 / 向上 / 四舍五入：上下两边用**同一个**方向，不是「上取上、下取下」。
 // 实测支持这一点：上期所 rb2701 昨结 3158、5%，理论 3315.9 / 3000.1，
 // 柜台给 3315 / 3000 —— **两边都是向下**（probes.md §12）。
-// ⚠️ 往里收（大商所，§13 #24）是唯一上下方向不同的一种：涨停向下、跌停向上。
+// 往里收为涨停向下、跌停向上；通用往外扩能力的方向与其相反，不作市场映射。
 // ⚠️ 必须有 default：此前没有，不认识的取值会把「价 ÷ 跳」原样乘回去，静默返回一个没对齐跳的价（评审 20260922）。
 func snapToTick(px, tick decimal.Decimal, r TickRounding, upper bool) (decimal.Decimal, bool) {
+	if r == TickOutward {
+		// QuoRem 的整数商与余数精确；不能用 Div 先舍掉极小余数再判断方向。
+		quotient, remainder := px.QuoRem(tick, 0)
+		if upper && remainder.IsPositive() {
+			quotient = quotient.Add(decimal.NewFromInt(1))
+		}
+		if !upper && remainder.IsNegative() {
+			quotient = quotient.Sub(decimal.NewFromInt(1))
+		}
+		return quotient.Mul(tick), true
+	}
 	n := px.Div(tick)
 	switch r {
 	case TickFloor:

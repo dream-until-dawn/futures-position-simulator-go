@@ -7219,8 +7219,8 @@
 		"name": "731 Valid 漏了往里收 —— 大商所的涨跌停推不出来",
 		"dir": "",
 		"file": "refdata/refdata.go",
-		"old": "\tcase TickFloor, TickCeil, TickHalfUp, TickNone, TickInward:\n\t\treturn true",
-		"new": "\tcase TickFloor, TickCeil, TickHalfUp, TickNone:\n\t\treturn true",
+		"old": "\tcase TickFloor, TickCeil, TickHalfUp, TickNone, TickInward, TickOutward:\n\t\treturn true",
+		"new": "\tcase TickFloor, TickCeil, TickHalfUp, TickNone, TickOutward:\n\t\treturn true",
 		"pkg": "./refdata/",
 		"test": "TestSnapToTickRejectsUnknownRounding",
 		"want": "往里收 不 Valid",
@@ -12907,5 +12907,85 @@
     "new": "sort.Slice(sessions,func(i,j int)bool{return sessions[i].Start<sessions[j].Start}); start := sessions[0].Start",
     "test": "TestFirstOpenExplicitSuspensionAndOrder",
     "want": "只读首开查询修改时段表"
-  }
+  },
+{
+  "name": "1263 向外取整 上界少加一跳",
+  "pkg": "./refdata",
+  "expect": "red",
+  "file": "refdata/refdata.go",
+  "old": "quotient = quotient.Add(decimal.NewFromInt(1))",
+  "new": "quotient = quotient.Add(decimal.NewFromInt(0))",
+  "test": "TestTickOutwardExact",
+  "want": "向外精确结果错误"
+},
+{
+  "name": "1264 向外取整 负下界少减一跳",
+  "pkg": "./refdata",
+  "expect": "red",
+  "file": "refdata/refdata.go",
+  "old": "quotient = quotient.Sub(decimal.NewFromInt(1))",
+  "new": "quotient = quotient.Sub(decimal.NewFromInt(0))",
+  "test": "TestTickOutwardExact",
+  "want": "向外精确结果错误"
+},
+{
+  "name": "1265 向外取整 先除法舍去极细余数",
+  "pkg": "./refdata",
+  "expect": "red",
+  "file": "refdata/refdata.go",
+  "old": "quotient, remainder := px.QuoRem(tick, 0)",
+  "new": "quotient, remainder := px.Div(tick).QuoRem(decimal.NewFromInt(1), 0)",
+  "test": "TestTickOutwardExact",
+  "want": "向外精确结果错误"
+},
+{
+  "name": "1266 向外取整 Valid漏新增值",
+  "pkg": "./refdata",
+  "expect": "red",
+  "file": "refdata/refdata.go",
+  "old": "case TickFloor, TickCeil, TickHalfUp, TickNone, TickInward, TickOutward:",
+  "new": "case TickFloor, TickCeil, TickHalfUp, TickNone, TickInward:",
+  "test": "TestTickOutwardCompatibility",
+  "want": "向外枚举未识别"
+},
+{
+  "name": "1267 向外取整 名称错写向内",
+  "pkg": "./refdata",
+  "expect": "red",
+  "file": "refdata/refdata.go",
+  "old": "case TickOutward:\n\t\treturn \"往外扩\"",
+  "new": "case TickOutward:\n\t\treturn \"往里收\"",
+  "test": "TestTickOutwardCompatibility",
+  "want": "向外名称错误"
+},
+{
+  "name": "1268 向外取整 枚举未保留值6",
+  "pkg": "./refdata",
+  "expect": "red",
+  "file": "refdata/refdata.go",
+  "old": "\tTickOutward\n",
+  "new": "\tTickOutward = 7\n",
+  "test": "TestTickOutwardCompatibility",
+  "want": "向外枚举必须追加为6"
+},
+{
+  "name": "1269 向外取整 自动加入郑商所实测映射",
+  "pkg": ".",
+  "expect": "red",
+  "file": "submit.go",
+  "old": "types.SHFE: refdata.TickFloor,",
+  "new": "types.SHFE: refdata.TickFloor, types.CZCE: refdata.TickOutward,",
+  "test": "TestOutwardDoesNotBecomeMeasured",
+  "want": "通用向外能力改变既有实测映射"
+},
+{
+  "name": "1270 向外取整 回放丢取整序列化",
+  "pkg": "./replay",
+  "expect": "red",
+  "file": "replay/model.go",
+  "old": "Rounding refdata.TickRounding `json:\"rounding\"`",
+  "new": "Rounding refdata.TickRounding `json:\"-\"`",
+  "test": "TestTickOutwardBundle",
+  "want": "取整往返改变"
+}
 ]
